@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -40,6 +41,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -114,14 +116,12 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
   {
-    IndexIO indexIO = new IndexIO(
-        mapper,
-        () -> 0
-    );
+    IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
     IndexMergerV9 indexMerger = new IndexMergerV9(
         mapper,
         indexIO,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        true
     );
     final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
     {
@@ -155,10 +155,12 @@ public class MSQTestWorkerContext implements WorkerContext
             injector,
             indexIO,
             null,
+            null,
             null
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),
+        injector.getInstance(LoadedSegmentDataProviderFactory.class),
         workerMemoryParameters
     );
   }
@@ -179,5 +181,11 @@ public class MSQTestWorkerContext implements WorkerContext
   public Bouncer processorBouncer()
   {
     return injector.getInstance(Bouncer.class);
+  }
+
+  @Override
+  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  {
+    return injector.getInstance(LoadedSegmentDataProviderFactory.class);
   }
 }

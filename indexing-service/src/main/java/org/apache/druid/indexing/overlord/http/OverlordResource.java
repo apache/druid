@@ -19,23 +19,25 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
-import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.client.indexing.IndexingWorker;
-import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -61,8 +63,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -73,6 +76,7 @@ import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -90,7 +94,6 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -106,6 +109,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -131,8 +135,12 @@ public class OverlordResource
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
   private final ProvisioningStrategy provisioningStrategy;
 
+  private final AuthConfig authConfig;
+
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
-  private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+  private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+  private static final Set<String> AUDITED_TASK_TYPES
+      = ImmutableSet.of("index", "index_parallel", "compact", "index_hadoop", "kill");
 
   private enum TaskStateLookup
   {
@@ -162,7 +170,8 @@ public class OverlordResource
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
       WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
-      ProvisioningStrategy provisioningStrategy
+      ProvisioningStrategy provisioningStrategy,
+      AuthConfig authConfig
   )
   {
     this.taskMaster = taskMaster;
@@ -174,10 +183,11 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.provisioningStrategy = provisioningStrategy;
+    this.authConfig = authConfig;
   }
 
   /**
-   * Warning, magic: {@link org.apache.druid.client.indexing.HttpIndexingServiceClient#runTask} may call this method
+   * Warning, magic: {@link org.apache.druid.rpc.indexing.OverlordClient#runTask} may call this method
    * remotely with {@link ClientTaskQuery} objects, but we deserialize {@link Task} objects. See the comment for {@link
    * ClientTaskQuery} for details.
    */
@@ -185,17 +195,24 @@ public class OverlordResource
   @Path("/task")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response taskPost(final Task task, @Context final HttpServletRequest req)
+  public Response taskPost(
+      final Task task,
+      @Context final HttpServletRequest req
+  )
   {
-    final String dataSource = task.getDataSource();
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSource, ResourceType.DATASOURCE),
-        Action.WRITE
-    );
+    final Set<ResourceAction> resourceActions;
+    try {
+      resourceActions = getNeededResourceActionsForTask(task);
+    }
+    catch (UOE e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
+    }
 
-    Access authResult = AuthorizationUtils.authorizeResourceAction(
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        resourceAction,
+        resourceActions,
         authorizerMapper
     );
 
@@ -205,25 +222,34 @@ public class OverlordResource
 
     return asLeaderWith(
         taskMaster.getTaskQueue(),
-        new Function<TaskQueue, Response>()
-        {
-          @Override
-          public Response apply(TaskQueue taskQueue)
-          {
-            try {
-              taskQueue.add(task);
-              return Response.ok(ImmutableMap.of("task", task.getId())).build();
+        taskQueue -> {
+          try {
+            taskQueue.add(task);
+
+            if (AUDITED_TASK_TYPES.contains(task.getType())) {
+              auditManager.doAudit(
+                  AuditEntry.builder()
+                            .key(task.getDataSource())
+                            .type("task")
+                            .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                            .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
+                            .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                            .build()
+              );
             }
-            catch (EntryExistsException e) {
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format("Task[%s] already exists!", task.getId())
-                                 )
-                             )
-                             .build();
-            }
+
+            return Response.ok(ImmutableMap.of("task", task.getId())).build();
+          }
+          catch (DruidException e) {
+            return Response
+                .status(e.getStatusCode())
+                .entity(new ErrorResponse(e))
+                .build();
+          }
+          catch (org.apache.druid.common.exception.DruidException e) {
+            return Response.status(e.getResponseCode())
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
           }
         }
     );
@@ -255,6 +281,7 @@ public class OverlordResource
     }
   }
 
+  @Deprecated
   @POST
   @Path("/lockedIntervals")
   @Produces(MediaType.APPLICATION_JSON)
@@ -267,6 +294,20 @@ public class OverlordResource
 
     // Build the response
     return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+  }
+
+  @POST
+  @Path("/lockedIntervals/v2")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getDatasourceLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    if (lockFilterPolicies == null || lockFilterPolicies.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No filter provided").build();
+    }
+
+    // Build the response
+    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(lockFilterPolicies)).build();
   }
 
   @GET
@@ -462,27 +503,17 @@ public class OverlordResource
   public Response getTotalWorkerCapacity()
   {
     // Calculate current cluster capacity
-    int currentCapacity;
     Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (!taskRunnerOptional.isPresent()) {
       // Cannot serve call as not leader
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
     TaskRunner taskRunner = taskRunnerOptional.get();
-    Collection<ImmutableWorkerInfo> workers;
-    if (taskRunner instanceof WorkerTaskRunner) {
-      workers = ((WorkerTaskRunner) taskRunner).getWorkers();
-      currentCapacity = workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
-    } else {
-      log.debug(
-          "Cannot calculate capacity as task runner [%s] of type [%s] does not support listing workers",
-          taskRunner,
-          taskRunner.getClass().getName()
-      );
-      workers = ImmutableList.of();
-      currentCapacity = -1;
-    }
+    Collection<ImmutableWorkerInfo> workers = taskRunner instanceof WorkerTaskRunner ?
+        ((WorkerTaskRunner) taskRunner).getWorkers() : ImmutableList.of();
 
+    int currentCapacity = taskRunner.getTotalCapacity();
+    int usedCapacity = taskRunner.getUsedCapacity();
     // Calculate maximum capacity with auto scale
     int maximumCapacity;
     if (workerConfigRef == null) {
@@ -513,7 +544,7 @@ public class OverlordResource
       );
       maximumCapacity = -1;
     }
-    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity)).build();
+    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity)).build();
   }
 
   // default value is used for backwards compatibility
@@ -523,15 +554,13 @@ public class OverlordResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setWorkerConfig(
       final WorkerBehaviorConfig workerBehaviorConfig,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
     final SetResult setResult = configManager.set(
         WorkerBehaviorConfig.CONFIG_KEY,
         workerBehaviorConfig,
-        new AuditInfo(author, comment, req.getRemoteAddr())
+        AuthorizationUtils.buildAuditInfo(req)
     );
     if (setResult.isOk()) {
       log.info("Updating Worker configs: %s", workerBehaviorConfig);
@@ -910,10 +939,25 @@ public class OverlordResource
     }
 
     if (taskMaster.isLeader()) {
-      final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
-      return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      try {
+        final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
+        return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      }
+      catch (DruidException e) {
+        return Response.status(e.getStatusCode())
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to delete pending segments for datasource[%s] and interval[%s].", dataSource, deleteInterval);
+        return Response.status(Status.INTERNAL_SERVER_ERROR)
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
     } else {
-      return Response.status(Status.SERVICE_UNAVAILABLE).build();
+      return Response.status(Status.SERVICE_UNAVAILABLE)
+                     .entity(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"))
+                     .build();
     }
   }
 
@@ -932,24 +976,6 @@ public class OverlordResource
           {
             if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
-            } else if (taskRunner.isK8sTaskRunner()) {
-              // required because kubernetes task runner has no concept of a worker, so returning a dummy worker.
-              return Response.ok(ImmutableList.of(
-                  new IndexingWorkerInfo(
-                      new IndexingWorker(
-                          "http",
-                          "host",
-                          "8100",
-                          taskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
-                          "version"
-                      ),
-                      0,
-                      Collections.emptySet(),
-                      Collections.emptyList(),
-                      DateTimes.EPOCH,
-                      null
-                  )
-              )).build();
             } else {
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
@@ -1084,6 +1110,18 @@ public class OverlordResource
       // Encourage client to try again soon, when we'll likely have a redirect set up
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
+  }
+
+  @VisibleForTesting
+  Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws UOE
+  {
+    final Set<ResourceAction> resourceActions = new HashSet<>();
+    java.util.Optional<Resource> destinationResource = task.getDestinationResource();
+    destinationResource.ifPresent(resource -> resourceActions.add(new ResourceAction(resource, Action.WRITE)));
+    if (authConfig.isEnableInputSourceSecurity()) {
+      resourceActions.addAll(task.getInputSourceResources());
+    }
+    return resourceActions;
   }
 
   private List<TaskStatusPlus> securedTaskStatusPlus(

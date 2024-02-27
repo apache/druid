@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write.columnar;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.ISE;
@@ -41,6 +40,7 @@ public class FrameColumnWriters
   public static final byte TYPE_DOUBLE = 3;
   public static final byte TYPE_STRING = 4;
   public static final byte TYPE_COMPLEX = 5;
+  public static final byte TYPE_STRING_ARRAY = 6;
 
   private FrameColumnWriters()
   {
@@ -130,7 +130,7 @@ public class FrameColumnWriters
     return new StringFrameColumnWriterImpl(
         selector,
         allocator,
-        capabilities == null || capabilities.hasMultipleValues().isMaybeTrue()
+        capabilities == null ? ColumnCapabilities.Capable.UNKNOWN : capabilities.hasMultipleValues()
     );
   }
 
@@ -140,12 +140,8 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new StringArrayFrameColumnWriter(
-        selector,
-        allocator,
-        true
-    );
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new StringArrayFrameColumnWriterImpl(selector, allocator);
   }
 
   private static ComplexFrameColumnWriter makeComplexWriter(
@@ -170,9 +166,7 @@ public class FrameColumnWriters
 
   private static boolean hasNullsForNumericWriter(final ColumnCapabilities capabilities)
   {
-    if (NullHandling.replaceWithDefault()) {
-      return false;
-    } else if (capabilities == null) {
+    if (capabilities == null) {
       return true;
     } else if (capabilities.getType().isNumeric()) {
       return capabilities.hasNulls().isMaybeTrue();

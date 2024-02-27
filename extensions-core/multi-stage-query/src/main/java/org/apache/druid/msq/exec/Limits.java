@@ -62,18 +62,12 @@ public class Limits
   /**
    * Maximum number of input bytes per worker in case number of tasks is determined automatically.
    */
-  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 10 * 1024 * 1024 * 1024L;
+  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 1024 * 1024 * 512L;
 
   /**
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.
    */
   public static final int MAX_KERNEL_MANIPULATION_QUEUE_SIZE = 100_000;
-
-  /**
-   * Maximum number of bytes buffered for each side of a
-   * {@link org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessor}, not counting the most recent frame read.
-   */
-  public static final int MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN = 10_000_000;
 
   /**
    * Maximum relaunches across all workers.
@@ -90,4 +84,16 @@ public class Limits
    * {@link ClusterStatisticsMergeMode#SEQUENTIAL} mode is chosen.
    */
   public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
+
+  /**
+   * Max number of rows in the query reports of the SELECT queries run by MSQ. This ensures that the reports donot blow
+   * up for queries operating on larger datasets. The full result of the select query should be available once the
+   * MSQ is able to run async queries
+   */
+  public static final long MAX_SELECT_RESULT_ROWS = 3_000;
+
+  /**
+   * Max number of partition buckets for ingestion queries.
+   */
+  public static final int MAX_PARTITION_BUCKETS = 5_000;
 }

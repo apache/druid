@@ -23,18 +23,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.SegmentReference;
+
+import java.util.function.Function;
 
 @JsonTypeName("groupByPreShuffle")
 public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -44,6 +43,7 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   @JsonCreator
   public GroupByPreShuffleFrameProcessorFactory(@JsonProperty("query") GroupByQuery query)
   {
+    super(query);
     this.query = Preconditions.checkNotNull(query, "query");
   }
 
@@ -54,9 +54,9 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   }
 
   @Override
-  protected FrameProcessor<Long> makeProcessor(
+  protected FrameProcessor<Object> makeProcessor(
       final ReadableInput baseInput,
-      final Int2ObjectMap<ReadableInput> sideChannels,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final FrameContext frameContext
@@ -64,13 +64,11 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   {
     return new GroupByPreShuffleFrameProcessor(
         query,
+        frameContext.groupingEngine(),
         baseInput,
-        sideChannels,
-        frameContext.groupByStrategySelector(),
-        new JoinableFactoryWrapper(frameContext.joinableFactory()),
+        segmentMapFn,
         outputChannelHolder,
-        new LazyResourceHolder<>(() -> Pair.of(frameWriterFactoryHolder.get(), frameWriterFactoryHolder)),
-        frameContext.memoryParameters().getBroadcastJoinMemory()
+        frameWriterFactoryHolder
     );
   }
 }

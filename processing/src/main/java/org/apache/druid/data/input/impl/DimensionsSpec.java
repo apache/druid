@@ -300,7 +300,6 @@ public class DimensionsSpec
     private List<String> dimensionExclusions;
     private List<SpatialDimensionSchema> spatialDimensions;
     private boolean includeAllDimensions;
-
     private boolean useSchemaDiscovery;
 
     public Builder setDimensions(List<DimensionSchema> dimensions)

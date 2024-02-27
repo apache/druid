@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
@@ -55,7 +56,6 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -64,6 +64,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -115,6 +116,7 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -564,23 +566,14 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   {
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
     directory = tempFolder.newFolder();
-    final TaskConfig taskConfig = new TaskConfig(
-        new File(directory, "baseDir").getPath(),
-        new File(directory, "baseTaskDir").getPath(),
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig =
+        new TaskConfigBuilder()
+            .setBaseDir(new File(directory, "baseDir").getPath())
+            .setBaseTaskDir(new File(directory, "baseTaskDir").getPath())
+            .setDefaultRowFlushBoundary(50000)
+            .setRestoreTasksOnRestart(true)
+            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+            .build();
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createPendingSegmentsTable();
@@ -670,6 +663,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
 
     toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -703,12 +697,12 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
-        null,
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
         "1",
-        new TaskStorageDirTracker(taskConfig)
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

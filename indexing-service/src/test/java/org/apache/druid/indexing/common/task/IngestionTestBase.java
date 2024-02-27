@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -48,6 +47,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -107,19 +107,21 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private final TestUtils testUtils = new TestUtils();
+  protected final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
   private SegmentCacheManagerFactory segmentCacheManagerFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
+  private File baseDir;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     temporaryFolder.create();
+    baseDir = temporaryFolder.newFolder();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
@@ -223,6 +225,30 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         null,
         objectMapper
     );
+  }
+
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
+  {
+    return new TaskToolbox.Builder()
+        .config(config)
+        .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
+        .taskActionClient(createActionClient(task))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .dataSegmentKiller(new NoopDataSegmentKiller())
+        .joinableFactory(NoopJoinableFactory.INSTANCE)
+        .jsonMapper(objectMapper)
+        .taskWorkDir(baseDir)
+        .indexIO(getIndexIO())
+        .indexMergerV9(testUtils.getIndexMergerV9Factory()
+                                .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .taskLogPusher(null)
+        .attemptId("1")
+        .build();
   }
 
   public IndexIO getIndexIO()
@@ -372,23 +398,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
-        final TaskConfig config = new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false,
-            null
-        );
+        final TaskConfig config = new TaskConfigBuilder()
+            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+            .build();
         final TaskToolbox box = new TaskToolbox.Builder()
             .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -397,7 +409,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .dataSegmentKiller(new NoopDataSegmentKiller())
             .joinableFactory(NoopJoinableFactory.INSTANCE)
             .jsonMapper(objectMapper)
-            .taskWorkDir(temporaryFolder.newFolder())
+            .taskWorkDir(baseDir)
             .indexIO(getIndexIO())
             .indexMergerV9(testUtils.getIndexMergerV9Factory()
                                     .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
@@ -408,7 +420,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .appenderatorsManager(new TestAppenderatorsManager())
             .taskLogPusher(null)
             .attemptId("1")
-            .dirTracker(new TaskStorageDirTracker(config))
             .build();
 
 

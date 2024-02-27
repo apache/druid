@@ -21,7 +21,6 @@ package org.apache.druid.indexing.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -40,12 +39,13 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 
-public class InputRowSchemasTest extends NullHandlingTest
+public class InputRowSchemasTest extends InitializedNullHandlingTest
 {
   @Test
   public void test_createColumnsFilter_normal()

@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaPostAggMacros;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateWithErrorBoundsOperatorConversion;
@@ -71,6 +73,7 @@ public class SketchModule implements DruidModule
         ThetaSketchApproxCountDistinctSqlAggregator.NAME,
         ThetaSketchApproxCountDistinctSqlAggregator.class
     );
+    ExpressionModule.addExprMacro(binder, ThetaPostAggMacros.ThetaSketchEstimateExprMacro.class);
   }
 
   @Override

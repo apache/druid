@@ -167,6 +167,12 @@ public interface TypeSignature<Type extends TypeDescriptor>
     return getType().isArray();
   }
 
+  @JsonIgnore
+  default boolean isPrimitiveArray()
+  {
+    return getType().isArray() && getElementType() != null && getElementType().isPrimitive();
+  }
+
   /**
    * Convert a {@link TypeSignature} into a simple string. This value can be converted back into a {@link TypeSignature}
    * with {@link Types#fromString(TypeFactory, String)}.

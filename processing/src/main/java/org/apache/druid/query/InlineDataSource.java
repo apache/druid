@@ -190,6 +190,7 @@ public class InlineDataSource implements DataSource
   @JsonProperty("rows")
   public List<Object[]> getRowsAsList()
   {
+    Iterable<Object[]> rows = getRows();
     return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
   }
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.HttpServerInventoryView;
@@ -35,7 +36,7 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
-import org.apache.druid.server.coordinator.HttpLoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.HttpLoadQueuePeon;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.annotation.Nullable;
@@ -205,7 +206,8 @@ public class SegmentListerResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
 
     asyncContext.setTimeout(timeout);
@@ -317,7 +319,8 @@ public class SegmentListerResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
 
     asyncContext.setTimeout(timeout);

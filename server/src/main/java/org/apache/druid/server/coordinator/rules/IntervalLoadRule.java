@@ -21,14 +21,14 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -37,16 +37,15 @@ public class IntervalLoadRule extends LoadRule
   private static final Logger log = new Logger(IntervalLoadRule.class);
 
   private final Interval interval;
-  private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
+      @JsonProperty("useDefaultTierForNull") @Nullable Boolean useDefaultTierForNull
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
-    validateTieredReplicants(this.tieredReplicants);
+    super(tieredReplicants, useDefaultTierForNull);
     this.interval = interval;
   }
 
@@ -55,20 +54,6 @@ public class IntervalLoadRule extends LoadRule
   public String getType()
   {
     return "loadByInterval";
-  }
-
-  @Override
-  @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
-  {
-    return tieredReplicants;
-  }
-
-  @Override
-  public int getNumReplicants(String tier)
-  {
-    final Integer retVal = tieredReplicants.get(tier);
-    return retVal == null ? 0 : retVal;
   }
 
   @JsonProperty
@@ -98,24 +83,16 @@ public class IntervalLoadRule extends LoadRule
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
+    if (!super.equals(o)) {
+      return false;
+    }
     IntervalLoadRule that = (IntervalLoadRule) o;
-
-    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
-      return false;
-    }
-    if (tieredReplicants != null ? !tieredReplicants.equals(that.tieredReplicants) : that.tieredReplicants != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(interval, that.interval);
   }
 
   @Override
   public int hashCode()
   {
-    int result = interval != null ? interval.hashCode() : 0;
-    result = 31 * result + (tieredReplicants != null ? tieredReplicants.hashCode() : 0);
-    return result;
+    return Objects.hash(super.hashCode(), interval);
   }
 }

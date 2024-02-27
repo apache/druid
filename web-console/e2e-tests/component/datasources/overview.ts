@@ -33,6 +33,7 @@ enum DatasourceColumn {
   AVAILABILITY,
   SEGMENT_LOAD_DROP,
   TOTAL_DATA_SIZE,
+  RUNNING_TASKS,
   SEGMENT_ROWS,
   // SEGMENT_SIZE, (Hidden by default)
   // SEGMENT_GRANULARITY, (Hidden by default)

@@ -46,11 +46,6 @@ public class SegmentizerFactoryTest
         mapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 777;
-          }
         }
     );
     mapper.setInjectableValues(

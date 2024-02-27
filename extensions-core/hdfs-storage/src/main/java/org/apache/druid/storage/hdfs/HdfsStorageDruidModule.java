@@ -35,6 +35,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
+import org.apache.druid.inputsource.hdfs.HdfsInputSourceFactory;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -50,7 +51,7 @@ import java.util.Properties;
  */
 public class HdfsStorageDruidModule implements DruidModule
 {
-  static final String SCHEME = "hdfs";
+  public static final String SCHEME = "hdfs";
   private Properties props = null;
 
   @Inject
@@ -65,7 +66,8 @@ public class HdfsStorageDruidModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule().registerSubtypes(
             new NamedType(HdfsLoadSpec.class, HdfsStorageDruidModule.SCHEME),
-            new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME)
+            new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME),
+            new NamedType(HdfsInputSourceFactory.class, HdfsStorageDruidModule.SCHEME)
         )
     );
   }
@@ -117,6 +119,8 @@ public class HdfsStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HdfsKerberosConfig.class);
     binder.bind(HdfsStorageAuthentication.class).in(ManageLifecycle.class);
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
+    binder.bind(HdfsStorageAvailabilityChecker.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, HdfsStorageAvailabilityChecker.class);
 
     JsonConfigProvider.bind(binder, "druid.ingestion.hdfs", HdfsInputSourceConfig.class);
   }

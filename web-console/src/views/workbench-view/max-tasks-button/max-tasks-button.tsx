@@ -37,7 +37,7 @@ const TASK_ASSIGNMENT_OPTIONS = ['max', 'auto'];
 
 const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
   max: 'Use as many tasks as possible, up to the maximum.',
-  auto: 'Use as few tasks as possible without exceeding 10 GiB or 10,000 files per task.',
+  auto: `Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.`,
 };
 
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
@@ -94,8 +94,13 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 <MenuItem
                   key={String(t)}
                   icon={tickIcon(t === taskAssigment)}
-                  text={`${t} - ${TASK_ASSIGNMENT_DESCRIPTION[t]}`}
+                  text={
+                    <>
+                      <strong>{t}</strong>: {TASK_ASSIGNMENT_DESCRIPTION[t]}
+                    </>
+                  }
                   shouldDismissPopover={false}
+                  multiline
                   onClick={() => changeQueryContext(changeTaskAssigment(queryContext, t))}
                 />
               ))}

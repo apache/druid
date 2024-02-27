@@ -142,7 +142,7 @@ public class KllFloatsSketchToCDFPostAggregatorTest
     final PostAggregator postAgg = new KllFloatsSketchToCDFPostAggregator(
         "cdf",
         new FieldAccessPostAggregator("field", "sketch"),
-        new float[] {4} // half of the distribution is below 4
+        new float[] {3} // half of the distribution is less or equals 3
     );
 
     final double[] cdf = (double[]) postAgg.compute(fields);

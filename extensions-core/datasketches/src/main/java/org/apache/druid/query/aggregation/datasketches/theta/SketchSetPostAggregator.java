@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.common.Util;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -55,7 +55,7 @@ public class SketchSetPostAggregator implements PostAggregator
     this.fields = fields;
     this.func = SketchHolder.Func.valueOf(func);
     this.maxSketchSize = maxSize == null ? SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE : maxSize;
-    Util.checkIfPowerOf2(this.maxSketchSize, "size");
+    Util.checkIfIntPowerOf2(this.maxSketchSize, "size");
 
     if (fields.size() <= 1) {
       throw new IAE("Illegal number of fields[%s], must be > 1", fields.size());

@@ -103,7 +103,7 @@ fi
 
 # Assemble Java options
 JAVA_OPTS="$DRUID_SERVICE_JAVA_OPTS $DRUID_COMMON_JAVA_OPTS -XX:HeapDumpPath=$LOG_DIR/$INSTANCE_NAME $DEBUG_OPTS"
-LOG4J_CONFIG=$SHARED_DIR/conf/log4j2.xml
+LOG4J_CONFIG=$SHARED_DIR/resources/log4j2.xml
 if [ -f $LOG4J_CONFIG ]; then
 	JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=$LOG4J_CONFIG"
 fi
@@ -145,6 +145,6 @@ echo "" >> $LOG_FILE
 
 # Run Druid service
 cd $DRUID_HOME
-exec java $JAVA_OPTS -cp $CP \
+exec bin/run-java $JAVA_OPTS -cp $CP \
 	org.apache.druid.cli.Main server $DRUID_SERVICE \
 	>> $LOG_FILE 2>&1

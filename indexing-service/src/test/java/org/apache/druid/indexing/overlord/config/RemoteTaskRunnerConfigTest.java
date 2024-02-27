@@ -823,7 +823,7 @@ public class RemoteTaskRunnerConfigTest
         RemoteTaskRunnerConfig.class
     );
     configProvider.inject(props, injector.getBinding(JsonConfigurator.class).getProvider().get());
-    configProvider.get().get();
+    configProvider.get();
   }
 
   @Test
@@ -844,7 +844,7 @@ public class RemoteTaskRunnerConfigTest
         RemoteTaskRunnerConfig.class
     );
     configProvider.inject(props, injector.getBinding(JsonConfigurator.class).getProvider().get());
-    configProvider.get().get();
+    configProvider.get();
   }
 
 

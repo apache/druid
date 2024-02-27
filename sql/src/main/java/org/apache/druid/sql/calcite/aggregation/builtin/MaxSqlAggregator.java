@@ -28,10 +28,8 @@ import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class MaxSqlAggregator extends SimpleSqlAggregator
 {
@@ -53,17 +51,17 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
     if (valueType == null) {
       return null;
     }
-    return Aggregation.create(createMaxAggregatorFactory(valueType.getType(), name, fieldName, macroTable));
+    return Aggregation.create(createMaxAggregatorFactory(valueType, name, fieldName, macroTable));
   }
 
   private static AggregatorFactory createMaxAggregatorFactory(
-      final ValueType aggregationType,
+      final ColumnType aggregationType,
       final String name,
       final String fieldName,
       final ExprMacroTable macroTable
   )
   {
-    switch (aggregationType) {
+    switch (aggregationType.getType()) {
       case LONG:
         return new LongMaxAggregatorFactory(name, fieldName, null, macroTable);
       case FLOAT:
@@ -71,7 +69,9 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMaxAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw new UnsupportedSQLQueryException("Max aggregation is not supported for '%s' type", aggregationType);
+        // This error refers to the Druid type. But, we're in SQL validation.
+        // It should refer to the SQL type.
+        throw SimpleSqlAggregator.badTypeException(fieldName, "MAX", aggregationType);
     }
   }
 }

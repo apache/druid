@@ -20,31 +20,20 @@
 package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.joda.time.Period;
+import org.apache.druid.metadata.TestMetadataStorageConnector;
+import org.apache.druid.metadata.TestMetadataStorageTablesConfig;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
-@RunWith(MockitoJUnitRunner.class)
 public class ConfigManagerTest
 {
   private static final String CONFIG_KEY = "configX";
@@ -52,33 +41,40 @@ public class ConfigManagerTest
   private static final byte[] OLD_CONFIG = {1, 2, 3};
   private static final TestConfig NEW_CONFIG = new TestConfig("2", "y", 2);
 
-  @Mock
-  private MetadataStorageConnector mockDbConnector;
-
-  @Mock
-  private MetadataStorageTablesConfig mockMetadataStorageTablesConfig;
-
-  @Mock
-  private AuditManager mockAuditManager;
-
-  @Mock
-  private ConfigManagerConfig mockConfigManagerConfig;
+  private MetadataStorageConnector dbConnector;
+  private MetadataStorageTablesConfig metadataStorageTablesConfig;
+  private TestConfigManagerConfig configManagerConfig;
 
   private ConfigSerde<TestConfig> configConfigSerdeFromClass;
   private ConfigManager configManager;
   private JacksonConfigManager jacksonConfigManager;
 
-  @Before
   public void setup()
   {
-    when(mockMetadataStorageTablesConfig.getConfigTable()).thenReturn(TABLE_NAME);
-    when(mockConfigManagerConfig.getPollDuration()).thenReturn(new Period());
-    configManager = new ConfigManager(mockDbConnector, Suppliers.ofInstance(mockMetadataStorageTablesConfig), Suppliers.ofInstance(mockConfigManagerConfig));
+    setup(new TestMetadataStorageConnector());
+  }
+
+  public void setup(TestMetadataStorageConnector dbConnector)
+  {
+    this.dbConnector = dbConnector;
+    metadataStorageTablesConfig = new TestMetadataStorageTablesConfig()
+    {
+      @Override
+      public String getConfigTable()
+      {
+        return TABLE_NAME;
+      }
+    };
+    configManagerConfig = new TestConfigManagerConfig();
+    configManager = new ConfigManager(
+        this.dbConnector,
+        Suppliers.ofInstance(metadataStorageTablesConfig),
+        Suppliers.ofInstance(configManagerConfig)
+    );
     jacksonConfigManager = new JacksonConfigManager(
         configManager,
         new ObjectMapper(),
-        new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
-        mockAuditManager
+        null
     );
     configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
   }
@@ -86,6 +82,7 @@ public class ConfigManagerTest
   @Test
   public void testSetNewObjectIsNull()
   {
+    setup();
     ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, null);
     Assert.assertFalse(setResult.isOk());
     Assert.assertFalse(setResult.isRetryable());
@@ -95,6 +92,7 @@ public class ConfigManagerTest
   @Test
   public void testSetConfigManagerNotStarted()
   {
+    setup();
     ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, NEW_CONFIG);
     Assert.assertFalse(setResult.isOk());
     Assert.assertFalse(setResult.isRetryable());
@@ -104,56 +102,100 @@ public class ConfigManagerTest
   @Test
   public void testSetOldObjectNullShouldInsertWithoutSwap()
   {
-    configManager.start();
-    ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, null, NEW_CONFIG);
-    Assert.assertTrue(setResult.isOk());
-    Mockito.verify(mockDbConnector).insertOrUpdate(
-        ArgumentMatchers.eq(TABLE_NAME),
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.eq(CONFIG_KEY),
-        ArgumentMatchers.any(byte[].class)
-    );
-    Mockito.verifyNoMoreInteractions(mockDbConnector);
+    final AtomicBoolean called = new AtomicBoolean();
+    setup(new TestMetadataStorageConnector()
+    {
+
+      @Override
+      public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
+      {
+        Assert.assertFalse(called.getAndSet(true));
+        Assert.assertEquals(TABLE_NAME, tableName);
+        Assert.assertEquals(CONFIG_KEY, key);
+        return null;
+      }
+    });
+
+    try {
+      configManager.start();
+      ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, null, NEW_CONFIG);
+      Assert.assertTrue(setResult.isOk());
+      Assert.assertTrue(called.get());
+    }
+    finally {
+      configManager.stop();
+    }
   }
 
   @Test
   public void testSetOldObjectNotNullShouldSwap()
   {
-    when(mockConfigManagerConfig.isEnableCompareAndSwap()).thenReturn(true);
-    when(mockDbConnector.compareAndSwap(any(List.class))).thenReturn(true);
-    final ArgumentCaptor<List<MetadataCASUpdate>> updateCaptor = ArgumentCaptor.forClass(List.class);
-    configManager.start();
-    ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, OLD_CONFIG, NEW_CONFIG);
-    Assert.assertTrue(setResult.isOk());
-    Mockito.verify(mockDbConnector).compareAndSwap(
-        updateCaptor.capture()
-    );
-    Mockito.verifyNoMoreInteractions(mockDbConnector);
-    Assert.assertEquals(1, updateCaptor.getValue().size());
-    Assert.assertEquals(TABLE_NAME, updateCaptor.getValue().get(0).getTableName());
-    Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN, updateCaptor.getValue().get(0).getKeyColumn());
-    Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN, updateCaptor.getValue().get(0).getValueColumn());
-    Assert.assertEquals(CONFIG_KEY, updateCaptor.getValue().get(0).getKey());
-    Assert.assertArrayEquals(OLD_CONFIG, updateCaptor.getValue().get(0).getOldValue());
-    Assert.assertArrayEquals(configConfigSerdeFromClass.serialize(NEW_CONFIG), updateCaptor.getValue().get(0).getNewValue());
+    final AtomicBoolean called = new AtomicBoolean();
+    setup(new TestMetadataStorageConnector()
+    {
+      @Override
+      public boolean compareAndSwap(List<MetadataCASUpdate> updates)
+      {
+        Assert.assertFalse(called.getAndSet(true));
+        Assert.assertEquals(1, updates.size());
+        final MetadataCASUpdate singularUpdate = updates.get(0);
+        Assert.assertEquals(TABLE_NAME, singularUpdate.getTableName());
+        Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN, singularUpdate.getKeyColumn());
+        Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN, singularUpdate.getValueColumn());
+        Assert.assertEquals(CONFIG_KEY, singularUpdate.getKey());
+        Assert.assertArrayEquals(OLD_CONFIG, singularUpdate.getOldValue());
+        Assert.assertArrayEquals(configConfigSerdeFromClass.serialize(NEW_CONFIG), singularUpdate.getNewValue());
+        return true;
+      }
+    });
+    try {
+      configManager.start();
+      ConfigManager.SetResult setResult = configManager.set(
+          CONFIG_KEY,
+          configConfigSerdeFromClass,
+          OLD_CONFIG,
+          NEW_CONFIG
+      );
+      Assert.assertTrue(setResult.isOk());
+      Assert.assertTrue(called.get());
+    }
+    finally {
+      configManager.stop();
+    }
   }
 
   @Test
   public void testSetOldObjectNotNullButCompareAndSwapDisabledShouldInsertWithoutSwap()
   {
-    when(mockConfigManagerConfig.isEnableCompareAndSwap()).thenReturn(false);
-    configManager.start();
-    ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, OLD_CONFIG, NEW_CONFIG);
-    Assert.assertTrue(setResult.isOk());
-    Mockito.verify(mockDbConnector).insertOrUpdate(
-        ArgumentMatchers.eq(TABLE_NAME),
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.eq(CONFIG_KEY),
-        ArgumentMatchers.any(byte[].class)
-    );
-    Mockito.verifyNoMoreInteractions(mockDbConnector);
+    final AtomicBoolean called = new AtomicBoolean();
+
+    setup(new TestMetadataStorageConnector()
+    {
+      @Override
+      public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
+      {
+        Assert.assertFalse(called.getAndSet(true));
+        Assert.assertEquals(TABLE_NAME, tableName);
+        Assert.assertEquals(CONFIG_KEY, key);
+        return null;
+      }
+    });
+    configManagerConfig.enableCompareAndSwap = false;
+
+    try {
+      configManager.start();
+      ConfigManager.SetResult setResult = configManager.set(
+          CONFIG_KEY,
+          configConfigSerdeFromClass,
+          OLD_CONFIG,
+          NEW_CONFIG
+      );
+      Assert.assertTrue(setResult.isOk());
+      Assert.assertTrue(called.get());
+    }
+    finally {
+      configManager.stop();
+    }
   }
 
   static class TestConfig

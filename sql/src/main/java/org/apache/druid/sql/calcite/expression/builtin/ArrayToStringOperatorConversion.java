@@ -33,7 +33,7 @@ public class ArrayToStringOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_TO_STRING")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,expr)",
+              "'ARRAY_TO_STRING(array, expr)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)

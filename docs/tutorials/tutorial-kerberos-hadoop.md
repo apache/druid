@@ -1,7 +1,7 @@
 ---
 id: tutorial-kerberos-hadoop
-title: "Configuring Apache Druid to use Kerberized Apache Hadoop as deep storage"
-sidebar_label: "Kerberized HDFS deep storage"
+title: Configure Apache Druid to use Kerberized Apache Hadoop as deep storage
+sidebar_label: Kerberized HDFS deep storage
 ---
 
 <!--

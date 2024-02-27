@@ -62,19 +62,19 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/cpu_count",
         cpusetSnapshot.getCpuSetCpus().length
     ));
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/effective_cpu_count",
         cpusetSnapshot.getEffectiveCpuSetCpus().length
     ));
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/mems_count",
         cpusetSnapshot.getCpuSetMems().length
     ));
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/effective_mems_count",
         cpusetSnapshot.getEffectiveCpuSetMems().length
     ));

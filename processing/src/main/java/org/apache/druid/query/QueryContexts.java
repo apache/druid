@@ -31,10 +31,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @PublicApi
 public class QueryContexts
@@ -54,6 +56,8 @@ public class QueryContexts
   public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
   public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
+  public static final String MAX_SUBQUERY_BYTES_KEY = "maxSubqueryBytes";
+  public static final String USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = "useNestedForUnknownTypeInSubquery";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
@@ -81,10 +85,15 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  public static final String WINDOWING_STRICT_VALIDATION = "windowingStrictValidation";
+
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
+
+  // SQL statement resource specific keys
+  public static final String CTX_EXECUTION_MODE = "executionMode";
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -110,6 +119,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
+  public static final boolean DEFAULT_WINDOWING_STRICT_VALIDATION = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -423,8 +433,20 @@ public class QueryContexts
 
   public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz, E defaultValue)
   {
-    if (value == null) {
+    E result = getAsEnum(key, value, clazz);
+    if (result == null) {
       return defaultValue;
+    } else {
+      return result;
+    }
+  }
+
+
+  @Nullable
+  public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz)
+  {
+    if (value == null) {
+      return null;
     }
 
     try {
@@ -437,7 +459,12 @@ public class QueryContexts
     catch (IllegalArgumentException e) {
       throw badValueException(
           key,
-          StringUtils.format("a value of enum [%s]", clazz.getSimpleName()),
+          StringUtils.format(
+              "referring to one of the values [%s] of enum [%s]",
+              Arrays.stream(clazz.getEnumConstants()).map(E::name).collect(
+                  Collectors.joining(",")),
+              clazz.getSimpleName()
+          ),
           value
       );
     }

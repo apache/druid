@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
+@SuppressWarnings("CheckReturnValue")
 public class ImmutableRTreeTest
 {
   @Test

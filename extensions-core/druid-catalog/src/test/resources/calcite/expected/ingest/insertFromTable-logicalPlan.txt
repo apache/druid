@@ -1,0 +1,3 @@
+LogicalInsert(target=[dst], partitionedBy=['ALL TIME'], clusteredBy=[<none>])
+  LogicalProject(__time=[$0], extra1=[$1], dim2=[$2], dim1=[$3], cnt=[$4], m1=[$5], extra2=[$6], extra3=[$7], m2=[$8])
+    LogicalTableScan(table=[[druid, foo]])

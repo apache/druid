@@ -57,13 +57,13 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
   const { value, unlimited } = props;
   const [showValue, setShowValue] = useState<string | undefined>();
 
-  function renderShowValueDialog(): JSX.Element | undefined {
+  function renderShowValueDialog() {
     if (!showValue) return;
 
     return <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />;
   }
 
-  function renderTruncated(str: string): JSX.Element {
+  function renderTruncated(str: string) {
     if (str.length <= MAX_CHARS_TO_SHOW) {
       return <div className="table-cell plain">{str}</div>;
     }

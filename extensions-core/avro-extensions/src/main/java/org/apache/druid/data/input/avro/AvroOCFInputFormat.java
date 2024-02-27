@@ -40,6 +40,7 @@ import java.util.Objects;
 
 public class AvroOCFInputFormat extends NestedInputFormat
 {
+  static final long SCALE_FACTOR = 8L;
   private static final Logger LOGGER = new Logger(AvroOCFInputFormat.class);
 
   private final boolean binaryAsString;
@@ -114,6 +115,12 @@ public class AvroOCFInputFormat extends NestedInputFormat
         binaryAsString,
         extractUnionsByType
     );
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    return size * SCALE_FACTOR;
   }
 
   @Override

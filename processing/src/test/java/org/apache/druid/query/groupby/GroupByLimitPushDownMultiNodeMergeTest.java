@@ -62,9 +62,6 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -128,11 +125,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         JSON_MAPPER,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -162,7 +154,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
                 .withRollup(withRollup)
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
   }
@@ -206,7 +197,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -242,7 +233,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
@@ -277,7 +268,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileC = INDEX_MERGER_V9.persist(
         indexC,
         new File(tmpDir, "C"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexC = INDEX_IO.loadIndex(fileC);
@@ -313,7 +304,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileD = INDEX_MERGER_V9.persist(
         indexD,
         new File(tmpDir, "D"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexD = INDEX_IO.loadIndex(fileD);
@@ -428,7 +419,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileE = INDEX_MERGER_V9.persist(
         indexE,
         new File(tmpDir, "E"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexE = INDEX_IO.loadIndex(fileE);
@@ -523,7 +514,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileF = INDEX_MERGER_V9.persist(
         indexF,
         new File(tmpDir, "F"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexF = INDEX_IO.loadIndex(fileF);
@@ -551,11 +542,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return "v2";
-      }
 
       @Override
       public int getBufferGrouperInitialBuckets()
@@ -570,8 +556,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
       }
     };
     config.setSingleThreaded(false);
-    config.setMaxIntermediateRows(Integer.MAX_VALUE);
-    config.setMaxResults(Integer.MAX_VALUE);
 
     DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
     {
@@ -590,50 +574,34 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        druidProcessingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            druidProcessingConfig,
-            configSupplier,
-            bufferPool,
-            mergePool,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergePool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        NOOP_QUERYWATCHER
     );
 
-    final GroupByStrategySelector strategySelector2 = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine2 = new GroupingEngine(
+        druidProcessingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            druidProcessingConfig,
-            configSupplier,
-            bufferPool,
-            mergePool2,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergePool2,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        NOOP_QUERYWATCHER
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(
-        strategySelector,
-        new GroupByQueryQueryToolChest(strategySelector)
+        groupingEngine,
+        new GroupByQueryQueryToolChest(groupingEngine)
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
-        strategySelector2,
-        new GroupByQueryQueryToolChest(strategySelector2)
+        groupingEngine2,
+        new GroupByQueryQueryToolChest(groupingEngine2)
     );
   }
 

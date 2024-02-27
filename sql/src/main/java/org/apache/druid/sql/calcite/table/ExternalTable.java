@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptTable.ToRelContext;
 import org.apache.calcite.rel.RelNode;
@@ -29,6 +30,8 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
+
+import java.util.Set;
 
 /**
  * Represents an source of data external to Druid: a CSV file, an HTTP request, etc.
@@ -42,7 +45,7 @@ public class ExternalTable extends DruidTable
   private final DataSource dataSource;
   private final ObjectMapper objectMapper;
 
-  private final String inputSourceType;
+  private final Supplier<Set<String>> inputSourceTypeSupplier;
 
   /**
    * Cached row type, to avoid recreating types multiple times.
@@ -53,13 +56,13 @@ public class ExternalTable extends DruidTable
       final DataSource dataSource,
       final RowSignature rowSignature,
       final ObjectMapper objectMapper,
-      final String inputSourceType
+      final Supplier<Set<String>> inputSourceTypesSupplier
   )
   {
     super(rowSignature);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.objectMapper = objectMapper;
-    this.inputSourceType = inputSourceType;
+    this.inputSourceTypeSupplier = inputSourceTypesSupplier;
   }
 
   @Override
@@ -93,9 +96,9 @@ public class ExternalTable extends DruidTable
     return rowType;
   }
 
-  public String getInputSourceType()
+  public Supplier<Set<String>> getInputSourceTypeSupplier()
   {
-    return inputSourceType;
+    return inputSourceTypeSupplier;
   }
 
   @Override
@@ -110,7 +113,6 @@ public class ExternalTable extends DruidTable
     return "ExternalTable{" +
            "dataSource=" + dataSource +
            ", rowSignature=" + getRowSignature() +
-           ", inputSourceType=" + getInputSourceType() +
            '}';
   }
 }

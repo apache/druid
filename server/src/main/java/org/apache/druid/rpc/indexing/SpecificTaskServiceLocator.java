@@ -22,6 +22,7 @@ package org.apache.druid.rpc.indexing;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.indexing.TaskStatusResponse;
@@ -165,7 +166,8 @@ public class SpecificTaskServiceLocator implements ServiceLocator
                   }
                 }
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
 
         return Futures.nonCancellationPropagating(retVal);

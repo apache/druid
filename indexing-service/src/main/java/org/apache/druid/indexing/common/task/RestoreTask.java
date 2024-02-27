@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskStatus;
@@ -28,12 +29,15 @@ import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class RestoreTask extends AbstractFixedIntervalTask
 {
@@ -60,6 +64,14 @@ public class RestoreTask extends AbstractFixedIntervalTask
     return "restore";
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return ImmutableSet.of();
+  }
+
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
@@ -68,7 +80,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new RetrieveUnusedSegmentsAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new RetrieveUnusedSegmentsAction(myLock.getDataSource(), myLock.getInterval(), null, null));
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {

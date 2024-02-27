@@ -1,0 +1,1 @@
+SELECT LEAD(col3) OVER (ORDER BY col0 ) LEAD_col3 FROM "fewRowsAllData.parquet"

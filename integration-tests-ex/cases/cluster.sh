@@ -129,7 +129,7 @@ function show_status {
 function build_shared_dir {
   mkdir -p $SHARED_DIR
   # Must start with an empty DB to keep MySQL happy
-  rm -rf $SHARED_DIR/db
+  sudo rm -rf $SHARED_DIR/db
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
   mkdir -p $SHARED_DIR/db
@@ -139,7 +139,7 @@ function build_shared_dir {
   # Permissions in some build setups are screwed up. See above. The user
   # which runs Docker does not have permission to write into the /shared
   # directory. Force ownership to allow writing.
-  chmod -R a+rwx $SHARED_DIR
+  sudo chmod -R a+rwx $SHARED_DIR
 }
 
 # Either generate the docker-compose file, or use "static" versions.

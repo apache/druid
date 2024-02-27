@@ -16,12 +16,16 @@
  * limitations under the License.
  */
 
-import type { DateRange } from '@blueprintjs/datetime';
+import type { DateRange } from '@blueprintjs/datetime2';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+export function prettyFormatIsoDate(isoDate: string): string {
+  return isoDate.replace('T', ' ').replace(/\.\d\d\dZ$/, '');
 }
 
 export function utcToLocalDate(utcDate: Date): Date {

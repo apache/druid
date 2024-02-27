@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
@@ -43,6 +44,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,6 +78,7 @@ public class AvroStreamInputRowParserTest
   private static final String ID = "id";
   private static final String SOME_OTHER_ID = "someOtherId";
   private static final String IS_VALID = "isValid";
+  private static final String NESTED_ARRAY_VAL = "nestedArrayVal";
   private static final String TOPIC = "aTopic";
   private static final String EVENT_TYPE_VALUE = "type-a";
   private static final long ID_VALUE = 1976491L;
@@ -84,8 +87,9 @@ public class AvroStreamInputRowParserTest
   private static final int SOME_INT_VALUE = 1;
   private static final long SOME_LONG_VALUE = 679865987569912369L;
   private static final ZonedDateTime DATE_TIME = ZonedDateTime.of(2015, 10, 25, 19, 30, 0, 0, ZoneOffset.UTC);
-  static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
+  static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID, NESTED_ARRAY_VAL);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
+      NESTED_ARRAY_VAL,
       SOME_OTHER_ID,
       "someIntArray",
       "someFloat",
@@ -105,7 +109,8 @@ public class AvroStreamInputRowParserTest
       new JSONPathSpec(
           true,
           ImmutableList.of(
-              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong"),
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nestedArrayVal", "someRecordArray[?(@.nestedString=='string in record')].nestedString")
           )
       )
   );
@@ -115,7 +120,9 @@ public class AvroStreamInputRowParserTest
       new JSONPathSpec(
           true,
           ImmutableList.of(
-              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong"),
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nestedArrayVal", "someRecordArray[?(@.nestedString=='string in record')].nestedString")
+
           )
       )
   );
@@ -294,6 +301,45 @@ public class AvroStreamInputRowParserTest
     }
   }
 
+  @Test
+  public void testParseInvalidData() throws IOException, SchemaValidationException
+  {
+    Repository repository = new InMemoryRepository(null);
+    SchemaRepoBasedAvroBytesDecoder<String, Integer> decoder = new SchemaRepoBasedAvroBytesDecoder<>(
+        new Avro1124SubjectAndIdConverter(TOPIC),
+        repository
+    );
+
+    // prepare data
+    GenericRecord someAvroDatum = buildSomeAvroDatum();
+
+    // encode schema id
+    Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
+    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<>(
+        repository,
+        new IntegerConverter(),
+        new AvroSchemaConverter(),
+        new IdentityConverter()
+    );
+    Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
+    ByteBuffer byteBuffer = ByteBuffer.allocate(20);
+    converter.putSubjectAndId(id, byteBuffer);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(new byte[0]);
+    out.write(byteBuffer.array());
+
+    DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(someAvroDatum.getSchema());
+    // write avro datum to bytes
+    writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
+
+    ParseException parseException = Assert.assertThrows(
+        ParseException.class,
+        () -> decoder.parse(ByteBuffer.wrap(out.toByteArray()))
+    );
+    Assert.assertTrue(parseException.getCause() instanceof AvroRuntimeException);
+    Assert.assertTrue(parseException.getMessage().contains("Failed to read Avro message"));
+  }
+
   static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions, boolean isFromPigAvro)
   {
     Assert.assertEquals(expectedDimensions, inputRow.getDimensions());
@@ -364,6 +410,14 @@ public class AvroStreamInputRowParserTest
     LinkedHashMap someRecord = (LinkedHashMap) someRecordObj;
     Assert.assertEquals(4892, someRecord.get("subInt"));
     Assert.assertEquals(1543698L, someRecord.get("subLong"));
+
+    final Object someList = inputRow.getDimension("nestedArrayVal");
+    Assert.assertNotNull(someList);
+    Assert.assertTrue(someList instanceof List);
+    List someRecordObj3List = (List) someList;
+    Assert.assertEquals(1, someRecordObj3List.size());
+    Assert.assertEquals("string in record", someRecordObj3List.get(0));
+
 
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
     Assert.assertEquals(1, inputRow.getDimension("someIntValueMap").size());

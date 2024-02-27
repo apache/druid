@@ -23,8 +23,10 @@ sidebar_label: "SQL metadata tables"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
@@ -47,8 +49,10 @@ FROM INFORMATION_SCHEMA.COLUMNS
 WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
-> Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
-> `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::info
+ Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
+ `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::
 
 ### SCHEMATA table
 `INFORMATION_SCHEMA.SCHEMATA` provides a list of all known schemas, which include `druid` for standard [Druid Table datasources](datasource.md#table), `lookup` for [Lookups](datasource.md#lookup), `sys` for the virtual [System metadata tables](#system-schema), and `INFORMATION_SCHEMA` for these virtual tables. Tables are allowed to have the same name across different schemas, so the schema may be included in an SQL statement to distinguish them, e.g. `lookup.table` vs `druid.table`.
@@ -105,13 +109,35 @@ SELECT "ORDINAL_POSITION", "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "JDBC_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE "TABLE_NAME" = 'foo'
 ```
+### ROUTINES table
+`INFORMATION_SCHEMA.ROUTINES` provides a list of all known functions.
+
+|Column|Type| Notes|
+|------|----|------|
+|ROUTINE_CATALOG|VARCHAR| The catalog that contains the routine. Always set as `druid`|
+|ROUTINE_SCHEMA|VARCHAR| The schema that contains the routine. Always set as `INFORMATION_SCHEMA`|
+|ROUTINE_NAME|VARCHAR| THe routine name|
+|ROUTINE_TYPE|VARCHAR| The routine type. Always set as `FUNCTION`|
+|IS_AGGREGATOR|VARCHAR| If a routine is an aggregator function, then the value will be set to `YES`, else `NO`|
+|SIGNATURES|VARCHAR| One or more routine signatures|
+
+For example, this query returns information about all the aggregator functions:
+
+```sql
+SELECT "ROUTINE_CATALOG", "ROUTINE_SCHEMA", "ROUTINE_NAME", "ROUTINE_TYPE", "IS_AGGREGATOR", "SIGNATURES"
+FROM "INFORMATION_SCHEMA"."ROUTINES"
+WHERE "IS_AGGREGATOR" = 'YES'
+```
+
 
 ## SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
 
-> Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
-> `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::info
+ Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
+ `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::
 
 ### SEGMENTS table
 
@@ -129,14 +155,15 @@ Segments table provides details on all Druid segments, whether they are publishe
 |num_replicas|BIGINT|Number of replicas of this segment currently being served|
 |num_rows|BIGINT|Number of rows in this segment, or zero if the number of rows is not known.<br /><br />This row count is gathered by the Broker in the background. It will be zero if the Broker has not gathered a row count for this segment yet. For segments ingested from streams, the reported row count may lag behind the result of a `count(*)` query because the cached `num_rows` on the Broker may be out of date. This will settle shortly after new rows stop being written to that particular segment.|
 |is_active|BIGINT|True for segments that represent the latest state of a datasource.<br /><br />Equivalent to `(is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1`. In steady state, when no ingestion or data management operations are happening, `is_active` will be equivalent to `is_available`. However, they may differ from each other when ingestion or data management operations have executed recently. In these cases, Druid will load and unload segments appropriately to bring actual availability in line with the expected state given by `is_active`.|
-|is_published|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment has been published to the metadata store and is marked as used. See the [segment lifecycle documentation](../design/architecture.md#segment-lifecycle) for more details.|
-|is_available|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any data serving process, like a Historical or a realtime ingestion task. See the [segment lifecycle documentation](../design/architecture.md#segment-lifecycle) for more details.|
+|is_published|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment has been published to the metadata store and is marked as used. See the [segment lifecycle documentation](../design/storage.md#segment-lifecycle) for more details.|
+|is_available|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any data serving process, like a Historical or a realtime ingestion task. See the [segment lifecycle documentation](../design/storage.md#segment-lifecycle) for more details.|
 |is_realtime|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any Historical process is serving this segment.|
-|is_overshadowed|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, `is_overshadowed` is always 0 for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [segment lifecycle documentation](../design/architecture.md#segment-lifecycle) for more details.|
+|is_overshadowed|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, `is_overshadowed` is always 0 for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [segment lifecycle documentation](../design/storage.md#segment-lifecycle) for more details.|
 |shard_spec|VARCHAR|JSON-serialized form of the segment `ShardSpec`|
 |dimensions|VARCHAR|JSON-serialized form of the segment dimensions|
 |metrics|VARCHAR|JSON-serialized form of the segment metrics|
 |last_compaction_state|VARCHAR|JSON-serialized form of the compaction task's config (compaction task which created this segment). May be null if segment was not created by compaction task.|
+|replication_factor|BIGINT|Total number of replicas of the segment that are required to be loaded across all historical tiers, based on the load rule that currently applies to this segment. If this value is 0, the segment is not assigned to any historical and will not be loaded. This value is -1 if load rules for the segment have not been evaluated yet.|
 
 For example, to retrieve all currently active segments for datasource "wikipedia", use the query:
 
@@ -207,8 +234,8 @@ Servers table lists all discovered servers in the cluster.
 |tier|VARCHAR|Distribution tier see [druid.server.tier](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
 |current_size|BIGINT|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
 |max_size|BIGINT|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
-|is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or the default long value (0 or null depending on `druid.generic.useDefaultValueForNull`) if the server type does not have the concept of leadership|
-
+|is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or the default long value (null or zero depending on `druid.generic.useDefaultValueForNull`) if the server type does not have the concept of leadership|
+|start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 To retrieve information about all servers, use the query:
 
 ```sql
@@ -272,8 +299,8 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|VARCHAR|Supervisor task identifier|
-|state|VARCHAR|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|detailed_state|VARCHAR|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
+|state|VARCHAR|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md) for more information.|
+|detailed_state|VARCHAR|Supervisor specific state. See documentation of the specific supervisor for details: [Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md).|
 |healthy|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
 |type|VARCHAR|Type of supervisor, e.g. `kafka`, `kinesis` or `materialized_view`|
 |source|VARCHAR|Source of the supervisor, e.g. Kafka topic or Kinesis stream|

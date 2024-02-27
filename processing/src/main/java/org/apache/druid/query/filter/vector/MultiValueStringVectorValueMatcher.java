@@ -19,16 +19,18 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
-import java.util.Objects;
 
 public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFactory
 {
@@ -42,17 +44,18 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
-    final String etnValue = NullHandling.emptyToNullIfNeeded(NullHandling.emptyToNullIfNeeded(value));
+    final String etnValue = NullHandling.emptyToNullIfNeeded(value);
     final IdLookup idLookup = selector.idLookup();
     final int id;
 
     if (idLookup != null) {
       // Optimization when names can be looked up to IDs ahead of time.
       id = idLookup.lookupId(etnValue);
+      final boolean hasNull = NullHandling.isNullOrEquivalent(selector.lookupName(0));
 
       if (id < 0) {
         // Value doesn't exist in this column.
-        return BooleanVectorValueMatcher.of(selector, false);
+        return VectorValueMatcher.allFalseMultiValueDimensionMatcher(selector);
       }
 
       // Check for "id".
@@ -61,7 +64,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
         @Override
-        public ReadableVectorMatch match(final ReadableVectorMatch mask)
+        public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
           final IndexedInts[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
@@ -75,12 +78,13 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
             if (n == 0) {
               // null should match empty rows in multi-value columns
-              if (etnValue == null) {
+              if (etnValue == null || includeUnknown) {
                 selection[numRows++] = rowNum;
               }
             } else {
               for (int j = 0; j < n; j++) {
-                if (ints.get(j) == id) {
+                final int rowId = ints.get(j);
+                if ((hasNull && includeUnknown && rowId == 0) || (rowId == id)) {
                   selection[numRows++] = rowNum;
                   break;
                 }
@@ -89,13 +93,23 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
     } else {
-      return makeMatcher(s -> Objects.equals(s, etnValue));
+      return makeMatcher(etnValue == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(etnValue));
     }
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
+    if (castForComparison == null) {
+      return VectorValueMatcher.allFalseMultiValueDimensionMatcher(selector);
+    }
+    return makeMatcher(castForComparison.asString());
   }
 
   @Override
@@ -104,10 +118,8 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
     return makeMatcher(predicateFactory.makeStringPredicate());
   }
 
-  private VectorValueMatcher makeMatcher(final Predicate<String> predicate)
+  private VectorValueMatcher makeMatcher(final DruidObjectPredicate<String> predicate)
   {
-    final boolean matchNull = predicate.apply(null);
-
     if (selector.getValueCardinality() > 0) {
       final BitSet checkedIds = new BitSet(selector.getValueCardinality());
       final BitSet matchingIds = new BitSet(selector.getValueCardinality());
@@ -118,7 +130,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         private final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
         @Override
-        public ReadableVectorMatch match(final ReadableVectorMatch mask)
+        public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
           final IndexedInts[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
@@ -132,7 +144,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
             if (n == 0) {
               // null should match empty rows in multi-value columns
-              if (matchNull) {
+              if (predicate.apply(null).matches(includeUnknown)) {
                 selection[numRows++] = rowNum;
               }
             } else {
@@ -143,7 +155,8 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
                 if (checkedIds.get(id)) {
                   matches = matchingIds.get(id);
                 } else {
-                  matches = predicate.apply(selector.lookupName(id));
+                  final String val = selector.lookupName(id);
+                  matches = predicate.apply(val).matches(includeUnknown);
                   checkedIds.set(id);
                   if (matches) {
                     matchingIds.set(id);
@@ -159,7 +172,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
@@ -170,7 +182,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
         @Override
-        public ReadableVectorMatch match(final ReadableVectorMatch mask)
+        public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
           final IndexedInts[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
@@ -184,13 +196,14 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
             if (n == 0) {
               // null should match empty rows in multi-value columns
-              if (matchNull) {
+              if (predicate.apply(null).matches(includeUnknown)) {
                 selection[numRows++] = rowNum;
               }
             } else {
               for (int j = 0; j < n; j++) {
                 final int id = ints.get(j);
-                if (predicate.apply(selector.lookupName(id))) {
+                final String val = selector.lookupName(id);
+                if (predicate.apply(val).matches(includeUnknown)) {
                   selection[numRows++] = rowNum;
                   break;
                 }
@@ -199,7 +212,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };

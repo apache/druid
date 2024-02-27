@@ -32,10 +32,11 @@ import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.querykit.BroadcastJoinSegmentMapFnProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 
@@ -123,36 +124,47 @@ public class WorkerMemoryParameters
   private static final long PARTITION_STATS_MEMORY_MAX_BYTES = 300_000_000;
 
   /**
-   * Fraction of free memory per bundle that can be used by {@link org.apache.druid.msq.querykit.BroadcastJoinHelper}
-   * to store broadcast data on-heap. This is used to limit the total size of input frames, which we expect to
-   * expand on-heap. Expansion can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are
-   * UTF-16 on-heap, which is a 2x expansion, and object and index overhead must be considered on top of that. So
-   * we use a value somewhat lower than 0.5.
+   * Threshold in bytes below which we assume that the worker is "small". While calculating the memory requirements for
+   * a small worker, we try to be as conservatives with the estimates and the extra temporary space required by the
+   * frames, since that can add up quickly and cause OOM.
+   */
+  private static final long SMALL_WORKER_CAPACITY_THRESHOLD_BYTES = 256_000_000;
+
+  /**
+   * Fraction of free memory per bundle that can be used by {@link BroadcastJoinSegmentMapFnProcessor} to store broadcast
+   * data on-heap. This is used to limit the total size of input frames, which we expect to expand on-heap. Expansion
+   * can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are UTF-16 on-heap, which is
+   * a 2x expansion, and object and index overhead must be considered on top of that. So we use a value somewhat
+   * lower than 0.5.
    */
   static final double BROADCAST_JOIN_MEMORY_FRACTION = 0.3;
+
+  /**
+   * Fraction of free memory per bundle that can be used by
+   * {@link org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessor} to buffer frames in its trackers.
+   */
+  static final double SORT_MERGE_JOIN_MEMORY_FRACTION = 0.9;
+
   /**
    * In case {@link NotEnoughMemoryFault} is thrown, a fixed estimation overhead is added when estimating total memory required for the process.
    */
   private static final long BUFFER_BYTES_FOR_ESTIMATION = 1000;
 
+  private final long processorBundleMemory;
   private final int superSorterMaxActiveProcessors;
   private final int superSorterMaxChannelsPerProcessor;
-  private final long appenderatorMemory;
-  private final long broadcastJoinMemory;
   private final int partitionStatisticsMaxRetainedBytes;
 
   WorkerMemoryParameters(
+      final long processorBundleMemory,
       final int superSorterMaxActiveProcessors,
       final int superSorterMaxChannelsPerProcessor,
-      final long appenderatorMemory,
-      final long broadcastJoinMemory,
       final int partitionStatisticsMaxRetainedBytes
   )
   {
+    this.processorBundleMemory = processorBundleMemory;
     this.superSorterMaxActiveProcessors = superSorterMaxActiveProcessors;
     this.superSorterMaxChannelsPerProcessor = superSorterMaxChannelsPerProcessor;
-    this.appenderatorMemory = appenderatorMemory;
-    this.broadcastJoinMemory = broadcastJoinMemory;
     this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
   }
 
@@ -309,14 +321,37 @@ public class WorkerMemoryParameters
         )
     );
 
-    // Apportion max frames to all processors equally, then subtract one to account for an output frame.
-    final int superSorterMaxChannelsPerProcessor = maxNumFramesForSuperSorter / superSorterMaxActiveProcessors - 1;
+    final int isSmallWorker = usableMemoryInJvm < SMALL_WORKER_CAPACITY_THRESHOLD_BYTES ? 1 : 0;
+    // Apportion max frames to all processors equally, then subtract one to account for an output frame and one to account
+    // for the durable storage's output frame in the supersorter. The extra frame is required in case of durable storage
+    // since composing output channel factories keep a frame open while writing to them.
+    // We only account for this extra frame in the workers where the heap size is relatively small to be more
+    // conservative with the memory estimations. In workers with heap size larger than the frame size, we can get away
+    // without accounting for this extra frame, and instead better parallelize the supersorter's operations.
+    final int superSorterMaxChannelsPerProcessor = maxNumFramesForSuperSorter / superSorterMaxActiveProcessors
+                                                   - 1
+                                                   - isSmallWorker;
+    if (superSorterMaxActiveProcessors <= 0) {
+      throw new MSQException(
+          new NotEnoughMemoryFault(
+              calculateSuggestedMinMemoryFromUsableMemory(
+                  estimateUsableMemory(
+                      numWorkersInJvm,
+                      numProcessingThreadsInJvm,
+                      PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
+                  ), totalLookupFootprint),
+              maxMemoryInJvm,
+              usableMemoryInJvm,
+              numWorkersInJvm,
+              numProcessingThreadsInJvm
+          )
+      );
+    }
 
     return new WorkerMemoryParameters(
+        bundleMemoryForProcessing,
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
-        (long) (bundleMemoryForProcessing * APPENDERATOR_MEMORY_FRACTION),
-        (long) (bundleMemoryForProcessing * BROADCAST_JOIN_MEMORY_FRACTION),
         Ints.checkedCast(workerMemory) // 100% of worker memory is devoted to partition statistics
     );
   }
@@ -334,13 +369,13 @@ public class WorkerMemoryParameters
   public long getAppenderatorMaxBytesInMemory()
   {
     // Half for indexing, half for merging.
-    return Math.max(1, appenderatorMemory / 2);
+    return Math.max(1, getAppenderatorMemory() / 2);
   }
 
   public int getAppenderatorMaxColumnsToMerge()
   {
     // Half for indexing, half for merging.
-    return Ints.checkedCast(Math.max(2, appenderatorMemory / 2 / APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN));
+    return Ints.checkedCast(Math.max(2, getAppenderatorMemory() / 2 / APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN));
   }
 
   public int getStandardFrameSize()
@@ -355,12 +390,25 @@ public class WorkerMemoryParameters
 
   public long getBroadcastJoinMemory()
   {
-    return broadcastJoinMemory;
+    return (long) (processorBundleMemory * BROADCAST_JOIN_MEMORY_FRACTION);
+  }
+
+  public long getSortMergeJoinMemory()
+  {
+    return (long) (processorBundleMemory * SORT_MERGE_JOIN_MEMORY_FRACTION);
   }
 
   public int getPartitionStatisticsMaxRetainedBytes()
   {
     return partitionStatisticsMaxRetainedBytes;
+  }
+
+  /**
+   * Amount of memory to devote to {@link org.apache.druid.segment.realtime.appenderator.Appenderator}.
+   */
+  private long getAppenderatorMemory()
+  {
+    return (long) (processorBundleMemory * APPENDERATOR_MEMORY_FRACTION);
   }
 
   @Override
@@ -373,10 +421,9 @@ public class WorkerMemoryParameters
       return false;
     }
     WorkerMemoryParameters that = (WorkerMemoryParameters) o;
-    return superSorterMaxActiveProcessors == that.superSorterMaxActiveProcessors
+    return processorBundleMemory == that.processorBundleMemory
+           && superSorterMaxActiveProcessors == that.superSorterMaxActiveProcessors
            && superSorterMaxChannelsPerProcessor == that.superSorterMaxChannelsPerProcessor
-           && appenderatorMemory == that.appenderatorMemory
-           && broadcastJoinMemory == that.broadcastJoinMemory
            && partitionStatisticsMaxRetainedBytes == that.partitionStatisticsMaxRetainedBytes;
   }
 
@@ -384,10 +431,9 @@ public class WorkerMemoryParameters
   public int hashCode()
   {
     return Objects.hash(
+        processorBundleMemory,
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
-        appenderatorMemory,
-        broadcastJoinMemory,
         partitionStatisticsMaxRetainedBytes
     );
   }
@@ -396,10 +442,9 @@ public class WorkerMemoryParameters
   public String toString()
   {
     return "WorkerMemoryParameters{" +
-           "superSorterMaxActiveProcessors=" + superSorterMaxActiveProcessors +
+           "processorBundleMemory=" + processorBundleMemory +
+           ", superSorterMaxActiveProcessors=" + superSorterMaxActiveProcessors +
            ", superSorterMaxChannelsPerProcessor=" + superSorterMaxChannelsPerProcessor +
-           ", appenderatorMemory=" + appenderatorMemory +
-           ", broadcastJoinMemory=" + broadcastJoinMemory +
            ", partitionStatisticsMaxRetainedBytes=" + partitionStatisticsMaxRetainedBytes +
            '}';
   }
@@ -563,7 +608,8 @@ public class WorkerMemoryParameters
     // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
     // we create this instance. Luckily, this is the typical mode of operation, since by default
     // druid.lookup.enableLookupSyncOnStartup = true.
-    final LookupReferencesManager lookupManager = injector.getInstance(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider lookupManager =
+        injector.getInstance(LookupExtractorFactoryContainerProvider.class);
 
     int lookupCount = 0;
     long lookupFootprint = 0;

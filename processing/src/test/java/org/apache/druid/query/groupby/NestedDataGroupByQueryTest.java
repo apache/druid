@@ -34,9 +34,9 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -56,6 +56,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -70,7 +71,6 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private final Closer closer;
-  private final GroupByQueryConfig config;
   private final QueryContexts.Vectorize vectorize;
   private final AggregationTestHelper helper;
   private final BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator;
@@ -83,7 +83,6 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   )
   {
     NestedDataModule.registerHandlersAndSerde();
-    this.config = config;
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         NestedDataModule.getJacksonModulesList(),
@@ -195,9 +194,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
             new Object[]{"100", null, 100L, 1L, "1", null, 2L},
             new Object[]{"hello", null, null, 1L, "1", null, 12L},
             new Object[]{"world", null, null, 1L, "1", null, 2L}
-        ),
-        "incremental".equals(segmentsName),
-        true
+        )
     );
   }
 
@@ -307,10 +304,46 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         groupQuery,
         NullHandling.sqlCompatible()
         ? ImmutableList.of(new Object[]{null, 16L})
-        : ImmutableList.of(new Object[]{"foo", 16L}),
-        true,
-        false
+        : ImmutableList.of(new Object[]{"foo", 16L})
     );
+  }
+
+  @Test
+  public void testGroupByNonExistentFilterAsString()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("nest", "$.fake", "v0", ColumnType.STRING)
+                                          )
+                                          .setDimFilter(new SelectorDimFilter("v0", "1", null))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+    runResults(groupQuery, Collections.emptyList());
+  }
+
+  @Test
+  public void testGroupByNonExistentFilterAsNumeric()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("nest", "$.fake", "v0", ColumnType.LONG)
+                                          )
+                                          .setDimFilter(new SelectorDimFilter("v0", "1", null))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+    runResults(groupQuery, Collections.emptyList());
   }
 
   @Test
@@ -368,7 +401,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedType()
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedTypeLong()
   {
     List<String> vals = new ArrayList<>();
     vals.add("100");
@@ -390,9 +423,79 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         groupQuery,
         ImmutableList.of(
             new Object[]{100L, 2L}
-        ),
-        false,
-        true
+        )
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnNestedStringColumnWithFilterExpectedTypeLong()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.LONG))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nester", "$.y.a", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new SelectorDimFilter("v0", "100", null))
+                                          .build();
+
+
+    runResults(groupQuery, Collections.emptyList());
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedTypeDouble()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.DOUBLE))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{100.0, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedTypeFloat()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.FLOAT))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{100f, 2L}
+        )
     );
   }
 
@@ -446,9 +549,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         ImmutableList.of(
             new Object[]{1672531200000L, NullHandling.defaultLongValue(), 8L},
             new Object[]{1672617600000L, NullHandling.defaultLongValue(), 8L}
-        ),
-        false,
-        true
+        )
     );
   }
 
@@ -471,14 +572,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .build();
 
 
-    runResults(
-        groupQuery,
-        ImmutableList.of(
-            new Object[]{1672531200000L, 8L}
-        ),
-        false,
-        true
-    );
+    runResults(groupQuery, ImmutableList.of(new Object[]{1672531200000L, 8L}));
   }
 
   @Test
@@ -500,14 +594,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .build();
 
 
-    runResults(
-        groupQuery,
-        ImmutableList.of(
-            new Object[]{"1672531200000", 8L}
-        ),
-        true,
-        false
-    );
+    runResults(groupQuery, ImmutableList.of(new Object[]{"1672531200000", 8L}));
   }
 
   @Test
@@ -531,53 +618,32 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
 
     runResults(
         groupQuery,
-        ImmutableList.of(),
-        false,
-        true
+        ImmutableList.of()
     );
-  }
-
-  private void runResults(GroupByQuery groupQuery, List<Object[]> expectedResults)
-  {
-    runResults(groupQuery, expectedResults, false, false);
   }
 
   private void runResults(
       GroupByQuery groupQuery,
-      List<Object[]> expectedResults,
-      boolean hasUnknownCardinality,
-      boolean hasNonStringOutput
+      List<Object[]> expectedResults
   )
   {
+    List<Segment> segments = segmentsGenerator.apply(tempFolder, closer);
     Supplier<List<ResultRow>> runner =
-        () -> helper.runQueryOnSegmentsObjs(segmentsGenerator.apply(tempFolder, closer), groupQuery).toList();
-    if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-      if (hasUnknownCardinality) {
-        Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
-        Assert.assertEquals(
-            "java.lang.UnsupportedOperationException: GroupBy v1 does not support dimension selectors with unknown cardinality.",
-            t.getMessage()
-        );
-        return;
-      }
-      if (hasNonStringOutput) {
-        Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
-        Assert.assertEquals(
-            "java.lang.UnsupportedOperationException: GroupBy v1 only supports dimensions with an outputType of STRING.",
-            t.getMessage()
-        );
-        return;
-      }
-    }
-    if (!"segments".equals(segmentsName)) {
-      if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-        Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
-        Assert.assertEquals(
-            "java.lang.UnsupportedOperationException: GroupBy v1 does not support dimension selectors with unknown cardinality.",
-            t.getMessage()
-        );
-        return;
-      } else if (vectorize == QueryContexts.Vectorize.FORCE) {
+        () -> helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
+    Filter filter = groupQuery.getFilter() == null ? null : groupQuery.getFilter().toFilter();
+    boolean allCanVectorize = segments.stream()
+                                      .allMatch(
+                                          s -> s.asStorageAdapter()
+                                                .canVectorize(
+                                                    filter,
+                                                    groupQuery.getVirtualColumns(),
+                                                    groupQuery.isDescending()
+                                                )
+                                      );
+
+    Assert.assertEquals(NestedDataTestUtils.expectSegmentGeneratorCanVectorize(segmentsName), allCanVectorize);
+    if (!allCanVectorize) {
+      if (vectorize == QueryContexts.Vectorize.FORCE) {
         Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
         Assert.assertEquals(
             "java.util.concurrent.ExecutionException: java.lang.RuntimeException: org.apache.druid.java.util.common.ISE: Cannot vectorize!",
@@ -603,8 +669,10 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
       final Object[] resultRow = results.get(i).getArray();
       Assert.assertEquals(expected.get(i).length, resultRow.length);
       for (int j = 0; j < resultRow.length; j++) {
-        if (rowSignature.getColumnType(j).map(t -> t.anyOf(ValueType.DOUBLE, ValueType.FLOAT)).orElse(false)) {
+        if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.DOUBLE)).orElse(false)) {
           Assert.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
+        } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
+          Assert.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
         } else {
           Assert.assertEquals(expected.get(i)[j], resultRow[j]);
         }

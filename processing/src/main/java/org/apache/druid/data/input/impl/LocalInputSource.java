@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -34,27 +35,37 @@ import org.apache.commons.io.filefilter.NotFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
+public class LocalInputSource
+    extends AbstractInputSource
+    implements SplittableInputSource<List<File>>, SystemFieldInputSource
 {
   private static final Logger log = new Logger(LocalInputSource.class);
   public static final String TYPE_KEY = "local";
@@ -64,26 +75,37 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Nullable
   private final String filter;
   private final List<File> files;
+  private final SystemFields systemFields;
 
   @JsonCreator
   public LocalInputSource(
       @JsonProperty("baseDir") @Nullable File baseDir,
       @JsonProperty("filter") @Nullable String filter,
-      @JsonProperty("files") @Nullable List<File> files
+      @JsonProperty("files") @Nullable List<File> files,
+      @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields
   )
   {
     this.baseDir = baseDir;
     this.filter = baseDir != null ? Preconditions.checkNotNull(filter, "filter") : filter;
     this.files = files == null ? Collections.emptyList() : files;
+    this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
 
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
       throw new IAE("At least one of baseDir or files should be specified");
     }
   }
 
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
+  }
+
   public LocalInputSource(File baseDir, String filter)
   {
-    this(baseDir, filter, null);
+    this(baseDir, filter, null, SystemFields.none());
   }
 
   @Nullable
@@ -117,6 +139,12 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     return filter;
   }
 
+  @Override
+  public Set<SystemField> getConfiguredSystemFields()
+  {
+    return systemFields.getFields();
+  }
+
   public List<File> getFiles()
   {
     return files;
@@ -137,20 +165,28 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public Stream<InputSplit<List<File>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Streams.sequentialStreamFrom(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)))
+    return Streams.sequentialStreamFrom(getSplitFileIterator(inputFormat, getSplitHintSpecOrDefault(splitHintSpec)))
                   .map(InputSplit::new);
   }
 
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Iterators.size(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)));
+    return Iterators.size(getSplitFileIterator(inputFormat, getSplitHintSpecOrDefault(splitHintSpec)));
   }
 
-  private Iterator<List<File>> getSplitFileIterator(SplitHintSpec splitHintSpec)
+  private Iterator<List<File>> getSplitFileIterator(final InputFormat inputFormat, SplitHintSpec splitHintSpec)
   {
     final Iterator<File> fileIterator = getFileIterator();
-    return splitHintSpec.split(fileIterator, file -> new InputFileAttribute(file.length()));
+    return splitHintSpec.split(
+        fileIterator,
+        file -> new InputFileAttribute(
+            file.length(),
+            inputFormat != null
+            ? inputFormat.getWeightedSize(file.getName(), file.length())
+            : file.length()
+        )
+    );
   }
 
   @VisibleForTesting
@@ -208,7 +244,22 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public SplittableInputSource<List<File>> withSplit(InputSplit<List<File>> split)
   {
-    return new LocalInputSource(null, null, split.get());
+    return new LocalInputSource(null, null, split.get(), systemFields);
+  }
+
+  @Override
+  public Object getSystemFieldValue(InputEntity entity, SystemField field)
+  {
+    final FileEntity fileEntity = (FileEntity) entity;
+
+    switch (field) {
+      case URI:
+        return fileEntity.getUri().toString();
+      case PATH:
+        return fileEntity.getFile().getPath();
+      default:
+        return null;
+    }
   }
 
   @Override
@@ -228,7 +279,8 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Iterators.transform(getFileIterator(), FileEntity::new),
+        CloseableIterators.withEmptyBaggage(Iterators.transform(getFileIterator(), FileEntity::new)),
+        SystemFieldDecoratorFactory.fromInputSource(this),
         temporaryDirectory
     );
   }
@@ -243,15 +295,16 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
       return false;
     }
     LocalInputSource that = (LocalInputSource) o;
-    return Objects.equals(baseDir, that.baseDir) &&
-           Objects.equals(filter, that.filter) &&
-           Objects.equals(files, that.files);
+    return Objects.equals(baseDir, that.baseDir)
+           && Objects.equals(filter, that.filter)
+           && Objects.equals(files, that.files)
+           && Objects.equals(systemFields, that.systemFields);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDir, filter, files);
+    return Objects.hash(baseDir, filter, files, systemFields);
   }
 
   @Override
@@ -261,6 +314,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
            "baseDir=\"" + baseDir +
            "\", filter=" + filter +
            ", files=" + files +
+           (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
            "}";
   }
 }

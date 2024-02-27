@@ -53,7 +53,7 @@ public class RetryingInputStream<T> extends InputStream
   private long startOffset;
 
   // Used in tests to disable waiting.
-  private boolean doWait;
+  private final boolean doWait;
 
   /**
    * @param object             The object entity to open
@@ -70,22 +70,61 @@ public class RetryingInputStream<T> extends InputStream
       @Nullable Integer maxTries
   ) throws IOException
   {
+    this(object, objectOpenFunction, retryCondition, maxTries, true);
+  }
+
+  @VisibleForTesting
+  RetryingInputStream(
+      T object,
+      ObjectOpenFunction<T> objectOpenFunction,
+      Predicate<Throwable> retryCondition,
+      @Nullable Integer maxTries,
+      boolean doWait
+  ) throws IOException
+  {
     this.object = Preconditions.checkNotNull(object, "object");
     this.objectOpenFunction = Preconditions.checkNotNull(objectOpenFunction, "objectOpenFunction");
     this.retryCondition = Preconditions.checkNotNull(retryCondition, "retryCondition");
     this.maxTries = maxTries == null ? RetryUtils.DEFAULT_MAX_TRIES : maxTries;
-    this.delegate = new CountingInputStream(objectOpenFunction.open(object));
-    this.doWait = true;
+    this.doWait = doWait;
 
     if (this.maxTries <= 1) {
       throw new IAE("maxTries must be greater than 1");
     }
+    openWithRetry(0);
   }
 
   private void openIfNeeded() throws IOException
   {
     if (delegate == null) {
-      delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
+      openWithRetry(startOffset);
+    }
+  }
+
+  private void openWithRetry(final long offset) throws IOException
+  {
+    for (int nTry = 0; nTry < maxTries; nTry++) {
+      try {
+        delegate = new CountingInputStream(objectOpenFunction.open(object, offset));
+        break;
+      }
+      catch (Throwable t) {
+        final int nextTry = nTry + 1;
+        if (nextTry < maxTries && retryCondition.apply(t)) {
+          final String message = StringUtils.format("Stream interrupted at position [%d]", offset);
+          try {
+            if (doWait) {
+              RetryUtils.awaitNextRetry(t, message, nextTry, maxTries, false);
+            }
+          }
+          catch (InterruptedException e) {
+            t.addSuppressed(e);
+            throwAsIOException(t);
+          }
+        } else {
+          throwAsIOException(t);
+        }
+      }
     }
   }
 
@@ -115,8 +154,7 @@ public class RetryingInputStream<T> extends InputStream
         if (doWait) {
           RetryUtils.awaitNextRetry(t, message, nextTry, maxTries, false);
         }
-
-        delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
+        openWithRetry(startOffset);
       }
       catch (InterruptedException | IOException e) {
         t.addSuppressed(e);
@@ -232,11 +270,5 @@ public class RetryingInputStream<T> extends InputStream
     if (delegate != null) {
       delegate.close();
     }
-  }
-
-  @VisibleForTesting
-  void setNoWait()
-  {
-    this.doWait = false;
   }
 }

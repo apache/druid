@@ -33,7 +33,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 public interface DruidToGraphiteEventConverter
 {
   /**
-   * This function acts as a filter. It returns <tt>null</tt> if the event is not suppose to be emitted to Graphite
+   * This function acts as a filter. It returns <tt>null</tt> if the event is not supposed to be emitted to Graphite
    * Also This function will define the mapping between the druid event dimension's values and Graphite metric Path
    *
    * @param serviceMetricEvent Druid event ot type {@link ServiceMetricEvent}

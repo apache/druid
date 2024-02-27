@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -111,5 +112,49 @@ public class Types
   {
     return (typeSignature1 != null && typeSignature1.is(typeDescriptor)) ||
            (typeSignature2 != null && typeSignature2.is(typeDescriptor));
+  }
+
+  /**
+   * Returns true if {@link TypeSignature} is not null and is {@link TypeSignature#isNumeric()}
+   */
+  public static <T extends TypeDescriptor> boolean isNumeric(@Nullable TypeSignature<T> typeSignature)
+  {
+    return typeSignature != null && typeSignature.isNumeric();
+  }
+
+  /**
+   * Returns true if {@link TypeSignature} is not null and is {@link TypeSignature#isNumeric()} or has
+   * {@link TypeSignature#getElementType()} that is numeric.
+   */
+  public static <T extends TypeDescriptor> boolean isNumericOrNumericArray(@Nullable TypeSignature<T> typeSignature)
+  {
+    if (typeSignature == null) {
+      return false;
+    }
+    return typeSignature.isNumeric() || (typeSignature.isArray() && typeSignature.getElementType().isNumeric());
+  }
+
+  public static class IncompatibleTypeException extends IAE
+  {
+    public IncompatibleTypeException(TypeSignature<?> type, TypeSignature<?> other)
+    {
+      super("Cannot implicitly cast [%s] to [%s]", type, other);
+    }
+  }
+
+  public static class InvalidCastException extends IAE
+  {
+    public InvalidCastException(TypeSignature<?> type, TypeSignature<?> other)
+    {
+      super("Invalid type, cannot cast [" + type + "] to [" + other + "]");
+    }
+  }
+
+  public static class InvalidCastBooleanException extends IAE
+  {
+    public InvalidCastBooleanException(TypeSignature<?> type)
+    {
+      super("Invalid type, cannot coerce [" + type + "] to boolean");
+    }
   }
 }

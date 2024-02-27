@@ -40,9 +40,8 @@ public class SearchStrategySelector
     final String strategyString = config.withOverrides(query).getSearchStrategy();
 
     switch (strategyString) {
-      case AutoStrategy.NAME:
-        log.debug("Auto strategy is selected, query id [%s]", query.getId());
-        return AutoStrategy.of(query);
+      case "auto":
+        log.debug("Auto strategy is selected but has been removed, using 'use-index' strategy instead for query id [%s]", query.getId());
       case UseIndexesStrategy.NAME:
         log.debug("Use-index strategy is selected, query id [%s]", query.getId());
         return UseIndexesStrategy.of(query);

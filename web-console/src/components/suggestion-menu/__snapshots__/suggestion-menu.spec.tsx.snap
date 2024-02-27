@@ -63,11 +63,13 @@ exports[`SuggestionMenu matches snapshot 1`] = `
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <div
             class="bp4-fill bp4-text-overflow-ellipsis"

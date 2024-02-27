@@ -51,7 +51,7 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
   ExprMacroTable macroTable = new ExprMacroTable(ImmutableList.of(createMacro, addMacro, testMacro));
 
   Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
-      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
           .put("bloomy", InputBindings.inputSupplier(BloomFilterExpressions.BLOOM_FILTER_TYPE, () -> new BloomKFilter(100)))
           .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> SOME_STRING))
           .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> SOME_LONG))

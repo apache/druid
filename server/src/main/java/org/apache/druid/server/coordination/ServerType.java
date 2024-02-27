@@ -149,6 +149,18 @@ public enum ServerType
     return ServerType.valueOf(StringUtils.toUpperCase(type).replace('-', '_'));
   }
 
+  public static ServerType fromNodeRole(NodeRole nodeRole)
+  {
+    // this doesn't actually check that the NodeRole is a typical data node
+    if (nodeRole.equals(NodeRole.HISTORICAL)) {
+      return ServerType.HISTORICAL;
+    } else if (nodeRole.equals(NodeRole.BROKER)) {
+      return ServerType.BROKER;
+    } else {
+      return ServerType.INDEXER_EXECUTOR;
+    }
+  }
+
   @Override
   @JsonValue
   public String toString()

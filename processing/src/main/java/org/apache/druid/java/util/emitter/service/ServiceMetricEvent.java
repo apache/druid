@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Predicate;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -119,23 +119,23 @@ public class ServiceMetricEvent implements Event
         .putAll(
             Maps.filterEntries(
                 userDims,
-                new Predicate<Map.Entry<String, Object>>()
-                {
-                  @Override
-                  public boolean apply(Map.Entry<String, Object> input)
-                  {
-                    return input.getKey() != null;
-                  }
-                }
+                input -> input.getKey() != null
             )
         )
         .build();
   }
 
-  public static class Builder
+  /**
+   * Builder for a {@link ServiceMetricEvent}. This builder can be used for
+   * building only one event.
+   */
+  public static class Builder extends ServiceEventBuilder<ServiceMetricEvent>
   {
     private final Map<String, Object> userDims = new TreeMap<>();
     private String feed = "metrics";
+    private String metric;
+    private Number value;
+    private DateTime createdTime;
 
     public Builder setFeed(String feed)
     {
@@ -168,19 +168,7 @@ public class ServiceMetricEvent implements Event
       return userDims.get(dim);
     }
 
-    public ServiceEventBuilder<ServiceMetricEvent> build(
-        final String metric,
-        final Number value
-    )
-    {
-      return build(null, metric, value);
-    }
-
-    public ServiceEventBuilder<ServiceMetricEvent> build(
-        final DateTime createdTime,
-        final String metric,
-        final Number value
-    )
+    public Builder setMetric(String metric, Number value)
     {
       if (Double.isNaN(value.doubleValue())) {
         throw new ISE("Value of NaN is not allowed!");
@@ -189,21 +177,31 @@ public class ServiceMetricEvent implements Event
         throw new ISE("Value of Infinite is not allowed!");
       }
 
-      return new ServiceEventBuilder<ServiceMetricEvent>()
-      {
-        @Override
-        public ServiceMetricEvent build(ImmutableMap<String, String> serviceDimensions)
-        {
-          return new ServiceMetricEvent(
-              createdTime,
-              serviceDimensions,
-              userDims,
-              feed,
-              metric,
-              value
-          );
-        }
-      };
+      this.metric = metric;
+      this.value = value;
+      return this;
+    }
+
+    public Builder setCreatedTime(DateTime createdTime)
+    {
+      this.createdTime = createdTime;
+      return this;
+    }
+
+    @Override
+    public ServiceMetricEvent build(ImmutableMap<String, String> serviceDimensions)
+    {
+      Preconditions.checkNotNull(metric, "Metric is not set");
+      Preconditions.checkNotNull(value, "Value is not set");
+
+      return new ServiceMetricEvent(
+          createdTime,
+          serviceDimensions,
+          userDims,
+          feed,
+          metric,
+          value
+      );
     }
   }
 }

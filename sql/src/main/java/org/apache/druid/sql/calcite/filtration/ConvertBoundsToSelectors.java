@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.filtration;
 
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.column.RowSignature;
@@ -61,6 +63,20 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
             bound.getDimension(),
             bound.getUpper(),
             bound.getExtractionFn()
+        );
+      } else {
+        return filter;
+      }
+    } else if (filter instanceof RangeFilter) {
+      final RangeFilter bound = (RangeFilter) filter;
+      // since the range filter retains the match value type, we don't need to restrict to ranges
+      // that match the underlying column type
+      if (bound.isEquality()) {
+        return new EqualityFilter(
+            bound.getColumn(),
+            bound.getMatchValueType(),
+            bound.getUpper(),
+            null
         );
       } else {
         return filter;

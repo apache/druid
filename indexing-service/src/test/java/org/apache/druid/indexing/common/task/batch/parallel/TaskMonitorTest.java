@@ -231,7 +231,7 @@ public class TaskMonitorTest
 
     TestTask(String id, long runTime, boolean shouldFail, boolean throwUnknownTypeIdError)
     {
-      super(id, null, "testDataSource", runTime, 0, null, null, null);
+      super(id, null, "testDataSource", runTime, 0, null);
       this.shouldFail = shouldFail;
       this.throwUnknownTypeIdError = throwUnknownTypeIdError;
     }
@@ -244,7 +244,7 @@ public class TaskMonitorTest
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
     {
       // do nothing
     }

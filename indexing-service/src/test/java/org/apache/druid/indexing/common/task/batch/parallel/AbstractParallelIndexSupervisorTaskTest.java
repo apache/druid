@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputFormat;
@@ -51,11 +52,11 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
@@ -75,6 +76,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -116,7 +118,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -192,6 +193,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           5,
           null,
           null,
+          null,
           null
       );
 
@@ -247,29 +249,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     taskRunner = new SimpleThreadingTaskRunner(testName.getMethodName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
-    intermediaryDataManager = new LocalIntermediaryDataManager(
-        new WorkerConfig(),
-        taskConfig,
-        null,
-        new TaskStorageDirTracker(taskConfig)
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+    intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
     coordinatorClient = new LocalCoordinatorClient(remoteApiExecutor);
     prepareObjectMapper(objectMapper, getIndexIO());
@@ -318,6 +302,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         5,
+        null,
         null,
         null,
         null
@@ -494,7 +479,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           (Function<TaskStatus, TaskStatus>) status -> {
             shutdownTask(task);
             return status;
-          }
+          },
+          MoreExecutors.directExecutor()
       );
       return cleanupFuture;
     }
@@ -652,23 +638,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
 
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -702,23 +674,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
-    TaskConfig config = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    TaskConfig config = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -754,7 +712,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
         .taskLogPusher(null)
         .attemptId("1")
-        .dirTracker(new TaskStorageDirTracker(config))
+        .emitter(new StubServiceEmitter())
         .build();
   }
 
@@ -1059,34 +1017,30 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  class LocalCoordinatorClient extends CoordinatorClient
+  class LocalCoordinatorClient extends NoopCoordinatorClient
   {
-    private final ExecutorService exec;
+    private final ListeningExecutorService exec;
 
     LocalCoordinatorClient(ExecutorService exec)
     {
-      super(null, null);
-      this.exec = exec;
+      this.exec = MoreExecutors.listeningDecorator(exec);
     }
 
     @Override
-    public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+    public ListenableFuture<List<DataSegment>> fetchUsedSegments(
         String dataSource,
         List<Interval> intervals
     )
     {
-      try {
-        return exec.submit(
-            () -> getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
-        ).get();
-      }
-      catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException(e);
-      }
+      return exec.submit(
+          () -> ImmutableList.copyOf(
+              getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
+          )
+      );
     }
 
     @Override
-    public DataSegment fetchUsedSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       ImmutableDruidDataSource druidDataSource;
       try {
@@ -1104,7 +1058,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSource, segmentId)) {
         DataSegment segment = druidDataSource.getSegment(possibleSegmentId);
         if (segment != null) {
-          return segment;
+          return Futures.immediateFuture(segment);
         }
       }
       throw new ISE("Can't find segment for id[%s]", segmentId);

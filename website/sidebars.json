@@ -7,7 +7,6 @@
       "tutorials/cluster"
     ],
     "Tutorials": [
-      "tutorials/tutorial-batch",
       "tutorials/tutorial-msq-extern",
       "tutorials/tutorial-kafka",
       "tutorials/tutorial-batch-hadoop",
@@ -20,67 +19,83 @@
       "tutorials/tutorial-delete-data",
       "tutorials/tutorial-ingestion-spec",
       "tutorials/tutorial-transform-spec",
+      "tutorials/tutorial-msq-convert-spec",
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-msq-convert-spec",
-      "tutorials/tutorial-jdbc",
       "tutorials/tutorial-sql-query-view",
-      "tutorials/tutorial-unnest-datasource",
-      "tutorials/tutorial-jupyter-index",
+      "tutorials/tutorial-unnest-arrays",
+      "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",
+      {
+        "type": "category",
+        "label": "Services",
+        "items": [
+          "design/coordinator",
+          "design/overlord",
+          "design/broker",
+          "design/router",
+          "design/historical",
+          "design/middlemanager",
+          "design/peons",
+          "design/indexer"
+        ]
+      },
+      "design/storage",
       "design/segments",
-      "design/processes",
-      "dependencies/deep-storage",
-      "dependencies/metadata-storage",
-      "dependencies/zookeeper"
+      "design/deep-storage",
+      "design/metadata-storage",
+      "design/zookeeper"
     ],
     "Ingestion": [
       "ingestion/index",
-      "ingestion/data-formats",
-      "ingestion/data-model",
-      "ingestion/rollup",
-      "ingestion/partitioning",
-      "ingestion/ingestion-spec",
-      "ingestion/schema-design",
       {
-        "type": "subcategory",
-        "label": "Stream ingestion",
-        "ids": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion",
-          "ingestion/standalone-realtime"
+        "type": "category",
+        "label": "Ingestion concepts",
+        "items": [
+          "ingestion/data-formats",
+          "ingestion/input-sources",
+          "ingestion/schema-model",
+          "ingestion/rollup",
+          "ingestion/partitioning",
+          "ingestion/tasks"
         ]
       },
       {
-        "type": "subcategory",
-        "label": "Batch ingestion",
-        "ids": [
-          "ingestion/native-batch",
-          "ingestion/native-batch-input-sources",
-          "ingestion/migrate-from-firehose",
-          "ingestion/native-batch-firehose",
-          "ingestion/hadoop"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "SQL-based ingestion \uD83C\uDD95",
-        "ids": [
+        "type": "category",
+        "label": "SQL-based batch",
+        "items": [
           "multi-stage-query/index",
           "multi-stage-query/concepts",
-          "multi-stage-query/api",
           "multi-stage-query/security",
           "multi-stage-query/examples",
           "multi-stage-query/reference",
           "multi-stage-query/known-issues"
         ]
       },
-      "ingestion/tasks",
+      {
+        "type": "category",
+        "label": "Streaming",
+        "items": [
+          "ingestion/streaming",
+          "ingestion/supervisor",
+          "ingestion/kafka-ingestion",
+          "ingestion/kinesis-ingestion"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Classic batch",
+        "items": [
+          "ingestion/native-batch",
+          "ingestion/hadoop"
+        ]
+      },
+      "ingestion/ingestion-spec",
+      "ingestion/schema-design",
+      "ingestion/concurrent-append-replace",
       "ingestion/faq"
     ],
     "Data management": [
@@ -88,40 +103,54 @@
       "data-management/update",
       "data-management/delete",
       "data-management/schema-changes",
-      "data-management/compaction",
-      "data-management/automatic-compaction"
+      {
+        "type": "category",
+        "label": "Compaction",
+        "link": {
+           "type": "doc",
+           "id": "data-management/compaction"
+        },
+        "items": [
+           "data-management/automatic-compaction",
+           "data-management/manual-compaction"
+         ]
+       }
     ],
     "Querying": [
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Druid SQL",
-        "ids": [
+        "items": [
           "querying/sql",
+          "querying/tips-good-queries",
+          "querying/query-deep-storage",
           "querying/sql-data-types",
           "querying/sql-operators",
           "querying/sql-scalar",
           "querying/sql-aggregations",
+          "querying/sql-window-functions",
+          "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
           "querying/sql-functions",
-          "querying/sql-api",
-          "querying/sql-jdbc",
           "querying/sql-query-context",
           "querying/sql-metadata-tables",
           "querying/sql-translation"
         ]
       },
       "querying/querying",
+      "querying/query-processing",
       "querying/query-execution",
       "querying/troubleshooting",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Concepts",
-        "ids": [
+        "items": [
           "querying/datasource",
           "querying/joins",
           "querying/lookups",
           "querying/multi-value-dimensions",
+          "querying/arrays",
           "querying/nested-columns",
           "querying/multitenancy",
           "querying/caching",
@@ -131,9 +160,9 @@
       },
 
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Native query types",
-        "ids": [
+        "items": [
           "querying/timeseriesquery",
           "querying/topnquery",
           "querying/groupbyquery",
@@ -145,49 +174,78 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Native query components",
-        "ids": [
+        "items": [
           "querying/filters",
           "querying/granularities",
           "querying/dimensionspecs",
           "querying/aggregations",
           "querying/post-aggregations",
-          "misc/math-expr",
+          "querying/math-expr",
           "querying/having",
           "querying/limitspec",
           "querying/topnmetricspec",
           "querying/sorting-orders",
           "querying/virtual-columns",
-          "development/geo"
+          "querying/geo"
         ]
       }
     ],
+    "API reference":[
+      "api-reference/api-reference",
+      {
+        "type": "category",
+        "label": "HTTP APIs",
+        "items": [
+          "api-reference/sql-api",
+          "api-reference/sql-ingestion-api",
+          "api-reference/json-querying-api",
+          "api-reference/tasks-api",
+          "api-reference/supervisor-api",
+          "api-reference/retention-rules-api",
+          "api-reference/data-management-api",
+          "api-reference/automatic-compaction-api",
+          "api-reference/lookups-api",
+          "api-reference/service-status-api",
+          "api-reference/dynamic-configuration-api",
+          "api-reference/legacy-metadata-api"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Java APIs",
+        "items": [
+          "api-reference/sql-jdbc"
+        ]
+      }
+
+    ],
     "Configuration": [
       "configuration/index",
-      "development/extensions",
+      "configuration/extensions",
       "configuration/logging"
     ],
     "Operations": [
       "operations/web-console",
       "operations/java",
+      "operations/durable-storage",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Security",
-        "ids": [
+        "items": [
           "operations/security-overview",
           "operations/security-user-auth",
           "operations/auth-ldap",
           "operations/password-provider",
           "operations/dynamic-config-provider",
-          "design/auth",
           "operations/tls-support"
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Performance tuning",
-        "ids": [
+        "items": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
           "operations/mixed-workloads",
@@ -196,23 +254,23 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Monitoring",
-        "ids": [
+        "items": [
           "operations/request-logging",
           "operations/metrics",
           "operations/alerts"
         ]
       },
-      "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
+      "operations/migrate-from-firehose",
       "operations/other-hadoop",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Misc",
-        "ids": [
+        "items": [
           "operations/dump-segment",
           "operations/reset-cluster",
           "operations/insert-segment-to-db",
@@ -230,84 +288,15 @@
       "development/javascript",
       "development/build",
       "development/versioning",
+      "development/contribute-to-docs",
       "development/experimental"
     ],
     "Misc": [
       "misc/papers-and-talks"
     ],
-    "Hidden": [
-      "comparisons/druid-vs-elasticsearch",
-      "comparisons/druid-vs-key-value",
-      "comparisons/druid-vs-kudu",
-      "comparisons/druid-vs-redshift",
-      "comparisons/druid-vs-spark",
-      "comparisons/druid-vs-sql-on-hadoop",
-      "design/auth",
-      "design/broker",
-      "design/coordinator",
-      "design/historical",
-      "design/indexer",
-      "design/indexing-service",
-      "design/middlemanager",
-      "design/overlord",
-      "design/router",
-      "design/peons",
-      "development/extensions-core/approximate-histograms",
-      "development/extensions-core/avro",
-      "development/extensions-core/azure",
-      "development/extensions-core/bloom-filter",
-      "development/extensions-core/datasketches-extension",
-      "development/extensions-core/datasketches-hll",
-      "development/extensions-core/datasketches-quantiles",
-      "development/extensions-core/datasketches-theta",
-      "development/extensions-core/datasketches-tuple",
-      "development/extensions-core/druid-basic-security",
-      "development/extensions-core/druid-kerberos",
-      "development/extensions-core/druid-lookups",
-      "development/extensions-core/druid-ranger-security",
-      "development/extensions-core/google",
-      "development/extensions-core/hdfs",
-      "development/extensions-core/kafka-extraction-namespace",
-      "development/extensions-core/lookups-cached-global",
-      "development/extensions-core/mysql",
-      "development/extensions-core/orc",
-      "development/extensions-core/druid-pac4j",
-      "development/extensions-core/parquet",
-      "development/extensions-core/postgresql",
-      "development/extensions-core/protobuf",
-      "development/extensions-core/s3",
-      "development/extensions-core/simple-client-sslcontext",
-      "development/extensions-core/stats",
-      "development/extensions-core/test-stats",
-      "development/extensions-core/druid-aws-rds",
-      "development/extensions-core/kubernetes",
-      "development/extensions-contrib/ambari-metrics-emitter",
-      "development/extensions-contrib/cassandra",
-      "development/extensions-contrib/cloudfiles",
-      "development/extensions-contrib/distinctcount",
-      "development/extensions-contrib/graphite",
-      "development/extensions-contrib/influx",
-      "development/extensions-contrib/influxdb-emitter",
-      "development/extensions-contrib/kafka-emitter",
-      "development/extensions-contrib/materialized-view",
-      "development/extensions-contrib/momentsketch-quantiles",
-      "development/extensions-contrib/moving-average-query",
-      "development/extensions-contrib/opentsdb-emitter",
-      "development/extensions-contrib/redis-cache",
-      "development/extensions-contrib/sqlserver",
-      "development/extensions-contrib/statsd",
-      "development/extensions-contrib/tdigestsketch-quantiles",
-      "development/extensions-contrib/thrift",
-      "development/extensions-contrib/time-min-max",
-      "development/extensions-contrib/gce-extensions",
-      "development/extensions-contrib/aliyun-oss",
-      "development/extensions-contrib/prometheus",
-      "operations/kubernetes",
-      "querying/hll-old",
-      "querying/select-query",
-      "ingestion/native-batch-firehose",
-      "ingestion/native-batch-simple-task",
-      "ingestion/standalone-realtime"
+    "Release info": [
+      "release-info/release-notes",
+      "release-info/upgrade-notes"
     ]
   }
 }

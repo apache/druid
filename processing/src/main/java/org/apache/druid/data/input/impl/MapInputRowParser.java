@@ -32,10 +32,12 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
@@ -66,31 +68,57 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return parse(inputRowSchema.getTimestampSpec(), inputRowSchema.getDimensionsSpec(), theMap);
   }
 
+  @VisibleForTesting
+  static InputRow parse(
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      Map<String, Object> theMap
+  ) throws ParseException
+  {
+    final List<String> dimensionsToUse = findDimensions(
+        timestampSpec,
+        dimensionsSpec,
+        theMap == null ? Collections.emptySet() : theMap.keySet()
+    );
+
+    return parse(timestampSpec, dimensionsToUse, theMap);
+  }
+
+  public static InputRow parse(
+      TimestampSpec timestampSpec,
+      List<String> dimensions,
+      Map<String, Object> theMap
+  ) throws ParseException
+  {
+    final DateTime timestamp = parseTimestamp(timestampSpec, theMap);
+    return new MapBasedInputRow(timestamp, dimensions, theMap);
+  }
+
   /**
    * Finds the final set of dimension names to use for {@link InputRow}.
    * There are 3 cases here.
    *
    * 1) If {@link DimensionsSpec#isIncludeAllDimensions()} is set, the returned list includes _both_
-   *    {@link DimensionsSpec#getDimensionNames()} and the dimensions in the given map ({@code rawInputRow#keySet()}).
+   * {@link DimensionsSpec#getDimensionNames()} and the dimensions in the given map ({@code rawInputRow#keySet()}).
    * 2) If isIncludeAllDimensions is not set and {@link DimensionsSpec#getDimensionNames()} is not empty,
-   *    the dimensions in dimensionsSpec is returned.
+   * the dimensions in dimensionsSpec is returned.
    * 3) If isIncludeAllDimensions is not set and {@link DimensionsSpec#getDimensionNames()} is empty,
-   *    the dimensions in the given map is returned.
+   * the dimensions in the given map is returned.
    *
    * In any case, the returned list does not include any dimensions in {@link DimensionsSpec#getDimensionExclusions()}
    * or {@link TimestampSpec#getTimestampColumn()}.
    */
-  private static List<String> findDimensions(
+  public static List<String> findDimensions(
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
-      Map<String, Object> rawInputRow
+      Set<String> fields
   )
   {
     final String timestampColumn = timestampSpec.getTimestampColumn();
     final Set<String> exclusions = dimensionsSpec.getDimensionExclusions();
-    if (dimensionsSpec.isIncludeAllDimensions()) {
+    if (dimensionsSpec.isIncludeAllDimensions() || dimensionsSpec.useSchemaDiscovery()) {
       LinkedHashSet<String> dimensions = new LinkedHashSet<>(dimensionsSpec.getDimensionNames());
-      for (String field : rawInputRow.keySet()) {
+      for (String field : fields) {
         if (timestampColumn.equals(field) || exclusions.contains(field)) {
           continue;
         }
@@ -102,7 +130,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
         return dimensionsSpec.getDimensionNames();
       } else {
         List<String> dimensions = new ArrayList<>();
-        for (String field : rawInputRow.keySet()) {
+        for (String field : fields) {
           if (timestampColumn.equals(field) || exclusions.contains(field)) {
             continue;
           }
@@ -113,40 +141,55 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     }
   }
 
-  @VisibleForTesting
-  static InputRow parse(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      Map<String, Object> theMap
-  ) throws ParseException
+  public static DateTime parseTimestamp(TimestampSpec timestampSpec, Map<String, Object> theMap)
   {
-    final List<String> dimensionsToUse = findDimensions(timestampSpec, dimensionsSpec, theMap);
+    return parseTimestampOrThrowParseException(
+        timestampSpec.getRawTimestamp(theMap),
+        timestampSpec,
+        () -> theMap
+    );
+  }
 
+  /**
+   * Given a plain Java Object, extract a timestamp from it using the provided {@link TimestampSpec}, or throw
+   * a {@link ParseException} if we can't.
+   *
+   * @param timeValue      object to interpret as timestmap
+   * @param timestampSpec  timestamp spec
+   * @param rawMapSupplier supplier of the original raw data that this object came from. Used for error messages.
+   */
+  public static DateTime parseTimestampOrThrowParseException(
+      final Object timeValue,
+      final TimestampSpec timestampSpec,
+      final Supplier<Map<String, ?>> rawMapSupplier
+  )
+  {
     final DateTime timestamp;
+
     try {
-      timestamp = timestampSpec.extractTimestamp(theMap);
+      timestamp = timestampSpec.parseDateTime(timeValue);
     }
     catch (Exception e) {
-      String rawMap = rawMapToPrint(theMap);
+      String rawMap = rawMapToPrint(rawMapSupplier.get());
       throw new ParseException(
           rawMap,
           e,
           "Timestamp[%s] is unparseable! Event: %s",
-          timestampSpec.getRawTimestamp(theMap),
+          timeValue,
           rawMap
       );
     }
     if (timestamp == null) {
-      String rawMap = rawMapToPrint(theMap);
+      String rawMap = rawMapToPrint(rawMapSupplier.get());
       throw new ParseException(
           rawMap,
           "Timestamp[%s] is unparseable! Event: %s",
-          timestampSpec.getRawTimestamp(theMap),
+          timeValue,
           rawMap
       );
     }
     if (!Intervals.ETERNITY.contains(timestamp)) {
-      String rawMap = rawMapToPrint(theMap);
+      String rawMap = rawMapToPrint(rawMapSupplier.get());
       throw new ParseException(
           rawMap,
           "Encountered row with timestamp[%s] that cannot be represented as a long: [%s]",
@@ -154,11 +197,11 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
           rawMap
       );
     }
-    return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
+    return timestamp;
   }
 
   @Nullable
-  private static String rawMapToPrint(@Nullable Map<String, Object> rawMap)
+  private static String rawMapToPrint(@Nullable Map<String, ?> rawMap)
   {
     if (rawMap == null) {
       return null;

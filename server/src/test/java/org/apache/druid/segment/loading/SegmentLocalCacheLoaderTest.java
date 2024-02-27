@@ -83,7 +83,7 @@ public class SegmentLocalCacheLoaderTest
     Assert.assertEquals(interval, segment.getDataInterval());
     Assert.assertNotNull(segment.asStorageAdapter());
 
-    Assert.assertTrue(segment.asQueryableIndex().isFromTombstone());
+    Assert.assertTrue(segment.asStorageAdapter().isFromTombstone());
 
     Assert.assertEquals(interval, segment.asQueryableIndex().getDataInterval());
     Assert.assertThrows(UnsupportedOperationException.class, () -> segment.asQueryableIndex().getMetadata());

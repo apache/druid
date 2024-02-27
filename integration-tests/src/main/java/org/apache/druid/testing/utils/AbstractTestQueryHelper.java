@@ -186,7 +186,8 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     } else {
       Map<String, Object> map = (Map<String, Object>) results.get(0).get("result");
 
-      return (Integer) map.get("rows");
+      Integer rowCount = (Integer) map.get("rows");
+      return rowCount == null ? 0 : rowCount;
     }
   }
 }

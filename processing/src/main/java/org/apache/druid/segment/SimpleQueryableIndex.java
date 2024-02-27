@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
@@ -39,7 +38,7 @@ import java.util.Map;
 /**
  *
  */
-public class SimpleQueryableIndex extends AbstractIndex implements QueryableIndex
+public class SimpleQueryableIndex implements QueryableIndex
 {
   private final Interval dataInterval;
   private final List<String> columnNames;
@@ -102,12 +101,6 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   }
 
   @Override
-  public StorageAdapter toStorageAdapter()
-  {
-    return new QueryableIndexStorageAdapter(this);
-  }
-
-  @Override
   public Indexed<String> getAvailableDimensions()
   {
     return availableDimensions;
@@ -164,8 +157,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
     for (String dim : availableDimensions) {
       final ColumnHolder columnHolder = getColumnHolder(dim);
-      ColumnCapabilities capabilities = columnHolder.getHandlerCapabilities();
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+      final DimensionHandler handler = columnHolder.getColumnFormat().getColumnHandler(dim);
       dimensionHandlerMap.put(dim, handler);
     }
     return dimensionHandlerMap;

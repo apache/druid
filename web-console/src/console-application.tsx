@@ -19,33 +19,52 @@
 import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
+import type { JSX } from 'react';
 import React from 'react';
 import type { RouteComponentProps } from 'react-router';
 import { Redirect } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
+import type { Filter } from 'react-table';
 
 import type { HeaderActiveTab } from './components';
 import { HeaderBar, Loader } from './components';
 import type { DruidEngine, QueryWithContext } from './druid-models';
 import { Capabilities } from './helpers';
+import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
-import { localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
+import { compact, localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
 import {
   DatasourcesView,
+  ExploreView,
   HomeView,
-  IngestionView,
   LoadDataView,
   LookupsView,
   SegmentsView,
   ServicesView,
   SqlDataLoaderView,
+  SupervisorsView,
+  TasksView,
   WorkbenchView,
 } from './views';
 
 import './console-application.scss';
 
+type FiltersRouteMatch = RouteComponentProps<{ filters?: string }>;
+
+function changeHashWithFilter(slug: string, filters: Filter[]) {
+  const filterString = tableFiltersToString(filters);
+  location.hash = slug + (filterString ? `/${filterString}` : '');
+}
+
+function viewFilterChange(slug: string) {
+  return (filters: Filter[]) => changeHashWithFilter(slug, filters);
+}
+
+function pathWithFilter(slug: string) {
+  return [`/${slug}/:filters`, `/${slug}`];
+}
+
 export interface ConsoleApplicationProps {
-  exampleManifestsUrl?: string;
   defaultQueryContext?: Record<string, any>;
   mandatoryQueryContext?: Record<string, any>;
 }
@@ -68,8 +87,9 @@ export class ConsoleApplication extends React.PureComponent<
       timeout: 120000,
       message: (
         <>
-          It appears that the service serving this console is not responding. The console will not
-          function at the moment.
+          Some backend druid services are not responding. The console will not function at the
+          moment. Make sure that all your Druid services are up and running. Check the logs of
+          individual services for troubleshooting.
         </>
       ),
     });
@@ -77,14 +97,12 @@ export class ConsoleApplication extends React.PureComponent<
 
   private supervisorId?: string;
   private taskId?: string;
-  private taskGroupId?: string;
-  private openDialog?: string;
-  private datasource?: string;
-  private onlyUnavailable?: boolean;
+  private openSupervisorDialog?: boolean;
+  private openTaskDialog?: boolean;
   private queryWithContext?: QueryWithContext;
 
-  constructor(props: ConsoleApplicationProps, context: any) {
-    super(props, context);
+  constructor(props: ConsoleApplicationProps) {
+    super(props);
     this.state = {
       capabilities: Capabilities.FULL,
       capabilitiesLoading: true,
@@ -128,70 +146,83 @@ export class ConsoleApplication extends React.PureComponent<
   private resetInitialsWithDelay() {
     setTimeout(() => {
       this.taskId = undefined;
-      this.taskGroupId = undefined;
       this.supervisorId = undefined;
-      this.openDialog = undefined;
-      this.datasource = undefined;
-      this.onlyUnavailable = undefined;
+      this.openSupervisorDialog = undefined;
+      this.openTaskDialog = undefined;
       this.queryWithContext = undefined;
     }, 50);
   }
 
   private readonly goToStreamingDataLoader = (supervisorId?: string) => {
     if (supervisorId) this.supervisorId = supervisorId;
-    window.location.hash = 'streaming-data-loader';
+    location.hash = 'streaming-data-loader';
     this.resetInitialsWithDelay();
   };
 
   private readonly goToClassicBatchDataLoader = (taskId?: string) => {
     if (taskId) this.taskId = taskId;
-    window.location.hash = 'classic-batch-data-loader';
+    location.hash = 'classic-batch-data-loader';
     this.resetInitialsWithDelay();
   };
 
   private readonly goToDatasources = (datasource: string) => {
-    this.datasource = datasource;
-    window.location.hash = 'datasources';
-    this.resetInitialsWithDelay();
+    changeHashWithFilter('datasources', [{ id: 'datasource', value: `=${datasource}` }]);
   };
 
   private readonly goToSegments = (datasource: string, onlyUnavailable = false) => {
-    this.datasource = datasource;
-    this.onlyUnavailable = onlyUnavailable;
-    window.location.hash = 'segments';
+    changeHashWithFilter(
+      'segments',
+      compact([
+        { id: 'datasource', value: `=${datasource}` },
+        onlyUnavailable ? { id: 'is_available', value: '=false' } : undefined,
+      ]),
+    );
+  };
+
+  private readonly goToSupervisor = (supervisorId: string) => {
+    changeHashWithFilter('supervisors', [{ id: 'supervisor_id', value: `=${supervisorId}` }]);
+  };
+
+  private readonly goToTasksWithTaskId = (taskId: string) => {
+    changeHashWithFilter('tasks', [{ id: 'task_id', value: `=${taskId}` }]);
+  };
+
+  private readonly goToTasksWithTaskGroupId = (taskGroupId: string) => {
+    changeHashWithFilter('tasks', [{ id: 'group_id', value: `=${taskGroupId}` }]);
+  };
+
+  private readonly goToTasksWithDatasource = (datasource: string, type?: string) => {
+    changeHashWithFilter(
+      'tasks',
+      compact([
+        { id: 'datasource', value: `=${datasource}` },
+        type ? { id: 'type', value: `=${type}` } : undefined,
+      ]),
+    );
+  };
+
+  private readonly openSupervisorSubmit = () => {
+    this.openSupervisorDialog = true;
+    location.hash = 'supervisor';
     this.resetInitialsWithDelay();
   };
 
-  private readonly goToIngestionWithTaskId = (taskId?: string) => {
-    this.taskId = taskId;
-    window.location.hash = 'ingestion';
-    this.resetInitialsWithDelay();
-  };
-
-  private readonly goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
-    this.taskGroupId = taskGroupId;
-    if (openDialog) this.openDialog = openDialog;
-    window.location.hash = 'ingestion';
-    this.resetInitialsWithDelay();
-  };
-
-  private readonly goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
-    this.datasource = datasource;
-    if (openDialog) this.openDialog = openDialog;
-    window.location.hash = 'ingestion';
+  private readonly openTaskSubmit = () => {
+    this.openTaskDialog = true;
+    location.hash = 'tasks';
     this.resetInitialsWithDelay();
   };
 
   private readonly goToQuery = (queryWithContext: QueryWithContext) => {
     this.queryWithContext = queryWithContext;
-    window.location.hash = 'workbench';
+    location.hash = 'workbench';
     this.resetInitialsWithDelay();
   };
 
   private readonly wrapInViewContainer = (
     active: HeaderActiveTab,
     el: JSX.Element,
-    classType: 'normal' | 'narrow-pad' | 'thin' = 'normal',
+    classType: 'normal' | 'narrow-pad' | 'thin' | 'thinner' = 'normal',
   ) => {
     const { capabilities } = this.state;
 
@@ -213,16 +244,16 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'data-loader',
       <LoadDataView
         mode="all"
         initTaskId={this.taskId}
         initSupervisorId={this.supervisorId}
-        exampleManifestsUrl={exampleManifestsUrl}
-        goToIngestion={this.goToIngestionWithTaskGroupId}
+        goToSupervisor={this.goToSupervisor}
+        goToTasks={this.goToTasksWithTaskGroupId}
+        openSupervisorSubmit={this.openSupervisorSubmit}
+        openTaskSubmit={this.openTaskSubmit}
       />,
       'narrow-pad',
     );
@@ -234,28 +265,31 @@ export class ConsoleApplication extends React.PureComponent<
       <LoadDataView
         mode="streaming"
         initSupervisorId={this.supervisorId}
-        goToIngestion={this.goToIngestionWithTaskGroupId}
+        goToSupervisor={this.goToSupervisor}
+        goToTasks={this.goToTasksWithTaskGroupId}
+        openSupervisorSubmit={this.openSupervisorSubmit}
+        openTaskSubmit={this.openTaskSubmit}
       />,
       'narrow-pad',
     );
   };
 
   private readonly wrappedClassicBatchDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'classic-batch-data-loader',
       <LoadDataView
         mode="batch"
         initTaskId={this.taskId}
-        exampleManifestsUrl={exampleManifestsUrl}
-        goToIngestion={this.goToIngestionWithTaskGroupId}
+        goToSupervisor={this.goToSupervisor}
+        goToTasks={this.goToTasksWithTaskGroupId}
+        openSupervisorSubmit={this.openSupervisorSubmit}
+        openTaskSubmit={this.openTaskSubmit}
       />,
       'narrow-pad',
     );
   };
 
-  private readonly wrappedWorkbenchView = (p: RouteComponentProps<any>) => {
+  private readonly wrappedWorkbenchView = (p: RouteComponentProps<{ tabId?: string }>) => {
     const { defaultQueryContext, mandatoryQueryContext } = this.props;
     const { capabilities } = this.state;
 
@@ -273,14 +307,14 @@ export class ConsoleApplication extends React.PureComponent<
         capabilities={capabilities}
         tabId={p.match.params.tabId}
         onTabChange={newTabId => {
-          location.hash = `#workbench/${newTabId}`;
+          location.hash = `workbench/${newTabId}`;
         }}
         initQueryWithContext={this.queryWithContext}
         defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
         queryEngines={queryEngines}
         allowExplain
-        goToIngestion={this.goToIngestionWithTaskId}
+        goToTask={this.goToTasksWithTaskId}
       />,
       'thin',
     );
@@ -293,69 +327,100 @@ export class ConsoleApplication extends React.PureComponent<
       <SqlDataLoaderView
         capabilities={capabilities}
         goToQuery={this.goToQuery}
-        goToIngestion={this.goToIngestionWithTaskId}
+        goToTask={this.goToTasksWithTaskId}
       />,
     );
   };
 
-  private readonly wrappedDatasourcesView = () => {
+  private readonly wrappedDatasourcesView = (p: FiltersRouteMatch) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
-        initDatasource={this.datasource}
+        filters={stringToTableFilters(p.match.params.filters)}
+        onFiltersChange={viewFilterChange('datasources')}
         goToQuery={this.goToQuery}
-        goToTask={this.goToIngestionWithDatasource}
+        goToTasks={this.goToTasksWithDatasource}
         goToSegments={this.goToSegments}
         capabilities={capabilities}
       />,
     );
   };
 
-  private readonly wrappedSegmentsView = () => {
+  private readonly wrappedSegmentsView = (p: FiltersRouteMatch) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'segments',
       <SegmentsView
-        datasource={this.datasource}
-        onlyUnavailable={this.onlyUnavailable}
+        filters={stringToTableFilters(p.match.params.filters)}
+        onFiltersChange={viewFilterChange('segments')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
       />,
     );
   };
 
-  private readonly wrappedIngestionView = () => {
+  private readonly wrappedSupervisorsView = (p: FiltersRouteMatch) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
-      'ingestion',
-      <IngestionView
-        taskId={this.taskId}
-        taskGroupId={this.taskGroupId}
-        datasourceId={this.datasource}
-        openDialog={this.openDialog}
+      'supervisors',
+      <SupervisorsView
+        filters={stringToTableFilters(p.match.params.filters)}
+        onFiltersChange={viewFilterChange('supervisors')}
+        openSupervisorDialog={this.openSupervisorDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
         goToStreamingDataLoader={this.goToStreamingDataLoader}
+        goToTasks={this.goToTasksWithDatasource}
+        capabilities={capabilities}
+      />,
+    );
+  };
+
+  private readonly wrappedTasksView = (p: FiltersRouteMatch) => {
+    const { capabilities } = this.state;
+    return this.wrapInViewContainer(
+      'tasks',
+      <TasksView
+        filters={stringToTableFilters(p.match.params.filters)}
+        onFiltersChange={viewFilterChange('tasks')}
+        openTaskDialog={this.openTaskDialog}
+        goToDatasource={this.goToDatasources}
+        goToQuery={this.goToQuery}
         goToClassicBatchDataLoader={this.goToClassicBatchDataLoader}
         capabilities={capabilities}
       />,
     );
   };
 
-  private readonly wrappedServicesView = () => {
+  private readonly wrappedServicesView = (p: FiltersRouteMatch) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'services',
-      <ServicesView goToQuery={this.goToQuery} capabilities={capabilities} />,
+      <ServicesView
+        filters={stringToTableFilters(p.match.params.filters)}
+        onFiltersChange={viewFilterChange('services')}
+        goToQuery={this.goToQuery}
+        capabilities={capabilities}
+      />,
     );
   };
 
-  private readonly wrappedLookupsView = () => {
-    return this.wrapInViewContainer('lookups', <LookupsView />);
+  private readonly wrappedLookupsView = (p: FiltersRouteMatch) => {
+    return this.wrapInViewContainer(
+      'lookups',
+      <LookupsView
+        filters={stringToTableFilters(p.match.params.filters)}
+        onFiltersChange={viewFilterChange('lookups')}
+      />,
+    );
   };
 
-  render(): JSX.Element {
+  private readonly wrappedExploreView = () => {
+    return this.wrapInViewContainer('explore', <ExploreView />, 'thinner');
+  };
+
+  render() {
     const { capabilities, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
@@ -390,10 +455,15 @@ export class ConsoleApplication extends React.PureComponent<
                 <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
               )}
 
-              <Route path="/ingestion" component={this.wrappedIngestionView} />
-              <Route path="/datasources" component={this.wrappedDatasourcesView} />
-              <Route path="/segments" component={this.wrappedSegmentsView} />
-              <Route path="/services" component={this.wrappedServicesView} />
+              <Route path={pathWithFilter('supervisors')} component={this.wrappedSupervisorsView} />
+              <Route path={pathWithFilter('tasks')} component={this.wrappedTasksView} />
+              <Route path="/ingestion">
+                <Redirect to="/tasks" />
+              </Route>
+
+              <Route path={pathWithFilter('datasources')} component={this.wrappedDatasourcesView} />
+              <Route path={pathWithFilter('segments')} component={this.wrappedSegmentsView} />
+              <Route path={pathWithFilter('services')} component={this.wrappedServicesView} />
 
               <Route path="/query">
                 <Redirect to="/workbench" />
@@ -404,8 +474,13 @@ export class ConsoleApplication extends React.PureComponent<
               />
 
               {capabilities.hasCoordinatorAccess() && (
-                <Route path="/lookups" component={this.wrappedLookupsView} />
+                <Route path={pathWithFilter('lookups')} component={this.wrappedLookupsView} />
               )}
+
+              {capabilities.hasSql() && (
+                <Route path="/explore" component={this.wrappedExploreView} />
+              )}
+
               <Route component={this.wrappedHomeView} />
             </Switch>
           </div>

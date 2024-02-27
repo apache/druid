@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 
@@ -46,7 +47,7 @@ public interface SqlEngine
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
    * if the context has a problem.
    */
-  void validateContext(Map<String, Object> queryContext) throws ValidationException;
+  void validateContext(Map<String, Object> queryContext);
 
   /**
    * SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.
@@ -82,7 +83,7 @@ public interface SqlEngine
   /**
    * Create a {@link QueryMaker} for an INSERT ... SELECT query.
    *
-   * @param targetDataSource datasource for the INSERT portion of the query
+   * @param destination      destination for the INSERT portion of the query
    * @param relRoot          planned and validated rel for the SELECT portion of the query
    * @param plannerContext   context for this query
    *
@@ -92,7 +93,7 @@ public interface SqlEngine
    */
   @SuppressWarnings("RedundantThrows")
   QueryMaker buildQueryMakerForInsert(
-      String targetDataSource,
+      IngestDestination destination,
       RelRoot relRoot,
       PlannerContext plannerContext
   ) throws ValidationException;

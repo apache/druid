@@ -25,11 +25,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.client.BrokerInternalQueryConfig;
-import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -38,13 +36,13 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
@@ -52,11 +50,13 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
@@ -68,17 +68,14 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataFactory;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
-
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -135,18 +132,19 @@ public class QueryFrameworkUtils
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final CatalogResolver catalogResolver
   )
   {
     DruidSchema druidSchema = createMockSchema(
         injector,
         conglomerate,
         walker,
-        plannerConfig,
-        druidSchemaManager
+        druidSchemaManager,
+        catalogResolver
     );
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
@@ -168,7 +166,8 @@ public class QueryFrameworkUtils
     InformationSchema informationSchema =
         new InformationSchema(
             catalog,
-            authorizerMapper
+            authorizerMapper,
+            createOperatorTable(injector)
         );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
@@ -184,7 +183,7 @@ public class QueryFrameworkUtils
 
   public static DruidSchemaCatalog createMockRootSchema(
       final Injector injector,
-           final QueryRunnerFactoryConglomerate conglomerate,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper
@@ -197,7 +196,8 @@ public class QueryFrameworkUtils
         plannerConfig,
         null,
         new NoopDruidSchemaManager(),
-        authorizerMapper
+        authorizerMapper,
+        CatalogResolver.NULL_RESOLVER
     );
   }
 
@@ -205,26 +205,29 @@ public class QueryFrameworkUtils
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
-      final DruidSchemaManager druidSchemaManager
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalog
   )
   {
-    final SegmentMetadataCache cache = new SegmentMetadataCache(
+    final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
-        new SegmentManager(EasyMock.createMock(SegmentLoader.class))
-        {
-          @Override
-          public Set<String> getDataSourceNames()
-          {
-            return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
-          }
-        },
-        createDefaultJoinableFactory(injector),
-        SegmentMetadataCacheConfig.create(),
+        new TestTimelineServerView(walker.getSegments()),
+        BrokerSegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig(),
-        new NoopServiceEmitter()
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(
+            createDefaultJoinableFactory(injector),
+            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+            {
+              @Override
+              public Set<String> getDataSourceNames()
+              {
+                return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
+              }
+            }
+        ),
+        null
     );
 
     try {
@@ -236,7 +239,7 @@ public class QueryFrameworkUtils
     }
 
     cache.stop();
-    return new DruidSchema(cache, druidSchemaManager);
+    return new DruidSchema(cache, druidSchemaManager, catalog);
   }
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)
@@ -246,17 +249,6 @@ public class QueryFrameworkUtils
         ImmutableSet.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE),
         ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
     );
-  }
-
-  public static ExprMacroTable createExprMacroTable(final Injector injector)
-  {
-    final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
-    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(injector.getInstance(clazz));
-    }
-    exprMacros.add(injector.getInstance(LookupExprMacro.class));
-
-    return new ExprMacroTable(exprMacros);
   }
 
   public static DruidOperatorTable createOperatorTable(final Injector injector)

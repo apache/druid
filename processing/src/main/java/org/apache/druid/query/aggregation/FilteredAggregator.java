@@ -35,9 +35,15 @@ public class FilteredAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    if (matcher.matches()) {
+    if (matcher.matches(false)) {
       delegate.aggregate();
     }
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return delegate.isNull();
   }
 
   @Override

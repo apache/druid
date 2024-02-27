@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -35,16 +38,17 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -53,15 +57,15 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -72,18 +76,18 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -91,10 +95,17 @@ import java.util.function.Supplier;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE5;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_LOTS_O_COLUMNS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS_LOTS_OF_COLUMNS;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -109,11 +120,6 @@ public class CalciteMSQTestsHelper
 
     Module customBindings =
         binder -> {
-          final LookupReferencesManager lookupReferencesManager =
-              EasyMock.createStrictMock(LookupReferencesManager.class);
-          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet()).anyTimes();
-          EasyMock.replay(lookupReferencesManager);
-          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
           binder.bind(AppenderatorsManager.class).toProvider(() -> null);
 
           // Requirements of JoinableFactoryModule
@@ -145,7 +151,7 @@ public class CalciteMSQTestsHelper
               )
           );
           ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-          IndexIO indexIO = new IndexIO(testMapper, () -> 0);
+          IndexIO indexIO = new IndexIO(testMapper, ColumnConfig.DEFAULT);
           SegmentCacheManager segmentCacheManager = null;
           try {
             segmentCacheManager = new SegmentCacheManagerFactory(testMapper).manufacturate(temporaryFolder.newFolder(
@@ -168,13 +174,15 @@ public class CalciteMSQTestsHelper
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
-                .toInstance((dataSegment, channelCounters) ->
-                                new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
+          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-          binder.bind(GroupByStrategySelector.class)
-                .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-                                                  .getStrategySelector());
+          GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+              groupByQueryConfig,
+              groupByBuffers
+          ).getGroupingEngine();
+          binder.bind(GroupingEngine.class).toInstance(groupingEngine);
         };
     return ImmutableList.of(
         customBindings,
@@ -185,7 +193,25 @@ public class CalciteMSQTestsHelper
     );
   }
 
-  private static Supplier<Pair<Segment, Closeable>> getSupplierForSegment(SegmentId segmentId)
+  private static LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  {
+    // Currently, there is no metadata in this test for loaded segments. Therefore, this should not be called.
+    // In the future, if this needs to be supported, mocks for LoadedSegmentDataProvider should be added like
+    // org.apache.druid.msq.exec.MSQLoadedSegmentTests.
+    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
+    LoadedSegmentDataProvider loadedSegmentDataProvider = Mockito.mock(LoadedSegmentDataProvider.class);
+    try {
+      doThrow(new AssertionError("Test does not support loaded segment query"))
+          .when(loadedSegmentDataProvider).fetchRowsFromDataServer(any(), any(), any(), any());
+      doReturn(loadedSegmentDataProvider).when(mockFactory).createLoadedSegmentDataProvider(anyString(), any());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return mockFactory;
+  }
+
+  private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(SegmentId segmentId)
   {
     final TemporaryFolder temporaryFolder = new TemporaryFolder();
     try {
@@ -209,7 +235,7 @@ public class CalciteMSQTestsHelper
               .build();
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "1"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(foo1Schema)
               .rows(ROWS1)
@@ -236,20 +262,57 @@ public class CalciteMSQTestsHelper
               .build();
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "2"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(indexSchemaDifferentDim3M1Types)
               .rows(ROWS2)
               .buildMMappedIndex();
           break;
         case DATASOURCE3:
+        case CalciteTests.BROADCAST_DATASOURCE:
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "3"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(INDEX_SCHEMA_NUMERIC_DIMS)
               .rows(ROWS1_WITH_NUMERIC_DIMS)
               .buildMMappedIndex();
+          break;
+        case DATASOURCE5:
+          index = IndexBuilder
+              .create()
+              .tmpDir(temporaryFolder.newFolder())
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(INDEX_SCHEMA_LOTS_O_COLUMNS)
+              .rows(ROWS_LOTS_OF_COLUMNS)
+              .buildMMappedIndex();
+          break;
+        case CalciteArraysQueryTest.DATA_SOURCE_ARRAYS:
+          index = IndexBuilder.create()
+                              .tmpDir(temporaryFolder.newFolder())
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                                      .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .inputSource(
+                                  ResourceInputSource.of(
+                                      NestedDataTestUtils.class.getClassLoader(),
+                                      NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                                  )
+                              )
+                              .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                              .inputTmpDir(temporaryFolder.newFolder())
+                              .buildMMappedIndex();
+          break;
+        case CalciteTests.WIKIPEDIA_FIRST_LAST:
+          index = TestDataBuilder.makeWikipediaIndexWithAggregation(temporaryFolder.newFolder());
           break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
@@ -291,13 +354,6 @@ public class CalciteMSQTestsHelper
       {
       }
     };
-    return new Supplier<Pair<Segment, Closeable>>()
-    {
-      @Override
-      public Pair<Segment, Closeable> get()
-      {
-        return new Pair<>(segment, Closer.create());
-      }
-    };
+    return () -> new ReferenceCountingResourceHolder<>(segment, Closer.create());
   }
 }

@@ -19,6 +19,7 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 1M
+100MiB
 32-bit
 500MiB
 64-bit
@@ -28,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -42,6 +44,7 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
+cartesian
 concat
 CIDR
 CORS
@@ -52,6 +55,7 @@ Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
+CLI
 DDL
 DML
 DNS
@@ -59,10 +63,12 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+DeltaLakeInputSource
 dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
+Docusaurus
 DogStatsD
 DOCTYPE
 Double.NEGATIVE_INFINITY
@@ -74,6 +80,7 @@ downsamples
 downsampling
 Dropwizard
 dropwizard
+druid-deltalake-extensions
 DruidInputSource
 DruidSQL
 DynamicConfigProvider
@@ -107,9 +114,13 @@ html
 HyperLogLog
 IAM
 IANA
+IcebergFilter
+IcebergInputSource
 IETF
 IP
 IPv4
+IPv6
+IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
 IS0
@@ -122,6 +133,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+IntelliJ
 ioConfig
 Istio
 JBOD
@@ -151,6 +163,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+Lakehouse
 LDAPS
 LRU
 LZ4
@@ -170,6 +183,7 @@ Montréal
 MSQ
 Murmur3
 MVCC
+MV_TO_ARRAY
 NFS
 OCF
 OIDC
@@ -183,10 +197,15 @@ ParAccel
 ParseSpec
 ParseSpecs
 Protobuf
+protobuf
 pull-deps
 RDBMS
 RDDs
 RDS
+ROUTINE_CATALOG
+ROUTINE_NAME
+ROUTINE_SCHEMA
+ROUTINE_TYPE
 Rackspace
 Redis
 S3
@@ -206,6 +225,8 @@ SqlParameter
 SslContextFactory
 StatsD
 SYSTEM_TABLE
+TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -230,6 +251,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
@@ -249,6 +271,7 @@ base64
 big-endian
 bigint
 blobstore
+Boolean
 boolean
 breakpoint
 broadcasted
@@ -261,6 +284,7 @@ codebase
 codec
 colocated
 colocation
+colocating
 compactable
 compactionTask
 config
@@ -297,10 +321,13 @@ enum
 expectedType
 expr
 failover
+failovers
 featureSpec
 findColumnsFromHeader
 filenames
 filesystem
+filterColumn
+filterValue
 firefox
 firehose
 firehoses
@@ -312,6 +339,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -331,12 +359,14 @@ interruptible
 isAllowList
 jackson-jq
 javadoc
+javascript
 joinable
 jsonCompression
 json_keys
 json_object
 json_paths
 json_query
+json_query_array
 json_value
 karlkfi
 kerberos
@@ -364,6 +394,7 @@ max_map_count
 memcached
 mergeable
 metadata
+metastores
 millis
 microbatch
 microbatches
@@ -372,12 +403,14 @@ misconfigured
 mostAvailableSize
 multitenancy
 multitenant
+MVDs
 mysql
 namespace
 namespaced
 namespaces
 natively
 netflow
+nondescriptive
 nonfinalized
 non-null
 non-nullable
@@ -399,6 +432,7 @@ pluggable
 podSpec
 postgres
 postgresql
+pre-aggregate
 pre-aggregated
 pre-aggregates
 pre-aggregating
@@ -406,7 +440,7 @@ pre-aggregation
 pre-computation
 pre-compute
 pre-computing
-pre-configured
+preconfigured
 pre-existing
 pre-filtered
 pre-filtering
@@ -417,6 +451,7 @@ preemptible
 prefetch
 prefetched
 prefetching
+precached
 prepend
 prepended
 prepending
@@ -470,13 +505,16 @@ skipHeaderRows
 Smoosh
 smoosh
 smooshed
+snapshotting
 splittable
 ssl
 sslmode
+start_time
 stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-conditions
 subarray
 subnet
 subqueries
@@ -486,10 +524,14 @@ substring
 subtask
 subtasks
 supervisorTaskId
+SVG
 symlink
 syntaxes
+systemFields
+tablePath
 tiering
 timeseries
+Timeseries
 timestamp
 timestamps
 to_json_string
@@ -533,6 +575,7 @@ varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
+versioned
 versioning
 virtualColumns
 w.r.t.
@@ -543,11 +586,13 @@ whitespace
 wildcard
 wildcards
 xml
+XOR
 znode
 znodes
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
 ARRAY_AGG
+ARRAY_TO_MV
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -573,6 +618,7 @@ NUMERIC_PRECISION
 NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
+PNG
 POSIX
 P1M
 P1Y
@@ -625,6 +671,7 @@ num_segments
 partition_num
 plaintext_port
 queue_insertion_time
+replication_factor
 runner_status
 segment_id
 server_type
@@ -693,7 +740,6 @@ DurableStorageConfiguration
 ColumnTypeNotSupported
 InsertCannotAllocateSegment
 InsertCannotBeEmpty
-InsertCannotOrderByDescending
 InsertCannotReplaceExistingSegment
 InsertLockPreempted
 InsertTimeNull
@@ -717,6 +763,7 @@ TooManyWorkers
 NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
+TIMED_OUT
 # MSQ context parameters
 maxNumTasks
 taskAssignment
@@ -736,45 +783,60 @@ APPROX_COUNT_DISTINCT_DS_THETA
 APPROX_QUANTILE_DS
 DS_QUANTILES_SKETCH
 APPROX_QUANTILE_FIXED_BUCKETS
-
+# Operators
+pivoted
+UNPIVOT
+unpivoted
 # File specific overrides
- - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
- - ../docs/configuration/logging.md
 _common
+appender
 appenders
- - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
 Minio
 multi-server
- - ../docs/dependencies/metadata-storage.md
 BasicDataSource
- - ../docs/dependencies/zookeeper.md
 LeaderLatch
+2.x
+28.x
+3.0.x
 3.5.x
 3.4.x
- - ../docs/design/auth.md
+3.5.x.
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
+booleans
+EOF
+IE11
+InsufficientResourceException
 HttpClient
+JsonConfigurator
+KIP-297
 allowAll
 authenticatorChain
 defaultUser
- - ../docs/design/coordinator.md
 inputSegmentSizeBytes
 skipOffsetFromLatest
- - ../docs/design/router.md
 brokerService
 c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
+NUMBER_FEATURES
+NUMBER_OF_CONTRIBUTORS
+PreparedStatement
+pre-upgrade
+QueryCapacityExceededException
+QueryTimeoutException
+QueryUnsupportedException
+ResultSet
 runtime.properties
+SqlParseException
 timeBoundary
- - ../docs/design/segments.md
+ValidationException
 0x0
 0x9
 2GB
@@ -785,7 +847,6 @@ Ke
 datasource_intervalStart_intervalEnd_version_partitionNum
 partitionNum
 v9
- - ../docs/development/build.md
 3.x
 8u92
 DskipTests
@@ -796,14 +857,11 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
- - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
 trustStore
- - ../docs/development/extensions-core/azure.md
 StaticAzureBlobStoreFirehose
 StaticS3Firehose
 fetchTimeout
@@ -814,7 +872,6 @@ maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
 sharedAccessStorageToken
- - ../docs/development/extensions-contrib/cloudfiles.md
 StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
@@ -826,7 +883,6 @@ maxCacheCapacityBytes
 maxFetchCapacityBytes
 fetchTimeout
 maxFetchRetry
- - ../docs/development/extensions-contrib/distinctcount.md
 distinctCount
 groupBy
 maxIntermediateRows
@@ -835,20 +891,17 @@ queryGranularity
 segmentGranularity
 topN
 visitor_id
- - ../docs/development/extensions-contrib/influx.md
 cpu
 web_requests
- - ../docs/development/extensions-contrib/influxdb-emitter.md
 _
 druid_
 druid_cache_total
 druid_hits
 druid_query
 historical001
- - ../docs/development/extensions-contrib/materialized-view.md
 HadoopTuningConfig
 TuningConfig
-base-dataSource's
+base-dataSource
 baseDataSource
 baseDataSource-hashCode
 classpathPrefix
@@ -859,18 +912,18 @@ maxTaskCount
 metricsSpec
 queryType
 tuningConfig
- - ../docs/development/extensions-contrib/momentsketch-quantiles.md
 arcsinh
 fieldName
 momentSketchMerge
 momentsketch
- - ../docs/development/extensions-contrib/moving-average-query.md
 10-minutes
 MeanNoNulls
 P1D
 cycleSize
 doubleMax
 doubleAny
+doubleFirst
+doubleLast
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -880,6 +933,8 @@ druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
+longFirst
+longLast
 longMean
 longMeanNoNulls
 longMin
@@ -888,31 +943,25 @@ movingAverage
 postAggregations
 postAveragers
 pull-deps
- - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
 namespacePrefix
 src
- - ../docs/development/extensions-contrib/redis-cache.md
 loadList
 pull-deps
 PT2S
- - ../docs/development/extensions-contrib/sqlserver.md
 com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc
- - ../docs/development/extensions-contrib/statsd.md
 convertRange
-- ../docs/development/extensions-contrib/prometheus.md
 HTTPServer
 conversionFactor
 prometheus
 Pushgateway
 flushPeriod
- - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
+postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
- - ../docs/development/extensions-contrib/thrift.md
 HadoopDruidIndexer
 LzoThriftBlock
 SequenceFile
@@ -924,10 +973,8 @@ ioConfig
 parseSpec
 thriftClass
 thriftJar
- - ../docs/development/extensions-contrib/time-min-max.md
 timeMax
 timeMin
- - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
 Alibaba
 Aliyun
 aliyun-oss-extensions
@@ -935,11 +982,11 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
 url
- - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
 fixedBucketsHistogram
@@ -947,7 +994,6 @@ bucketNum
 lowerLimit
 numBuckets
 upperLimit
- - ../docs/development/extensions-core/avro.md
 AVRO-1124
 Avro-1124
 SchemaRepo
@@ -961,34 +1007,28 @@ schemaRepository
 schema_inline
 subjectAndIdConverter
 url
- - ../docs/development/extensions-core/bloom-filter.md
 BloomKFilter
 bitset
 outputStream
- - ../docs/development/extensions-core/datasketches-hll.md
 HLLSketchBuild
 HLLSketchMerge
 lgK
 log2
 tgtHllType
- - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
 maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
- - ../docs/development/extensions-core/datasketches-theta.md
 isInputThetaSketch
 thetaSketch
 user_id
- - ../docs/development/extensions-core/datasketches-tuple.md
 ArrayOfDoublesSketch
 arrayOfDoublesSketch
 metricColumns
 nominalEntries
 numberOfValues
- - ../docs/development/extensions-core/druid-basic-security.md
 INFORMATION_SCHEMA
 MyBasicAuthenticator
 MyBasicAuthorizer
@@ -1009,14 +1049,12 @@ objectClass
 initialAdminRole
 adminGroupMapping
 groupMappingName
- - ../docs/development/extensions-core/druid-kerberos.md
 8KiB
 HttpComponents
 MyKerberosAuthenticator
 RFC-4559
 SPNego
 _HOST
- - ../docs/development/extensions-core/druid-lookups.md
 cacheFactory
 concurrencyLevel
 dataFetcher
@@ -1030,32 +1068,25 @@ maximumSize
 onHeapPolling
 pollPeriod
 reverseLoadingCacheSpec
- - ../docs/development/extensions-core/druid-pac4j.md
 OAuth
 Okta
 OpenID
 pac4j
- - ../docs/development/extensions-core/kubernetes.md
 Env
 POD_NAME
 POD_NAMESPACE
 ConfigMap
 PT17S
- - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
- - ../docs/development/extensions-core/hdfs.md
 gcs-connector
-hadoop2
 hdfs
- - ../docs/development/extensions-core/kafka-extraction-namespace.md
 Aotearoa
 Czechia
 KTable
 LookupExtractorFactory
 Zeelund
-zookeeper.connect
- - ../docs/development/extensions-core/kafka-ingestion.md
+zookeeper.connect 
 0.11.x.
 00Z
 2016-01-01T11
@@ -1096,7 +1127,6 @@ metricCompression
 numKafkaPartitions
 taskCount
 taskDuration
- - ../docs/development/extensions-core/kinesis-ingestion.md
 9.2dist
 KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
@@ -1106,12 +1136,14 @@ LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcise
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
+maxBytesPerPoll
 maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsPerFetchfetchDelayMillismaxRecordsPerPollamazon-kinesis-client1
 numKinesisShards
 numProcessors
 q.size
 repartitionTransitionDuration
 replicastaskCounttaskCount
+resetOffsets
 resetuseEarliestSequenceNumberPOST
 resumePOST
 statusrecentErrorsdruid.supervisor.maxStoredExceptionEventsstatedetailedStatestatedetailedStatestatestatePENDINGRUNNINGSUSPENDEDSTOPPINGUNHEALTHY_SUPERVISORUNHEALTHY_TASKSdetailedStatestatedruid.supervisor.unhealthinessThresholddruid.supervisor.taskUnhealthinessThresholdtaskDurationtaskCountreplicasdetailedStatedetailedStateRUNNINGPOST
@@ -1132,21 +1164,17 @@ KCL
 signalled
 ProvisionedThroughputExceededException
 Deaggregation
- - ../docs/development/extensions-core/lookups-cached-global.md
 baz
 customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec
- - ../docs/development/extensions-core/parquet.md
 binaryAsString
- - ../docs/development/extensions-core/postgresql.md
-sslFactory's
+replaceMissingValueWith
+sslFactory
 sslMode
- - ../docs/development/extensions-core/protobuf.md
 Proto
 metrics.desc
 metrics.desc.
@@ -1155,7 +1183,6 @@ metrics_pb
 protoMessageType
 timeAndDims
 tmp
- - ../docs/development/extensions-core/s3.md
 SigV4
 jvm.config
 kms
@@ -1163,11 +1190,9 @@ s3
 s3a
 s3n
 uris
- - ../docs/development/extensions-core/simple-client-sslcontext.md
 KeyManager
 SSLContext
 TrustManager
- - ../docs/development/extensions-core/stats.md
 GenericUDAFVariance
 Golub
 J.L.
@@ -1183,7 +1208,6 @@ variance2
 varianceFold
 variance_pop
 variance_sample
- - ../docs/development/extensions-core/test-stats.md
 Berry_statbook
 Berry_statbook_chpt6.pdf
 S.E.
@@ -1203,7 +1227,6 @@ www.ucs.louisiana.edu
 zscore
 zscore2sample
 ztests
- - ../docs/development/extensions.md
 DistinctCount
 artifactId
 com.example
@@ -1226,16 +1249,13 @@ org.apache.druid.extensions.contrib.
 pull-deps
 sqlserver-metadata-storage
 statsd-emitter
- - ../docs/development/geo.md
 coords
 dimName
 maxCoords
 Mb
 minCoords
- - ../docs/development/javascript.md
 Metaspace
 dev
- - ../docs/development/modules.md
 AggregatorFactory
 ArchiveTask
 ComplexMetrics
@@ -1254,17 +1274,19 @@ ObjectMapper
 PasswordProvider
 PostAggregators
 QueryRunnerFactory
+segmentmetadataquery
 SegmentMetadataQuery
 SegmentMetadataQueryQueryToolChest
 StaticS3FirehoseFactory
 loadSpec
 multibind
 pom.xml
- - ../docs/ingestion/data-formats.md
 0.6.x
 0.7.x
 0.7.x.
 TimeAndDims
+catalogProperties
+catalogUri
 column2
 column_1
 column_n
@@ -1273,33 +1295,36 @@ ctrl
 descriptorString
 headerFormat
 headerLabelPrefix
+icebergFilter
+icebergCatalog
 jsonLowercase
 kafka
 KafkaStringHeaderFormat
 kafka.header.
 kafka.key
 kafka.timestamp
+kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
+lowerOpen
 timestamp
 timestampColumnName
 timestampSpec
+upperOpen
 urls
 valueFormat
- - ../docs/data-management/compaction.md
 1GB
 IOConfig
 compactionTask
 compactionTasks
 ingestSegmentFirehose
 numShards
- - ../docs/ingestion/faq.md
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
- - ../docs/ingestion/hadoop.md
 2012-01-01T00
 2012-01-03T00
 2012-01-05T00
@@ -1348,6 +1373,7 @@ segmentOutputPath
 segmentTable
 shardSpec
 single_dim
+tableName
 targetPartitionSize
 targetRowsPerSegment
 useCombiner
@@ -1356,7 +1382,6 @@ useNewAggs
 useYarnRMJobStatusFallback
 workingPath
 z.example.com
- - ../docs/ingestion/native-batch.md
 150MB
 CombiningFirehose
 DataSchema
@@ -1378,7 +1403,7 @@ chatHandlerTimeout
 cityName
 connectorConfig
 countryName
-dataSchema's
+dataSchema
 dropExisting
 foldCase
 forceGuaranteedRollup
@@ -1405,7 +1430,6 @@ totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
- - ../docs/ingestion/native-batch-firehose.md
 LocalFirehose
 baseDir
 HttpFirehose
@@ -1422,14 +1446,11 @@ connectorConfig
 InlineFirehose
 CombiningFirehose
 httpAuthenticationPassword
- - ../docs/ingestion/native-batch-input-source.md
 accessKeyId
 secretAccessKey
 accessKeyId
 httpAuthenticationPassword
 countryName
- - ../docs/ingestion/native-batch-simple-task.md
-dataSchema's
 appendToExisting
 dropExisting
 timeChunk
@@ -1438,17 +1459,16 @@ forceGuaranteedRollup
 reportParseExceptions
 pushTimeout
 segmentWriteOutMediumFactory
- - ../docs/ingestion/schema-design.md
 product_category
 product_id
 product_name
- - ../docs/ingestion/tasks.md
 BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+warehouseSource
+warehousePath
 index.md
- - ../docs/misc/math-expr.md
 DOUBLE_ARRAY
 DOY
 DateTimeFormat
@@ -1464,6 +1484,7 @@ arr1
 arr2
 array_append
 array_concat
+ARRAY_CONCAT
 array_set_add
 array_set_add_all
 array_contains
@@ -1507,10 +1528,20 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
+
+isnull
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad
@@ -1522,6 +1553,7 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+regexp_replace
 contains_string
 icontains_string
 result1
@@ -1536,6 +1568,9 @@ str1
 str2
 string_to_array
 stringAny
+stringFirst
+stringLast
+Strlen
 strlen
 strpos
 timestamp_ceil
@@ -1555,9 +1590,7 @@ IEC
 human_readable_binary_byte_format
 human_readable_decimal_byte_format
 human_readable_decimal_format
- - ../docs/misc/papers-and-talks.md
 RADStack
- - ../docs/operations/api-reference.md
 00.000Z
 2015-09-12T03
 2015-09-12T05
@@ -1578,7 +1611,7 @@ segmentId2
 taskId
 taskid
 un
- - ../docs/operations/basic-cluster-tuning.md
+ 
 100MiB
 128MiB
 15ms
@@ -1593,7 +1626,6 @@ un
 G1GC
 GroupBys
 QoS-type
- - ../docs/operations/dump-segment.md
 DumpSegment
 SegmentMetadata
 __time
@@ -1601,14 +1633,10 @@ bitmapSerdeFactory
 columnName
 index.zip
 time-iso8601
- - ../docs/operations/export-metadata.md
 hadoopStorageDirectory
- - ../docs/operations/insert-segment-to-db.md
 0.14.x
- - ../docs/operations/java.md
 G1
 Temurin
- - ../docs/operations/metrics.md
 0.14.x
 1s
 Bufferpool
@@ -1662,7 +1690,6 @@ taskType
 threadPoolNumBusyThreads.
 threadPoolNumIdleThreads
 threadPoolNumTotalThreads.
- - ../docs/operations/other-hadoop.md
 CDH
 Classloader
 assembly.sbt
@@ -1673,17 +1700,14 @@ mapred-default
 mapred-site
 sbt
 scala-2
- - ../docs/operations/pull-deps.md
 org.apache.hadoop
 proxy.com.
 remoteRepository
- - ../docs/operations/recommendations.md
 JBOD
 druid.processing.buffer.sizeBytes.
 druid.processing.numMergeBuffers
 druid.processing.numThreads
 tmpfs
- - ../docs/operations/rule-configuration.md
 broadcastByInterval
 broadcastByPeriod
 broadcastForever
@@ -1695,9 +1719,7 @@ dropForever
 loadByInterval
 loadByPeriod
 loadForever
- - ../docs/operations/segment-optimization.md
 700MB
- - ../docs/operations/single-server.md
 128GiB
 16GiB
 256GiB
@@ -1710,18 +1732,13 @@ i3.16xlarge
 i3.2xlarge
 i3.4xlarge
 i3.8xlarge
- - ../docs/operations/tls-support.md
 CN
 subjectAltNames
- - ../docs/querying/aggregations.md
 HyperUnique
 hyperUnique
 longSum
- - ../docs/querying/datasource.md
 groupBys
- - ../docs/querying/datasourcemetadataquery.md
 dataSourceMetadata
- - ../docs/querying/dimensionspecs.md
 ExtractionDimensionSpec
 SimpleDateFormat
 bar_1
@@ -1736,7 +1753,6 @@ timeFormat
 tz
 v3
 weekyears
- - ../docs/querying/filters.md
 ___bar
 caseSensitive
 extractionFn
@@ -1744,13 +1760,11 @@ insensitive_contains
 last_name
 lowerStrict
 upperStrict
- - ../docs/querying/granularities.md
 1970-01-01T00
 P2W
 PT0.750S
 PT1H30M
 TimeseriesQuery
- - ../docs/querying/groupbyquery.md
 D1
 D2
 D3
@@ -1769,30 +1783,24 @@ pushdown
 row1
 subtotalsSpec
 tradeoff
- - ../docs/querying/having.md
 HavingSpec
 HavingSpecs
 dimSelector
 equalTo
 greaterThan
 lessThan
- - ../docs/querying/hll-old.md
 DefaultDimensionSpec
 druid-hll
 isInputHyperUnique
- - ../docs/querying/joins.md
 pre-join
- - ../docs/querying/limitspec.md
 DefaultLimitSpec
 OrderByColumnSpec
 OrderByColumnSpecs
 dimensionOrder
- - ../docs/querying/lookups.md
 60_000
 kafka-extraction-namespace
 mins
-tierName
- - ../docs/querying/multi-value-dimensions.md
+tierName 
 row2
 row3
 row4
@@ -1801,14 +1809,11 @@ t4
 t5
 groupByEnableMultiValueUnnesting
 unnesting
- - ../docs/querying/multitenancy.md
 500ms
 tenant_id
- - ../docs/querying/post-aggregations.md
 fieldAccess
 finalizingFieldAccess
 hyperUniqueCardinality
- - ../docs/querying/query-context.md
 brokerService
 bySegment
 doubleSum
@@ -1824,6 +1829,8 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
+floatFirst
+floatLast
 floatSum
 joinFilterRewriteMaxSize
 maxQueuedBytes
@@ -1847,14 +1854,12 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableJoinFilterRewriteValueColumnFilters
 joinFilterRewriteMaxSize
- - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata
 TimeBoundary
 errorClass
 errorMessage
 x-jackson-smile
- - ../docs/querying/scan-query.md
 batchSize
 compactedList
 druid.query.scan.legacy
@@ -1864,7 +1869,6 @@ maxRowsQueuedForOrdering
 maxSegmentPartitionsOrderedInMemory
 resultFormat
 valueVector
- - ../docs/querying/searchquery.md
 SearchQuerySpec
 cursorOnly
 druid.query.search.searchStrategy
@@ -1872,45 +1876,36 @@ queryableIndexSegment
 searchDimensions
 searchStrategy
 useIndexes
- - ../docs/querying/searchqueryspec.md
 ContainsSearchQuerySpec
 FragmentSearchQuerySpec
 InsensitiveContainsSearchQuerySpec
 RegexSearchQuerySpec
- - ../docs/querying/segmentmetadataquery.md
 analysisType
 analysisTypes
+aggregatorMergeStrategy
 lenientAggregatorMerge
 minmax
 segmentMetadata
 toInclude
- - ../docs/querying/select-query.md
 PagingSpec
 fromNext
 pagingSpec
- - ../docs/querying/sorting-orders.md
 BoundFilter
-GroupByQuery's
+GroupByQuery
 SearchQuery
 TopNMetricSpec
 compareTo
 file12
 file2
- - ../docs/querying/sql-operators.md
 _x_
- - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2
- - ../docs/querying/topnmetricspec.md
 DimensionTopNMetricSpec
 metricSpec
 previousStop
- - ../docs/querying/topnquery.md
 GroupByQuery
 top500
- - ../docs/querying/virtual-columns.md
 outputType
- - ../docs/tutorials/cluster.md
 1.9TB
 16CPU
 WebUpd8
@@ -1918,18 +1913,18 @@ m5.2xlarge
 metadata.storage.
 256GiB
 128GiB
- - ../docs/tutorials/tutorial-batch-hadoop.md
+ 
 PATH_TO_DRUID
 namenode
- - ../docs/tutorials/tutorial-delete-data.md
+ 
 segmentID
 segmentIds
- - ../docs/tutorials/tutorial-ingestion-spec.md
+ 
 dstIP
 dstPort
 srcIP
 srcPort
- - ../docs/tutorials/tutorial-kerberos-hadoop.md
+ 
 common_runtime_properties
 druid.extensions.directory
 druid.extensions.loadList
@@ -1942,19 +1937,14 @@ druid.storage.type
 hdfs.headless.keytab
 indexing_log
 keytabs
- - ../docs/tutorials/tutorial-query.md
 dsql
- - ../docs/tutorials/tutorial-retention.md
 2015-09-12T12
- - ../docs/tutorials/tutorial-sketches-theta.md
 clickstreams
 uid
 _k_
 Bridgerton
 Hellmar
- - ../docs/tutorials/tutorial-update-data.md
 bear-111
- - ../docs/configuration/index.md
 10KiB
 2GiB
 512KiB
@@ -2105,6 +2095,8 @@ orderbys
 org.apache.druid
 org.apache.druid.jetty.RequestLog
 org.apache.hadoop
+OSHI
+OshiSysMonitor
 overlord.html
 pendingSegments
 pre-flight
@@ -2124,6 +2116,7 @@ slf4j
 sql
 sqlQuery
 successfulSending
+[S]igar
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
@@ -2149,9 +2142,7 @@ fillCapacityWithCategorySpec
 WorkerCategorySpec
 workerCategorySpec
 CategoryConfig
- - ../docs/design/index.md
 logsearch
- - ../docs/ingestion/index.md
 2000-01-01T01
 DateTimeFormat
 JsonPath
@@ -2164,7 +2155,6 @@ missingValue
 skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
- - ../docs/tutorials/index.md
 4CPU
 cityName
 countryIsoCode
@@ -2179,7 +2169,6 @@ regionIsoCode
 regionName
 4GiB
 512GiB
- - ../docs/development/extensions-core/druid-ranger-security.md
 json
 metastore
 UserGroupInformation
@@ -2187,7 +2176,6 @@ CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
- - ../docs/configuration/human-readable-byte.md
 0s
 1T
 3G
@@ -2216,7 +2204,6 @@ CDF
 maxStreamLength
 toString
 100TB
-- ../docs/development/extensions-contrib/compressed-big-decimal.md
 compressedBigDecimal
 limitSpec
 metricsSpec
@@ -2225,7 +2212,6 @@ SaleAmount
 IngestionSpec
 druid-compressed-bigdecimal
 doubleSum
- - ../docs/querying/sql-functions.md
 ANY_VALUE
 APPROX_COUNT_DISTINCT_DS_HLL
 APPROX_COUNT_DISTINCT_DS_THETA
@@ -2250,6 +2236,8 @@ CHARACTER_LENGTH
 CURRENT_DATE
 CURRENT_TIMESTAMP
 DATE_TRUNC
+DECODE_BASE64_COMPLEX
+DECODE_BASE64_UTF8
 DS_CDF
 DS_GET_QUANTILE
 DS_GET_QUANTILES
@@ -2316,13 +2304,108 @@ KTable
 Aotearoa
 Czechia
 Zeelund
- - ../docs/tutorials/docker.md
- nano
- - ../docs/operations/python.md
+nano
 MacOS
 RHEL
 psutil
 pathlib
-- ../docs/tutorials/tutorial-sql-query-view.md
 kttm_simple
 dist_country
+# Extensions
+druid-avro-extensions
+druid-azure-extensions
+druid-basic-security
+druid-bloom-filter
+druid-datasketches
+druid-google-extensions
+druid-hdfs-storage
+druid-histogram
+druid-kafka-extraction-name
+druid-kafka-indexing-service
+druid-kinesis-indexing-service
+druid-kerberos
+druid-lookups-cached-global
+druid-lookups-cached-single
+druid-multi-stage-query
+druid-orc-extensions
+druid-parquet-extensions
+druid-protobuf-extensions
+druid-ranger-security
+druid-s3-extensions
+druid-ec2-extensions
+druid-aws-rds-extensions
+druid-stats
+mysql-metadata-storage
+postgresql-metadata-storage
+simple-client-sslcontext
+druid-pac4j
+druid-kubernetes-extensions
+aliyun-oss-extensions
+ambari-metrics-emitter
+druid-cassandra-storage
+druid-cloudfiles-extensions
+druid-compressed-bigdecimal
+druid-distinctcount
+druid-redis-cache
+druid-time-min-max
+sqlserver-metadata-storage
+graphite-emitter|Graphite metrics emitter
+statsd-emitter|StatsD metrics emitter
+kafka-emitter|Kafka metrics emitter
+druid-thrift-extensions
+druid-opentsdb-emitter
+materialized-view-selection
+materialized-view-maintenance
+druid-moving-average-query
+druid-influxdb-emitter
+druid-momentsketch
+druid-tdigestsketch
+gce-extensions
+prometheus-emitter
+kubernetes-overlord-extensions
+UCS
+ISO646-US
+completeTasks
+runningTasks
+waitingTasks
+pendingTasks
+shutdownAllTasks
+supervisorId
+suspendAll
+resumeAll
+terminateAll
+selfDiscovered
+loadstatus
+isLeader
+taskslots
+loadstatus
+sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
+LAST_VALUE
+markUnused
+markUsed
+segmentId
+aggregateMultipleValues
+appRegistrationClientId
+appRegistrationClientSecret
+tenantId
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
+
+- ../docs/development/extensions-contrib/spectator-histogram.md
+SpectatorHistogram
+PercentileBuckets
+spectatorHistogram
+spectatorHistogramTimer
+spectatorHistogramDistribution
+percentileSpectatorHistogram
+percentilesSpectatorHistogram
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
+quantilesFromDDSketch
+quantileFromDDSketch
+collapsingLowestDense

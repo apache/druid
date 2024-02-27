@@ -89,14 +89,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
-        {
-          @Override
-          public String getDataSource()
-          {
-            return "foo";
-          }
-        }
+        NoopTask.forDatasource("foo")
     );
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
@@ -124,14 +117,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
-        {
-          @Override
-          public String getDataSource()
-          {
-            return "foo";
-          }
-        }
+        NoopTask.forDatasource("foo")
     );
     Assert.assertEquals("localhost", worker.getWorker().getHost());
   }
@@ -160,14 +146,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
-        {
-          @Override
-          public String getDataSource()
-          {
-            return "foo";
-          }
-        }
+        NoopTask.forDatasource("foo")
     );
     Assert.assertEquals("enableHost", worker.getWorker().getHost());
   }
@@ -196,14 +175,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
-        {
-          @Override
-          public String getDataSource()
-          {
-            return "foo";
-          }
-        }
+        NoopTask.forDatasource("foo")
     );
     Assert.assertEquals("enableHost", worker.getWorker().getHost());
   }
@@ -282,13 +254,6 @@ public class EqualDistributionWorkerSelectStrategyTest
 
   private static NoopTask createDummyTask(final String dataSource)
   {
-    return new NoopTask(null, null, null, 1, 0, null, null, null)
-    {
-      @Override
-      public String getDataSource()
-      {
-        return dataSource;
-      }
-    };
+    return NoopTask.forDatasource(dataSource);
   }
 }

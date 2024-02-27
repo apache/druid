@@ -36,6 +36,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
@@ -97,7 +98,7 @@ public class SegmentManagerThreadSafetyTest
             new SimpleModule().registerSubtypes(new NamedType(LocalLoadSpec.class, "local"), new NamedType(TestSegmentizerFactory.class, "test"))
         )
         .setInjectableValues(new Std().addValue(LocalDataSegmentPuller.class, segmentPuller));
-    indexIO = new IndexIO(objectMapper, () -> 0);
+    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
     segmentCacheManager = new SegmentLocalCacheManager(

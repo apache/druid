@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write;
 
+import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
@@ -32,7 +33,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -119,13 +119,8 @@ public class RowBasedFrameWriter implements FrameWriter
       return false;
     }
 
-    try {
-      if (!writeData()) {
-        return false;
-      }
-    }
-    catch (Exception e) {
-      throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
+    if (!writeData()) {
+      return false;
     }
 
     final MemoryRange<WritableMemory> rowOffsetCursor = rowOffsetMemory.cursor();
@@ -292,11 +287,22 @@ public class RowBasedFrameWriter implements FrameWriter
       final long writeResult;
 
       // May throw InvalidNullByteException; allow it to propagate upwards.
-      writeResult = fieldWriter.writeTo(
-          dataCursor.memory(),
-          dataCursor.start() + bytesWritten,
-          remainingInBlock - bytesWritten
-      );
+      try {
+        writeResult = fieldWriter.writeTo(
+            dataCursor.memory(),
+            dataCursor.start() + bytesWritten,
+            remainingInBlock - bytesWritten
+        );
+      }
+      catch (InvalidNullByteException inbe) {
+        throw InvalidNullByteException.builder(inbe)
+                                      .column(signature.getColumnName(i))
+                                      .build();
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
 
       if (writeResult < 0) {
         // Reset to beginning of loop.

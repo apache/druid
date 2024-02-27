@@ -46,7 +46,7 @@ public class TaskRunnerUtilsTest
   public void testMakeTaskLocationURL()
   {
     final URL url = TaskRunnerUtils.makeTaskLocationURL(
-        new TaskLocation("1.2.3.4", 8090, 8290),
+        TaskLocation.create("1.2.3.4", 8090, 8290),
         "/druid/worker/v1/task/%s/log",
         "foo bar&"
     );

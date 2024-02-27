@@ -77,8 +77,8 @@ public class MetadataStorageConnectorConfigTest
         "user",
         "\"nothing\""
     );
-    Assert.assertTrue(metadataStorageConnectorConfig.equals(metadataStorageConnectorConfig2));
-    Assert.assertTrue(metadataStorageConnectorConfig.hashCode() == metadataStorageConnectorConfig2.hashCode());
+    Assert.assertEquals(metadataStorageConnectorConfig, metadataStorageConnectorConfig2);
+    Assert.assertEquals(metadataStorageConnectorConfig.hashCode(), metadataStorageConnectorConfig2.hashCode());
   }
 
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
@@ -193,12 +193,9 @@ public class MetadataStorageConnectorConfigTest
   @Test
   public void testCreate()
   {
-    Map<String, Object> props = ImmutableMap.of("key", "value");
-    MetadataStorageConnectorConfig config = MetadataStorageConnectorConfig.create(
-        "connectURI",
-        "user",
-        "pwd",
-        props);
+    Map<String, String> props = ImmutableMap.of("key", "value");
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "pwd", props);
     Assert.assertEquals("connectURI", config.getConnectURI());
     Assert.assertEquals("user", config.getUser());
     Assert.assertEquals("pwd", config.getPassword());

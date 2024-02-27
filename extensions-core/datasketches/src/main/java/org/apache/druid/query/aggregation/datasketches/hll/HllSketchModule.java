@@ -25,8 +25,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllPostAggExprMacros;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctUtf8SqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateWithErrorBoundsOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchObjectSqlAggregator;
@@ -57,6 +60,7 @@ public class HllSketchModule implements DruidModule
   {
     registerSerde();
     SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctSqlAggregator.class);
+    SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctUtf8SqlAggregator.class);
     SqlBindings.addAggregator(binder, HllSketchObjectSqlAggregator.class);
 
     SqlBindings.addOperatorConversion(binder, HllSketchEstimateOperatorConversion.class);
@@ -64,6 +68,7 @@ public class HllSketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, HllSketchSetUnionOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
 
+    ExpressionModule.addExprMacro(binder, HllPostAggExprMacros.HLLSketchEstimateExprMacro.class);
     SqlBindings.addApproxCountDistinctChoice(
         binder,
         HllSketchApproxCountDistinctSqlAggregator.NAME,

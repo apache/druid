@@ -23,7 +23,7 @@ title: "StatsD Emitter"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `statsd-emitter` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `statsd-emitter` in the extensions load list.
 
 ## Introduction
 
@@ -65,7 +65,7 @@ e.g.
 For metrics which are emitted from multiple services with different dimensions, the metric name is prefixed with
 the service name.
 e.g.
-`"coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
- "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" }`
- 
+`"druid/coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+ "druid/historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" }`
+
 For most use-cases, the default mapping is sufficient.

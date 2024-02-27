@@ -52,7 +52,7 @@ It runs the query in two main phases:
 ## Operations
 
 ### Installation
-Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../development/extensions.md#community-extensions) on all Druid broker and router nodes.
+Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../configuration/extensions.md#community-extensions) on all Druid broker and router nodes.
 
 ```bash
 java -classpath "<your_druid_dir>/lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions.contrib:druid-moving-average-query:{VERSION}

@@ -37,7 +37,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -122,11 +122,6 @@ public class LikeFilterBenchmark
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
     final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final List<Integer> ints = generateInts();
-    final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
-        FluentIterable.from(ints)
-                      .transform(Object::toString),
-        GenericIndexed.STRING_STRATEGY
-    );
     final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
@@ -145,7 +140,7 @@ public class LikeFilterBenchmark
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
-        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
+        new StringUtf8ColumnIndexSupplier<>(bitmapFactory, dictionaryUtf8::singleThreaded, bitmaps, null)
     );
   }
 

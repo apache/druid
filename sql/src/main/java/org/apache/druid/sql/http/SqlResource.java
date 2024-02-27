@@ -22,13 +22,11 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -43,7 +41,6 @@ import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
 
@@ -102,7 +99,6 @@ public class SqlResource
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
-
   }
 
   @POST
@@ -210,6 +206,10 @@ public class SqlResource
 
   private class SqlResourceQueryResultPusher extends QueryResultPusher
   {
+<<<<<<< HEAD
+=======
+    private final String sqlQueryId;
+>>>>>>> upstream/master
     private final HttpStatement stmt;
     private final SqlQuery sqlQuery;
 
@@ -222,9 +222,9 @@ public class SqlResource
     {
       super(
           req,
-          SqlResource.this.jsonMapper,
-          SqlResource.this.responseContextConfig,
-          SqlResource.this.selfNode,
+          jsonMapper,
+          responseContextConfig,
+          selfNode,
           SqlResource.QUERY_METRIC_COUNTER,
           stmt.sqlQueryId(),
           MediaType.APPLICATION_JSON_TYPE,
@@ -246,28 +246,9 @@ public class SqlResource
         @Nullable
         public Response.ResponseBuilder start()
         {
-          try {
-            thePlan = stmt.plan();
-            queryResponse = thePlan.run();
-            return null;
-          }
-          catch (RelOptPlanner.CannotPlanException e) {
-            throw new SqlPlanningException(
-                SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
-                e.getMessage()
-            );
-          }
-          // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
-          // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
-          // dubious at best).  We keep this just in case, but it might be best to remove it and see where the
-          // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
-          catch (AssertionError e) {
-            log.warn(e, "AssertionError killed query: %s", sqlQuery);
-
-            // We wrap the exception here so that we get the sanitization.  java.lang.AssertionError apparently
-            // doesn't implement org.apache.druid.common.exception.SanitizableException.
-            throw new QueryInterruptedException(e);
-          }
+          thePlan = stmt.plan();
+          queryResponse = thePlan.run();
+          return null;
         }
 
         @Override
@@ -360,6 +341,5 @@ public class SqlResource
       }
       out.write(jsonMapper.writeValueAsBytes(ex));
     }
-
   }
 }

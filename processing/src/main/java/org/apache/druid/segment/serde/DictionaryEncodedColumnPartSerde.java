@@ -28,11 +28,10 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -43,11 +42,10 @@ import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.DictionaryWriter;
-import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
@@ -311,143 +309,34 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         builder.setType(ValueType.STRING);
 
-        final int dictionaryStartPosition = buffer.position();
-        final byte dictionaryVersion = buffer.get();
-
-        if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
-          final byte encodingId = buffer.get();
-          if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            readFrontCodedColumn(buffer, builder, rVersion, rFlags, hasMultipleValues);
-          } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
-            // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
-            // this provides backwards compatibility should we switch at some point in the future to always
-            // writing dictionaryVersion
-            readGenericIndexedColumn(buffer, builder, columnConfig, rVersion, rFlags, hasMultipleValues);
-          } else {
-            throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
-          }
-        } else {
-          // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
-          // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
-          // GenericIndexed version can be correctly read
-          buffer.position(dictionaryStartPosition);
-          readGenericIndexedColumn(buffer, builder, columnConfig, rVersion, rFlags, hasMultipleValues);
-        }
-      }
-
-      private void readGenericIndexedColumn(
-          ByteBuffer buffer,
-          ColumnBuilder builder,
-          ColumnConfig columnConfig,
-          VERSION rVersion,
-          int rFlags,
-          boolean hasMultipleValues
-      )
-      {
-        // Duplicate the first buffer since we are reading the dictionary twice.
-        final GenericIndexed<String> rDictionary = GenericIndexed.read(
-            buffer.duplicate(),
-            GenericIndexed.STRING_STRATEGY,
-            builder.getFileMapper()
-        );
-
-        final GenericIndexed<ByteBuffer> rDictionaryUtf8 = GenericIndexed.read(
-            buffer,
-            GenericIndexed.UTF8_STRATEGY,
-            builder.getFileMapper()
-        );
-
-        final WritableSupplier<ColumnarInts> rSingleValuedColumn;
-        final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
-
-        if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
-          rSingleValuedColumn = null;
-        } else {
-          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
-          rMultiValuedColumn = null;
-        }
-
-        final String firstDictionaryEntry = rDictionary.get(0);
-
-        DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
-            rDictionary,
-            rDictionaryUtf8,
-            rSingleValuedColumn,
-            rMultiValuedColumn,
-            columnConfig.columnCacheSizeBytes()
-        );
-
-        builder.setHasMultipleValues(hasMultipleValues)
-               .setHasNulls(firstDictionaryEntry == null)
-               .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
-
-        GenericIndexed<ImmutableBitmap> rBitmaps = null;
-        ImmutableRTree rSpatialIndex = null;
-        if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
-          rBitmaps = GenericIndexed.read(
-              buffer,
-              bitmapSerdeFactory.getObjectStrategy(),
-              builder.getFileMapper()
-          );
-        }
-
-        if (buffer.hasRemaining()) {
-          rSpatialIndex = new ImmutableRTreeObjectStrategy(
-              bitmapSerdeFactory.getBitmapFactory()
-          ).fromByteBufferWithSize(buffer);
-        }
-
-        if (rBitmaps != null || rSpatialIndex != null) {
-          builder.setIndexSupplier(
-              new DictionaryEncodedStringIndexSupplier(
-                  bitmapSerdeFactory.getBitmapFactory(),
-                  rDictionary,
-                  rDictionaryUtf8,
-                  rBitmaps,
-                  rSpatialIndex
-              ),
-              rBitmaps != null,
-              rSpatialIndex != null
-          );
-        }
-      }
-
-      private void readFrontCodedColumn(
-          ByteBuffer buffer,
-          ColumnBuilder builder,
-          VERSION rVersion,
-          int rFlags,
-          boolean hasMultipleValues
-      )
-      {
-        final Supplier<FrontCodedIndexed> rUtf8Dictionary = FrontCodedIndexed.read(
-            buffer,
-            byteOrder
-        );
-
-        final WritableSupplier<ColumnarInts> rSingleValuedColumn;
-        final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
-
-        if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
-          rSingleValuedColumn = null;
-        } else {
-          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
-          rMultiValuedColumn = null;
-        }
-
-        final boolean hasNulls = rUtf8Dictionary.get().get(0) == null;
-
-        StringFrontCodedDictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier =
-            new StringFrontCodedDictionaryEncodedColumnSupplier(
-                rUtf8Dictionary,
-                rSingleValuedColumn,
-                rMultiValuedColumn
+        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier =
+            StringEncodingStrategies.getStringDictionarySupplier(
+                builder.getFileMapper(),
+                buffer,
+                byteOrder
             );
+
+        final WritableSupplier<ColumnarInts> rSingleValuedColumn;
+        final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
+
+        if (hasMultipleValues) {
+          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
+          rSingleValuedColumn = null;
+        } else {
+          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
+          rMultiValuedColumn = null;
+        }
+
+        final boolean hasNulls = dictionarySupplier.get().get(0) == null;
+
+        final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
+            dictionarySupplier,
+            rSingleValuedColumn,
+            rMultiValuedColumn
+        );
         builder.setHasMultipleValues(hasMultipleValues)
                .setHasNulls(hasNulls)
-               .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
+               .setDictionaryEncodedColumnSupplier(supplier);
 
         GenericIndexed<ImmutableBitmap> rBitmaps = null;
         ImmutableRTree rSpatialIndex = null;
@@ -467,9 +356,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         if (rBitmaps != null || rSpatialIndex != null) {
           builder.setIndexSupplier(
-              new StringFrontCodedColumnIndexSupplier(
+              new StringUtf8ColumnIndexSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
-                  rUtf8Dictionary,
+                  dictionarySupplier,
                   rBitmaps,
                   rSpatialIndex
               ),

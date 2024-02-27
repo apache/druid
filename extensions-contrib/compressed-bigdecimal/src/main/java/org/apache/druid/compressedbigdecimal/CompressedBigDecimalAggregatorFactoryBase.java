@@ -129,9 +129,6 @@ public abstract class CompressedBigDecimalAggregatorFactoryBase
   public abstract AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner();
 
   @Override
-  public abstract List<AggregatorFactory> getRequiredColumns();
-
-  @Override
   public abstract String toString();
 
   @Nullable

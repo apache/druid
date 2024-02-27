@@ -1,7 +1,7 @@
 ---
 id: rollup
 title: "Data rollup"
-sidebar_label: Data rollup
+sidebar_label: Rollup
 description: Introduces rollup as a concept. Provides suggestions to maximize the benefits of rollup. Differentiates between perfect and best-effort rollup.
 ---
 
@@ -26,7 +26,7 @@ description: Introduces rollup as a concept. Provides suggestions to maximize th
 
 Druid can roll up data at ingestion time to reduce the amount of raw data to  store on disk. Rollup is a form of summarization or pre-aggregation. Rolling up data can dramatically reduce the size of data to be stored and reduce row counts by potentially orders of magnitude. As a trade-off for the efficiency of rollup, you lose the ability to query individual events.
 
-At ingestion time, you control rollup with the `rollup` setting in the [`granularitySpec`](./ingestion-spec.md#granularityspec). Rollup is enabled by default. This means Druid combines into a single row any rows that have identical [dimension](./data-model.md#dimensions) values and [timestamp](./data-model.md#primary-timestamp) values after [`queryGranularity`-based truncation](./ingestion-spec.md#granularityspec).
+At ingestion time, you control rollup with the `rollup` setting in the [`granularitySpec`](./ingestion-spec.md#granularityspec). Rollup is enabled by default. This means Druid combines into a single row any rows that have identical [dimension](./schema-model.md#dimensions) values and [timestamp](./schema-model.md#primary-timestamp) values after [`queryGranularity`-based truncation](./ingestion-spec.md#granularityspec).
 
 When you disable rollup, Druid loads each row as-is without doing any form of pre-aggregation. This mode is similar to databases that do not support a rollup feature. Set `rollup` to `false` if you want Druid to store each record as-is, without any rollup summarization.
 
@@ -87,8 +87,8 @@ The following table shows how each method handles rollup:
 |[Native batch](native-batch.md)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
 |[SQL-based batch](../multi-stage-query/index.md)|Always perfect.|
 |[Hadoop](hadoop.md)|Always perfect.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Always best-effort.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Always best-effort.|
+|[Kafka indexing service](../ingestion/kafka-ingestion.md)|Always best-effort.|
+|[Kinesis indexing service](../ingestion/kinesis-ingestion.md)|Always best-effort.|
 
 ## Learn more
 

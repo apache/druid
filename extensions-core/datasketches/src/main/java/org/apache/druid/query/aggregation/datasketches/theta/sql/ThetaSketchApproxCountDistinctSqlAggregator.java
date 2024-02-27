@@ -21,24 +21,30 @@ package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 import java.util.Collections;
 
 public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
   public static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
-
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchSqlAggFunction();
+  private static final SqlAggFunction FUNCTION_INSTANCE =
+      OperatorConversions.aggregatorBuilder(NAME)
+                         .operandNames("column", "size")
+                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+                         .operandTypeInference(InferTypes.VARCHAR_1024)
+                         .requiredOperandCount(1)
+                         .literalOperands(1)
+                         .returnTypeNonNull(SqlTypeName.BIGINT)
+                         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+                         .build();
 
   public ThetaSketchApproxCountDistinctSqlAggregator()
   {
@@ -65,31 +71,5 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
             aggregatorFactory.getName()
         ) : null
     );
-  }
-
-  private static class ThetaSketchSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
-
-    ThetaSketchSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.BIGINT),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-              )
-          ),
-          SqlFunctionCategory.NUMERIC,
-          false,
-          false
-      );
-    }
   }
 }

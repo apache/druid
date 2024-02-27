@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from 'druid-query-toolkit';
+import type { QueryResult } from '@druid-toolkit/query';
 
 import { filterMap, formatNumber, oneOf } from './general';
 import { deepSet } from './object-change';

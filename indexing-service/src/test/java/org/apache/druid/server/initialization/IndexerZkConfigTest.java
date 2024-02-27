@@ -153,7 +153,7 @@ public class IndexerZkConfigTest
     );
     indexerZkConfig.inject(propertyValues, configurator);
 
-    Assert.assertEquals("/druid/indexer/tasks", indexerZkConfig.get().get().getTasksPath());
+    Assert.assertEquals("/druid/indexer/tasks", indexerZkConfig.get().getTasksPath());
   }
 
   @Test
@@ -175,8 +175,8 @@ public class IndexerZkConfigTest
     indexerZkConfig.inject(propertyValues, configurator);
 
 
-    IndexerZkConfig zkConfig = indexerZkConfig.get().get();
-    ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get().get();
+    IndexerZkConfig zkConfig = indexerZkConfig.get();
+    ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get();
 
     validateEntries(zkConfig);
     validateEntries(zkPathsConfig1);
@@ -207,7 +207,7 @@ public class IndexerZkConfigTest
         IndexerZkConfig.class
     );
     indexerPathsConfig.inject(propertyValues, configurator);
-    IndexerZkConfig indexerZkConfig = indexerPathsConfig.get().get();
+    IndexerZkConfig indexerZkConfig = indexerPathsConfig.get();
 
 
     // Rewind value before we potentially fail
@@ -240,7 +240,7 @@ public class IndexerZkConfigTest
 
     zkPathsConfig.inject(propertyValues, configurator);
 
-    ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get().get();
+    ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get();
 
     IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1, null, null, null, null);
 

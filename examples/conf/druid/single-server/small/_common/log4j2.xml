@@ -26,14 +26,14 @@
 
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
 
     <!-- Rolling Files-->
     <RollingRandomAccessFile name="FileAppender"
                              fileName="${sys:druid.log.path}/${sys:druid.node.type}.log"
                              filePattern="${sys:druid.log.path}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
       <Policies>
         <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
       </Policies>
@@ -80,6 +80,11 @@
       <Appender-ref ref="FileAppender"/>
     </Logger>
     <Logger name="com.sun.jersey.guice" level="warn" additivity="false">
+      <Appender-ref ref="FileAppender"/>
+    </Logger>
+
+    <!-- Quieter KafkaSupervisors -->
+    <Logger name="org.apache.kafka.clients.consumer.internals" level="warn" additivity="false">
       <Appender-ref ref="FileAppender"/>
     </Logger>
   </Loggers>

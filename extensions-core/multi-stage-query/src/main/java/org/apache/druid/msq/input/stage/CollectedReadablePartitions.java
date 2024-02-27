@@ -68,7 +68,7 @@ public class CollectedReadablePartitions implements ReadablePartitions
   @Override
   public List<ReadablePartitions> split(int maxNumSplits)
   {
-    return SlicerUtils.makeSlices(partitionToWorkerMap.int2IntEntrySet().iterator(), maxNumSplits)
+    return SlicerUtils.makeSlicesStatic(partitionToWorkerMap.int2IntEntrySet().iterator(), maxNumSplits)
                       .stream()
                       .map(
                           entries -> {

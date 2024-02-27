@@ -31,7 +31,7 @@ There are three major modes of operation:
 2. Building sketches from raw data during ingestion
 3. Building sketches from raw data at query time
 
-To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use this aggregator, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]

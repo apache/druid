@@ -19,21 +19,22 @@
 
 package org.apache.druid.common.config;
 
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Collections;
+
+import static org.apache.druid.common.config.NullHandling.defaultValueForClass;
+import static org.apache.druid.common.config.NullHandling.defaultValueForType;
 import static org.apache.druid.common.config.NullHandling.replaceWithDefault;
 import static org.junit.Assert.assertEquals;
 
-public class NullHandlingTest
+public final class NullHandlingTest extends InitializedNullHandlingTest
 {
-  @BeforeClass
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void test_defaultValueForClass_float()
   {
@@ -92,6 +93,17 @@ public class NullHandlingTest
   }
 
   @Test
+  public void test_defaultValueForType()
+  {
+    assertEquals(defaultValueForClass(Float.class), defaultValueForType(ValueType.FLOAT));
+    assertEquals(defaultValueForClass(Double.class), defaultValueForType(ValueType.DOUBLE));
+    assertEquals(defaultValueForClass(Long.class), defaultValueForType(ValueType.LONG));
+    assertEquals(defaultValueForClass(String.class), defaultValueForType(ValueType.STRING));
+    assertEquals(defaultValueForClass(Object.class), defaultValueForType(ValueType.COMPLEX));
+    assertEquals(defaultValueForClass(Object.class), defaultValueForType(ValueType.ARRAY));
+  }
+
+  @Test
   public void test_ignoreNullsStrings()
   {
     try {
@@ -104,5 +116,87 @@ public class NullHandlingTest
     finally {
       NullHandling.initializeForTests();
     }
+  }
+
+  @Test
+  public void test_mustCombineNullAndEmptyInDictionary()
+  {
+    Assert.assertFalse(
+        NullHandling.mustCombineNullAndEmptyInDictionary(
+            new ListIndexed<>(Collections.singletonList(null))
+        )
+    );
+
+    Assert.assertFalse(
+        NullHandling.mustCombineNullAndEmptyInDictionary(
+            new ListIndexed<>(StringUtils.toUtf8ByteBuffer("foo"))
+        )
+    );
+
+    Assert.assertFalse(
+        NullHandling.mustCombineNullAndEmptyInDictionary(
+            new ListIndexed<>(StringUtils.toUtf8ByteBuffer(""))
+        )
+    );
+
+    Assert.assertFalse(
+        NullHandling.mustCombineNullAndEmptyInDictionary(
+            new ListIndexed<>(StringUtils.toUtf8ByteBuffer(""), StringUtils.toUtf8ByteBuffer("foo"))
+        )
+    );
+
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault(),
+        NullHandling.mustCombineNullAndEmptyInDictionary(
+            new ListIndexed<>(null, StringUtils.toUtf8ByteBuffer(""))
+        )
+    );
+
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault(),
+        NullHandling.mustCombineNullAndEmptyInDictionary(
+            new ListIndexed<>(null, StringUtils.toUtf8ByteBuffer(""), StringUtils.toUtf8ByteBuffer("foo")))
+    );
+  }
+
+  @Test
+  public void test_mustReplaceFirstValueWithNullInDictionary()
+  {
+    Assert.assertFalse(
+        NullHandling.mustReplaceFirstValueWithNullInDictionary(
+            new ListIndexed<>(Collections.singletonList(null))
+        )
+    );
+
+    Assert.assertFalse(
+        NullHandling.mustReplaceFirstValueWithNullInDictionary(
+            new ListIndexed<>(StringUtils.toUtf8ByteBuffer("foo"))
+        )
+    );
+
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault(),
+        NullHandling.mustReplaceFirstValueWithNullInDictionary(
+            new ListIndexed<>(StringUtils.toUtf8ByteBuffer(""))
+        )
+    );
+
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault(),
+        NullHandling.mustReplaceFirstValueWithNullInDictionary(
+            new ListIndexed<>(StringUtils.toUtf8ByteBuffer(""), StringUtils.toUtf8ByteBuffer("foo"))
+        )
+    );
+
+    Assert.assertFalse(
+        NullHandling.mustReplaceFirstValueWithNullInDictionary(
+            new ListIndexed<>(null, StringUtils.toUtf8ByteBuffer(""))
+        )
+    );
+
+    Assert.assertFalse(
+        NullHandling.mustReplaceFirstValueWithNullInDictionary(
+            new ListIndexed<>(null, StringUtils.toUtf8ByteBuffer(""), StringUtils.toUtf8ByteBuffer("foo")))
+    );
   }
 }

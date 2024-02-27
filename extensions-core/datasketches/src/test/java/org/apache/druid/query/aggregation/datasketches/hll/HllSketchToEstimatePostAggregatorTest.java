@@ -94,6 +94,7 @@ public class HllSketchToEstimatePostAggregatorTest
                       null,
                       null,
                       null,
+                      null,
                       false
                   )
               )

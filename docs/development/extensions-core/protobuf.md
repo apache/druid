@@ -23,14 +23,14 @@ title: "Protobuf"
   -->
 
 
-This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
+This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
 
 The `druid-protobuf-extensions` provides the [Protobuf Parser](../../ingestion/data-formats.md#protobuf-parser)
 for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.
 
 ## Example: Load Protobuf messages from Kafka
 
-This example demonstrates how to load Protobuf messages from Kafka.  Please read the [Load from Kafka tutorial](../../tutorials/tutorial-kafka.md) first, and see [Kafka Indexing Service](./kafka-ingestion.md) documentation for more details.
+This example demonstrates how to load Protobuf messages from Kafka.  Please read the [Load from Kafka tutorial](../../tutorials/tutorial-kafka.md) first, and see [Kafka Indexing Service](../../ingestion/kafka-ingestion.md) documentation for more details.
 
 The files used in this example are found at [`./examples/quickstart/protobuf` in your Druid directory](https://github.com/apache/druid/tree/master/examples/quickstart/protobuf).
 

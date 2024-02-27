@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
@@ -88,8 +89,11 @@ public class SegmentToRowsAndColumnsOperatorTest
     try {
       Operator.go(op, new ExceptionalReceiver());
     }
-    catch (ISE e) {
-      Assert.assertEquals(e.getMessage(), "Segment[class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift");
+    catch (DruidException e) {
+      Assert.assertEquals(
+          e.getMessage(),
+          "Segment [class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift"
+      );
       exceptionThrown = true;
     }
     Assert.assertTrue(exceptionThrown);
@@ -169,7 +173,7 @@ public class SegmentToRowsAndColumnsOperatorTest
     boolean exceptionThrown = false;
     try {
       new OperatorTestHelper()
-          .withPushFn(rac -> {
+          .withPushFn(() -> rac -> {
             Assert.assertSame(expectedRac, rac);
             return Operator.Signal.GO;
           })

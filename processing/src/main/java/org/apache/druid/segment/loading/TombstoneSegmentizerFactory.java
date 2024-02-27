@@ -36,6 +36,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -120,15 +121,16 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
             throw new UnsupportedOperationException();
           }
 
-          // mark this index to indicate that it comes from a tombstone:
-          @Override
-          public boolean isFromTombstone()
-          {
-            return true;
-          }
         };
 
-    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex)
+    {
+      @Override
+      public boolean isFromTombstone()
+      {
+        return true;
+      }
+    };
 
     Segment segmentObject = new Segment()
     {

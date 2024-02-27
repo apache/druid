@@ -20,9 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.tuple.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -31,14 +29,13 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.util.Optionality;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.thetacommon.ThetaUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -46,6 +43,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -69,12 +67,10 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
@@ -86,12 +82,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
     final int nominalEntries;
     final int metricExpressionEndIndex;
     final int lastArgIndex = argList.size() - 1;
-    final RexNode potentialNominalEntriesArg = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        argList.get(lastArgIndex)
-    );
+    final RexNode potentialNominalEntriesArg = inputAccessor.getField(argList.get(lastArgIndex));
 
     if (potentialNominalEntriesArg.isA(SqlKind.LITERAL) &&
         RexLiteral.value(potentialNominalEntriesArg) instanceof Number) {
@@ -99,7 +90,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
       nominalEntries = ((Number) RexLiteral.value(potentialNominalEntriesArg)).intValue();
       metricExpressionEndIndex = lastArgIndex - 1;
     } else {
-      nominalEntries = Util.DEFAULT_NOMINAL_ENTRIES;
+      nominalEntries = ThetaUtil.DEFAULT_NOMINAL_ENTRIES;
       metricExpressionEndIndex = lastArgIndex;
     }
 
@@ -107,16 +98,11 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
     for (int i = 0; i <= metricExpressionEndIndex; i++) {
       final String fieldName;
 
-      final RexNode columnRexNode = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          argList.get(i)
-      );
+      final RexNode columnRexNode = inputAccessor.getField(argList.get(i));
 
       final DruidExpression columnArg = Expressions.toDruidExpression(
           plannerContext,
-          rowSignature,
+          inputAccessor.getInputRowSignature(),
           columnRexNode
       );
       if (columnArg == null) {
@@ -124,9 +110,10 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
       }
 
       if (columnArg.isDirectColumnAccess() &&
-          rowSignature.getColumnType(columnArg.getDirectColumn())
-                      .map(type -> type.is(ValueType.COMPLEX))
-                      .orElse(false)) {
+          inputAccessor.getInputRowSignature()
+              .getColumnType(columnArg.getDirectColumn())
+              .map(type -> type.is(ValueType.COMPLEX))
+              .orElse(false)) {
         fieldName = columnArg.getDirectColumn();
       } else {
         final RelDataType dataType = columnRexNode.getType();

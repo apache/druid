@@ -22,8 +22,6 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.InputStreamContent;
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -110,6 +108,35 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   }
 
   @Test
+  public void testPushTaskStatus() throws Exception
+  {
+    final File tmpDir = FileUtils.createTempDir();
+
+    try {
+      final File statusFile = new File(tmpDir, "status.json");
+      BufferedWriter output = Files.newBufferedWriter(statusFile.toPath(), StandardCharsets.UTF_8);
+      output.write("{}");
+      output.close();
+
+      storage.insert(
+          EasyMock.eq(BUCKET),
+          EasyMock.eq(PREFIX + "/" + TASKID),
+          EasyMock.anyObject(InputStreamContent.class)
+      );
+      EasyMock.expectLastCall();
+
+      replayAll();
+
+      googleTaskLogs.pushTaskLog(TASKID, statusFile);
+
+      verifyAll();
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
+  }
+
+  @Test
   public void testStreamTaskLogWithoutOffset() throws Exception
   {
     final String testLog = "hello this is a log";
@@ -117,7 +144,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
@@ -139,7 +166,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, offset))
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, offset))
             .andReturn(new ByteArrayInputStream(StringUtils.toUtf8(expectedLog)));
 
     replayAll();
@@ -163,7 +190,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, internalOffset))
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, internalOffset))
             .andReturn(new ByteArrayInputStream(StringUtils.toUtf8(expectedLog)));
 
     replayAll();
@@ -178,20 +205,34 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   }
 
   @Test
+  public void testStreamTaskStatus() throws Exception
+  {
+    final String taskStatus = "{}";
+
+    final String logPath = PREFIX + "/" + TASKID + ".status.json";
+    EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
+    EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) taskStatus.length());
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(taskStatus)));
+
+    replayAll();
+
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskStatus(TASKID);
+
+    final StringWriter writer = new StringWriter();
+    IOUtils.copy(stream.get(), writer, "UTF-8");
+    Assert.assertEquals(writer.toString(), taskStatus);
+
+    verifyAll();
+  }
+
+  @Test
   public void test_killAll_noException_deletesAllTaskLogs() throws IOException
   {
-    StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
-    StorageObject object2 = GoogleTestUtils.newStorageObject(BUCKET, KEY_2, TIME_1);
+    GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorageObjectMetadata object2 = GoogleTestUtils.newStorageObject(BUCKET, KEY_2, TIME_1);
 
     EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
-    Storage.Objects.List listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
-
-    GoogleTestUtils.expectListObjects(
-        listRequest,
-        PREFIX_URI,
-        MAX_KEYS,
-        ImmutableList.of(object1, object2)
-    );
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1, object2));
 
     GoogleTestUtils.expectDeleteObjects(
         storage,
@@ -200,29 +241,22 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     );
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(listRequest, inputDataConfig, storage, timeSupplier);
+    EasyMock.replay(inputDataConfig, storage, timeSupplier);
 
     googleTaskLogs.killAll();
 
-    EasyMock.verify(listRequest, inputDataConfig, storage, timeSupplier);
+    EasyMock.verify(inputDataConfig, storage, timeSupplier);
   }
 
 
   @Test
   public void test_killAll_recoverableExceptionWhenDeletingObjects_deletesAllTaskLogs() throws IOException
   {
-    StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
     EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
 
-    Storage.Objects.List listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
-
-    GoogleTestUtils.expectListObjects(
-        listRequest,
-        PREFIX_URI,
-        MAX_KEYS,
-        ImmutableList.of(object1)
-    );
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
     GoogleTestUtils.expectDeleteObjects(
         storage,
@@ -232,31 +266,23 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(listRequest, inputDataConfig, storage, timeSupplier);
+    EasyMock.replay(inputDataConfig, storage, timeSupplier);
 
     googleTaskLogs.killAll();
 
-    EasyMock.verify(listRequest, inputDataConfig, storage, timeSupplier);
+    EasyMock.verify(inputDataConfig, storage, timeSupplier);
   }
 
   @Test
   public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    Storage.Objects.List listRequest = null;
     try {
-      StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+      GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
       EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
 
-      listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
-
-      GoogleTestUtils.expectListObjects(
-          listRequest,
-          PREFIX_URI,
-          MAX_KEYS,
-          ImmutableList.of(object1)
-      );
+      GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
       GoogleTestUtils.expectDeleteObjects(
           storage,
@@ -266,7 +292,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-      EasyMock.replay(listRequest, inputDataConfig, storage, timeSupplier);
+      EasyMock.replay(inputDataConfig, storage, timeSupplier);
 
       googleTaskLogs.killAll();
     }
@@ -276,23 +302,16 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     Assert.assertTrue(ioExceptionThrown);
 
-    EasyMock.verify(listRequest, inputDataConfig, storage, timeSupplier);
+    EasyMock.verify(inputDataConfig, storage, timeSupplier);
   }
 
   @Test
   public void test_killOlderThan_noException_deletesOnlyTaskLogsOlderThan() throws IOException
   {
-    StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
-    StorageObject object2 = GoogleTestUtils.newStorageObject(BUCKET, KEY_2, TIME_FUTURE);
+    GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorageObjectMetadata object2 = GoogleTestUtils.newStorageObject(BUCKET, KEY_2, TIME_FUTURE);
 
-    Storage.Objects.List listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
-
-    GoogleTestUtils.expectListObjects(
-        listRequest,
-        PREFIX_URI,
-        MAX_KEYS,
-        ImmutableList.of(object1, object2)
-    );
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1, object2));
 
     GoogleTestUtils.expectDeleteObjects(
         storage,
@@ -301,25 +320,18 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     );
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(listRequest, inputDataConfig, storage);
+    EasyMock.replay(inputDataConfig, storage);
     googleTaskLogs.killOlderThan(TIME_NOW);
 
-    EasyMock.verify(listRequest, inputDataConfig, storage);
+    EasyMock.verify(inputDataConfig, storage);
   }
 
   @Test
   public void test_killOlderThan_recoverableExceptionWhenListingObjects_deletesAllTaskLogs() throws IOException
   {
-    StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
-    Storage.Objects.List listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
-
-    GoogleTestUtils.expectListObjects(
-        listRequest,
-        PREFIX_URI,
-        MAX_KEYS,
-        ImmutableList.of(object1)
-    );
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
     GoogleTestUtils.expectDeleteObjects(
         storage,
@@ -329,29 +341,21 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(listRequest, inputDataConfig, storage);
+    EasyMock.replay(inputDataConfig, storage);
 
     googleTaskLogs.killOlderThan(TIME_NOW);
 
-    EasyMock.verify(listRequest, inputDataConfig, storage);
+    EasyMock.verify(inputDataConfig, storage);
   }
 
   @Test
   public void test_killOlderThan_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    Storage.Objects.List listRequest = null;
     try {
-      StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+      GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
-      listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
-
-      GoogleTestUtils.expectListObjects(
-          listRequest,
-          PREFIX_URI,
-          MAX_KEYS,
-          ImmutableList.of(object1)
-      );
+      GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
       GoogleTestUtils.expectDeleteObjects(
           storage,
@@ -361,7 +365,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-      EasyMock.replay(listRequest, inputDataConfig, storage);
+      EasyMock.replay(inputDataConfig, storage);
 
       googleTaskLogs.killOlderThan(TIME_NOW);
     }
@@ -371,6 +375,6 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     Assert.assertTrue(ioExceptionThrown);
 
-    EasyMock.verify(listRequest, inputDataConfig, storage);
+    EasyMock.verify(inputDataConfig, storage);
   }
 }

@@ -25,8 +25,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.SleepModule;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.filter.BoundDimFilter;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -61,7 +59,7 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
-                  .filters(new BoundDimFilter("m1", null, "2.0", null, true, null, null, StringComparators.NUMERIC))
+                  .filters(range("m1", ColumnType.DOUBLE, null, 2.0, false, true))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)

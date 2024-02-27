@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -108,7 +109,7 @@ public class ExecutorLifecycle
     // pod twice, no need to lock.
     if (taskExecutorConfig.isParentStreamDefined()) {
       // Avoid running the same task twice on the same machine by locking the task base directory.
-      final File taskLockFile = Preconditions.checkNotNull(taskExecutorConfig.getLockFile(), "lockfile is null");
+      final File taskLockFile = taskConfig.getTaskLockFile(task.getId());
       try {
         synchronized (this) {
           if (taskLockChannel == null && taskLockFileLock == null) {
@@ -156,7 +157,7 @@ public class ExecutorLifecycle
             }
 
             // Kind of gross, but best way to kill the JVM as far as I know
-            log.info("Triggering JVM shutdown.");
+            log.info("Triggering JVM shutdown. Check overlord logs to see why the task is being shut down.");
             System.exit(2);
           }
       );
@@ -198,7 +199,8 @@ public class ExecutorLifecycle
               throw new RuntimeException(e);
             }
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 

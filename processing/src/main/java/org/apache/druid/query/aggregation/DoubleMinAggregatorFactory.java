@@ -29,8 +29,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 
 /**
  */
@@ -109,12 +107,6 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleMinAggregatorFactory(name, name, null, macroTable);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new DoubleMinAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override

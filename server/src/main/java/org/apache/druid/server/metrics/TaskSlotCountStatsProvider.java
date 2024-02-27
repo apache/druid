@@ -23,6 +23,11 @@ import javax.annotation.Nullable;
 
 import java.util.Map;
 
+/**
+ * This is deprecated and will be merged into {@link TaskCountStatsProvider} in
+ * a future release.
+ */
+@Deprecated
 public interface TaskSlotCountStatsProvider
 {
   /**

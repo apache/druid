@@ -78,6 +78,12 @@ public class SpecificTaskRetryPolicy implements ServiceRetryPolicy
   }
 
   @Override
+  public boolean retryLoggable()
+  {
+    return baseRetryPolicy.retryLoggable();
+  }
+
+  @Override
   public boolean retryNotAvailable()
   {
     return baseRetryPolicy.retryNotAvailable();

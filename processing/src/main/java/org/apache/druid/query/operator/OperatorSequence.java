@@ -91,6 +91,7 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
         @Override
         public Yielder<OutType> next(OutType initValue)
         {
+          accumulator.reset();
           if (continuation == null) {
             // This means that we completed processing on the previous run.  In this case, we are all done
             return Yielders.done(null, null);

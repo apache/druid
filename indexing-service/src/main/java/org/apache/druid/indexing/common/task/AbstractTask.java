@@ -50,10 +50,13 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractTask implements Task
 {
@@ -94,9 +97,13 @@ public abstract class AbstractTask implements Task
   private final String dataSource;
 
   private final Map<String, Object> context;
+
   private File reportsFile;
+  private File statusFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+  private volatile CountDownLatch cleanupCompletionLatch;
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
@@ -142,11 +149,12 @@ public abstract class AbstractTask implements Task
   public String setup(TaskToolbox toolbox) throws Exception
   {
     if (toolbox.getConfig().isEncapsulatedTask()) {
-      File taskDir = toolbox.getDirTracker().getTaskDir(getId());
+      File taskDir = toolbox.getConfig().getTaskDir(getId());
       FileUtils.mkdirp(taskDir);
       File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
       FileUtils.mkdirp(attemptDir);
       reportsFile = new File(attemptDir, "report.json");
+      statusFile = new File(attemptDir, "status.json");
       InetAddress hostName = InetAddress.getLocalHost();
       DruidNode node = toolbox.getTaskExecutorNode();
       toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.create(
@@ -160,48 +168,84 @@ public abstract class AbstractTask implements Task
   @Override
   public final TaskStatus run(TaskToolbox taskToolbox) throws Exception
   {
-    boolean failure = false;
+    TaskStatus taskStatus = null;
     try {
+      cleanupCompletionLatch = new CountDownLatch(1);
       String errorMessage = setup(taskToolbox);
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
-        return TaskStatus.failure(getId(), errorMessage);
+        taskStatus = TaskStatus.failure(getId(), errorMessage);
+        return taskStatus;
       }
-      TaskStatus taskStatus = runTask(taskToolbox);
-      if (taskStatus.isFailure()) {
-        failure = true;
-      }
+      taskStatus = runTask(taskToolbox);
       return taskStatus;
     }
     catch (Exception e) {
-      failure = true;
+      taskStatus = TaskStatus.failure(getId(), e.toString());
       throw e;
     }
     finally {
-      cleanUp(taskToolbox, failure);
+      try {
+        cleanUp(taskToolbox, taskStatus);
+      }
+      finally {
+        cleanupCompletionLatch.countDown();
+      }
     }
   }
 
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
-  public void cleanUp(TaskToolbox toolbox, boolean failure) throws Exception
+  @Override
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
-    if (toolbox.getConfig().isEncapsulatedTask()) {
-      // report back to the overlord
-      UpdateStatusAction status = new UpdateStatusAction("successful");
-      if (failure) {
-        status = new UpdateStatusAction("failure");
-      }
-      toolbox.getTaskActionClient().submit(status);
-      toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
+    // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
+    Thread.interrupted();
 
-      if (reportsFile != null && reportsFile.exists()) {
-        toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
-        log.debug("Pushed task reports");
-      } else {
-        log.debug("No task reports file exists to push");
-      }
-    } else {
+    if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
+      return;
+    }
+
+    TaskStatus taskStatusToReport = taskStatus == null
+        ? TaskStatus.failure(id, "Task failed to run")
+        : taskStatus;
+    // report back to the overlord
+    UpdateStatusAction status = new UpdateStatusAction("", taskStatusToReport);
+    toolbox.getTaskActionClient().submit(status);
+    toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
+
+    if (reportsFile != null && reportsFile.exists()) {
+      toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
+      log.debug("Pushed task reports");
+    } else {
+      log.debug("No task reports file exists to push");
+    }
+
+    if (statusFile != null) {
+      toolbox.getJsonMapper().writeValue(statusFile, taskStatusToReport);
+      toolbox.getTaskLogPusher().pushTaskStatus(id, statusFile);
+      Files.deleteIfExists(statusFile.toPath());
+      log.debug("Pushed task status");
+    } else {
+      log.debug("No task status file exists to push");
+    }
+  }
+
+  @Override
+  public boolean waitForCleanupToFinish()
+  {
+    try {
+      if (cleanupCompletionLatch != null) {
+        // block until the cleanup process completes
+        return cleanupCompletionLatch.await(300, TimeUnit.SECONDS);
+      }
+
+      return true;
+    }
+    catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for task cleanUp to finish!");
+      Thread.currentThread().interrupt();
+      return false;
     }
   }
 
@@ -281,12 +325,12 @@ public abstract class AbstractTask implements Task
   public String toString()
   {
     return "AbstractTask{" +
-           "id='" + id + '\'' +
-           ", groupId='" + groupId + '\'' +
-           ", taskResource=" + taskResource +
-           ", dataSource='" + dataSource + '\'' +
-           ", context=" + context +
-           '}';
+        "id='" + id + '\'' +
+        ", groupId='" + groupId + '\'' +
+        ", taskResource=" + taskResource +
+        ", dataSource='" + dataSource + '\'' +
+        ", context=" + context +
+        '}';
   }
 
   public TaskStatus success()
@@ -372,8 +416,8 @@ public abstract class AbstractTask implements Task
   protected static IngestionMode computeBatchIngestionMode(@Nullable BatchIOConfig ioConfig)
   {
     final boolean isAppendToExisting = ioConfig == null
-                                       ? BatchIOConfig.DEFAULT_APPEND_EXISTING
-                                       : ioConfig.isAppendToExisting();
+        ? BatchIOConfig.DEFAULT_APPEND_EXISTING
+        : ioConfig.isAppendToExisting();
     final boolean isDropExisting = ioConfig == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : ioConfig.isDropExisting();
     return computeIngestionMode(isAppendToExisting, isDropExisting);
   }
@@ -388,7 +432,7 @@ public abstract class AbstractTask implements Task
       return IngestionMode.REPLACE_LEGACY;
     }
     throw new IAE("Cannot simultaneously replace and append to existing segments. "
-                  + "Either dropExisting or appendToExisting should be set to false");
+        + "Either dropExisting or appendToExisting should be set to false");
   }
 
   public void emitMetric(
@@ -401,7 +445,7 @@ public abstract class AbstractTask implements Task
     if (emitter == null || metric == null || value == null) {
       return;
     }
-    emitter.emit(getMetricBuilder().build(metric, value));
+    emitter.emit(getMetricBuilder().setMetric(metric, value));
   }
 
 

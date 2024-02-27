@@ -23,6 +23,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,6 +36,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
@@ -42,7 +46,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -61,9 +64,9 @@ public abstract class QueryResultPusher
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
 
-  private StreamingHttpResponseAccumulator accumulator = null;
-  private AsyncContext asyncContext = null;
-  private HttpServletResponse response = null;
+  private StreamingHttpResponseAccumulator accumulator;
+  private AsyncContext asyncContext;
+  private HttpServletResponse response;
 
   public QueryResultPusher(
       HttpServletRequest request,
@@ -149,6 +152,14 @@ public abstract class QueryResultPusher
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
+    catch (DruidException e) {
+      // Less than ideal. But, if we return the result as JSON, this is
+      // the only way for the security filter to know that, yes, it is OK
+      // to show the user this error even if we didn't get to the step where
+      // we did a security check.
+      request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+      return handleDruidException(resultsWriter, e);
+    }
     catch (QueryException e) {
       return handleQueryException(resultsWriter, e);
     }
@@ -159,7 +170,7 @@ public abstract class QueryResultPusher
         // returning results before a ForbiddenException gets thrown, that means that we've already leaked stuff
         // that should not have been leaked.  I.e. it means, we haven't validated the authorization early enough.
         if (response != null && response.isCommitted()) {
-          log.error(re, "Got a forbidden exception for query[%s] after the response was already committed.", queryId);
+          log.error(re, "Got a forbidden exception for query [%s] after the response was already committed.", queryId);
         }
         throw re;
       }
@@ -174,17 +185,17 @@ public abstract class QueryResultPusher
           accumulator.close();
         }
         catch (IOException e) {
-          log.warn(e, "Suppressing exception closing accumulator for query[%s]", queryId);
+          log.warn(e, "Suppressing exception closing accumulator for query [%s]", queryId);
         }
       }
       if (resultsWriter == null) {
-        log.warn("resultsWriter was null for query[%s], work was maybe done in start() that shouldn't be.", queryId);
+        log.warn("resultsWriter was null for query [%s], work was maybe done in start() that shouldn't be.", queryId);
       } else {
         try {
           resultsWriter.close();
         }
         catch (IOException e) {
-          log.warn(e, "Suppressing exception closing accumulator for query[%s]", queryId);
+          log.warn(e, "Suppressing exception closing accumulator for query [%s]", queryId);
         }
       }
       if (asyncContext != null) {
@@ -197,58 +208,48 @@ public abstract class QueryResultPusher
   @Nullable
   private Response handleQueryException(ResultsWriter resultsWriter, QueryException e)
   {
-    if (accumulator != null && accumulator.isInitialized()) {
-      // We already started sending a response when we got the error message.  In this case we just give up
-      // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
-      // also throwing the exception body into the response to make it easier for the client to choke if it manages
-      // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
-      // the future.
+    return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
+  }
 
+  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  {
+    if (resultsWriter != null) {
       resultsWriter.recordFailure(e);
-
-      // This case is always a failure because the error happened mid-stream of sending results back.  Therefore,
-      // we do not believe that the response stream was actually usable
       counter.incrementFailed();
-      return null;
+
+      if (accumulator != null && accumulator.isInitialized()) {
+        // We already started sending a response when we got the error message.  In this case we just give up
+        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
+        // also throwing the exception body into the response to make it easier for the client to choke if it manages
+        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
+        // the future.
+        return null;
+      }
     }
 
-    final QueryException.FailType failType = e.getFailType();
-    switch (failType) {
-      case USER_ERROR:
+    switch (e.getCategory()) {
+      case INVALID_INPUT:
       case UNAUTHORIZED:
-      case QUERY_RUNTIME_FAILURE:
+      case RUNTIME_FAILURE:
       case CANCELED:
         counter.incrementInterrupted();
         break;
       case CAPACITY_EXCEEDED:
       case UNSUPPORTED:
+      case UNCATEGORIZED:
+      case DEFENSIVE:
         counter.incrementFailed();
         break;
       case TIMEOUT:
         counter.incrementTimedOut();
         break;
-      case UNKNOWN:
-        log.warn(
-            e,
-            "Unknown errorCode[%s], support needs to be added for error handling.",
-            e.getErrorCode()
-        );
-        counter.incrementFailed();
     }
 
-    resultsWriter.recordFailure(e);
-
-    final int responseStatus = failType.getExpectedStatus();
-
     if (response == null) {
-      // No response object yet, so assume we haven't started the async context and is safe to return Response
       final Response.ResponseBuilder bob = Response
-          .status(responseStatus)
+          .status(e.getStatusCode())
           .type(contentType)
-          .entity((StreamingOutput) output -> {
-            writeException(e, output);
-            output.close();
-          });
+          .entity(new ErrorResponse(e));
 
       bob.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
       for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
@@ -261,7 +262,7 @@ public abstract class QueryResultPusher
         QueryResource.NO_STACK_LOGGER.warn(e, "Response was committed without the accumulator writing anything!?");
       }
 
-      response.setStatus(responseStatus);
+      response.setStatus(e.getStatusCode());
       response.setHeader("Content-Type", contentType.toString());
       try (ServletOutputStream out = response.getOutputStream()) {
         writeException(e, out);
@@ -269,7 +270,7 @@ public abstract class QueryResultPusher
       catch (IOException ioException) {
         log.warn(
             ioException,
-            "Suppressing IOException thrown sending error response for query[%s]",
+            "Suppressing IOException thrown sending error response for query [%s]",
             queryId
         );
       }

@@ -219,7 +219,7 @@ public class RemoteTaskRunnerTestUtils
     return pathExists(JOINER.join(STATUS_PATH, workerId, taskId));
   }
 
-  boolean taskAnnounced(final String workerId, final String taskId)
+  boolean taskAssigned(final String workerId, final String taskId)
   {
     return pathExists(JOINER.join(TASKS_PATH, workerId, taskId));
   }

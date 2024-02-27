@@ -31,7 +31,7 @@ title: "Druid AWS RDS Module"
 Before using this password provider, please make sure that you have connected all dots for db user to connect using token.
 See [AWS Guide](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html).
 
-To use this extension, make sure you [include](../../development/extensions.md#loading-extensions) it in your config file along with other extensions e.g.
+To use this extension, make sure you [include](../../configuration/extensions.md#loading-extensions) it in your config file along with other extensions e.g.
 
 ```
 druid.extensions.loadList=["druid-aws-rds-extensions", "postgresql-metadata-storage", ...]

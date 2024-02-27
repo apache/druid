@@ -21,10 +21,12 @@ import React from 'react';
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { deepGet, deepSet, nonEmptyArray, typeIs } from '../../utils';
+import { deepGet, deepSet, nonEmptyArray, typeIsKnown } from '../../utils';
 
 export const FILTER_SUGGESTIONS: string[] = [
   '*',
+  '*.jsonl',
+  '*.jsonl.gz',
   '*.json',
   '*.json.gz',
   '*.csv',
@@ -42,6 +44,7 @@ export interface InputSource {
   prefixes?: string[];
   objects?: { bucket: string; path: string }[];
   fetchTimeout?: number;
+  systemFields?: string[];
 
   // druid
   dataSource?: string;
@@ -52,6 +55,9 @@ export interface InputSource {
 
   // inline
   data?: string;
+
+  // delta
+  tablePath?: string;
 
   // hdfs
   paths?: string | string[];
@@ -77,7 +83,7 @@ export type InputSourceDesc =
       dataSource: string;
       interval: string;
       filter?: any;
-      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/native-batch-input-sources.html
+      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/input-sources.html
       metrics?: string[];
       maxInputSegmentBytesPerTask?: number;
     }
@@ -100,7 +106,7 @@ export type InputSourceDesc =
       };
     }
   | {
-      type: 'google' | 'azure';
+      type: 'google' | 'azureStorage';
       uris?: string[];
       prefixes?: string[];
       objects?: { bucket: string; path: string }[];
@@ -108,6 +114,10 @@ export type InputSourceDesc =
   | {
       type: 'hdfs';
       paths?: string | string[];
+    }
+  | {
+      type: 'delta';
+      tablePath?: string;
     }
   | {
       type: 'sql';
@@ -145,7 +155,7 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
       return;
 
     case 's3':
-    case 'azure':
+    case 'azureStorage':
     case 'google':
       if (
         !nonEmptyArray(inputSource.uris) &&
@@ -153,6 +163,12 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
         !nonEmptyArray(inputSource.objects)
       ) {
         return 'must have at least one uri or prefix or object';
+      }
+      return;
+
+    case 'delta':
+      if (!inputSource.tablePath) {
+        return 'must have tablePath';
       }
       return;
 
@@ -167,6 +183,18 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
   }
 }
 
+const KNOWN_TYPES = [
+  'inline',
+  'druid',
+  'http',
+  'local',
+  's3',
+  'azureStorage',
+  'delta',
+  'google',
+  'hdfs',
+  'sql',
+];
 export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
   // inline
 
@@ -174,10 +202,11 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'data',
     label: 'Inline data',
     type: 'string',
-    defined: typeIs('inline'),
+    defined: typeIsKnown(KNOWN_TYPES, 'inline'),
     required: true,
     placeholder: 'Paste your data here',
     multiline: true,
+    height: '400px',
     info: <p>Put you inline data here</p>,
   },
 
@@ -188,7 +217,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'URIs',
     type: 'string-array',
     placeholder: 'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
-    defined: typeIs('http'),
+    defined: typeIsKnown(KNOWN_TYPES, 'http'),
     required: true,
     info: (
       <p>
@@ -201,7 +230,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'httpAuthenticationUsername',
     label: 'HTTP auth username',
     type: 'string',
-    defined: typeIs('http'),
+    defined: typeIsKnown(KNOWN_TYPES, 'http'),
     placeholder: '(optional)',
     info: <p>Username to use for authentication with specified URIs</p>,
   },
@@ -209,7 +238,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'httpAuthenticationPassword',
     label: 'HTTP auth password',
     type: 'string',
-    defined: typeIs('http'),
+    defined: typeIsKnown(KNOWN_TYPES, 'http'),
     placeholder: '(optional)',
     info: <p>Password to use for authentication with specified URIs</p>,
   },
@@ -221,7 +250,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Base directory',
     type: 'string',
     placeholder: '/path/to/files/',
-    defined: typeIs('local'),
+    defined: typeIsKnown(KNOWN_TYPES, 'local'),
     required: true,
     info: (
       <>
@@ -236,7 +265,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'filter',
     label: 'File filter',
     type: 'string',
-    defined: typeIs('local'),
+    defined: typeIsKnown(KNOWN_TYPES, 'local'),
     required: true,
     suggestions: FILTER_SUGGESTIONS,
     info: (
@@ -321,9 +350,10 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'uris',
     label: 'Azure URIs',
     type: 'string-array',
-    placeholder: 'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+    placeholder:
+      'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
     defined: inputSource =>
-      inputSource.type === 'azure' &&
+      inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'prefixes') &&
       !deepGet(inputSource, 'objects'),
     required: true,
@@ -341,9 +371,10 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'prefixes',
     label: 'Azure prefixes',
     type: 'string-array',
-    placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+    placeholder:
+      'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
     defined: inputSource =>
-      inputSource.type === 'azure' &&
+      inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'uris') &&
       !deepGet(inputSource, 'objects'),
     required: true,
@@ -358,8 +389,8 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'objects',
     label: 'Azure objects',
     type: 'json',
-    placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
-    defined: inputSource => inputSource.type === 'azure' && deepGet(inputSource, 'objects'),
+    placeholder: '{"bucket":"your-storage-account", "path":"your-container/some-file.ext"}',
+    defined: inputSource => inputSource.type === 'azureStorage' && deepGet(inputSource, 'objects'),
     required: true,
     info: (
       <>
@@ -374,7 +405,22 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       </>
     ),
   },
-
+  {
+    name: 'properties.sharedAccessStorageToken',
+    label: 'Shared Access Storage Token',
+    type: 'string',
+    placeholder: '(sas token)',
+    defined: inputSource => inputSource.type === 'azureStorage',
+    info: (
+      <>
+        <p>Shared Access Storage Token for this storage account.</p>
+        <p>
+          Note: Inlining the sas token into the ingestion spec can be dangerous as it might appear
+          in server log files and can be seen by anyone accessing this console.
+        </p>
+      </>
+    ),
+  },
   // google
   {
     name: 'uris',
@@ -441,7 +487,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: FILTER_SUGGESTIONS,
     placeholder: '*',
-    defined: typeIs('s3', 'azure', 'google'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3', 'azureStorage', 'google'),
     info: (
       <p>
         A wildcard filter for files. See{' '}
@@ -461,7 +507,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: [undefined, 'environment', 'default'],
     placeholder: '(none)',
-    defined: typeIs('s3'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3'),
     info: (
       <>
         <p>S3 access key type.</p>
@@ -518,7 +564,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: [undefined, 'environment', 'default'],
     placeholder: '(none)',
-    defined: typeIs('s3'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3'),
     info: (
       <>
         <p>S3 secret key type.</p>
@@ -566,7 +612,17 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Paths',
     type: 'string',
     placeholder: '/path/to/file.ext',
-    defined: typeIs('hdfs'),
+    defined: typeIsKnown(KNOWN_TYPES, 'hdfs'),
+    required: true,
+  },
+
+  // delta lake
+  {
+    name: 'tablePath',
+    label: 'Delta table path',
+    type: 'string',
+    placeholder: '/path/to/deltaTable',
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: true,
   },
 
@@ -576,7 +632,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Database type',
     type: 'string',
     suggestions: ['mysql', 'postgresql'],
-    defined: typeIs('sql'),
+    defined: typeIsKnown(KNOWN_TYPES, 'sql'),
     required: true,
     info: (
       <>

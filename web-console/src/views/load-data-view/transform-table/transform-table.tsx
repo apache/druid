@@ -23,6 +23,7 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import type { Transform } from '../../../druid-models';
+import { TIME_COLUMN } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
@@ -30,22 +31,28 @@ import {
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
-import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleResponse } from '../../../utils/sampler';
+import { getHeaderNamesFromSampleResponse } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
 export function transformTableSelectedColumnName(
-  sampleData: SampleHeaderAndRows,
+  sampleResponse: SampleResponse,
   selectedTransform: Partial<Transform> | undefined,
 ): string | undefined {
   if (!selectedTransform) return;
   const selectedTransformName = selectedTransform.name;
-  if (selectedTransformName && !sampleData.header.includes(selectedTransformName)) return;
+  if (
+    selectedTransformName &&
+    !getHeaderNamesFromSampleResponse(sampleResponse).includes(selectedTransformName)
+  ) {
+    return;
+  }
   return selectedTransformName;
 }
 
 export interface TransformTableProps {
-  sampleData: SampleHeaderAndRows;
+  sampleResponse: SampleResponse;
   columnFilter: string;
   transformedColumnsOnly: boolean;
   transforms: Transform[];
@@ -55,7 +62,7 @@ export interface TransformTableProps {
 
 export const TransformTable = React.memo(function TransformTable(props: TransformTableProps) {
   const {
-    sampleData,
+    sampleResponse,
     columnFilter,
     transformedColumnsOnly,
     transforms,
@@ -66,14 +73,14 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
   return (
     <ReactTable
       className={classNames('transform-table', DEFAULT_TABLE_CLASS_NAME)}
-      data={sampleData.rows}
+      data={sampleResponse.data}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
       pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
-      columns={filterMap(sampleData.header, (columnName, i) => {
+      showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
+      columns={filterMap(getHeaderNamesFromSampleResponse(sampleResponse), (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
-        const timestamp = columnName === '__time';
+        const isTimestamp = columnName === TIME_COLUMN;
         const transformIndex = transforms.findIndex(f => f.name === columnName);
         if (transformIndex === -1 && transformedColumnsOnly) return;
         const transform = transforms[transformIndex];
@@ -113,7 +120,7 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
           width: 140,
           Cell: function TransformTableCell(row: RowRenderProps) {
-            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+            return <TableCell value={isTimestamp ? new Date(Number(row.value)) : row.value} />;
           },
         };
       })}

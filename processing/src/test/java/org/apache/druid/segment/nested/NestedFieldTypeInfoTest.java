@@ -57,6 +57,23 @@ public class NestedFieldTypeInfoTest
   }
 
   @Test
+  public void testSingleTypeWithEmptyArray() throws IOException
+  {
+    List<ColumnType> supportedTypes = ImmutableList.of(
+        ColumnType.STRING,
+        ColumnType.LONG,
+        ColumnType.DOUBLE,
+        ColumnType.STRING_ARRAY,
+        ColumnType.LONG_ARRAY,
+        ColumnType.DOUBLE_ARRAY
+    );
+
+    for (ColumnType type : supportedTypes) {
+      testSingleTypeWithEmptyArray(type);
+    }
+  }
+
+  @Test
   public void testMultiType() throws IOException
   {
     List<Set<ColumnType>> tests = ImmutableList.of(
@@ -73,13 +90,28 @@ public class NestedFieldTypeInfoTest
   }
 
   @Test
+  public void testOnlyEmptyType()
+  {
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
+    Assert.assertNull(typeSet.getSingleType());
+    Assert.assertTrue(typeSet.isEmpty());
+
+    typeSet.addUntypedArray();
+
+    Assert.assertEquals(ColumnType.LONG_ARRAY, typeSet.getSingleType());
+    // no actual types in the type set, only getSingleType
+    Assert.assertEquals(ImmutableSet.of(), FieldTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertTrue(typeSet.hasUntypedArray());
+  }
+
+  @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(NestedFieldTypeInfo.TypeSet.class)
+    EqualsVerifier.forClass(FieldTypeInfo.TypeSet.class)
                   .usingGetClass()
                   .verify();
 
-    EqualsVerifier.forClass(NestedFieldTypeInfo.MutableTypeSet.class)
+    EqualsVerifier.forClass(FieldTypeInfo.MutableTypeSet.class)
                   .suppress(Warning.NONFINAL_FIELDS)
                   .usingGetClass()
                   .verify();
@@ -87,60 +119,105 @@ public class NestedFieldTypeInfoTest
 
   private void testSingleType(ColumnType columnType) throws IOException
   {
-    NestedFieldTypeInfo.MutableTypeSet typeSet = new NestedFieldTypeInfo.MutableTypeSet();
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
     Assert.assertNull(typeSet.getSingleType());
     Assert.assertTrue(typeSet.isEmpty());
 
     typeSet.add(columnType);
 
     Assert.assertEquals(columnType, typeSet.getSingleType());
-    Assert.assertEquals(ImmutableSet.of(columnType), NestedFieldTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertEquals(ImmutableSet.of(columnType), FieldTypeInfo.convertToSet(typeSet.getByteValue()));
 
     writeTypeSet(typeSet);
-    NestedFieldTypeInfo info = new NestedFieldTypeInfo(BUFFER);
+    FieldTypeInfo info = new FieldTypeInfo(BUFFER);
     Assert.assertEquals(0, BUFFER.position());
 
-    NestedFieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+    FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
     Assert.assertEquals(columnType, roundTrip.getSingleType());
 
-    NestedFieldTypeInfo info2 = NestedFieldTypeInfo.read(BUFFER, 1);
+    FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
   }
 
   private void testMultiType(Set<ColumnType> columnTypes) throws IOException
   {
-    NestedFieldTypeInfo.MutableTypeSet typeSet = new NestedFieldTypeInfo.MutableTypeSet();
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
     Assert.assertNull(typeSet.getSingleType());
     Assert.assertTrue(typeSet.isEmpty());
 
-    NestedFieldTypeInfo.MutableTypeSet merge = new NestedFieldTypeInfo.MutableTypeSet();
+    FieldTypeInfo.MutableTypeSet merge = new FieldTypeInfo.MutableTypeSet();
     for (ColumnType columnType : columnTypes) {
       typeSet.add(columnType);
-      merge.merge(new NestedFieldTypeInfo.MutableTypeSet().add(columnType).getByteValue());
+      merge.merge(new FieldTypeInfo.MutableTypeSet().add(columnType).getByteValue(), false);
     }
 
     Assert.assertEquals(merge.getByteValue(), typeSet.getByteValue());
     Assert.assertNull(typeSet.getSingleType());
-    Assert.assertEquals(columnTypes, NestedFieldTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(typeSet.getByteValue()));
 
     writeTypeSet(typeSet);
-    NestedFieldTypeInfo info = new NestedFieldTypeInfo(BUFFER);
+    FieldTypeInfo info = new FieldTypeInfo(BUFFER);
     Assert.assertEquals(0, BUFFER.position());
 
-    NestedFieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+    FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
     Assert.assertNull(roundTrip.getSingleType());
-    Assert.assertEquals(columnTypes, NestedFieldTypeInfo.convertToSet(roundTrip.getByteValue()));
+    Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(roundTrip.getByteValue()));
 
-    NestedFieldTypeInfo info2 = NestedFieldTypeInfo.read(BUFFER, 1);
+    FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
   }
 
-  private static void writeTypeSet(NestedFieldTypeInfo.MutableTypeSet typeSet) throws IOException
+  private void testSingleTypeWithEmptyArray(ColumnType columnType) throws IOException
+  {
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
+    typeSet.add(columnType);
+    typeSet.addUntypedArray();
+
+    if (columnType.isArray()) {
+      // arrays with empty arrays are still single type
+      Assert.assertEquals(columnType, typeSet.getSingleType());
+      Assert.assertEquals(ImmutableSet.of(columnType), FieldTypeInfo.convertToSet(typeSet.getByteValue()));
+
+      writeTypeSet(typeSet);
+      FieldTypeInfo info = new FieldTypeInfo(BUFFER);
+      Assert.assertEquals(0, BUFFER.position());
+
+      FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+      Assert.assertEquals(columnType, roundTrip.getSingleType());
+
+      FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
+      Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
+      Assert.assertEquals(1, BUFFER.position());
+    } else {
+      // scalar types become multi-type
+      Set<ColumnType> columnTypes = ImmutableSet.of(columnType, ColumnType.ofArray(columnType));
+      FieldTypeInfo.MutableTypeSet merge = new FieldTypeInfo.MutableTypeSet();
+      merge.merge(new FieldTypeInfo.MutableTypeSet().add(columnType).getByteValue(), true);
+
+      Assert.assertEquals(merge.getByteValue(), typeSet.getByteValue());
+      Assert.assertNull(typeSet.getSingleType());
+      Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(typeSet.getByteValue()));
+
+      writeTypeSet(typeSet);
+      FieldTypeInfo info = new FieldTypeInfo(BUFFER);
+      Assert.assertEquals(0, BUFFER.position());
+
+      FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+      Assert.assertNull(roundTrip.getSingleType());
+      Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(roundTrip.getByteValue()));
+
+      FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
+      Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
+      Assert.assertEquals(1, BUFFER.position());
+    }
+  }
+
+  private static void writeTypeSet(FieldTypeInfo.MutableTypeSet typeSet) throws IOException
   {
     BUFFER.position(0);
-    NestedFieldTypeInfo.Writer writer = new NestedFieldTypeInfo.Writer(new OnHeapMemorySegmentWriteOutMedium());
+    FieldTypeInfo.Writer writer = new FieldTypeInfo.Writer(new OnHeapMemorySegmentWriteOutMedium());
     writer.open();
     writer.write(typeSet);
     Assert.assertEquals(1, writer.getSerializedSize());

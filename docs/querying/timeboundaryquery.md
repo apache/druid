@@ -23,9 +23,11 @@ sidebar_label: "TimeBoundary"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes a query
-> type that is only available in the native language.
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes a query
+ type that is only available in the native language.
+:::
 
 Time boundary queries return the earliest and latest data points of a data set. The grammar is:
 

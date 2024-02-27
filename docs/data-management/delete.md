@@ -24,12 +24,12 @@ title: "Data deletion"
 
 ## By time range, manually
 
-Apache Druid stores data [partitioned by time chunk](../design/architecture.md#datasources-and-segments) and supports
+Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 deleting data for time chunks by dropping segments. This is a fast, metadata-only operation.
 
 Deletion by time range happens in two steps:
 
-1. Segments to be deleted must first be marked as ["unused"](../design/architecture.md#segment-lifecycle). This can
+1. Segments to be deleted must first be marked as ["unused"](../design/storage.md#segment-lifecycle). This can
    happen when a segment is dropped by a [drop rule](../operations/rule-configuration.md) or when you manually mark a
    segment unused through the Coordinator API or web console. This is a soft delete: the data is not available for
    querying, but the segment files remains in deep storage, and the segment records remains in the metadata store.
@@ -38,7 +38,7 @@ Deletion by time range happens in two steps:
    you have a backup.
 
 For documentation on disabling segments using the Coordinator API, see the
-[Coordinator API reference](../operations/api-reference.md#coordinator-datasources).
+[Legacy metadata API reference](../api-reference/legacy-metadata-api.md#datasources).
 
 A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/tutorial-delete-data.md).
 
@@ -65,7 +65,7 @@ For example, to delete records where `userName` is `'bob'` with native batch ind
 To delete the same records using SQL, use [REPLACE](../multi-stage-query/concepts.md#replace) with `WHERE userName <> 'bob'`.
 
 To reindex using [native batch](../ingestion/native-batch.md), use the [`druid` input
-source](../ingestion/native-batch-input-source.md#druid-input-source). If needed,
+source](../ingestion/input-sources.md#druid-input-source). If needed,
 [`transformSpec`](../ingestion/ingestion-spec.md#transformspec) can be used to filter or modify data during the
 reindexing job. To reindex with SQL, use [`REPLACE <table> OVERWRITE`](../multi-stage-query/reference.md#replace)
 with `SELECT ... FROM <table>`. (Druid does not have `UPDATE` or `ALTER TABLE` statements.) Any SQL SELECT query can be
@@ -95,9 +95,22 @@ The available grammar is:
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
-    "context": <task context>
+    "context": <task_context>,
+    "batchSize": <optional_batch_size>,
+    "limit": <optional_maximum_number_of_segments_to_delete>,
+    "maxUsedStatusLastUpdatedTime": <optional_maximum_timestamp_when_segments_were_marked_as_unused>
 }
 ```
 
+Some of the parameters used in the task payload are further explained below:
+
+| Parameter   | Default         | Explanation                                                                                                                                                                                                                                                                                                                                                                 |
+|-------------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `batchSize`    |100    | Maximum number of segments that are deleted in one kill batch. Some operations on the Overlord may get stuck while a `kill` task is in progress due to concurrency constraints (such as in `TaskLockbox`). Thus, a `kill` task splits the list of unused segments to be deleted into smaller batches to yield the Overlord resources intermittently to other task operations.|
+| `limit`     | null (no limit) | Maximum number of segments for the kill task to delete.|
+| `maxUsedStatusLastUpdatedTime` | null (no cutoff) | Maximum timestamp used as a cutoff to include unused segments. The kill task only considers segments which lie in the specified `interval` and were marked as unused no later than this time. The default behavior is to kill all unused segments in the `interval` regardless of when they where marked as unused.|
+
+
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
+

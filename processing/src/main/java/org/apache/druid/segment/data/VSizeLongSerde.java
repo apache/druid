@@ -521,14 +521,14 @@ public class VSizeLongSerde
       }
       for ( ; i + Byte.SIZE < length; index += Byte.SIZE) {
         final byte unpack = buffer.get(offset + (index >> 3));
-        out[outPosition + i++] = base + (unpack >> 7) & 1;
-        out[outPosition + i++] = base + (unpack >> 6) & 1;
-        out[outPosition + i++] = base + (unpack >> 5) & 1;
-        out[outPosition + i++] = base + (unpack >> 4) & 1;
-        out[outPosition + i++] = base + (unpack >> 3) & 1;
-        out[outPosition + i++] = base + (unpack >> 2) & 1;
-        out[outPosition + i++] = base + (unpack >> 1) & 1;
-        out[outPosition + i++] = base + unpack & 1;
+        out[outPosition + i++] = base + ((unpack >> 7) & 1);
+        out[outPosition + i++] = base + ((unpack >> 6) & 1);
+        out[outPosition + i++] = base + ((unpack >> 5) & 1);
+        out[outPosition + i++] = base + ((unpack >> 4) & 1);
+        out[outPosition + i++] = base + ((unpack >> 3) & 1);
+        out[outPosition + i++] = base + ((unpack >> 2) & 1);
+        out[outPosition + i++] = base + ((unpack >> 1) & 1);
+        out[outPosition + i++] = base + (unpack & 1);
       }
       while (i < length) {
         out[outPosition + i++] = base + get(index++);
@@ -592,14 +592,14 @@ public class VSizeLongSerde
       }
       for ( ; i + 8 < length; index += 8) {
         final short unpack = buffer.getShort(offset + (index >> 2));
-        out[outPosition + i++] = base + (unpack >> 14) & 3;
-        out[outPosition + i++] = base + (unpack >> 12) & 3;
-        out[outPosition + i++] = base + (unpack >> 10) & 3;
-        out[outPosition + i++] = base + (unpack >> 8) & 3;
-        out[outPosition + i++] = base + (unpack >> 6) & 3;
-        out[outPosition + i++] = base + (unpack >> 4) & 3;
-        out[outPosition + i++] = base + (unpack >> 2) & 3;
-        out[outPosition + i++] = base + unpack & 3;
+        out[outPosition + i++] = base + ((unpack >> 14) & 3);
+        out[outPosition + i++] = base + ((unpack >> 12) & 3);
+        out[outPosition + i++] = base + ((unpack >> 10) & 3);
+        out[outPosition + i++] = base + ((unpack >> 8) & 3);
+        out[outPosition + i++] = base + ((unpack >> 6) & 3);
+        out[outPosition + i++] = base + ((unpack >> 4) & 3);
+        out[outPosition + i++] = base + ((unpack >> 2) & 3);
+        out[outPosition + i++] = base + (unpack & 3);
       }
       while (i < length) {
         out[outPosition + i++] = base + get(index++);
@@ -659,18 +659,18 @@ public class VSizeLongSerde
 
       // byte align
       while ((index & 0x1) != 0 && i < length) {
-        out[outPosition + i++] = base + get(index++) & 0xF;
+        out[outPosition + i++] = base + (get(index++) & 0xF);
       }
       for ( ; i + 8 < length; index += 8) {
         final int unpack = buffer.getInt(offset + (index >> 1));
-        out[outPosition + i++] = base + (unpack >> 28) & 0xF;
-        out[outPosition + i++] = base + (unpack >> 24) & 0xF;
-        out[outPosition + i++] = base + (unpack >> 20) & 0xF;
-        out[outPosition + i++] = base + (unpack >> 16) & 0xF;
-        out[outPosition + i++] = base + (unpack >> 12) & 0xF;
-        out[outPosition + i++] = base + (unpack >> 8) & 0xF;
-        out[outPosition + i++] = base + (unpack >> 4) & 0xF;
-        out[outPosition + i++] = base + unpack & 0xF;
+        out[outPosition + i++] = base + ((unpack >> 28) & 0xF);
+        out[outPosition + i++] = base + ((unpack >> 24) & 0xF);
+        out[outPosition + i++] = base + ((unpack >> 20) & 0xF);
+        out[outPosition + i++] = base + ((unpack >> 16) & 0xF);
+        out[outPosition + i++] = base + ((unpack >> 12) & 0xF);
+        out[outPosition + i++] = base + ((unpack >> 8) & 0xF);
+        out[outPosition + i++] = base + ((unpack >> 4) & 0xF);
+        out[outPosition + i++] = base + (unpack & 0xF);
       }
       while (i < length) {
         out[outPosition + i++] = base + get(index++);
@@ -725,7 +725,7 @@ public class VSizeLongSerde
     public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
     {
       for (int i = 0, indexOffset = startIndex; i < length; i++, indexOffset++) {
-        out[outPosition + i] = base + buffer.get(offset + indexOffset) & 0xFF;
+        out[outPosition + i] = base + (buffer.get(offset + indexOffset) & 0xFF);
       }
     }
 
@@ -795,7 +795,7 @@ public class VSizeLongSerde
       int index = startIndex;
       // every other value is byte aligned
       if ((index & 0x1) != 0) {
-        out[outPosition + i++] = get(index++);
+        out[outPosition + i++] = base + get(index++);
       }
       final int unpackSize = Long.BYTES + Integer.BYTES;
       for (int indexOffset = (index * 3) >> 1; i + 8 < length; indexOffset += unpackSize) {
@@ -838,7 +838,7 @@ public class VSizeLongSerde
     public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
     {
       for (int i = 0, indexOffset = (startIndex << 1); i < length; i++, indexOffset += Short.BYTES) {
-        out[outPosition + i] = base + buffer.getShort(offset + indexOffset) & 0xFFFF;
+        out[outPosition + i] = base + (buffer.getShort(offset + indexOffset) & 0xFFFF);
       }
     }
 
@@ -851,7 +851,7 @@ public class VSizeLongSerde
           return i;
         }
 
-        out[outPosition + i] = base + buffer.getShort(offset + (index << 1)) & 0xFFFF;
+        out[outPosition + i] = base + (buffer.getShort(offset + (index << 1)) & 0xFFFF);
       }
 
       return length;
@@ -884,7 +884,7 @@ public class VSizeLongSerde
       int index = startIndex;
       // every other value is byte aligned
       if ((index & 0x1) != 0) {
-        out[outPosition + i++] = get(index++);
+        out[outPosition + i++] = base + get(index++);
       }
       final int unpackSize = Long.BYTES + Long.BYTES + Integer.BYTES;
       for (int indexOffset = (index * 5) >> 1; i + 8 < length; indexOffset += unpackSize) {
@@ -970,7 +970,7 @@ public class VSizeLongSerde
     public void getDelta(long[] out, int outPosition, int startIndex, int length, long base)
     {
       for (int i = 0, indexOffset = (startIndex << 2); i < length; i++, indexOffset += Integer.BYTES) {
-        out[outPosition + i] = base + buffer.getInt(offset + indexOffset) & 0xFFFFFFFFL;
+        out[outPosition + i] = base + (buffer.getInt(offset + indexOffset) & 0xFFFFFFFFL);
       }
     }
   }

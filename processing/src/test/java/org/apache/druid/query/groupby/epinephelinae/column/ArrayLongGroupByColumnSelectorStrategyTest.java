@@ -41,23 +41,9 @@ import java.util.List;
 @RunWith(MockitoJUnitRunner.class)
 public class ArrayLongGroupByColumnSelectorStrategyTest
 {
-  protected final List<List<Long>> dictionary = new ArrayList<List<Long>>()
-  {
-    {
-      add(ImmutableList.of(1L, 2L));
-      add(ImmutableList.of(2L, 3L));
-      add(ImmutableList.of(1L));
-    }
-  };
+  protected final List<List<Long>> dictionary = new ArrayList<>();
 
-  protected final Object2IntOpenHashMap<List<Long>> reverseDictionary = new Object2IntOpenHashMap<List<Long>>()
-  {
-    {
-      put(ImmutableList.of(1L, 2L), 0);
-      put(ImmutableList.of(2L, 3L), 1);
-      put(ImmutableList.of(1L), 2);
-    }
-  };
+  protected final Object2IntOpenHashMap<List<Long>> reverseDictionary = new Object2IntOpenHashMap<>();
 
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
@@ -67,7 +53,15 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   @Before
   public void setup()
   {
+    dictionary.add(ImmutableList.of(1L, 2L));
+    dictionary.add(ImmutableList.of(2L, 3L));
+    dictionary.add(ImmutableList.of(1L));
+
     reverseDictionary.defaultReturnValue(-1);
+    reverseDictionary.put(ImmutableList.of(1L, 2L), 0);
+    reverseDictionary.put(ImmutableList.of(2L, 3L), 1);
+    reverseDictionary.put(ImmutableList.of(1L), 2);
+
     strategy = new ArrayLongGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
   }
 

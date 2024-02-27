@@ -43,11 +43,9 @@ public class CliPeonTest
   @Test
   public void testCliPeonK8sMode() throws IOException
   {
-    String taskId = "id0";
-    File baseTaskFile = temporaryFolder.newFolder(taskId);
-    File taskFile = new File(baseTaskFile, "task.json");
-    FileUtils.write(taskFile, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(baseTaskFile.getParent(), taskId, true);
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "k8s");
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
@@ -56,11 +54,20 @@ public class CliPeonTest
   @Test
   public void testCliPeonNonK8sMode() throws IOException
   {
-    String taskId = "id0";
-    File baseTaskFile = temporaryFolder.newFolder(taskId);
-    File taskFile = new File(baseTaskFile, "task.json");
-    FileUtils.write(taskFile, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(baseTaskFile.getParent(), taskId, false);
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "httpRemote");
+    final Injector injector = GuiceInjectors.makeStartupInjector();
+    injector.injectMembers(runnable);
+    Assert.assertNotNull(runnable.makeInjector());
+  }
+
+  @Test
+  public void testCliPeonK8sANdWorkerIsK8sMode() throws IOException
+  {
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "k8sAndWorker");
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
@@ -70,11 +77,10 @@ public class CliPeonTest
   {
     List<String> taskAndStatusFile = new ArrayList<>();
 
-    FakeCliPeon(String baseTaskDirectory, String taskId, boolean runningOnK8s)
+    FakeCliPeon(String taskDirectory, String runnerType)
     {
       try {
-        taskAndStatusFile.add(baseTaskDirectory);
-        taskAndStatusFile.add(taskId);
+        taskAndStatusFile.add(taskDirectory);
         taskAndStatusFile.add("1");
 
         Field privateField = CliPeon.class
@@ -82,9 +88,7 @@ public class CliPeonTest
         privateField.setAccessible(true);
         privateField.set(this, taskAndStatusFile);
 
-        if (runningOnK8s) {
-          System.setProperty("druid.indexer.runner.type", "k8s");
-        }
+        System.setProperty("druid.indexer.runner.type", runnerType);
       }
       catch (Exception ex) {
         // do nothing

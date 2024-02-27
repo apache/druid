@@ -28,12 +28,14 @@ The main goal of this cache is to speed up the access to a high latency lookup s
 Thus user can define various caching strategies or and implementation per lookup, even if the source is the same.
 This module can be used side to side with other lookup module like the global cached lookup module.
 
-To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
 
-> If using JDBC, you will need to add your database's client JAR files to the extension's directory.
-> For Postgres, the connector JAR is already included.
-> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
-> Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
+:::info
+ If using JDBC, you will need to add your database's client JAR files to the extension's directory.
+ For Postgres, the connector JAR is already included.
+ See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+ Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
+:::
 
 ## Architecture
 Generally speaking this module can be divided into two main component, namely, the data fetcher layer and caching layer.

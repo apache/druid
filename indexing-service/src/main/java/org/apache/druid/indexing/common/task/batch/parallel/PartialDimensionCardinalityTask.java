@@ -21,11 +21,13 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -43,16 +45,23 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.partition.HashPartitioner;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 {
@@ -60,7 +69,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final String supervisorTaskId;
   private final String subtaskSpecId;
 
   private final ObjectMapper jsonMapper;
@@ -86,7 +94,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         taskResource,
         ingestionSchema.getDataSchema(),
         ingestionSchema.getTuningConfig(),
-        context
+        context,
+        supervisorTaskId
     );
 
     Preconditions.checkArgument(
@@ -98,7 +107,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
-    this.supervisorTaskId = supervisorTaskId;
     this.jsonMapper = jsonMapper;
   }
 
@@ -115,12 +123,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   }
 
   @JsonProperty
-  private String getSupervisorTaskId()
-  {
-    return supervisorTaskId;
-  }
-
-  @JsonProperty
   @Override
   public String getSubtaskSpecId()
   {
@@ -133,12 +135,28 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     return TYPE;
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      throw getInputSecurityOnFirehoseUnsupportedError();
+    }
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .collect(Collectors.toSet()) :
+           ImmutableSet.of();
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     if (!getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
       return tryTimeChunkLock(
-          new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+          new SurrogateTaskActionClient(getSupervisorTaskId(), taskActionClient),
           getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
       );
     } else {
@@ -156,7 +174,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
 
-    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
     InputFormat inputFormat = inputSource.needsFormat()
                               ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
                               : null;
@@ -249,7 +267,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
   {
     final ParallelIndexSupervisorTaskClient taskClient =
         toolbox.getSupervisorTaskClientProvider().build(
-            supervisorTaskId,
+            getSupervisorTaskId(),
             ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
             ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
         );

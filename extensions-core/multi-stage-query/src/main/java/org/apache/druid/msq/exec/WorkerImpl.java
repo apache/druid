@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -31,6 +32,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.common.guava.FutureUtils;
@@ -60,6 +62,8 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.indexer.TaskStatus;
@@ -69,8 +73,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterNames;
@@ -79,8 +81,8 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
-import org.apache.druid.msq.indexing.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -90,6 +92,7 @@ import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
+import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
@@ -98,6 +101,10 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSliceReader;
+import org.apache.druid.msq.input.inline.InlineInputSlice;
+import org.apache.druid.msq.input.inline.InlineInputSliceReader;
+import org.apache.druid.msq.input.lookup.LookupInputSlice;
+import org.apache.druid.msq.input.lookup.LookupInputSliceReader;
 import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
@@ -114,9 +121,9 @@ import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.worker.WorkerStageKernel;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
-import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
-import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
+import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
+import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
+import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
@@ -126,6 +133,7 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
@@ -175,6 +183,12 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
+  private final WorkerStorageParameters workerStorageParameters;
+  /**
+   * Only set for select jobs.
+   */
+  @Nullable
+  private final MSQSelectDestination selectDestination;
 
   /**
    * Set once in {@link #runTask} and never reassigned.
@@ -194,16 +208,33 @@ public class WorkerImpl implements Worker
 
   public WorkerImpl(MSQWorkerTask task, WorkerContext context)
   {
+    this(
+        task,
+        context,
+        WorkerStorageParameters.createProductionInstance(
+            context.injector(),
+            MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext()))
+            // If Durable Storage is enabled, then super sorter intermediate storage can be enabled.
+        )
+    );
+  }
+
+  @VisibleForTesting
+  public WorkerImpl(MSQWorkerTask task, WorkerContext context, WorkerStorageParameters workerStorageParameters)
+  {
     this.task = task;
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
-    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(
-        MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
-    );
-    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
-        QueryContext.of(task.getContext())
-    );
+    QueryContext queryContext = QueryContext.of(task.getContext());
+    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(queryContext);
+    this.selectDestination = MultiStageQueryContext.getSelectDestinationOrNull(queryContext);
+    this.workerStorageParameters = workerStorageParameters;
+
+    long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured()
+                    ? workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes()
+                    : Long.MAX_VALUE;
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(maxBytes);
   }
 
   @Override
@@ -264,6 +295,7 @@ public class WorkerImpl implements Worker
   {
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
+    closer.register(context.loadedSegmentDataProviderFactory());
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
 
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
@@ -684,20 +716,26 @@ public class WorkerImpl implements Worker
       return DurableStorageInputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           MSQTasks.makeStorageConnector(context.injector()),
-          closer
+          closer,
+          false
       );
     } else {
       return new WorkerOrLocalInputChannelFactory(workerTaskList);
     }
   }
 
-  private OutputChannelFactory makeStageOutputChannelFactory(final FrameContext frameContext, final int stageNumber)
+  private OutputChannelFactory makeStageOutputChannelFactory(
+      final FrameContext frameContext,
+      final int stageNumber,
+      boolean isFinalStage
+  )
   {
     // Use the standard frame size, since we assume this size when computing how much is needed to merge output
     // files from different workers.
     final int frameSize = frameContext.memoryParameters().getStandardFrameSize();
 
-    if (durableStageStorageEnabled) {
+    if (durableStageStorageEnabled || (isFinalStage
+                                       && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           task().getWorkerNumber(),
@@ -705,7 +743,8 @@ public class WorkerImpl implements Worker
           task().getId(),
           frameSize,
           MSQTasks.makeStorageConnector(context.injector()),
-          context.tempDir()
+          context.tempDir(),
+          (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
       );
     } else {
       final File fileChannelDirectory =
@@ -727,8 +766,7 @@ public class WorkerImpl implements Worker
     final FileOutputChannelFactory fileOutputChannelFactory =
         new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
-    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext()))
-        && durableStageStorageEnabled) {
+    if (durableStageStorageEnabled && workerStorageParameters.isIntermediateStorageLimitConfigured()) {
       return new ComposingOutputChannelFactory(
           ImmutableList.of(
               fileOutputChannelFactory,
@@ -739,7 +777,8 @@ public class WorkerImpl implements Worker
                   task().getId(),
                   frameSize,
                   MSQTasks.makeStorageConnector(context.injector()),
-                  tmpDir
+                  tmpDir,
+                  false
               )
           ),
           frameSize
@@ -814,7 +853,17 @@ public class WorkerImpl implements Worker
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
     if (controllerAlive && !snapshotsTree.isEmpty()) {
-      controllerClient.postCounters(id(), snapshotsTree);
+      try {
+        controllerClient.postCounters(id(), snapshotsTree);
+      }
+      catch (IOException e) {
+        if (e.getCause() instanceof ServiceClosedException) {
+          // Suppress. This can happen if the controller goes away while a postCounters call is in flight.
+          log.debug(e, "Ignoring failure on postCounters, because controller has gone away.");
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
@@ -995,9 +1044,13 @@ public class WorkerImpl implements Worker
       final WorkOrder workOrder = kernel.getWorkOrder();
       final StageDefinition stageDef = workOrder.getStageDefinition();
 
+      final boolean isFinalStage = stageDef.getStageNumber() == workOrder.getQueryDefinition()
+                                                                         .getFinalStageDefinition()
+                                                                         .getStageNumber();
+
       makeInputSliceReader();
-      makeWorkOutputChannelFactory();
-      makeShuffleOutputChannelFactory();
+      makeWorkOutputChannelFactory(isFinalStage);
+      makeShuffleOutputChannelFactory(isFinalStage);
       makeAndRunWorkProcessors();
 
       if (stageDef.doesShuffle()) {
@@ -1008,7 +1061,7 @@ public class WorkerImpl implements Worker
             Futures.immediateFuture(workResultAndOutputChannels.getOutputChannels().readOnly());
       }
 
-      setUpCompletionCallbacks();
+      setUpCompletionCallbacks(isFinalStage);
     }
 
     /**
@@ -1046,12 +1099,20 @@ public class WorkerImpl implements Worker
                       .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
                       .put(StageInputSlice.class, new StageInputSliceReader(queryId, inputChannels))
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
-                      .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext.dataSegmentProvider()))
+                      .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
+                      .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
+                      .put(
+                          SegmentsInputSlice.class,
+                          new SegmentsInputSliceReader(
+                              frameContext,
+                              MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
+                          )
+                      )
                       .build()
       );
     }
 
-    private void makeWorkOutputChannelFactory()
+    private void makeWorkOutputChannelFactory(boolean isFinalStage)
     {
       if (workOutputChannelFactory != null) {
         throw new ISE("processorOutputChannelFactory already created");
@@ -1075,7 +1136,7 @@ public class WorkerImpl implements Worker
       } else {
         // Writing stage output.
         baseOutputChannelFactory =
-            makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber());
+            makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber(), isFinalStage);
       }
 
       workOutputChannelFactory = new CountingOutputChannelFactory(
@@ -1084,16 +1145,25 @@ public class WorkerImpl implements Worker
       );
     }
 
-    private void makeShuffleOutputChannelFactory()
+    private void makeShuffleOutputChannelFactory(boolean isFinalStage)
     {
       shuffleOutputChannelFactory =
           new CountingOutputChannelFactory(
-              makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber()),
+              makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber(), isFinalStage),
               counterTracker.channel(CounterNames.shuffleChannel())
           );
     }
 
-    private <FactoryType extends FrameProcessorFactory<I, WorkerClass, T, R>, I, WorkerClass extends FrameProcessor<T>, T, R> void makeAndRunWorkProcessors()
+    /**
+     * Use {@link FrameProcessorFactory#makeProcessors} to create {@link ProcessorsAndChannels}. Executes the
+     * processors using {@link #exec} and sets the output channels in {@link #workResultAndOutputChannels}.
+     *
+     * @param <FactoryType>         type of {@link StageDefinition#getProcessorFactory()}
+     * @param <ProcessorReturnType> return type of {@link FrameProcessor} created by the manager
+     * @param <ManagerReturnType>   result type of {@link ProcessorManager#result()}
+     * @param <ExtraInfoType>       type of {@link WorkOrder#getExtraInfo()}
+     */
+    private <FactoryType extends FrameProcessorFactory<ProcessorReturnType, ManagerReturnType, ExtraInfoType>, ProcessorReturnType, ManagerReturnType, ExtraInfoType> void makeAndRunWorkProcessors()
         throws IOException
     {
       if (workResultAndOutputChannels != null) {
@@ -1104,13 +1174,13 @@ public class WorkerImpl implements Worker
       final FactoryType processorFactory = (FactoryType) kernel.getStageDefinition().getProcessorFactory();
 
       @SuppressWarnings("unchecked")
-      final ProcessorsAndChannels<WorkerClass, T> processors =
+      final ProcessorsAndChannels<ProcessorReturnType, ManagerReturnType> processors =
           processorFactory.makeProcessors(
               kernel.getStageDefinition(),
               kernel.getWorkOrder().getWorkerNumber(),
               kernel.getWorkOrder().getInputs(),
               inputSliceReader,
-              (I) kernel.getWorkOrder().getExtraInfo(),
+              (ExtraInfoType) kernel.getWorkOrder().getExtraInfo(),
               workOutputChannelFactory,
               frameContext,
               parallelism,
@@ -1118,7 +1188,7 @@ public class WorkerImpl implements Worker
               e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
           );
 
-      final Sequence<WorkerClass> processorSequence = processors.processors();
+      final ProcessorManager<ProcessorReturnType, ManagerReturnType> processorManager = processors.getProcessorManager();
 
       final int maxOutstandingProcessors;
 
@@ -1131,10 +1201,8 @@ public class WorkerImpl implements Worker
             Math.max(1, Math.min(parallelism, processors.getOutputChannels().getAllChannels().size()));
       }
 
-      final ListenableFuture<R> workResultFuture = exec.runAllFully(
-          processorSequence,
-          processorFactory.newAccumulatedResult(),
-          processorFactory::accumulateResult,
+      final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
+          processorManager,
           maxOutstandingProcessors,
           processorBouncer,
           cancellationId
@@ -1216,7 +1284,7 @@ public class WorkerImpl implements Worker
       }
     }
 
-    private void setUpCompletionCallbacks()
+    private void setUpCompletionCallbacks(boolean isFinalStage)
     {
       final StageDefinition stageDef = kernel.getStageDefinition();
 
@@ -1252,7 +1320,7 @@ public class WorkerImpl implements Worker
 
               // Once the outputs channels have been resolved and are ready for reading, write success file, if
               // using durable storage.
-              writeDurableStorageSuccessFileIfNeeded(stageDef.getStageNumber());
+              writeDurableStorageSuccessFileIfNeeded(stageDef.getStageNumber(), isFinalStage);
 
               kernelManipulationQueue.add(holder -> holder.getStageKernelMap()
                                                           .get(stageDef.getId())
@@ -1267,29 +1335,32 @@ public class WorkerImpl implements Worker
                       kernelHolder.getStageKernelMap().get(stageDef.getId()).fail(t)
               );
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
     }
 
     /**
      * Write {@link DurableStorageUtils#SUCCESS_MARKER_FILENAME} for a particular stage, if durable storage is enabled.
      */
-    private void writeDurableStorageSuccessFileIfNeeded(final int stageNumber)
+    private void writeDurableStorageSuccessFileIfNeeded(final int stageNumber, boolean isFinalStage)
     {
-      if (!durableStageStorageEnabled) {
+      final DurableStorageOutputChannelFactory durableStorageOutputChannelFactory;
+      if (durableStageStorageEnabled || (isFinalStage
+                                         && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))) {
+        durableStorageOutputChannelFactory = DurableStorageOutputChannelFactory.createStandardImplementation(
+            task.getControllerTaskId(),
+            task().getWorkerNumber(),
+            stageNumber,
+            task().getId(),
+            frameContext.memoryParameters().getStandardFrameSize(),
+            MSQTasks.makeStorageConnector(context.injector()),
+            context.tempDir(),
+            (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
+        );
+      } else {
         return;
       }
-
-      DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
-          DurableStorageOutputChannelFactory.createStandardImplementation(
-              task.getControllerTaskId(),
-              task().getWorkerNumber(),
-              stageNumber,
-              task().getId(),
-              frameContext.memoryParameters().getStandardFrameSize(),
-              MSQTasks.makeStorageConnector(context.injector()),
-              context.tempDir()
-          );
       try {
         durableStorageOutputChannelFactory.createSuccessFile(task.getId());
       }
@@ -1298,11 +1369,7 @@ public class WorkerImpl implements Worker
             e,
             "Unable to create the success file [%s] at the location [%s]",
             DurableStorageUtils.SUCCESS_MARKER_FILENAME,
-            DurableStorageUtils.getSuccessFilePath(
-                task.getControllerTaskId(),
-                stageNumber,
-                task().getWorkerNumber()
-            )
+            durableStorageOutputChannelFactory.getSuccessFilePath()
         );
       }
     }
@@ -1561,7 +1628,7 @@ public class WorkerImpl implements Worker
               };
 
               // Chain futures so we only sort one partition at a time.
-              nextFuture = Futures.transform(
+              nextFuture = Futures.transformAsync(
                   nextFuture,
                   (AsyncFunction<OutputChannel, OutputChannel>) ignored -> {
                     final SuperSorter sorter = new SuperSorter(
@@ -1588,7 +1655,8 @@ public class WorkerImpl implements Worker
                     );
 
                     return FutureUtils.transform(sorter.run(), r -> Iterables.getOnlyElement(r.getAllChannels()));
-                  }
+                  },
+                  MoreExecutors.directExecutor()
               );
 
               sortedChannelFutures.add(nextFuture);
@@ -1614,7 +1682,7 @@ public class WorkerImpl implements Worker
         throw new ISE("Not initialized");
       }
 
-      return Futures.transform(
+      return Futures.transformAsync(
           pipelineFuture,
           (AsyncFunction<ResultAndChannels<?>, OutputChannels>) resultAndChannels ->
               Futures.transform(
@@ -1622,8 +1690,10 @@ public class WorkerImpl implements Worker
                   (Function<Object, OutputChannels>) input -> {
                     sanityCheckOutputChannels(resultAndChannels.getOutputChannels());
                     return resultAndChannels.getOutputChannels();
-                  }
-              )
+                  },
+                  MoreExecutors.directExecutor()
+              ),
+          MoreExecutors.directExecutor()
       );
     }
 
@@ -1655,11 +1725,13 @@ public class WorkerImpl implements Worker
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              Sequences.simple(processors),
-              stageDefinition.createResultKeyStatisticsCollector(
-                  frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
-              ),
-              ClusterByStatisticsCollector::addAll,
+              ProcessorManagers.of(processors)
+                               .withAccumulation(
+                                   stageDefinition.createResultKeyStatisticsCollector(
+                                       frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                   ),
+                                   ClusterByStatisticsCollector::addAll
+                               ),
               // Run all processors simultaneously. They are lightweight and this keeps things moving.
               processors.size(),
               Bouncer.unlimited(),
@@ -1691,7 +1763,8 @@ public class WorkerImpl implements Worker
                   }
               );
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
 
       return new ResultAndChannels<>(
@@ -1721,7 +1794,7 @@ public class WorkerImpl implements Worker
       }
 
       pipelineFuture = FutureUtils.transform(
-          Futures.transform(
+          Futures.transformAsync(
               pipelineFuture,
               new AsyncFunction<ResultAndChannels<?>, ResultAndChannels<?>>()
               {
@@ -1730,7 +1803,8 @@ public class WorkerImpl implements Worker
                 {
                   return fn.apply(t);
                 }
-              }
+              },
+              MoreExecutors.directExecutor()
           ),
           resultAndChannels -> new ResultAndChannels<>(
               resultAndChannels.getResultFuture(),

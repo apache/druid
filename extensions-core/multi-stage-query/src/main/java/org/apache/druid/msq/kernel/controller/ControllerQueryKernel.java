@@ -162,7 +162,8 @@ public class ControllerQueryKernel
    */
   public List<StageId> createAndGetNewStageIds(
       final InputSpecSlicerFactory slicerFactory,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final long maxInputBytesPerWorker
   )
   {
     final Int2IntMap stageWorkerCountMap = new Int2IntAVLTreeMap();
@@ -177,7 +178,7 @@ public class ControllerQueryKernel
       }
     }
 
-    createNewKernels(stageWorkerCountMap, slicerFactory.makeSlicer(stagePartitionsMap), assignmentStrategy);
+    createNewKernels(stageWorkerCountMap, slicerFactory.makeSlicer(stagePartitionsMap), assignmentStrategy, maxInputBytesPerWorker);
     return stageTracker.values()
                        .stream()
                        .filter(controllerStageTracker -> controllerStageTracker.getPhase() == ControllerStagePhase.NEW)
@@ -292,7 +293,8 @@ public class ControllerQueryKernel
   private void createNewKernels(
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final long maxInputBytesPerWorker
   )
   {
     for (final StageId nextStage : readyToRunStages) {
@@ -303,7 +305,8 @@ public class ControllerQueryKernel
           stageWorkerCountMap,
           slicer,
           assignmentStrategy,
-          maxRetainedPartitionSketchBytes
+          maxRetainedPartitionSketchBytes,
+          maxInputBytesPerWorker
       );
       stageTracker.put(nextStage, stageKernel);
     }
@@ -661,21 +664,23 @@ public class ControllerQueryKernel
    */
   public List<WorkOrder> getWorkInCaseWorkerEligibleForRetryElseThrow(int workerNumber, MSQFault msqFault)
   {
+    if (isRetriableFault(msqFault)) {
+      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
+    } else {
+      throw new MSQException(msqFault);
+    }
+  }
 
+  public static boolean isRetriableFault(MSQFault msqFault)
+  {
     final String errorCode;
     if (msqFault instanceof WorkerFailedFault) {
       errorCode = MSQFaultUtils.getErrorCodeFromMessage((((WorkerFailedFault) msqFault).getErrorMsg()));
     } else {
       errorCode = msqFault.getErrorCode();
     }
-
-    log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
-
-    if (RETRIABLE_ERROR_CODES.contains(errorCode)) {
-      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
-    } else {
-      throw new MSQException(msqFault);
-    }
+    log.debug("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
+    return RETRIABLE_ERROR_CODES.contains(errorCode);
   }
 
   /**
@@ -778,5 +783,19 @@ public class ControllerQueryKernel
   public boolean allPartialKeyInformationPresent(StageId stageId)
   {
     return getStageKernelOrThrow(stageId).allPartialKeyInformationFetched();
+  }
+
+  /**
+   * @return {@code true} if the stage output is empty, {@code false} if the stage output is non-empty,
+   * or {@code null} for stages where cluster key statistics are not gathered or is incomplete
+   */
+  @Nullable
+  public Boolean isStageOutputEmpty(final StageId stageId)
+  {
+    final CompleteKeyStatisticsInformation completeKeyStatistics = getCompleteKeyStatisticsInformation(stageId);
+    if (completeKeyStatistics == null || !completeKeyStatistics.isComplete()) {
+      return null;
+    }
+    return completeKeyStatistics.getTimeSegmentVsWorkerMap().size() == 0;
   }
 }

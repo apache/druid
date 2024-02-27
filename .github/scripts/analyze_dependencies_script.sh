@@ -15,9 +15,13 @@
 
 #! /bin/bash
 
+<<<<<<< HEAD
 # Adding the install step to ensure that the rRPC shaded jar is created
 # so that the implied compilation step works.
 ${MVN} ${MAVEN_SKIP} install dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${HADOOP_PROFILE} ||
+=======
+${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ||
+>>>>>>> upstream/master
 { echo "
     The dependency analysis has found a dependency that is either:
 

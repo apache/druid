@@ -91,6 +91,13 @@ public class CounterSnapshotsTree
     return retVal;
   }
 
+  public Map<Integer, CounterSnapshots> snapshotForStage(int stageNumber)
+  {
+    synchronized (snapshotsMap) {
+      return snapshotsMap.getOrDefault(stageNumber, null);
+    }
+  }
+
   private void putAll(final Map<Integer, Map<Integer, CounterSnapshots>> otherMap)
   {
     synchronized (snapshotsMap) {

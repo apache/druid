@@ -60,7 +60,7 @@ public class TimeSeriesUnionQueryRunnerTest extends InitializedNullHandlingTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(
-        QueryRunnerTestHelper.makeUnionQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),

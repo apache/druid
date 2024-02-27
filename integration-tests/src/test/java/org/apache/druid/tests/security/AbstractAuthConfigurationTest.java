@@ -276,7 +276,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaServerQuery(
         adminClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        getServersWithoutCurrentSize(adminServers)
+        getServersWithoutCurrentSizeAndStartTime(adminServers)
     );
 
     LOG.info("Checking sys.server_segments query as admin...");
@@ -767,7 +767,7 @@ public abstract class AbstractAuthConfigurationTest
     String content = responseHolder.getContent();
     List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
     if (isServerQuery) {
-      responseMap = getServersWithoutCurrentSize(responseMap);
+      responseMap = getServersWithoutCurrentSizeAndStartTime(responseMap);
     }
     Assert.assertEquals(responseMap, expectedResults);
   }
@@ -914,7 +914,7 @@ public abstract class AbstractAuthConfigurationTest
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
-    adminServers = getServersWithoutCurrentSize(
+    adminServers = getServersWithoutCurrentSizeAndStartTime(
         jsonMapper.readValue(
             fillServersTemplate(
                 config,
@@ -937,13 +937,14 @@ public abstract class AbstractAuthConfigurationTest
    * curr_size on historicals changes because cluster state is not isolated across different
    * integration tests, zero it out for consistent test results
    */
-  protected static List<Map<String, Object>> getServersWithoutCurrentSize(List<Map<String, Object>> servers)
+  protected static List<Map<String, Object>> getServersWithoutCurrentSizeAndStartTime(List<Map<String, Object>> servers)
   {
     return Lists.transform(
         servers,
         (server) -> {
           Map<String, Object> newServer = new HashMap<>(server);
           newServer.put("curr_size", 0);
+          newServer.put("start_time", "0");
           return newServer;
         }
     );

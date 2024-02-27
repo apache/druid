@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,24 @@ import java.util.List;
 @ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
+
+  /**
+   * This method is deprecated and retained for backward incompatibility.
+   * Returns whether the given query is cacheable or not.
+   * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
+   *
+   * @param ignoredQuery            the query to be cached
+   * @param ignoredWillMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
+   *                         called on the cached by-segment results
+   *
+   * @return true if the query is cacheable, otherwise false.
+   */
+  @Deprecated
+  default boolean isCacheable(QueryType ignoredQuery, boolean ignoredWillMergeRunners)
+  {
+    return false;
+  }
+
   /**
    * Returns whether the given query is cacheable or not.
    * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
@@ -43,10 +62,14 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    * @param query            the query to be cached
    * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
    *                         called on the cached by-segment results
+   * @param bySegment        segment level or result level cache
    *
    * @return true if the query is cacheable, otherwise false.
    */
-  boolean isCacheable(QueryType query, boolean willMergeRunners);
+  default boolean isCacheable(QueryType query, boolean willMergeRunners, boolean bySegment)
+  {
+    return isCacheable(query, willMergeRunners);
+  }
 
   /**
    * Computes the per-segment cache key for the given query. Because this is a per-segment cache key, it should only
@@ -134,10 +157,15 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
         throw new ISE("Ran out of objects while reading aggregators from cache!");
       }
 
-      if (isResultLevelCache) {
-        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
-      } else {
+      ColumnType resultType = aggregator.getResultType();
+      ColumnType intermediateType = aggregator.getIntermediateType();
+
+      boolean needsDeserialize = !isResultLevelCache || resultType.equals(intermediateType);
+
+      if (needsDeserialize) {
         addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
+      } else {
+        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
       }
     }
   }

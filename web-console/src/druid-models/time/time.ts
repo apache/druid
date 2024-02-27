@@ -53,7 +53,7 @@ const MIN_NANO = MIN_MICRO * 1000;
 const MAX_NANO = MIN_NANO * 1000;
 
 export const AUTO_MATCHER =
-  /^([+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))( ((([01]\d|2[0-3])((:?)[0-5]\d)?|24:?00)([.,]\d+(?!:))?)?(\17[0-5]\d([.,]\d+)?)?([zZ]|([+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)$/;
+  /^\s*([+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))( ((([01]\d|2[0-3])((:?)[0-5]\d)?|24:?00)([.,]\d+(?!:))?)?(\17[0-5]\d([.,]\d+)?)?([zZ]|([+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)\s*$/;
 export const ISO_MATCHER =
   /^([+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))(T((([01]\d|2[0-3])((:?)[0-5]\d)?|24:?00)([.,]\d+(?!:))?)?(\17[0-5]\d([.,]\d+)?)?([zZ]|([+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)$/;
 
@@ -86,7 +86,20 @@ export function timeFormatMatches(format: string, value: string | number | bigin
 }
 
 export function possibleDruidFormatForValues(values: any[]): string | undefined {
+  if (!values.length) return;
   return ALL_FORMAT_VALUES.find(format => {
     return values.every(value => timeFormatMatches(format, value));
   });
+}
+
+export function chooseByBestTimestamp<T extends { column: string; format: string }>(
+  candidates: T[],
+): T | undefined {
+  return (
+    candidates.find(ts => ts.column === '__time') || // If there is a __time column, just pick it
+    candidates.find(ts => /time/i.test(ts.column) && !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Prefer a suggestion that has "time" in the name and is not a numeric format
+    candidates.find(ts => /time/i.test(ts.column)) || // Otherwise anything that has "time" in the name
+    candidates.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
+    candidates[0]
+  );
 }

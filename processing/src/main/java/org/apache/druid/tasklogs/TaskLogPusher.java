@@ -35,4 +35,8 @@ public interface TaskLogPusher
   default void pushTaskReports(String taskid, File reportFile) throws IOException
   {
   }
+
+  default void pushTaskStatus(String taskid, File reportFile) throws IOException
+  {
+  }
 }

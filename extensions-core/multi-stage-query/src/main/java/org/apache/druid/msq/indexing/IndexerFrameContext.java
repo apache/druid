@@ -20,14 +20,15 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import java.io.File;
@@ -38,30 +39,33 @@ public class IndexerFrameContext implements FrameContext
   private final IndexIO indexIO;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerMemoryParameters memoryParameters;
+  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
 
   public IndexerFrameContext(
       IndexerWorkerContext context,
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
+      LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory,
       WorkerMemoryParameters memoryParameters
   )
   {
     this.context = context;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
+    this.loadedSegmentDataProviderFactory = loadedSegmentDataProviderFactory;
     this.memoryParameters = memoryParameters;
   }
 
   @Override
-  public JoinableFactory joinableFactory()
+  public SegmentWrangler segmentWrangler()
   {
-    return context.injector().getInstance(JoinableFactory.class);
+    return context.injector().getInstance(SegmentWrangler.class);
   }
 
   @Override
-  public GroupByStrategySelector groupByStrategySelector()
+  public GroupingEngine groupingEngine()
   {
-    return context.injector().getInstance(GroupByStrategySelector.class);
+    return context.injector().getInstance(GroupingEngine.class);
   }
 
   @Override
@@ -75,6 +79,13 @@ public class IndexerFrameContext implements FrameContext
   {
     return dataSegmentProvider;
   }
+
+  @Override
+  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  {
+    return loadedSegmentDataProviderFactory;
+  }
+
 
   @Override
   public File tempDir()

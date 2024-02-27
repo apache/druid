@@ -414,6 +414,7 @@ public class FrontCodedIntArrayIndexedTest
       assertSame(index, next, writer.get(index));
       index++;
     }
+    Assert.assertEquals(index, writer.getCardinality());
 
     // check 'get' again so that we aren't always reading from current page
     index = 0;

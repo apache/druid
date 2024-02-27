@@ -1,7 +1,7 @@
 ---
 id: tutorial-rollup
-title: "Tutorial: Roll-up"
-sidebar_label: "Roll-up"
+title: Aggregate data with rollup
+sidebar_label: Aggregate data with rollup
 ---
 
 <!--
@@ -24,14 +24,14 @@ sidebar_label: "Roll-up"
   -->
 
 
-Apache Druid can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid can summarize raw data at ingestion time using a process we refer to as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
-This tutorial will demonstrate the effects of roll-up on an example dataset.
+This tutorial will demonstrate the effects of rollup on an example dataset.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+It will also be helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
 
 ## Example data
 
@@ -105,7 +105,7 @@ We'll ingest this data using the following ingestion task spec, located at `quic
 }
 ```
 
-Roll-up has been enabled by setting `"rollup" : true` in the `granularitySpec`.
+Rollup has been enabled by setting `"rollup" : true` in the `granularitySpec`.
 
 Note that we have `srcIP` and `dstIP` defined as dimensions, a longSum metric is defined for the `packets` and `bytes` columns, and the `queryGranularity` has been defined as `minute`.
 
@@ -181,7 +181,7 @@ Likewise, these two events that occurred during `2018-01-01T01:02` have been rol
 └──────────────────────────┴────────┴───────┴─────────┴─────────┴─────────┘
 ```
 
-For the last event recording traffic between 1.1.1.1 and 2.2.2.2, no roll-up took place, because this was the only event that occurred during `2018-01-01T01:03`:
+For the last event recording traffic between 1.1.1.1 and 2.2.2.2, no rollup took place, because this was the only event that occurred during `2018-01-01T01:03`:
 
 ```json
 {"timestamp":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":49,"bytes":10204}

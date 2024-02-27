@@ -40,7 +40,7 @@ import java.util.List;
 
 public class ThetaSketchEstimateOperatorConversion implements SqlOperatorConversion
 {
-  private static final String FUNCTION_NAME = "THETA_SKETCH_ESTIMATE";
+  private static final String FUNCTION_NAME = "theta_sketch_estimate";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)
@@ -60,7 +60,7 @@ public class ThetaSketchEstimateOperatorConversion implements SqlOperatorConvers
       RexNode rexNode
   )
   {
-    return null;
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, FUNCTION_NAME);
   }
 
   @Nullable

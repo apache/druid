@@ -29,15 +29,15 @@ The Basic Security extension for Apache Druid adds:
 - an Escalator which determines the authentication scheme for internal Druid processes.
 - an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups.
 
-To load the extension, [include](../../development/extensions.md#loading-extensions) `druid-basic-security` in the `druid.extensions.loadList` in your `common.runtime.properties`. For example:
+To load the extension, [include](../../configuration/extensions.md#loading-extensions) `druid-basic-security` in the `druid.extensions.loadList` in your `common.runtime.properties`. For example:
 ```
 druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage", "druid-basic-security"]
 ```
 
 To enable basic auth, configure the basic Authenticator, Escalator, and Authorizer in `common.runtime.properties`.
-See [Security overview](../../operations/security-overview.html#enable-an-authenticator) for an example configuration for HTTP basic authentication.
+See [Security overview](../../operations/security-overview.md#enable-an-authenticator) for an example configuration for HTTP basic authentication.
 
-Visit [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces and for an example configuration.
+Visit [Authentication and Authorization](../../operations/auth.md) for more information on the implemented extension interfaces and for an example configuration.
 
 ## Configuration
 

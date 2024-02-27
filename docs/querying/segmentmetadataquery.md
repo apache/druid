@@ -23,10 +23,12 @@ sidebar_label: "SegmentMetadata"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes a query
-> type that is only available in the native language. However, Druid SQL contains similar functionality in
-> its [metadata tables](sql-metadata-tables.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes a query
+ type that is only available in the native language. However, Druid SQL contains similar functionality in
+ its [metadata tables](sql-metadata-tables.md).
+:::
 
 Segment metadata queries return per-segment information about:
 
@@ -62,7 +64,8 @@ There are several main parts to a segment metadata query:
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.md)|no|
 |analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "interval", "minmax"], but can be overridden with using the [segment metadata query config](../configuration/index.md#segmentmetadata-query-config). See section [analysisTypes](#analysistypes) for more details.|no|
-|lenientAggregatorMerge|If true, and if the "aggregators" analysisType is enabled, aggregators will be merged leniently. See below for details.|no|
+|aggregatorMergeStrategy| The strategy Druid uses to merge aggregators across segments. If true and if the `aggregators` analysis type is enabled, `aggregatorMergeStrategy` defaults to `strict`. Possible values include `strict`, `lenient`, `earliest`, and `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.|no|
+|lenientAggregatorMerge|Deprecated. Use `aggregatorMergeStrategy` property instead. If true, and if the `aggregators` analysis type is enabled, Druid merges aggregators leniently.|no|
 
 The format of the result is:
 
@@ -185,7 +188,7 @@ Currently, there is no API for retrieving this information.
 * `aggregators` in the result will contain the list of aggregators usable for querying metric columns. This may be
 null if the aggregators are unknown or unmergeable (if merging is enabled).
 
-* Merging can be strict or lenient. See *lenientAggregatorMerge* below for details.
+* Merging can be `strict`, `lenient`, `earliest`, or `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.
 
 * The form of the result is a map of column name to aggregator.
 
@@ -194,15 +197,22 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 * `rollup` in the result is true/false/null.
 * When merging is enabled, if some are rollup, others are not, result is null.
 
-## lenientAggregatorMerge
+### aggregatorMergeStrategy
 
 Conflicts between aggregator metadata across segments can occur if some segments have unknown aggregators, or if
-two segments use incompatible aggregators for the same column (e.g. longSum changed to doubleSum).
+two segments use incompatible aggregators for the same column, such as `longSum` changed to `doubleSum`.
+Druid supports the following aggregator merge strategies:
 
-Aggregators can be merged strictly (the default) or leniently. With strict merging, if there are any segments
-with unknown aggregators, or any conflicts of any kind, the merged aggregators list will be `null`. With lenient
-merging, segments with unknown aggregators will be ignored, and conflicts between aggregators will only null out
-the aggregator for that particular column.
+- `strict`: If there are any segments with unknown aggregators or any conflicts of any kind, the merged aggregators
+  list is `null`.
+- `lenient`: Druid ignores segments with unknown aggregators. Conflicts between aggregators set the aggregator for
+  that particular column to null.
+- `earliest`: In the event of conflicts between segments, Druid selects the aggregator from the earliest segment
+  for that particular column.
+- `latest`: In the event of conflicts between segments, Druid selects the aggregator from the most recent segment
+   for that particular column.
 
-In particular, with lenient merging, it is possible for an individual column's aggregator to be `null`. This will not
-occur with strict merging.
+
+### lenientAggregatorMerge (deprecated)
+
+Deprecated. Use [`aggregatorMergeStrategy`](#aggregatormergestrategy) instead.

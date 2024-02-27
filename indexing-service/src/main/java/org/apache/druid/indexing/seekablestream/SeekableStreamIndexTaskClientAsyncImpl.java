@@ -26,12 +26,14 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.RetryPolicy;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
@@ -55,10 +57,12 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -72,14 +76,14 @@ import java.util.function.Function;
 
 /**
  * Implementation of {@link SeekableStreamIndexTaskClient} based on {@link ServiceClient}.
- *
- * Used when {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig#getChatAsync()}
- * is true.
  */
 public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, SequenceOffsetType>
     implements SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>
 {
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClientAsyncImpl.class);
+
+  public static final int MIN_RETRY_WAIT_SECONDS = 2;
+  public static final int MAX_RETRY_WAIT_SECONDS = 10;
 
   private final ServiceClientFactory serviceClientFactory;
   private final TaskInfoProvider taskInfoProvider;
@@ -145,10 +149,16 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   {
     return makeRequest(id, new RequestBuilder(HttpMethod.POST, "/stop" + (publish ? "?publish=true" : "")))
         .onSuccess(r -> true)
-        .onHttpError(e -> Either.value(false))
-        .onNotAvailable(e -> Either.value(false))
+        .onHttpError(e -> {
+          log.warn("Task [%s] coundln't be stopped because of http request failure [%s].", id, e.getMessage());
+          return Either.value(false);
+        })
+        .onNotAvailable(e -> {
+          log.warn("Task [%s] coundln't be stopped because it is not available.", id);
+          return Either.value(false);
+        })
         .onClosed(e -> {
-          log.debug("Task [%s] couldn't be stopped because it is no longer running.", id);
+          log.warn("Task [%s] couldn't be stopped because it is no longer running.", id);
           return Either.value(true);
         })
         .go();
@@ -181,6 +191,23 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> deserializeOffsetsMap(r.getContent()))
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
+        .go();
+  }
+
+  @Override
+  public ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(
+      String taskId,
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newVersionOfSegment
+  )
+  {
+    final RequestBuilder requestBuilder
+        = new RequestBuilder(HttpMethod.POST, "/pendingSegmentVersion")
+        .jsonContent(jsonMapper, new PendingSegmentVersions(basePendingSegment, newVersionOfSegment));
+
+    return makeRequest(taskId, requestBuilder)
+        .handler(IgnoreHttpResponseHandler.INSTANCE)
+        .onSuccess(r -> true)
         .go();
   }
 
@@ -261,7 +288,15 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           if (result != null) {
             return Futures.immediateFuture(result);
           } else {
-            return getOffsetsWhenPaused(id, IndexTaskClient.makeRetryPolicyFactory(httpRetries).makeRetryPolicy());
+            return getOffsetsWhenPaused(
+                id,
+                new RetryPolicyFactory(
+                    new RetryPolicyConfig()
+                        .setMinWait(Period.seconds(MIN_RETRY_WAIT_SECONDS))
+                        .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
+                        .setMaxRetryCount(httpRetries)
+                ).makeRetryPolicy()
+            );
           }
         }
     );
@@ -391,7 +426,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                             {
                               retVal.setException(t);
                             }
-                          }
+                          },
+                          MoreExecutors.directExecutor()
                       ),
                   sleepTime,
                   TimeUnit.MILLISECONDS
@@ -568,7 +604,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                 retVal.set(either.valueOrThrow());
               }
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
 
       return retVal;
@@ -595,8 +632,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
       if (retry) {
         baseRetryPolicy = StandardRetryPolicy.builder()
                                              .maxAttempts(httpRetries + 1)
-                                             .minWaitMillis(IndexTaskClient.MIN_RETRY_WAIT_SECONDS * 1000)
-                                             .maxWaitMillis(IndexTaskClient.MAX_RETRY_WAIT_SECONDS * 1000)
+                                             .minWaitMillis(MIN_RETRY_WAIT_SECONDS * 1000)
+                                             .maxWaitMillis(MAX_RETRY_WAIT_SECONDS * 1000)
                                              .retryNotAvailable(false)
                                              .build();
       } else {

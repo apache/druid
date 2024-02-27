@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>26.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -37,6 +37,7 @@
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>${sigar.base.version}.132</sigar.version>
     <ipaddress.version>5.3.4</ipaddress.version>
+    <oshi.version>6.4.4</oshi.version>
   </properties>
 
   <dependencies>
@@ -119,8 +120,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
@@ -233,10 +234,6 @@
       <artifactId>fastutil-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil-extra</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4-runtime</artifactId>
     </dependency>
@@ -335,6 +332,11 @@
       dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-core</artifactId>
+      <version>${oshi.version}</version>
+    </dependency>
 
 
     <!-- Tests -->
@@ -358,9 +360,16 @@
       <artifactId>caliper</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- explicitly declare mockito-core dependency to make anaylize-dependencies happy when running with Java 8 -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-${mockito.inline.artifact}</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -418,11 +427,6 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -509,6 +513,18 @@
 
           <!-- use normal classpath instead of manifest jar for JvmUtilsTest.testSystemClassPath -->
           <useManifestOnlyJar>false</useManifestOnlyJar>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <!-- LoggingEmitter is a delegating class. Skip tests. -->
+            <exclude>org/apache/druid/java/util/emitter/core/LoggingEmitter.class</exclude>
+            <!-- Logger is a facade to the slf4j Logger. No tests needed. -->
+            <exclude>org/apache/druid/java/util/common/logger/Logger.class</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>

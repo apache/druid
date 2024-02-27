@@ -32,6 +32,10 @@ import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -42,6 +46,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 
 public class IndexTaskSamplerSpecTest extends EasyMockSupport
 {
@@ -124,5 +129,13 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
     SamplerConfig samplerConfig = capturedSamplerConfig.getValue();
     Assert.assertEquals(123, samplerConfig.getNumRows());
     Assert.assertEquals(2345, samplerConfig.getTimeoutMs());
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        spec.getInputSourceResources()
+    );
   }
 }

@@ -19,8 +19,12 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.rowsandcols.concrete.QueryableIndexRowsAndColumns;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  */
@@ -64,7 +68,19 @@ public class QueryableIndexSegment implements Segment
   @Override
   public void close()
   {
-    // this is kinda nasty
+    // this is kinda nasty because it actually unmaps the files and stuff too
     index.close();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(@Nonnull Class<T> clazz)
+  {
+    if (CloseableShapeshifter.class.equals(clazz)) {
+      return (T) new QueryableIndexRowsAndColumns(index);
+    }
+
+    return Segment.super.as(clazz);
   }
 }

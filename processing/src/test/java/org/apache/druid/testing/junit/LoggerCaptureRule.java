@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.junit;
 
+import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
@@ -28,8 +30,8 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.junit.rules.ExternalResource;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * JUnit rule to capture a class's logger output to an in-memory buffer to allow verification of log messages in tests.
@@ -73,6 +75,14 @@ public class LoggerCaptureRule extends ExternalResource
     inMemoryAppender.clearLogEvents();
   }
 
+  /**
+   * Wait for the captured
+   */
+  public void awaitLogEvents() throws InterruptedException
+  {
+    inMemoryAppender.awaitLogEvents();
+  }
+
   private static class InMemoryAppender extends AbstractAppender
   {
     static final String NAME = InMemoryAppender.class.getName();
@@ -80,32 +90,51 @@ public class LoggerCaptureRule extends ExternalResource
     private final String targetLoggerName;
 
     // logEvents has concurrent iteration and modification in CuratorModuleTest::exitsJvmWhenMaxRetriesExceeded(), needs to be thread safe
-    private final CopyOnWriteArrayList<LogEvent> logEvents;
+    @GuardedBy("logEvents")
+    private final List<LogEvent> logEvents;
 
     InMemoryAppender(Class<?> targetClass)
     {
       super(NAME, null, null);
       targetLoggerName = targetClass.getName();
-      logEvents = new CopyOnWriteArrayList<>();
+      logEvents = new ArrayList<>();
     }
 
     @Override
     public void append(LogEvent logEvent)
     {
-      if (logEvent.getLoggerName().equals(targetLoggerName)) {
-        logEvents.add(logEvent);
+      synchronized (logEvents) {
+        if (logEvent.getLoggerName().equals(targetLoggerName)) {
+          logEvents.add(logEvent);
+          logEvents.notifyAll();
+        }
       }
     }
 
     List<LogEvent> getLogEvents()
     {
-      return logEvents;
+      synchronized (logEvents) {
+        return ImmutableList.copyOf(logEvents);
+      }
     }
 
     void clearLogEvents()
     {
-      logEvents.clear();
+      synchronized (logEvents) {
+        logEvents.clear();
+      }
+    }
+
+    /**
+     * Wait for "logEvents" to be nonempty. If it is already nonempty, return immediately.
+     */
+    void awaitLogEvents() throws InterruptedException
+    {
+      synchronized (logEvents) {
+        while (logEvents.isEmpty()) {
+          logEvents.wait();
+        }
+      }
     }
   }
 }
-

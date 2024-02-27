@@ -135,7 +135,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             time,
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         client_type, "iphone",

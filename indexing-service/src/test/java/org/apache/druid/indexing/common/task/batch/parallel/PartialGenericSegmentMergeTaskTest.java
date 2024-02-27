@@ -143,4 +143,10 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.CONTEXT
     );
   }
+
+  @Test
+  public void testGetInputSourceResources()
+  {
+    Assert.assertTrue(target.getInputSourceResources().isEmpty());
+  }
 }

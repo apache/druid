@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-@Test(groups = TestNGGroup.QUERY)
+@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITJdbcQueryTest
 {
@@ -60,7 +60,7 @@ public class ITJdbcQueryTest
   private static final String QUERY_TEMPLATE =
       "SELECT \"user\", SUM(\"added\"), COUNT(*)" +
       "FROM \"wikipedia\" " +
-      "WHERE \"__time\" >= CURRENT_TIMESTAMP - INTERVAL '10' YEAR AND \"language\" = %s" +
+      "WHERE \"__time\" >= CURRENT_TIMESTAMP - INTERVAL '99' YEAR AND \"language\" = %s" +
       "GROUP BY 1 ORDER BY 3 DESC LIMIT 10";
   private static final String QUERY = StringUtils.format(QUERY_TEMPLATE, "'en'");
 
@@ -213,13 +213,15 @@ public class ITJdbcQueryTest
     }
   }
 
-  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position \\[0] is not bound")
+  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* No value bound for parameter \\(position \\[1]\\)")
   public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
   {
     for (String url : connections) {
       try (Connection connection = DriverManager.getConnection(url, connectionProperties);
            PreparedStatement statement = connection.prepareStatement(QUERY_PARAMETERIZED);
            ResultSet resultSet = statement.executeQuery()) {
+        // This won't actually run as we expect the exception to be thrown before it gets here
+        throw new IllegalStateException(resultSet.toString());
       }
     }
   }

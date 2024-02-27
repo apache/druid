@@ -30,6 +30,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -39,6 +43,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -84,6 +89,19 @@ public class PartialHashSegmentGenerateTaskTest
   {
     String id = target.getId();
     Assert.assertThat(id, Matchers.startsWith(PartialHashSegmentGenerateTask.TYPE));
+  }
+
+  @Test
+  public void hasCorrectInputSourceResources()
+  {
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        target.getInputSourceResources()
+    );
   }
 
   @Test

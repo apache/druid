@@ -21,6 +21,7 @@ package org.apache.druid.msq.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -29,11 +30,14 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
+import java.util.Set;
 
 /**
  * An {@link InputSource} that returns nothing (no rows).
@@ -87,5 +91,12 @@ public class NilInputSource implements InputSource
         return CloseableIterators.wrap(Collections.emptyIterator(), () -> {});
       }
     };
+  }
+
+  @Nonnull
+  @Override
+  public Set<String> getTypes() throws UOE
+  {
+    return ImmutableSet.of();
   }
 }

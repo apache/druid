@@ -20,7 +20,7 @@ const path = require('path');
 const fg = require('fast-glob');
 const fs = require('fs-extra');
 
-const entries = fg.sync(['./build/ApacheDruid/docs/**/*.html'])
+const entries = fg.sync(['./build/docs/**/*.html']);
 
 function hasAnchor(html, anchor) {
   anchor = anchor.replace('#', '');
@@ -54,16 +54,22 @@ entries.forEach((entry) => {
       // This one will get created externally
       if (url === '/docs/latest') return;
 
-      const target = url.startsWith('/')
-        ? './build/ApacheDruid' + url
+      let target = url.startsWith('/')
+        ? './build' + url
         : path.resolve(path.dirname(entry), url);
+
+      if (target.endsWith('/')) {
+        target += 'index.html';
+      } else {
+        target += '/index.html';
+      }
 
 
       let targetHtml;
       try {
         targetHtml = fs.readFileSync(target, 'utf-8');
       } catch (e) {
-        issues.push(`Could not find '${url}' linked from '${entry}'`);
+        issues.push(`Could not find '${url}' linked from '${entry}' [${target}]`);
         return;
       }
 
@@ -86,6 +92,6 @@ if (issues.length) {
   issues.push(`There are ${issues.length} issues`);
   console.error(issues.join('\n'));
   process.exit(1);
+} else {
+  console.log('No link-lint issues found');
 }
-
-

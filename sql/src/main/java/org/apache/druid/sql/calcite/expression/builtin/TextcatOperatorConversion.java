@@ -28,10 +28,10 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class TextcatOperatorConversion extends DirectOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("textcat")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();

@@ -24,6 +24,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import java.io.IOException;
 
 /**
+ * Cleans up stale task logs from deep storage.
  */
 @ExtensionPoint
 public interface TaskLogKiller

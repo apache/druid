@@ -42,6 +42,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
@@ -59,8 +60,9 @@ import java.util.stream.Collectors;
 public class QueryKitUtils
 {
   /**
-   * Field in frames that stores the partition "boosting" value. Typically used as the last element of a partitioning
-   * key when generating segments. This is an incrementing number that helps split up otherwise too-large partitions.
+   * Field in frames that stores the partition "boosting" value. Typically, it is used as the last element of a
+   * partitioning key when generating segments. This is an incrementing number that helps split up otherwise too-large
+   * partitions.
    */
   public static final String PARTITION_BOOST_COLUMN = "__boost";
 
@@ -72,7 +74,7 @@ public class QueryKitUtils
   /**
    * Enables QueryKit-generated processors to understand which output column will be mapped to
    * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME}. Necessary because {@link QueryKit}
-   * does not get direct access to {@link org.apache.druid.msq.indexing.ColumnMappings}.
+   * does not get direct access to {@link ColumnMappings}.
    */
   public static final String CTX_TIME_COLUMN_NAME = "__timeColumn";
 

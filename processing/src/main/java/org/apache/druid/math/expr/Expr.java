@@ -21,12 +21,20 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -185,10 +193,77 @@ public interface Expr extends Cacheable
     throw Exprs.cannotVectorize(this);
   }
 
+  @Nullable
+  default ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector columnIndexSelector,
+      @Nullable ColumnType outputType
+  )
+  {
+    final Expr.BindingAnalysis details = analyzeInputs();
+    if (details.getRequiredBindings().size() == 1) {
+      // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
+      // map over the values of the index.
+      final String column = Iterables.getOnlyElement(details.getRequiredBindings());
+
+      final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
+      if (delegateIndexSupplier == null) {
+        return null;
+      }
+      final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
+          DictionaryEncodedValueIndex.class
+      );
+
+      final ColumnCapabilities capabilities = columnIndexSelector.getColumnCapabilities(column);
+      if (!ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
+        // for mvds, expression might need to evaluate entire row, but we don't have those handy, so fall back to
+        // not using indexes
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
+      final ExpressionType inputType = ExpressionType.fromColumnTypeStrict(capabilities);
+      final ColumnType outType;
+      if (outputType == null) {
+        outType = ExpressionType.toColumnType(getOutputType(InputBindings.inspectorForColumn(column, inputType)));
+      } else {
+        outType = outputType;
+      }
+
+      if (delegateRawIndex != null && outputType != null) {
+        return new ExpressionPredicateIndexSupplier(
+            this,
+            column,
+            inputType,
+            outType,
+            delegateRawIndex
+        );
+      }
+    }
+    return NoIndexesColumnIndexSupplier.getInstance();
+  }
+
+
+  /**
+   * Decorates the {@link CacheKeyBuilder} for the default implementation of {@link #getCacheKey()}. The default cache
+   * key implementation includes the output of {@link #stringify()} and then uses a {@link Shuttle} to call this method
+   * on all children. The stringified representation is sufficient for most expressions, but for any which rely on
+   * external state that might change, this method allows the cache key to change when the state does, even if the
+   * expression itself is otherwise the same.
+   */
+  default void decorateCacheKeyBuilder(CacheKeyBuilder builder)
+  {
+    // no op
+  }
+
   @Override
   default byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify()).build();
+    CacheKeyBuilder builder = new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify());
+    // delegate to the child expressions through shuttle
+    Shuttle keyShuttle = expr -> {
+      expr.decorateCacheKeyBuilder(builder);
+      return expr;
+    };
+    this.visit(keyShuttle);
+    return builder.build();
   }
 
   /**
@@ -224,7 +299,7 @@ public interface Expr extends Cacheable
         if (argType == null) {
           continue;
         }
-        numeric &= argType.isNumeric();
+        numeric = numeric && argType.isNumeric();
       }
       return numeric;
     }
@@ -265,7 +340,7 @@ public interface Expr extends Cacheable
         if (currentType == null) {
           currentType = argType;
         }
-        allSame &= Objects.equals(argType, currentType);
+        allSame = allSame && Objects.equals(argType, currentType);
       }
       return allSame;
     }
@@ -302,7 +377,7 @@ public interface Expr extends Cacheable
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isPrimitive();
+        scalar = scalar && argType.isPrimitive();
       }
       return scalar;
     }
@@ -330,7 +405,7 @@ public interface Expr extends Cacheable
     {
       boolean canVectorize = true;
       for (Expr arg : args) {
-        canVectorize &= arg.canVectorize(this);
+        canVectorize = canVectorize && arg.canVectorize(this);
       }
       return canVectorize;
     }
@@ -440,8 +515,8 @@ public interface Expr extends Cacheable
    * @see Parser#applyUnappliedBindings
    * @see Parser#applyUnapplied
    * @see Parser#liftApplyLambda
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
+   * @see ExpressionSelectors#makeDimensionSelector
+   * @see ExpressionSelectors#makeColumnValueSelector
    */
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
@@ -609,7 +684,7 @@ public interface Expr extends Cacheable
      * Add set of arguments as {@link BindingAnalysis#arrayVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
+    public BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
     {
       Set<IdentifierExpr> arrayIdentifiers = new HashSet<>();
       for (Expr expr : arrayArguments) {
@@ -630,7 +705,7 @@ public interface Expr extends Cacheable
     /**
      * Copy, setting if an expression has array inputs
      */
-    BindingAnalysis withArrayInputs(boolean hasArrays)
+    public BindingAnalysis withArrayInputs(boolean hasArrays)
     {
       return new BindingAnalysis(
           freeVariables,
@@ -644,7 +719,7 @@ public interface Expr extends Cacheable
     /**
      * Copy, setting if an expression produces an array output
      */
-    BindingAnalysis withArrayOutput(boolean isOutputArray)
+    public BindingAnalysis withArrayOutput(boolean isOutputArray)
     {
       return new BindingAnalysis(
           freeVariables,

@@ -135,39 +135,6 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
-  public void testTransactionalDropSegments() throws Exception
-  {
-    final Task task = NoopTask.create();
-    actionTestKit.getTaskLockbox().add(task);
-    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
-
-    SegmentPublishResult result1 = SegmentTransactionalInsertAction.overwriteAction(
-        null,
-        null,
-        ImmutableSet.of(SEGMENT1)
-    ).perform(
-        task,
-        actionTestKit.getTaskActionToolbox()
-    );
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
-
-    SegmentPublishResult result2 = SegmentTransactionalInsertAction.overwriteAction(
-        null,
-        ImmutableSet.of(SEGMENT1),
-        ImmutableSet.of(SEGMENT2)
-    ).perform(
-        task,
-        actionTestKit.getTaskActionToolbox()
-    );
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
-
-    Assertions.assertThat(
-        actionTestKit.getMetadataStorageCoordinator()
-                     .retrieveUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
-    ).containsExactlyInAnyOrder(SEGMENT2);
-  }
-
-  @Test
   public void testFailTransactionalUpdateDataSourceMetadata() throws Exception
   {
     final Task task = NoopTask.create();
@@ -184,37 +151,7 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.fail(
-          "java.lang.RuntimeException: Inconsistent metadata state. " +
-          "This can happen if you update input topic in a spec without changing the supervisor name. " +
-          "Stored state: [null], Target state: [ObjectMetadata{theObject=[1]}]."
-        ),
-        result
-    );
-  }
-
-  @Test
-  public void testFailTransactionalDropSegment() throws Exception
-  {
-    final Task task = NoopTask.create();
-    actionTestKit.getTaskLockbox().add(task);
-    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
-
-    SegmentPublishResult result = SegmentTransactionalInsertAction.overwriteAction(
-        null,
-        // SEGMENT1 does not exist, hence will fail to drop
-        ImmutableSet.of(SEGMENT1),
-        ImmutableSet.of(SEGMENT2)
-    ).perform(
-        task,
-        actionTestKit.getTaskActionToolbox()
-    );
-
-    Assert.assertEquals(
-        SegmentPublishResult.fail(
-            "org.apache.druid.metadata.RetryTransactionException: " +
-            "Failed to drop some segments. Only 0 could be dropped out of 1. Trying again"
-        ),
+        SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."),
         result
     );
   }
@@ -224,7 +161,6 @@ public class SegmentTransactionalInsertActionTest
   {
     final Task task = NoopTask.create();
     final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.overwriteAction(
-        null,
         null,
         ImmutableSet.of(SEGMENT3)
     );

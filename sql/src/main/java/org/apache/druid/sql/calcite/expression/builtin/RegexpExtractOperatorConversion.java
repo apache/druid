@@ -24,6 +24,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -33,12 +34,14 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import java.util.regex.PatternSyntaxException;
+
 public class RegexpExtractOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("REGEXP_EXTRACT")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .literalOperands(1, 2)
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
@@ -66,24 +69,37 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
         StringUtils.toLowerCase(calciteOperator().getName()),
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
-          final Expr patternExpr = inputExpressions.get(1).parse(plannerContext.getExprMacroTable());
+          final Expr patternExpr = plannerContext.parseExpression(inputExpressions.get(1).getExpression());
           final Expr indexExpr = inputExpressions.size() > 2
-                                 ? inputExpressions.get(2).parse(plannerContext.getExprMacroTable())
+                                 ? plannerContext.parseExpression(inputExpressions.get(2).getExpression())
                                  : null;
 
           if (arg.isSimpleExtraction() && patternExpr.isLiteral() && (indexExpr == null || indexExpr.isLiteral())) {
             final String pattern = (String) patternExpr.getLiteralValue();
 
-            return arg.getSimpleExtraction().cascade(
-                new RegexDimExtractionFn(
-                    // Undo the empty-to-null conversion from patternExpr parsing (patterns cannot be null, even in
-                    // non-SQL-compliant null handling mode).
-                    StringUtils.nullToEmptyNonDruidDataString(pattern),
-                    indexExpr == null ? DEFAULT_INDEX : ((Number) indexExpr.getLiteralValue()).intValue(),
-                    true,
-                    null
-                )
-            );
+
+            try {
+              return arg.getSimpleExtraction().cascade(
+                  new RegexDimExtractionFn(
+                      // Undo the empty-to-null conversion from patternExpr parsing (patterns cannot be null, even in
+                      // non-SQL-compliant null handling mode).
+                      StringUtils.nullToEmptyNonDruidDataString(pattern),
+                      indexExpr == null ? DEFAULT_INDEX : ((Number) indexExpr.getLiteralValue()).intValue(),
+                      true,
+                      null
+                  )
+              );
+            }
+            catch (PatternSyntaxException e) {
+              throw InvalidSqlInput.exception(
+                  e,
+                  StringUtils.format(
+                      "An invalid pattern [%s] was provided for the REGEXP_EXTRACT function, error: [%s]",
+                      e.getPattern(),
+                      e.getMessage()
+                  )
+              );
+            }
           } else {
             return null;
           }

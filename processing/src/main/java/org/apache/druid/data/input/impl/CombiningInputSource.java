@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -29,10 +30,13 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.java.util.common.Pair;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -56,9 +60,22 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
   {
     Preconditions.checkArgument(
         delegates != null && !delegates.isEmpty(),
-        "Must specify atleast one delegate inputSource"
+        "Must specify at least one delegate inputSource"
     );
     this.delegates = delegates;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    Set<String> types = new HashSet<>();
+    for (InputSource delegate : delegates) {
+      types.addAll(delegate.getTypes());
+    }
+
+    return types;
   }
 
   @JsonProperty

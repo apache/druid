@@ -20,7 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.TestObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,7 +31,7 @@ import java.util.Collections;
  */
 public class RegexParseSpecTest
 {
-  private final ObjectMapper jsonMapper = new TestObjectMapper();
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testSerde() throws IOException

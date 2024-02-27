@@ -44,4 +44,9 @@ public interface TaskLogStreamer
   {
     return Optional.absent();
   }
+
+  default Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
+  {
+    return Optional.absent();
+  }
 }

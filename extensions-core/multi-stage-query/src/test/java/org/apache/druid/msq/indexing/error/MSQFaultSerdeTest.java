@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class MSQFaultSerdeTest
 {
@@ -54,17 +55,26 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", null));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", ColumnType.STRING_ARRAY));
     assertFaultSerde(new ColumnNameRestrictedFault("the column"));
-    assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY));
+    assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY, null));
+    assertFaultSerde(new InsertCannotAllocateSegmentFault(
+        "the datasource",
+        Intervals.of("2000-01-01/2002-01-01"),
+        Intervals.ETERNITY
+    ));
     assertFaultSerde(new InsertCannotBeEmptyFault("the datasource"));
-    assertFaultSerde(new InsertCannotOrderByDescendingFault("the column"));
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
-    assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
-    assertFaultSerde(new InvalidNullByteFault("the column"));
+    assertFaultSerde(new InsertTimeOutOfBoundsFault(
+        Intervals.of("2001/2002"),
+        Collections.singletonList(Intervals.of("2000/2001"))
+    ));
+    assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
     assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
+    assertFaultSerde(new QueryRuntimeFault("new error", "base error"));
+    assertFaultSerde(new QueryRuntimeFault("new error", null));
     assertFaultSerde(new RowTooLargeFault(1000));
-    assertFaultSerde(new TaskStartTimeoutFault(10, 11));
+    assertFaultSerde(new TaskStartTimeoutFault(1, 10, 11));
     assertFaultSerde(new TooManyBucketsFault(10));
     assertFaultSerde(new TooManyColumnsFault(10, 8));
     assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
@@ -79,6 +89,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(UnknownFault.forMessage("the message"));
     assertFaultSerde(new WorkerFailedFault("the worker task", "the error msg"));
     assertFaultSerde(new WorkerRpcFailedFault("the worker task"));
+    assertFaultSerde(new NotEnoughTemporaryStorageFault(250, 2));
   }
 
   @Test

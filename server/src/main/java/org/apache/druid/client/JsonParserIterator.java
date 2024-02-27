@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
@@ -37,17 +38,15 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class JsonParserIterator<T> implements Iterator<T>, Closeable
+public class JsonParserIterator<T> implements CloseableIterator<T>
 {
   private static final Logger LOG = new Logger(JsonParserIterator.class);
 
@@ -186,8 +185,17 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         } else if (nextToken == JsonToken.START_OBJECT) {
           throw convertException(jp.getCodec().readValue(jp, QueryException.class));
         } else {
+          String errMsg = jp.getValueAsString();
+          if (errMsg != null) {
+            errMsg = errMsg.substring(0, Math.min(errMsg.length(), 192));
+          }
           throw convertException(
-              new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
+              new IAE(
+                  "Next token wasn't a START_ARRAY, was[%s] from url[%s] with value[%s]",
+                  jp.getCurrentToken(),
+                  url,
+                  errMsg
+              )
           );
         }
       }

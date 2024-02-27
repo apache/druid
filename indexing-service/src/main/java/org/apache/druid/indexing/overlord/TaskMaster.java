@@ -34,7 +34,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
+import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -43,6 +43,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
@@ -91,7 +92,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
-      final OverlordHelperManager overlordHelperManager,
+      final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue
   )
@@ -137,7 +138,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(supervisorManager);
-          leaderLifecycle.addManagedInstance(overlordHelperManager);
+          leaderLifecycle.addManagedInstance(overlordDutyExecutor);
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()
               {
@@ -237,7 +238,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
-   * Returns true if it's the leader and its all services have been properly initialized.
+   * Returns true if it's the leader and all its services have been initialized.
    */
   public boolean isLeader()
   {
@@ -359,6 +360,17 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       return taskQueue.get().getWaitingTaskCount();
     } else {
       return null;
+    }
+  }
+
+  @Override
+  public CoordinatorRunStats getStats()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getQueueStats();
+    } else {
+      return CoordinatorRunStats.empty();
     }
   }
 

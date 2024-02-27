@@ -66,17 +66,17 @@ public class IndexSpecTest
   @Test
   public void testDefaults()
   {
-    final IndexSpec spec = new IndexSpec();
+    final IndexSpec spec = IndexSpec.DEFAULT;
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getMetricCompression());
-    Assert.assertEquals(CompressionFactory.LongEncodingStrategy.LONGS, spec.getLongEncoding());
+    Assert.assertEquals(LongEncodingStrategy.LONGS, spec.getLongEncoding());
   }
 
   @Test
   public void testAsMap()
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final IndexSpec spec = new IndexSpec();
+    final IndexSpec spec = IndexSpec.DEFAULT;
     final Map<String, Object> map = spec.asMap(objectMapper);
     Assert.assertEquals(
         spec.getBitmapSerdeFactory(),
@@ -99,6 +99,15 @@ public class IndexSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(IndexSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(IndexSpec.class)
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder()
+                               .withJsonCompression(CompressionStrategy.ZSTD)
+                               .build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }

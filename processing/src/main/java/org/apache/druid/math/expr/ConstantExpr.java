@@ -157,9 +157,12 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
 
 class LongExpr extends ConstantExpr<Long>
 {
+  private final ExprEval expr;
+
   LongExpr(Long value)
   {
     super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
+    expr = ExprEval.ofLong(value);
   }
 
   @Override
@@ -171,7 +174,7 @@ class LongExpr extends ConstantExpr<Long>
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofLong(value);
+    return expr;
   }
 
   @Override
@@ -240,9 +243,12 @@ class NullLongExpr extends ConstantExpr<Long>
 
 class DoubleExpr extends ConstantExpr<Double>
 {
+  private final ExprEval expr;
+
   DoubleExpr(Double value)
   {
     super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
+    expr = ExprEval.ofDouble(value);
   }
 
   @Override
@@ -254,7 +260,7 @@ class DoubleExpr extends ConstantExpr<Double>
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofDouble(value);
+    return expr;
   }
 
   @Override
@@ -323,9 +329,12 @@ class NullDoubleExpr extends ConstantExpr<Double>
 
 class StringExpr extends ConstantExpr<String>
 {
+  private final ExprEval expr;
+
   StringExpr(@Nullable String value)
   {
     super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
+    expr = ExprEval.of(value);
   }
 
   @Override
@@ -337,7 +346,7 @@ class StringExpr extends ConstantExpr<String>
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.of(value);
+    return expr;
   }
 
   @Override
@@ -464,15 +473,18 @@ class ArrayExpr extends ConstantExpr<Object[]>
 
 class ComplexExpr extends ConstantExpr<Object>
 {
+  private final ExprEval expr;
+
   protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
   {
     super(outputType, value);
+    expr = ExprEval.ofComplex(outputType, value);
   }
 
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofComplex(outputType, value);
+    return expr;
   }
 
   @Override

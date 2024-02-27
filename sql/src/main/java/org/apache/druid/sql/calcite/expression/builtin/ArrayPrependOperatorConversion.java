@@ -33,7 +33,7 @@ public class ArrayPrependOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_PREPEND")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(expr,array)",
+              "'ARRAY_PREPEND(expr, array)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.STRING),
                   OperandTypes.family(SqlTypeFamily.NUMERIC)

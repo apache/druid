@@ -20,8 +20,10 @@
 package org.apache.druid.msq.querykit.common;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
@@ -43,9 +45,12 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
@@ -58,8 +63,12 @@ import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -79,6 +88,7 @@ import java.util.concurrent.TimeUnit;
 public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
 {
   private static final StagePartition STAGE_PARTITION = new StagePartition(new StageId("q", 0), 0);
+  private static final long MAX_BUFFERED_BYTES = 10_000_000;
 
   private final int rowsPerInputFrame;
   private final int rowsPerOutputFrame;
@@ -154,7 +164,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.LEFT
+        JoinType.LEFT,
+        MAX_BUFFERED_BYTES
     );
 
     assertResult(processor, outputChannel.readable(), joinSignature, Collections.emptyList());
@@ -198,7 +209,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.LEFT
+        JoinType.LEFT,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -273,7 +285,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.INNER
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
     );
 
     assertResult(processor, outputChannel.readable(), joinSignature, Collections.emptyList());
@@ -313,7 +326,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.LEFT
+        JoinType.LEFT,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -383,7 +397,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         makeFrameWriterFactory(joinSignature),
         "j0.",
         ImmutableList.of(Collections.emptyList(), Collections.emptyList()),
-        JoinType.INNER
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -495,7 +510,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
                 new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)
             )
         ),
-        JoinType.LEFT
+        JoinType.LEFT,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -573,7 +589,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.RIGHT
+        JoinType.RIGHT,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -654,7 +671,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.FULL
+        JoinType.FULL,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -732,7 +750,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
         ),
-        JoinType.LEFT
+        JoinType.LEFT,
+        MAX_BUFFERED_BYTES
     );
 
     final String countryCodeForNull;
@@ -825,7 +844,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
         ),
-        JoinType.RIGHT
+        JoinType.RIGHT,
+        MAX_BUFFERED_BYTES
     );
 
     final String countryCodeForNull;
@@ -918,7 +938,8 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
-        JoinType.INNER
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -950,6 +971,234 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
     assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
   }
 
+  @Test
+  public void testInnerJoinCountryIsoCode_withMaxBufferedBytesLimit_succeeds() throws Exception
+  {
+    final ReadableInput factChannel = buildFactInput(
+        ImmutableList.of(
+            new KeyColumn("countryIsoCode", KeyOrder.ASCENDING),
+            new KeyColumn("page", KeyOrder.ASCENDING)
+        )
+    );
+
+    final ReadableInput countriesChannel =
+        buildCountriesInput(ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)));
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("page", ColumnType.STRING)
+                    .add("countryIsoCode", ColumnType.STRING)
+                    .add("j0.countryIsoCode", ColumnType.STRING)
+                    .add("j0.countryName", ColumnType.STRING)
+                    .add("j0.countryNumber", ColumnType.LONG)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        factChannel,
+        countriesChannel,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
+        ),
+        JoinType.INNER,
+        1
+    );
+
+    final List<List<Object>> expectedRows = Arrays.asList(
+        Arrays.asList("Peremptory norm", "AU", "AU", "Australia", 0L),
+        Arrays.asList("Didier Leclair", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Les Argonautes", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Sarah Michelle Gellar", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "CL", "CL", "Chile", 2L),
+        Arrays.asList("Diskussion:Sebastian Schulz", "DE", "DE", "Germany", 3L),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L),
+        Arrays.asList("Saison 9 de Secret Story", "FR", "FR", "France", 5L),
+        Arrays.asList("Glasgow", "GB", "GB", "United Kingdom", 6L),
+        Arrays.asList("Giusy Ferreri discography", "IT", "IT", "Italy", 7L),
+        Arrays.asList("Roma-Bangkok", "IT", "IT", "Italy", 7L),
+        Arrays.asList("青野武", "JP", "JP", "Japan", 8L),
+        Arrays.asList("유희왕 GX", "KR", "KR", "Republic of Korea", 9L),
+        Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L),
+        Arrays.asList("Mathis Bolly", "MX", "MX", "Mexico", 10L),
+        Arrays.asList("Алиса в Зазеркалье", "NO", "NO", "Norway", 11L),
+        Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
+        Arrays.asList("Wendigo", "SV", "SV", "El Salvador", 12L),
+        Arrays.asList("Carlo Curti", "US", "US", "United States", 13L),
+        Arrays.asList("DirecTV", "US", "US", "United States", 13L),
+        Arrays.asList("Old Anatolian Turkish", "US", "US", "United States", 13L),
+        Arrays.asList("Otjiwarongo Airport", "US", "US", "United States", 13L),
+        Arrays.asList("President of India", "US", "US", "United States", 13L)
+    );
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
+  public void testInnerJoinCountryIsoCode_backwards_withMaxBufferedBytesLimit_succeeds() throws Exception
+  {
+    final ReadableInput factChannel = buildFactInput(
+        ImmutableList.of(
+            new KeyColumn("countryIsoCode", KeyOrder.ASCENDING),
+            new KeyColumn("page", KeyOrder.ASCENDING)
+        )
+    );
+
+    final ReadableInput countriesChannel =
+        buildCountriesInput(ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)));
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("j0.page", ColumnType.STRING)
+                    .add("j0.countryIsoCode", ColumnType.STRING)
+                    .add("countryIsoCode", ColumnType.STRING)
+                    .add("countryName", ColumnType.STRING)
+                    .add("countryNumber", ColumnType.LONG)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        countriesChannel,
+        factChannel,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
+        ),
+        JoinType.INNER,
+        1
+    );
+
+    final List<List<Object>> expectedRows = Arrays.asList(
+        Arrays.asList("Peremptory norm", "AU", "AU", "Australia", 0L),
+        Arrays.asList("Didier Leclair", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Les Argonautes", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Sarah Michelle Gellar", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "CL", "CL", "Chile", 2L),
+        Arrays.asList("Diskussion:Sebastian Schulz", "DE", "DE", "Germany", 3L),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L),
+        Arrays.asList("Saison 9 de Secret Story", "FR", "FR", "France", 5L),
+        Arrays.asList("Glasgow", "GB", "GB", "United Kingdom", 6L),
+        Arrays.asList("Giusy Ferreri discography", "IT", "IT", "Italy", 7L),
+        Arrays.asList("Roma-Bangkok", "IT", "IT", "Italy", 7L),
+        Arrays.asList("青野武", "JP", "JP", "Japan", 8L),
+        Arrays.asList("유희왕 GX", "KR", "KR", "Republic of Korea", 9L),
+        Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L),
+        Arrays.asList("Mathis Bolly", "MX", "MX", "Mexico", 10L),
+        Arrays.asList("Алиса в Зазеркалье", "NO", "NO", "Norway", 11L),
+        Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
+        Arrays.asList("Wendigo", "SV", "SV", "El Salvador", 12L),
+        Arrays.asList("Carlo Curti", "US", "US", "United States", 13L),
+        Arrays.asList("DirecTV", "US", "US", "United States", 13L),
+        Arrays.asList("Old Anatolian Turkish", "US", "US", "United States", 13L),
+        Arrays.asList("Otjiwarongo Airport", "US", "US", "United States", 13L),
+        Arrays.asList("President of India", "US", "US", "United States", 13L)
+    );
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
+  public void testCountrySelfJoin() throws Exception
+  {
+    final ReadableInput factChannel1 = buildFactInput(ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)));
+    final ReadableInput factChannel2 = buildFactInput(ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)));
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("channel", ColumnType.STRING)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        factChannel1,
+        factChannel2,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING))
+        ),
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
+    );
+
+    final List<List<Object>> expectedRows = new ArrayList<>();
+
+    final ImmutableMap<String, Long> expectedCounts =
+        ImmutableMap.<String, Long>builder()
+                    .put("#ca.wikipedia", 1L)
+                    .put("#de.wikipedia", 1L)
+                    .put("#en.wikipedia", 196L)
+                    .put("#es.wikipedia", 16L)
+                    .put("#fr.wikipedia", 9L)
+                    .put("#ja.wikipedia", 1L)
+                    .put("#ko.wikipedia", 1L)
+                    .put("#ru.wikipedia", 1L)
+                    .put("#vi.wikipedia", 9L)
+                    .build();
+
+    for (final Map.Entry<String, Long> entry : expectedCounts.entrySet()) {
+      for (int i = 0; i < Ints.checkedCast(entry.getValue()); i++) {
+        expectedRows.add(Collections.singletonList(entry.getKey()));
+      }
+    }
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
+  public void testCountrySelfJoin_withMaxBufferedBytesLimit_fails() throws Exception
+  {
+    // Test is only valid when rowsPerInputFrame is low enough that we get multiple frames.
+    Assume.assumeThat(rowsPerInputFrame, Matchers.lessThanOrEqualTo(7));
+
+    final ReadableInput factChannel1 = buildFactInput(ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)));
+    final ReadableInput factChannel2 = buildFactInput(ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)));
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("channel", ColumnType.STRING)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        factChannel1,
+        factChannel2,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING))
+        ),
+        JoinType.INNER,
+        1
+    );
+
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
+        () -> run(processor, outputChannel.readable(), joinSignature)
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RuntimeException.class));
+    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(MSQException.class));
+    MatcherAssert.assertThat(
+        ((MSQException) e.getCause().getCause()).getFault(),
+        CoreMatchers.instanceOf(TooManyRowsWithSameKeyFault.class)
+    );
+  }
+
   private void assertResult(
       final SortMergeJoinFrameProcessor processor,
       final ReadableFrameChannel readableOutputChannel,
@@ -957,14 +1206,25 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
       final List<List<Object>> expectedRows
   )
   {
-    final ListenableFuture<Long> retVal = exec.runFully(processor, null);
+    final List<List<Object>> rowsFromProcessor = run(processor, readableOutputChannel, joinSignature);
+    FrameTestUtil.assertRowsEqual(Sequences.simple(expectedRows), Sequences.simple(rowsFromProcessor));
+  }
+
+  private List<List<Object>> run(
+      final SortMergeJoinFrameProcessor processor,
+      final ReadableFrameChannel readableOutputChannel,
+      final RowSignature joinSignature
+  )
+  {
+    final ListenableFuture<Object> retValFromProcessor = exec.runFully(processor, null);
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
         readableOutputChannel,
         FrameReader.create(joinSignature)
     );
 
-    FrameTestUtil.assertRowsEqual(Sequences.simple(expectedRows), rowsFromProcessor);
-    Assert.assertEquals(0L, (long) FutureUtils.getUnchecked(retVal, true));
+    final List<List<Object>> rows = rowsFromProcessor.toList();
+    Assert.assertEquals(Unit.instance(), FutureUtils.getUnchecked(retValFromProcessor, true));
+    return rows;
   }
 
   private ReadableInput buildFactInput(final List<KeyColumn> keyColumns) throws IOException

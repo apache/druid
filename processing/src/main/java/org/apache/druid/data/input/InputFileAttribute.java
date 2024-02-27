@@ -33,9 +33,25 @@ public class InputFileAttribute
    */
   private final long size;
 
+  /**
+   * The weighted size of the input file.
+   */
+  private final long weightedSize;
+
   public InputFileAttribute(long size)
   {
+    this(size, size);
+  }
+
+  public InputFileAttribute(long size, long weightedSize)
+  {
     this.size = size;
+    this.weightedSize = weightedSize;
+  }
+
+  public long getWeightedSize()
+  {
+    return weightedSize;
   }
 
   public long getSize()

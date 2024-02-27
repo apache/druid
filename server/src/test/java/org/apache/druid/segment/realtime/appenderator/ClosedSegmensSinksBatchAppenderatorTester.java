@@ -38,6 +38,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -173,20 +174,18 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         0,
         false,
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+        null
     );
     metrics = new FireDepartmentMetrics();
 
-    IndexIO indexIO = new IndexIO(
-        objectMapper,
-        () -> 0
-    );
+    IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     IndexMergerV9 indexMerger = new IndexMergerV9(
         objectMapper,
         indexIO,
@@ -316,6 +315,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
     private final IndexSpec indexSpecForIntermediatePersists;
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+    private final int numPersistThreads;
 
     public TestIndexTuningConfig(
          AppendableIndexSpec appendableIndexSpec,
@@ -328,7 +328,8 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
          Long pushTimeout,
          @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
          Integer maxColumnsToMerge,
-         File basePersistDirectory
+         File basePersistDirectory,
+         @Nullable Integer numPersistThreads
     )
     {
       this.appendableIndexSpec = appendableIndexSpec;
@@ -345,6 +346,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
 
       this.partitionsSpec = null;
       this.indexSpecForIntermediatePersists = this.indexSpec;
+      this.numPersistThreads = numPersistThreads == null ? DEFAULT_NUM_PERSIST_THREADS : numPersistThreads;
     }
 
     @Override
@@ -432,6 +434,12 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
     {
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
     }
+
+    @Override
+    public int getNumPersistThreads()
+    {
+      return numPersistThreads;
+    }
     
     @Override
     public boolean equals(Object o)
@@ -451,6 +459,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
              maxPendingPersists == that.maxPendingPersists &&
              reportParseExceptions == that.reportParseExceptions &&
              pushTimeout == that.pushTimeout &&
+             numPersistThreads == that.numPersistThreads &&
              Objects.equals(partitionsSpec, that.partitionsSpec) &&
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -474,7 +483,8 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
           maxPendingPersists,
           reportParseExceptions,
           pushTimeout,
-          segmentWriteOutMediumFactory
+          segmentWriteOutMediumFactory,
+          numPersistThreads
       );
     }
 
@@ -494,6 +504,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
              ", reportParseExceptions=" + reportParseExceptions +
              ", pushTimeout=" + pushTimeout +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+             ", numPersistThreads=" + numPersistThreads +
              '}';
     }
   }

@@ -24,7 +24,7 @@ description: "Defines a strategy to maintain Druid metadata store performance by
   ~ under the License.
   -->
 
-Apache Druid relies on [metadata storage](../dependencies/metadata-storage.md) to track information on data storage, operations, and system configuration.
+Apache Druid relies on [metadata storage](../design/metadata-storage.md) to track information on data storage, operations, and system configuration.
 The metadata store includes the following:
 
 - Segment records
@@ -71,7 +71,9 @@ If you want to skip the details, check out the [example](#example) for configuri
 <a name="kill-task"></a>
 ### Segment records and segments in deep storage (kill task)
 
-> The kill task is the only configuration in this topic that affects actual data in deep storage and not simply metadata or logs.
+:::info
+ The kill task is the only configuration in this topic that affects actual data in deep storage and not simply metadata or logs.
+:::
 
 Segment records and segments in deep storage become eligible for deletion when both of the following conditions hold:
 
@@ -84,6 +86,8 @@ Only applies to the specified datasources in the dynamic configuration parameter
 If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitted for all datasources.
 - `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `P1D`. Must be greater than `druid.coordinator.period.indexingPeriod`. 
 - `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
+- `druid.coordinator.kill.ignoreDurationToRetain`: A way to override `druid.coordinator.kill.durationToRetain`. When enabled, the coordinator considers all unused segments as eligible to be killed.
+- `druid.coordinator.kill.bufferPeriod`: Defines the amount of time that a segment must be unused before it can be permanently removed from metadata and deep storage. This serves as a buffer period to prevent data loss if data ends up being needed after being marked unused.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
 
 ### Audit records
@@ -118,8 +122,10 @@ Rule cleanup uses the following configuration:
 Druid retains all compaction configuration records by default, which should be suitable for most use cases.
 If you create and delete short-lived datasources with high frequency, and you set auto compaction configuration on those datasources, then consider turning on automated cleanup of compaction configuration records.
 
-> With automated cleanup of compaction configuration records, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is still ongoing, Druid may remove the compaction configuration.
+:::info
+ With automated cleanup of compaction configuration records, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is still ongoing, Druid may remove the compaction configuration.
 To prevent the configuration from being prematurely removed, wait for the datasource to be created before applying the compaction configuration to the datasource.
+:::
 
 Unlike other metadata records, compaction configuration records do not have a retention period set by `durationToRetain`. Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
 
@@ -130,7 +136,9 @@ Compaction configuration cleanup uses the following configuration:
  - `druid.coordinator.kill.compaction.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible compaction configuration records. Defaults to `P1D`.
 
 
->If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
+:::info
+If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
+:::
 
 ### Datasource records created by supervisors
 
@@ -163,7 +171,7 @@ For more detail, see [Task logging](../configuration/index.md#task-logging).
 Druid automatically cleans up metadata records, excluding compaction configuration records and indexer task logs.
 To disable automated metadata cleanup, set the following properties in the `coordinator/runtime.properties` file:
 
-```
+```properties
 # Keep unused segments
 druid.coordinator.kill.on=false
 
@@ -183,22 +191,23 @@ druid.coordinator.kill.datasource.on=false
 <a name="example"></a>
 ## Example configuration for automated metadata cleanup
 
-Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old. The exception is for audit logs, which you need to retain for 30 days:
+Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old after a seven day buffer period in case you want to recover the data. The exception is for audit logs, which you need to retain for 30 days:
 
-```
+```properties
 ...
 # Schedule the metadata management store task for every hour:
-druid.coordinator.period.metadataStoreManagementPeriod=P1H
+druid.coordinator.period.metadataStoreManagementPeriod=PT1H
 
-# Set a kill task to poll every day to delete Segment records and segments
-# in deep storage > 4 days old. When druid.coordinator.kill.on is set to true,
+# Set a kill task to poll every day to delete segment records and segments
+# in deep storage > 4 days old after a 7-day buffer period. When druid.coordinator.kill.on is set to true,
 # you can set killDataSourceWhitelist in the dynamic configuration to limit
 # the datasources that can be killed.
 # Required also for automated cleanup of rules and compaction configuration.
 
 druid.coordinator.kill.on=true
-druid.coordinator.kill.period=P1D 
+druid.coordinator.kill.period=P1D
 druid.coordinator.kill.durationToRetain=P4D
+druid.coordinator.kill.bufferPeriod=P7D
 druid.coordinator.kill.maxSegments=1000
 
 # Poll every day to delete audit records > 30 days old
@@ -230,5 +239,5 @@ druid.coordinator.kill.datasource.durationToRetain=P4D
 ## Learn more
 See the following topics for more information:
 - [Metadata management](../configuration/index.md#metadata-management) for metadata store configuration reference.
-- [Metadata storage](../dependencies/metadata-storage.md) for an overview of the metadata storage database.
+- [Metadata storage](../design/metadata-storage.md) for an overview of the metadata storage database.
 

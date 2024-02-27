@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
@@ -55,14 +56,17 @@ public class TombstoneSegmentizerFactoryTest
 
     QueryableIndex queryableIndex = segment.asQueryableIndex();
     Assert.assertNotNull(queryableIndex);
-    assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getNumRows());
-    assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getAvailableDimensions());
-    assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getBitmapFactoryForDimensions());
-    assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getMetadata());
-    assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getDimensionHandlers());
-    assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnNames());
+    assertThrows(UnsupportedOperationException.class, queryableIndex::getNumRows);
+    assertThrows(UnsupportedOperationException.class, queryableIndex::getAvailableDimensions);
+    assertThrows(UnsupportedOperationException.class, queryableIndex::getBitmapFactoryForDimensions);
+    assertThrows(UnsupportedOperationException.class, queryableIndex::getMetadata);
+    assertThrows(UnsupportedOperationException.class, queryableIndex::getDimensionHandlers);
+    assertThrows(UnsupportedOperationException.class, queryableIndex::getColumnNames);
     assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder(null));
-    Assert.assertTrue(queryableIndex.isFromTombstone());
+
+    StorageAdapter storageAdapter = segment.asStorageAdapter();
+    Assert.assertNotNull(storageAdapter);
+    Assert.assertTrue(storageAdapter.isFromTombstone());
 
   }
 }

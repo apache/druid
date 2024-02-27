@@ -25,57 +25,62 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
+ *
  */
 public class TopNResultValue implements Iterable<DimensionAndMetricValueExtractor>
 {
-  private final List<DimensionAndMetricValueExtractor> value;
+  private final List<DimensionAndMetricValueExtractor> valueList;
 
   @JsonCreator
-  public TopNResultValue(List<?> value)
+  public static TopNResultValue create(List<?> value)
   {
-    this.value = (value == null) ? new ArrayList<>() : Lists.transform(
+    if (value == null) {
+      return new TopNResultValue(new ArrayList<>());
+    }
+
+    return new TopNResultValue(Lists.transform(
         value,
-        new Function<Object, DimensionAndMetricValueExtractor>()
-        {
-          @Override
-          public DimensionAndMetricValueExtractor apply(@Nullable Object input)
-          {
-            if (input instanceof Map) {
-              return new DimensionAndMetricValueExtractor((Map) input);
-            } else if (input instanceof DimensionAndMetricValueExtractor) {
-              return (DimensionAndMetricValueExtractor) input;
-            } else {
-              throw new IAE("Unknown type for input[%s]", input.getClass());
-            }
+        (Function<Object, DimensionAndMetricValueExtractor>) input -> {
+          if (input instanceof Map) {
+            return new DimensionAndMetricValueExtractor((Map) input);
+          } else if (input instanceof DimensionAndMetricValueExtractor) {
+            return (DimensionAndMetricValueExtractor) input;
+          } else {
+            throw new IAE("Unknown type for input[%s]", input.getClass());
           }
         }
-    );
+    ));
+  }
+
+  public TopNResultValue(List<DimensionAndMetricValueExtractor> valueList)
+  {
+    this.valueList = valueList;
   }
 
   @JsonValue
   public List<DimensionAndMetricValueExtractor> getValue()
   {
-    return value;
+    return valueList;
   }
 
   @Override
   public Iterator<DimensionAndMetricValueExtractor> iterator()
   {
-    return value.iterator();
+    return valueList.iterator();
   }
 
   @Override
   public String toString()
   {
     return "TopNResultValue{" +
-           "value=" + value +
+           "valueList=" + valueList +
            '}';
   }
 
@@ -91,16 +96,12 @@ public class TopNResultValue implements Iterable<DimensionAndMetricValueExtracto
 
     TopNResultValue that = (TopNResultValue) o;
 
-    if (value != null ? !value.equals(that.value) : that.value != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(valueList, that.valueList);
   }
 
   @Override
   public int hashCode()
   {
-    return value != null ? value.hashCode() : 0;
+    return valueList != null ? valueList.hashCode() : 0;
   }
 }

@@ -33,13 +33,15 @@ import java.util.List;
 
 public class SamplerModule implements DruidModule
 {
+  public static final String INDEX_SCHEME = "index";
+
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
-                new NamedType(IndexTaskSamplerSpec.class, "index")
+                new NamedType(IndexTaskSamplerSpec.class, INDEX_SCHEME)
             )
     );
   }

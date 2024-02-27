@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.cloudfiles;
 
-import org.easymock.EasyMock;
-import org.easymock.EasyMockSupport;
 import org.jclouds.io.Payload;
 import org.jclouds.openstack.swift.v1.domain.SwiftObject;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
@@ -28,7 +26,11 @@ import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CloudFilesObjectApiProxyTest extends EasyMockSupport
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+public class CloudFilesObjectApiProxyTest
 {
   @Test
   public void getTest()
@@ -37,16 +39,14 @@ public class CloudFilesObjectApiProxyTest extends EasyMockSupport
     final String region = "region";
     final String container = "container";
 
-    CloudFilesApi cloudFilesApi = createMock(CloudFilesApi.class);
-    ObjectApi objectApi = createMock(ObjectApi.class);
-    SwiftObject swiftObject = createMock(SwiftObject.class);
-    Payload payload = createMock(Payload.class);
+    CloudFilesApi cloudFilesApi = mock(CloudFilesApi.class);
+    ObjectApi objectApi = mock(ObjectApi.class);
+    SwiftObject swiftObject = mock(SwiftObject.class);
+    Payload payload = mock(Payload.class);
 
-    EasyMock.expect(cloudFilesApi.getObjectApi(region, container)).andReturn(objectApi);
-    EasyMock.expect(objectApi.get(path)).andReturn(swiftObject);
-    EasyMock.expect(swiftObject.getPayload()).andReturn(payload);
-
-    replayAll();
+    when(cloudFilesApi.getObjectApi(region, container)).thenReturn(objectApi);
+    when(objectApi.get(path)).thenReturn(swiftObject);
+    when(swiftObject.getPayload()).thenReturn(payload);
 
     CloudFilesObjectApiProxy cfoApiProxy = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
     CloudFilesObject cloudFilesObject = cfoApiProxy.get(path, 0);
@@ -56,6 +56,8 @@ public class CloudFilesObjectApiProxyTest extends EasyMockSupport
     Assert.assertEquals(cloudFilesObject.getContainer(), container);
     Assert.assertEquals(cloudFilesObject.getPath(), path);
 
-    verifyAll();
+    verify(cloudFilesApi).getObjectApi(region, container);
+    verify(objectApi).get(path);
+    verify(swiftObject).getPayload();
   }
 }

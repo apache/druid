@@ -90,7 +90,7 @@ public class EmptyIndexTest
           new AggregatorFactory[0],
           tmpDir,
           DimensionsSpec.EMPTY,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           -1
       );
 

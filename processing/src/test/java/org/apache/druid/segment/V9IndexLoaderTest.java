@@ -25,6 +25,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.IndexIO.V9IndexLoader;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -119,7 +120,7 @@ public class V9IndexLoaderTest extends InitializedNullHandlingTest
   {
     private CannotDeserializeCountColumnV9IndexLoader()
     {
-      super(() -> 0);
+      super(ColumnConfig.DEFAULT);
     }
 
     @Override

@@ -27,6 +27,7 @@ import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.Module;
@@ -35,10 +36,12 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.guice.ObjectMapperModule;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -52,6 +55,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -60,6 +65,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.aliyun.OssInputDataConfig;
+import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
@@ -80,6 +86,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -101,9 +108,14 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
       URI.create("oss://bar/foo/file2.csv.gz")
   );
 
-  private static final List<List<CloudObjectLocation>> EXPECTED_COORDS =
+  private static final List<CloudObjectLocation> EXPECTED_OBJECTS =
       EXPECTED_URIS.stream()
-                   .map(uri -> Collections.singletonList(new CloudObjectLocation(uri)))
+                   .map(CloudObjectLocation::new)
+                   .collect(Collectors.toList());
+
+  private static final List<List<CloudObjectLocation>> EXPECTED_COORDS =
+      EXPECTED_OBJECTS.stream()
+                   .map(Collections::singletonList)
                    .collect(Collectors.toList());
 
   private static final List<URI> PREFIXES = Arrays.asList(
@@ -145,10 +157,33 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     final OssInputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), OssInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
+    Assert.assertEquals(Collections.emptySet(), serdeWithUris.getConfiguredSystemFields());
+  }
+
+  @Test
+  public void testSerdeWithUrisAndSystemFields() throws Exception
+  {
+    final OssInputSource withUris = (OssInputSource) new OssInputSource(
+        OSSCLIENT,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null,
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH)),
+        null
+    );
+    final OssInputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), OssInputSource.class);
+    Assert.assertEquals(withUris, serdeWithUris);
+    Assert.assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        serdeWithUris.getConfiguredSystemFields()
+    );
   }
 
   @Test
@@ -159,6 +194,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null,
         null
@@ -177,6 +213,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         null,
         null
     );
@@ -202,6 +239,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
+        null,
         mockConfigPropertiesWithoutKeyAndSecret
     );
     Assert.assertNotNull(withPrefixes);
@@ -221,6 +259,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         null,
         CLOUD_CONFIG_PROPERTIES
     );
@@ -242,6 +281,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
+        null,
         null
     );
     final OssInputSource serdeWithPrefixes =
@@ -259,6 +299,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
+        null,
         null,
         null
     );
@@ -279,6 +320,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
+        null,
         null
     );
   }
@@ -294,6 +336,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
+        null,
         null,
         null
     );
@@ -311,6 +354,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
+        null,
         null
     );
   }
@@ -318,10 +362,18 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testWithUrisSplit()
   {
+    EasyMock.reset(OSSCLIENT);
+    EasyMock.expect(OSSCLIENT.getObjectMetadata(EXPECTED_OBJECTS.get(0).getBucket(), EXPECTED_OBJECTS.get(0).getPath()))
+            .andReturn(objectMetadataWithSize(CONTENT.length));
+    EasyMock.expect(OSSCLIENT.getObjectMetadata(EXPECTED_OBJECTS.get(1).getBucket(), EXPECTED_OBJECTS.get(1).getPath()))
+            .andReturn(objectMetadataWithSize(CONTENT.length));
+    EasyMock.replay(OSSCLIENT);
+
     OssInputSource inputSource = new OssInputSource(
         OSSCLIENT,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
+        null,
         null,
         null,
         null,
@@ -330,10 +382,11 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        new MaxSizeSplitHintSpec(10, null)
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(OSSCLIENT);
   }
 
   @Test
@@ -349,6 +402,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null,
         null
@@ -376,6 +430,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null,
         null
@@ -408,6 +463,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
+        null,
         null
     );
 
@@ -435,6 +491,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null,
         null,
         null
@@ -466,6 +523,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null,
         null,
         null
@@ -514,6 +572,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
         null,
         null,
+        null,
         null
     );
 
@@ -541,6 +600,58 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    OssInputSource inputSource = new OssInputSource(
+        OSSCLIENT,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(ImmutableSet.of(OssStorageDruidModule.SCHEME), inputSource.getTypes());
+  }
+
+  @Test
+  public void testSystemFields()
+  {
+    OssInputSource inputSource = new OssInputSource(
+        OSSCLIENT,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
+        null,
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH)),
+        null
+    );
+
+    Assert.assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        inputSource.getConfiguredSystemFields()
+    );
+
+    final OssEntity entity = new OssEntity(null, new CloudObjectLocation("foo", "bar"));
+
+    Assert.assertEquals("oss://foo/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assert.assertEquals("foo", inputSource.getSystemFieldValue(entity, SystemField.BUCKET));
+    Assert.assertEquals("bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(OssInputSource.class)
+                  .usingGetClass()
+                  .withIgnoredFields("clientSupplier", "inputDataConfig")
+                  .verify();
   }
 
   private static void expectListObjects(URI prefix, List<URI> uris, byte[] content)
@@ -682,5 +793,12 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private static ObjectMetadata objectMetadataWithSize(final long size)
+  {
+    final ObjectMetadata retVal = new ObjectMetadata();
+    retVal.setContentLength(size);
+    return retVal;
   }
 }

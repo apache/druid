@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.java.util.common.FileUtils;
@@ -92,6 +93,28 @@ public class FileTaskLogsTest
     Assert.assertEquals(
         testReportString,
         StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get()))
+    );
+  }
+
+  @Test
+  public void testSimpleStatus() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final File tmpDir = temporaryFolder.newFolder();
+    final File logDir = new File(tmpDir, "druid/myTask");
+    final File statusFile = new File(tmpDir, "status.json");
+
+    final String taskId = "myTask";
+    final TaskStatus taskStatus = TaskStatus.success(taskId);
+    final String taskStatusString = mapper.writeValueAsString(taskStatus);
+    Files.write(taskStatusString, statusFile, StandardCharsets.UTF_8);
+
+    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+    taskLogs.pushTaskStatus(taskId, statusFile);
+
+    Assert.assertEquals(
+        taskStatusString,
+        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus(taskId).get()))
     );
   }
 

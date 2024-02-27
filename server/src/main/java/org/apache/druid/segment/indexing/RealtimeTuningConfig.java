@@ -37,6 +37,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.time.Duration;
 
 /**
  *
@@ -49,9 +50,9 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private static final RejectionPolicyFactory DEFAULT_REJECTION_POLICY_FACTORY = new ServerTimeRejectionPolicyFactory();
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
   private static final ShardSpec DEFAULT_SHARD_SPEC = new NumberedShardSpec(0, 1);
-  private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
+  private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
-  private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = 0;
+  private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
   private static final long DEFAULT_ALERT_TIMEOUT = 0;
   private static final String DEFAULT_DEDUP_COLUMN = null;
 
@@ -78,7 +79,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         DEFAULT_HANDOFF_CONDITION_TIMEOUT,
         DEFAULT_ALERT_TIMEOUT,
         null,
-        DEFAULT_DEDUP_COLUMN
+        DEFAULT_DEDUP_COLUMN,
+        DEFAULT_NUM_PERSIST_THREADS
     );
   }
 
@@ -104,6 +106,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   @Nullable
   private final String dedupColumn;
+  private final int numPersistThreads;
 
   public RealtimeTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -125,7 +128,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       Long handoffConditionTimeout,
       Long alertTimeout,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @Nullable String dedupColumn
+      @Nullable String dedupColumn,
+      @Nullable Integer numPersistThreads
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -163,6 +167,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? DEFAULT_DEDUP_COLUMN : dedupColumn;
+    this.numPersistThreads = numPersistThreads == null ?
+            DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
   }
 
   @JsonCreator
@@ -184,7 +190,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("dedupColumn") @Nullable String dedupColumn
+      @JsonProperty("dedupColumn") @Nullable String dedupColumn,
+      @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
   )
   {
     this(
@@ -207,7 +214,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        numPersistThreads
     );
   }
 
@@ -348,6 +356,13 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     return dedupColumn;
   }
 
+  @Override
+  @JsonProperty
+  public int getNumPersistThreads()
+  {
+    return numPersistThreads;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -370,7 +385,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        numPersistThreads
     );
   }
 
@@ -397,7 +413,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        numPersistThreads
     );
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
@@ -27,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
@@ -70,6 +72,9 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -77,6 +82,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -96,6 +102,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link SinglePhaseParallelIndexTaskRunner}. Similar to {@link IndexTask}, but this task
@@ -111,7 +118,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final String supervisorTaskId;
   private final String subtaskSpecId;
 
   /**
@@ -162,7 +168,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig())
+        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig()),
+        supervisorTaskId
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
@@ -172,7 +179,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
-    this.supervisorTaskId = supervisorTaskId;
     this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().isAppendToExisting() != true
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
@@ -190,13 +196,28 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return TYPE;
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      throw getInputSecurityOnFirehoseUnsupportedError();
+    }
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .collect(Collectors.toSet()) :
+           ImmutableSet.of();
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
     return determineLockGranularityAndTryLock(
-        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        new SurrogateTaskActionClient(getSupervisorTaskId(), taskActionClient),
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 
@@ -210,12 +231,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
-  }
-
-  @JsonProperty
-  public String getSupervisorTaskId()
-  {
-    return supervisorTaskId;
   }
 
   @Override
@@ -247,10 +262,10 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
 
       final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
-          supervisorTaskId,
+          getSupervisorTaskId(),
           ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );

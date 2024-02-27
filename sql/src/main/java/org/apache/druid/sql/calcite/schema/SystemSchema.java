@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -50,13 +49,12 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -67,8 +65,10 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -82,11 +82,12 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,8 +108,8 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
 
-  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
-      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
+  private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
+      SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSegment().getDataSource())
       );
@@ -117,6 +118,8 @@ public class SystemSchema extends AbstractSchema
       segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSource())
       );
+
+  private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
 
   /**
    * Booleans constants represented as long type,
@@ -151,6 +154,7 @@ public class SystemSchema extends AbstractSchema
       .add("dimensions", ColumnType.STRING)
       .add("metrics", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
+      .add("replication_factor", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -164,6 +168,7 @@ public class SystemSchema extends AbstractSchema
       .add("curr_size", ColumnType.LONG)
       .add("max_size", ColumnType.LONG)
       .add("is_leader", ColumnType.LONG)
+      .add("start_time", ColumnType.STRING)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -212,7 +217,7 @@ public class SystemSchema extends AbstractSchema
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
-      final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
+      final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper
   )
@@ -220,10 +225,10 @@ public class SystemSchema extends AbstractSchema
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
-        SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
+        TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper),
+        SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper)
     );
   }
 
@@ -271,7 +276,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      //get available segments from druidSchema
+      // get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
           druidSchema.cache().getSegmentMetadataSnapshot();
       final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
@@ -286,9 +291,9 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
       }
 
-      // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator.
-      final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
+      // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
+      // Coordinator. This may include both published and realtime segments.
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
@@ -298,13 +303,30 @@ public class SystemSchema extends AbstractSchema
             final DataSegment segment = val.getDataSegment();
             segmentsAlreadySeen.add(segment.getId());
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
-            long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
+            long numReplicas = 0L, numRows = 0L, isRealtime, isAvailable = 0L;
+
             if (partialSegmentData != null) {
               numReplicas = partialSegmentData.getNumReplicas();
-              numRows = partialSegmentData.getNumRows();
               isAvailable = partialSegmentData.isAvailable();
-              isRealtime = partialSegmentData.isRealtime();
+              numRows = partialSegmentData.getNumRows();
             }
+
+            // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
+            // broker might have outdated or no information regarding numRows and rowSignature for a segment.
+            // In that case, we should use {@code numRows} from the segment polled from the coordinator.
+            if (null != val.getNumRows()) {
+              numRows = val.getNumRows();
+            }
+
+            isRealtime = val.isRealtime() ? 1 : 0;
+
+            // set of segments returned from Coordinator include published and realtime segments
+            // so realtime segments are not published and vice versa
+            boolean isPublished = !val.isRealtime();
+
+            // is_active is true for published segments that are not overshadowed or else they should be realtime
+            boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
+
             try {
               return new Object[]{
                   segment.getId(),
@@ -316,17 +338,19 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   numRows,
-                  //is_active is true for published segments that are not overshadowed
-                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
-                  //is_published is true for published segments
-                  IS_PUBLISHED_TRUE,
+                  isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
+                  isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                   segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
-                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
+                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  // If the segment is unpublished, we won't have this information yet.
+                  // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
+                  // This should be automatically updated in the next Coordinator poll.
+                  val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
               };
             }
             catch (JsonProcessingException e) {
@@ -334,6 +358,8 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
+      // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
+      // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
           .from(() -> getAuthorizedAvailableSegments(
               availableSegmentEntries,
@@ -368,7 +394,8 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
                   val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
                   val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
-                  null // unpublished segments from realtime tasks will not be compacted yet
+                  null, // unpublished segments from realtime tasks will not be compacted yet
+                  REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
               };
             }
             catch (JsonProcessingException e) {
@@ -381,11 +408,10 @@ public class SystemSchema extends AbstractSchema
       );
 
       return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
-
     }
 
-    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
-        Iterator<SegmentWithOvershadowedStatus> it,
+    private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
+        Iterator<SegmentStatusInCluster> it,
         DataContext root
     )
     {
@@ -394,11 +420,11 @@ public class SystemSchema extends AbstractSchema
           "authenticationResult in dataContext"
       );
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
+      final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,
-              SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
+              SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR,
               authorizerMapper
           );
       return authorizedSegments.iterator();
@@ -489,21 +515,21 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final FilteredServerInventoryView serverInventoryView;
-    private final DruidLeaderClient overlordLeaderClient;
+    private final OverlordClient overlordClient;
     private final DruidLeaderClient coordinatorLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
-        DruidLeaderClient overlordLeaderClient,
+        OverlordClient overlordClient,
         DruidLeaderClient coordinatorLeaderClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
-      this.overlordLeaderClient = overlordLeaderClient;
+      this.overlordClient = overlordClient;
       this.coordinatorLeaderClient = coordinatorLeaderClient;
     }
 
@@ -531,13 +557,21 @@ public class SystemSchema extends AbstractSchema
 
       String tmpCoordinatorLeader = "";
       String tmpOverlordLeader = "";
+
       try {
         tmpCoordinatorLeader = coordinatorLeaderClient.findCurrentLeader();
-        tmpOverlordLeader = overlordLeaderClient.findCurrentLeader();
       }
-      catch (ISE ignored) {
+      catch (Exception ignored) {
         // no reason to kill the results if something is sad and there are no leaders
       }
+
+      try {
+        tmpOverlordLeader = FutureUtils.getUnchecked(overlordClient.findCurrentLeader(), true).toString();
+      }
+      catch (Exception ignored) {
+        // no reason to kill the results if something is sad and there are no leaders
+      }
+
       final String coordinatorLeader = tmpCoordinatorLeader;
       final String overlordLeader = tmpOverlordLeader;
 
@@ -545,7 +579,9 @@ public class SystemSchema extends AbstractSchema
           .from(() -> druidServers)
           .transform((DiscoveryDruidNode discoveryDruidNode) -> {
             //noinspection ConstantConditions
-            final boolean isDiscoverableDataServer = isDiscoverableDataServer(discoveryDruidNode);
+            final boolean isDiscoverableDataServer = isDiscoverableDataServer(
+                discoveryDruidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY, DataNodeService.class)
+            );
             final NodeRole serverRole = discoveryDruidNode.getNodeRole();
 
             if (isDiscoverableDataServer) {
@@ -594,7 +630,8 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
-          NullHandling.defaultLongValue()
+          NullHandling.defaultLongValue(),
+          toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
 
@@ -613,7 +650,8 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
-          isLeader ? 1L : 0L
+          isLeader ? 1L : 0L,
+          toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
 
@@ -647,27 +685,24 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize(),
-          NullHandling.defaultLongValue()
+          NullHandling.defaultLongValue(),
+          toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
 
-    private static boolean isDiscoverableDataServer(DiscoveryDruidNode druidNode)
+    private static boolean isDiscoverableDataServer(DataNodeService dataNodeService)
     {
-      final DruidService druidService = druidNode.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY);
-      if (druidService == null) {
-        return false;
-      }
-      final DataNodeService dataNodeService = (DataNodeService) druidService;
-      return dataNodeService.isDiscoverable();
+      return dataNodeService != null && dataNodeService.isDiscoverable();
     }
 
     private static DruidServer toDruidServer(DiscoveryDruidNode discoveryDruidNode)
     {
-      if (isDiscoverableDataServer(discoveryDruidNode)) {
-        final DruidNode druidNode = discoveryDruidNode.getDruidNode();
-        final DataNodeService dataNodeService = (DataNodeService) discoveryDruidNode
-            .getServices()
-            .get(DataNodeService.DISCOVERY_SERVICE_KEY);
+      final DruidNode druidNode = discoveryDruidNode.getDruidNode();
+      final DataNodeService dataNodeService = discoveryDruidNode.getService(
+          DataNodeService.DISCOVERY_SERVICE_KEY,
+          DataNodeService.class
+      );
+      if (isDiscoverableDataServer(dataNodeService)) {
         return new DruidServer(
             druidNode.getHostAndPortToUse(),
             druidNode.getHostAndPort(),
@@ -753,18 +788,15 @@ public class SystemSchema extends AbstractSchema
    */
   static class TasksTable extends AbstractTable implements ScannableTable
   {
-    private final DruidLeaderClient druidLeaderClient;
-    private final ObjectMapper jsonMapper;
+    private final OverlordClient overlordClient;
     private final AuthorizerMapper authorizerMapper;
 
     public TasksTable(
-        DruidLeaderClient druidLeaderClient,
-        ObjectMapper jsonMapper,
+        OverlordClient overlordClient,
         AuthorizerMapper authorizerMapper
     )
     {
-      this.druidLeaderClient = druidLeaderClient;
-      this.jsonMapper = jsonMapper;
+      this.overlordClient = overlordClient;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -787,7 +819,7 @@ public class SystemSchema extends AbstractSchema
       {
         private final CloseableIterator<TaskStatusPlus> it;
 
-        public TasksEnumerable(JsonParserIterator<TaskStatusPlus> tasks)
+        public TasksEnumerable(CloseableIterator<TaskStatusPlus> tasks)
         {
           this.it = getAuthorizedTasks(tasks, root);
         }
@@ -807,21 +839,7 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               final TaskStatusPlus task = it.next();
-              @Nullable final String host = task.getLocation().getHost();
-              @Nullable final String hostAndPort;
 
-              if (host == null) {
-                hostAndPort = null;
-              } else {
-                final int port;
-                if (task.getLocation().getTlsPort() >= 0) {
-                  port = task.getLocation().getTlsPort();
-                } else {
-                  port = task.getLocation().getPort();
-                }
-
-                hostAndPort = HostAndPort.fromParts(host, port).toString();
-              }
               return new Object[]{
                   task.getId(),
                   task.getGroupId(),
@@ -832,8 +850,8 @@ public class SystemSchema extends AbstractSchema
                   toStringOrNull(task.getStatusCode()),
                   toStringOrNull(task.getRunnerStatusCode()),
                   task.getDuration() == null ? 0L : task.getDuration(),
-                  hostAndPort,
-                  host,
+                  task.getLocation().getLocation(),
+                  task.getLocation().getHost(),
                   (long) task.getLocation().getPort(),
                   (long) task.getLocation().getTlsPort(),
                   task.getErrorMsg()
@@ -866,11 +884,11 @@ public class SystemSchema extends AbstractSchema
         }
       }
 
-      return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper));
+      return new TasksEnumerable(FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, null), true));
     }
 
     private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(
-        JsonParserIterator<TaskStatusPlus> it,
+        CloseableIterator<TaskStatusPlus> it,
         DataContext root
     )
     {
@@ -894,39 +912,20 @@ public class SystemSchema extends AbstractSchema
 
   }
 
-  //Note that overlord must be up to get tasks
-  private static JsonParserIterator<TaskStatusPlus> getTasks(
-      DruidLeaderClient indexingServiceClient,
-      ObjectMapper jsonMapper
-  )
-  {
-    return getThingsFromLeaderNode(
-        "/druid/indexer/v1/tasks",
-        new TypeReference<TaskStatusPlus>()
-        {
-        },
-        indexingServiceClient,
-        jsonMapper
-    );
-  }
-
   /**
    * This table contains a row per supervisor task.
    */
   static class SupervisorsTable extends AbstractTable implements ScannableTable
   {
-    private final DruidLeaderClient druidLeaderClient;
-    private final ObjectMapper jsonMapper;
+    private final OverlordClient overlordClient;
     private final AuthorizerMapper authorizerMapper;
 
     public SupervisorsTable(
-        DruidLeaderClient druidLeaderClient,
-        ObjectMapper jsonMapper,
+        OverlordClient overlordClient,
         AuthorizerMapper authorizerMapper
     )
     {
-      this.druidLeaderClient = druidLeaderClient;
-      this.jsonMapper = jsonMapper;
+      this.overlordClient = overlordClient;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -950,7 +949,7 @@ public class SystemSchema extends AbstractSchema
       {
         private final CloseableIterator<SupervisorStatus> it;
 
-        public SupervisorsEnumerable(JsonParserIterator<SupervisorStatus> tasks)
+        public SupervisorsEnumerable(CloseableIterator<SupervisorStatus> tasks)
         {
           this.it = getAuthorizedSupervisors(tasks, root);
         }
@@ -1008,11 +1007,11 @@ public class SystemSchema extends AbstractSchema
         }
       }
 
-      return new SupervisorsEnumerable(getSupervisors(druidLeaderClient, jsonMapper));
+      return new SupervisorsEnumerable(FutureUtils.getUnchecked(overlordClient.supervisorStatuses(), true));
     }
 
     private CloseableIterator<SupervisorStatus> getAuthorizedSupervisors(
-        JsonParserIterator<SupervisorStatus> it,
+        CloseableIterator<SupervisorStatus> it,
         DataContext root
     )
     {
@@ -1033,23 +1032,6 @@ public class SystemSchema extends AbstractSchema
 
       return wrap(authorizedSupervisors.iterator(), it);
     }
-  }
-
-  // Note that overlord must be up to get supervisor tasks, otherwise queries to sys.supervisors table
-  // will fail with internal server error (HTTP 500)
-  private static JsonParserIterator<SupervisorStatus> getSupervisors(
-      DruidLeaderClient indexingServiceClient,
-      ObjectMapper jsonMapper
-  )
-  {
-    return getThingsFromLeaderNode(
-        "/druid/indexer/v1/supervisor?system",
-        new TypeReference<SupervisorStatus>()
-        {
-        },
-        indexingServiceClient,
-        jsonMapper
-    );
   }
 
   public static <T> JsonParserIterator<T> getThingsFromLeaderNode(
@@ -1096,7 +1078,7 @@ public class SystemSchema extends AbstractSchema
     );
   }
 
-  private static <T> CloseableIterator<T> wrap(Iterator<T> iterator, JsonParserIterator<T> it)
+  private static <T> CloseableIterator<T> wrap(Iterator<T> iterator, Closeable closer)
   {
     return new CloseableIterator<T>()
     {
@@ -1106,7 +1088,7 @@ public class SystemSchema extends AbstractSchema
         final boolean hasNext = iterator.hasNext();
         if (!hasNext) {
           try {
-            it.close();
+            closer.close();
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -1124,7 +1106,7 @@ public class SystemSchema extends AbstractSchema
       @Override
       public void close() throws IOException
       {
-        it.close();
+        closer.close();
       }
     };
   }

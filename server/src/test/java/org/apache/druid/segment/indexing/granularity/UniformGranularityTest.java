@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.Interval;
@@ -343,7 +344,7 @@ public class UniformGranularityTest
   {
     // just make sure that intervals for uniform spec are not materialized (causing OOM) when created
     final GranularitySpec spec = new UniformGranularitySpec(
-        Granularities.SECOND,
+        new DurationGranularity(1000, 0),
         null,
         Collections.singletonList(
             Intervals.of("2012-01-01T00Z/P10Y")

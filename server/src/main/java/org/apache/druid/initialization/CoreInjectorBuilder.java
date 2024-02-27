@@ -26,12 +26,10 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.DruidProcessingConfigModule;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
 import org.apache.druid.guice.FirehoseModule;
-import org.apache.druid.guice.IndexingServiceDiscoveryModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
 import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.LifecycleModule;
@@ -106,14 +104,13 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         EmitterModule.class,
         HttpClientModule.global(),
         HttpClientModule.escalatedGlobal(),
-        new HttpClientModule("druid.broker.http", Client.class),
-        new HttpClientModule("druid.broker.http", EscalatedClient.class),
+        new HttpClientModule("druid.broker.http", Client.class, true),
+        new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
         new CuratorModule(),
         new AnnouncerModule(),
         new MetricsModule(),
         new SegmentWriteOutMediumModule(),
         new ServerModule(),
-        new DruidProcessingConfigModule(),
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
@@ -123,7 +120,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
-        new IndexingServiceDiscoveryModule(),
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new TombstoneDataStorageModule(),

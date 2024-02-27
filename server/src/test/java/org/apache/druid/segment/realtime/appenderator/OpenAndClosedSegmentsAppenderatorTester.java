@@ -144,13 +144,14 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
             maxRowsInMemory,
             maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
             skipBytesInMemoryOverheadCheck,
-            new IndexSpec(),
+            IndexSpec.DEFAULT,
             0,
             false,
             0L,
             OffHeapMemorySegmentWriteOutMediumFactory.instance(),
             IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-            basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+            basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+            null
         );
 
     metrics = new FireDepartmentMetrics();
@@ -159,11 +160,6 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         objectMapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     indexMerger = new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());

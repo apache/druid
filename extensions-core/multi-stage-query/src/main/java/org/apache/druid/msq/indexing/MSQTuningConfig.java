@@ -122,7 +122,7 @@ public class MSQTuningConfig
 
   public IndexSpec getIndexSpec()
   {
-    return indexSpec != null ? indexSpec : new IndexSpec();
+    return indexSpec != null ? indexSpec : IndexSpec.DEFAULT;
   }
 
   @Override

@@ -41,10 +41,10 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -98,7 +98,7 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                     .rows(ROWS1)
                     .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())

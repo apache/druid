@@ -30,12 +30,18 @@ import {
 } from '../time/time';
 import type { Transform } from '../transform-spec/transform-spec';
 
-const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
+export const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
 
 export const TIME_COLUMN = '__time';
 
 export const PLACEHOLDER_TIMESTAMP_SPEC: TimestampSpec = {
   column: NO_SUCH_COLUMN,
+  missingValue: '1970-01-01T00:00:00Z',
+};
+
+export const DETECTION_TIMESTAMP_SPEC: TimestampSpec = {
+  column: TIME_COLUMN,
+  format: 'millis',
   missingValue: '1970-01-01T00:00:00Z',
 };
 

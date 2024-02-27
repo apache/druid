@@ -275,6 +275,9 @@ public class SQLMetadataSupervisorManagerTest
     specs = allSpecs.get(supervisor2);
     Assert.assertEquals(1, specs.size());
     Assert.assertNull(specs.get(0).getSpec());
+
+    Map<String, SupervisorSpec> latestSupervisorSpec = supervisorManager.getLatest();
+    Assert.assertEquals(1, latestSupervisorSpec.size());
   }
 
   @Test

@@ -31,7 +31,10 @@ import com.google.inject.name.Names;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -40,6 +43,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -47,6 +51,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -92,6 +97,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   private LookupReferencesManager lookupReferencesManager;
   @Mock
   private SegmentManager segmentManager;
+  @Mock
+  private DruidOperatorTable druidOperatorTable;
 
   private DruidCalciteSchemaModule target;
   private Injector injector;
@@ -112,6 +119,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
           binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
+          binder.bind(DruidOperatorTable.class).toInstance(druidOperatorTable);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
                 .toInstance(coordinatorDruidLeaderClient);
@@ -125,6 +133,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
+          binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
+          binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
         },
         new LifecycleModule(),
         target);

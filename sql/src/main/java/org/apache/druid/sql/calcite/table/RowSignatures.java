@@ -23,11 +23,18 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeComparability;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperandCountRange;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.AbstractSqlType;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlSingleOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -79,7 +86,9 @@ public class RowSignatures
   {
     Preconditions.checkNotNull(simpleExtraction, "simpleExtraction");
     if (simpleExtraction.getExtractionFn() != null
-        || rowSignature.getColumnType(simpleExtraction.getColumn()).map(type -> type.is(ValueType.STRING)).orElse(false)) {
+        || rowSignature.getColumnType(simpleExtraction.getColumn())
+                       .map(type -> type.is(ValueType.STRING))
+                       .orElse(false)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       return StringComparators.NUMERIC;
@@ -142,6 +151,9 @@ public class RowSignatures
               case DOUBLE:
                 type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
                 break;
+              case FLOAT:
+                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.FLOAT, nullNumeric);
+                break;
               default:
                 throw new ISE("valueType[%s] not translatable", columnType);
             }
@@ -164,7 +176,7 @@ public class RowSignatures
    * Creates a {@link ComplexSqlType} using the supplied {@link RelDataTypeFactory} to ensure that the
    * {@link ComplexSqlType} is interned. This is important because Calcite checks that the references are equal
    * instead of the objects being equivalent.
-   *
+   * <p>
    * This method uses {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) ensures that if the
    * type factory is a {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
@@ -179,15 +191,15 @@ public class RowSignatures
 
   /**
    * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information.
-   *
+   * <p>
    * If using with other operations of a {@link RelDataTypeFactory}, consider wrapping the creation of this type in
    * {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) to ensure that if the type factory is a
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
-   *
+   * <p>
    * If {@link SqlTypeName} is going to be {@link SqlTypeName#OTHER} and a {@link RelDataTypeFactory} is available,
    * consider using {@link #makeComplexType(RelDataTypeFactory, ColumnType, boolean)}.
-   *
+   * <p>
    * This type does not work well with {@link org.apache.calcite.sql.type.ReturnTypes#explicit(RelDataType)}, which
    * will create new {@link RelDataType} using {@link SqlTypeName} during return type inference, so implementors of
    * {@link org.apache.druid.sql.calcite.expression.SqlOperatorConversion} should implement the
@@ -220,6 +232,11 @@ public class RowSignatures
       sb.append(columnType.asTypeString());
     }
 
+    public ColumnType getColumnType()
+    {
+      return columnType;
+    }
+
     public String getComplexTypeName()
     {
       return columnType.getComplexTypeName();
@@ -228,6 +245,69 @@ public class RowSignatures
     public String asTypeString()
     {
       return columnType.asTypeString();
+    }
+  }
+
+  public static ComplexSqlSingleOperandTypeChecker complexTypeChecker(ColumnType complexType)
+  {
+    return new ComplexSqlSingleOperandTypeChecker(
+        new ComplexSqlType(SqlTypeName.OTHER, complexType, true)
+    );
+  }
+
+  public static final class ComplexSqlSingleOperandTypeChecker implements SqlSingleOperandTypeChecker
+  {
+    private final ComplexSqlType type;
+
+    public ComplexSqlSingleOperandTypeChecker(
+        ComplexSqlType type
+    )
+    {
+      this.type = type;
+    }
+
+    @Override
+    public boolean checkSingleOperandType(
+        SqlCallBinding callBinding,
+        SqlNode operand,
+        int iFormalOperand,
+        boolean throwOnFailure
+    )
+    {
+      return type.equals(callBinding.getValidator().deriveType(callBinding.getScope(), operand));
+    }
+
+    @Override
+    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
+    {
+      if (callBinding.getOperandCount() != 1) {
+        return false;
+      }
+      return checkSingleOperandType(callBinding, callBinding.operand(0), 0, throwOnFailure);
+    }
+
+    @Override
+    public SqlOperandCountRange getOperandCountRange()
+    {
+      return SqlOperandCountRanges.of(1);
+    }
+
+    @Override
+    public String getAllowedSignatures(SqlOperator op, String opName)
+    {
+      return StringUtils.format("'%s'(%s)", opName, type);
+    }
+
+    @Override
+    public Consistency getConsistency()
+    {
+      return Consistency.NONE;
+    }
+
+    @Override
+    public boolean isOptional(int i)
+    {
+      return false;
     }
   }
 }

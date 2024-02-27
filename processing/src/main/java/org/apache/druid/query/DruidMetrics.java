@@ -33,6 +33,7 @@ public class DruidMetrics
   public static final String INTERVAL = "interval";
   public static final String ID = "id";
   public static final String TASK_ID = "taskId";
+  public static final String GROUP_ID = "groupId";
   public static final String STATUS = "status";
   public static final String TASK_INGESTION_MODE = "taskIngestionMode";
 
@@ -42,17 +43,14 @@ public class DruidMetrics
   public static final String TASK_TYPE = "taskType";
   public static final String TASK_STATUS = "taskStatus";
 
-  public static final String SERVER = "server";
-  public static final String TIER = "tier";
-
-  public static final String DUTY = "duty";
-  public static final String DUTY_GROUP = "dutyGroup";
-
   public static final String STREAM = "stream";
 
   public static final String PARTITION = "partition";
 
   public static final String TAGS = "tags";
+
+  public static final String CATEGORY = "category";
+  public static final String WORKER_VERSION = "workerVersion";
 
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {

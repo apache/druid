@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -44,7 +45,7 @@ import java.util.Optional;
  * Type signature for a row in a Druid datasource or query result.
  *
  * @see org.apache.druid.query.QueryToolChest#resultArraySignature which returns signatures for query results
- * @see org.apache.druid.query.InlineDataSource#getRowSignature which returns signatures for inline datasources
+ * @see InlineDataSource#getRowSignature which returns signatures for inline datasources
  */
 public class RowSignature implements ColumnInspector
 {
@@ -135,6 +136,15 @@ public class RowSignature implements ColumnInspector
   public Optional<ColumnType> getColumnType(final int columnNumber)
   {
     return Optional.ofNullable(columnTypes.get(getColumnName(columnNumber)));
+  }
+
+  /**
+   * Returns true if the column is a numeric type ({@link ColumnType#isNumeric()}), otherwise false if the column
+   * is not a numeric type or is not present in the row signature.
+   */
+  public boolean isNumeric(final String columnName)
+  {
+    return getColumnType(columnName).map(ColumnType::isNumeric).orElse(false);
   }
 
   /**

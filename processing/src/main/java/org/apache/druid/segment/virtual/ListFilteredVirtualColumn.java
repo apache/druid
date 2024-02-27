@@ -22,8 +22,11 @@ package org.apache.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
@@ -31,29 +34,30 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdMapping;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.SimpleBitmapColumnIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -135,9 +139,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   )
   {
     if (allowList) {
-      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate));
+      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate), delegate.getExtractionFn() != null);
     } else {
-      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate));
+      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate), delegate.getExtractionFn() != null);
     }
   }
 
@@ -179,24 +183,21 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
   @Nullable
   @Override
-  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector indexSelector
+  )
   {
+    if (delegate.getExtractionFn() != null) {
+      return NoIndexesColumnIndexSupplier.getInstance();
+    }
     return new ColumnIndexSupplier()
     {
       @Nullable
       @Override
       public <T> T as(Class<T> clazz)
       {
-
-        final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
-        if (holder == null) {
-          return null;
-        }
-        // someday maybe we can have a better way to get row count..
-        final ColumnHolder time = columnSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-        final int numRows = time.getLength();
-
-        ColumnIndexSupplier indexSupplier = holder.getIndexSupplier();
+        ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(delegate.getDimension());
         if (indexSupplier == null) {
           return null;
         }
@@ -215,6 +216,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
               null,
               underlyingIndex::getValue
           );
+
         } else {
           idMapping = ListFilteredDimensionSpec.buildDenyListIdMapping(
               values,
@@ -223,14 +225,24 @@ public class ListFilteredVirtualColumn implements VirtualColumn
           );
         }
 
+        // someday maybe we can have a better way to get row count..
+        final ColumnHolder time = indexSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
+        final int numRows = time.getLength();
+        final Supplier<ImmutableBitmap> nullValueBitmapSupplier = Suppliers.memoize(
+            () -> underlyingIndex.getBitmapFactory().complement(
+                underlyingIndex.getBitmapFactory().union(getNonNullBitmaps(underlyingIndex, idMapping)),
+                numRows
+            )
+        );
+
         if (clazz.equals(NullValueIndex.class)) {
-          return (T) new ListFilteredNullValueIndex(underlyingIndex, idMapping, numRows);
-        } else if (clazz.equals(StringValueSetIndex.class)) {
-          return (T) new ListFilteredStringValueSetIndex(underlyingIndex, idMapping);
-        } else if (clazz.equals(DruidPredicateIndex.class)) {
-          return (T) new ListFilteredDruidPredicateIndex(underlyingIndex, idMapping);
-        } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-          return (T) new ListFilteredLexicographicalRangeIndex(underlyingIndex, idMapping);
+          return (T) new ListFilteredNullValueIndex(nullValueBitmapSupplier);
+        } else if (clazz.equals(StringValueSetIndexes.class)) {
+          return (T) new ListFilteredStringValueSetIndexes(underlyingIndex, idMapping, nullValueBitmapSupplier);
+        } else if (clazz.equals(DruidPredicateIndexes.class)) {
+          return (T) new ListFilteredDruidPredicateIndexes(underlyingIndex, idMapping, nullValueBitmapSupplier);
+        } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
+          return (T) new ListFilteredLexicographicalRangeIndexes(underlyingIndex, idMapping, nullValueBitmapSupplier);
         } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
           return (T) new ListFilteredDictionaryEncodedStringValueIndex(underlyingIndex, idMapping);
         }
@@ -249,8 +261,10 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return false;
     }
     ListFilteredVirtualColumn that = (ListFilteredVirtualColumn) o;
-    return allowList == that.allowList && name.equals(that.name) && delegate.equals(that.delegate) && values.equals(
-        that.values);
+    return allowList == that.allowList &&
+           name.equals(that.name) &&
+           delegate.equals(that.delegate) &&
+           values.equals(that.values);
   }
 
   @Override
@@ -268,6 +282,74 @@ public class ListFilteredVirtualColumn implements VirtualColumn
            ", values=" + values +
            ", isAllowList=" + allowList +
            '}';
+  }
+
+  private static Iterable<ImmutableBitmap> getNonNullBitmaps(
+      DictionaryEncodedStringValueIndex delegateIndex,
+      IdMapping idMapping
+  )
+  {
+    final int start = NullHandling.isNullOrEquivalent(delegateIndex.getValue(idMapping.getReverseId(0))) ? 1 : 0;
+    return getBitmapsInRange(
+        delegateIndex,
+        idMapping,
+        DruidObjectPredicate.alwaysTrue(),
+        start,
+        idMapping.getValueCardinality(),
+        false
+    );
+  }
+
+  private static Iterable<ImmutableBitmap> getBitmapsInRange(
+      DictionaryEncodedStringValueIndex delegate,
+      IdMapping idMapping,
+      DruidObjectPredicate<String> matcher,
+      int start,
+      int end,
+      boolean includeUnknown
+  )
+  {
+    return () -> new Iterator<ImmutableBitmap>()
+    {
+      int currIndex = start;
+      int found;
+
+      {
+        found = findNext();
+      }
+
+      private int findNext()
+      {
+        while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex))).matches(includeUnknown)) {
+          currIndex++;
+        }
+
+        if (currIndex < end) {
+          return currIndex++;
+        } else {
+          return -1;
+        }
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        return found != -1;
+      }
+
+      @Override
+      public ImmutableBitmap next()
+      {
+        int cur = found;
+
+        if (cur == -1) {
+          throw new NoSuchElementException();
+        }
+
+        found = findNext();
+        return delegate.getBitmap(idMapping.getReverseId(cur));
+      }
+    };
   }
 
   private static class BaseListFilteredColumnIndex
@@ -318,102 +400,49 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return -(minIndex + 1);
     }
 
-    Iterable<ImmutableBitmap> getBitmapsInRange(Predicate<String> matcher, int start, int end)
+    Iterable<ImmutableBitmap> getBitmapsInRange(DruidObjectPredicate<String> matcher, int start, int end, boolean includeUnknown)
     {
-      return () -> new Iterator<ImmutableBitmap>()
-      {
-        int currIndex = start;
-        int found;
-
-        {
-          found = findNext();
-        }
-
-        private int findNext()
-        {
-          while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex)))) {
-            currIndex++;
-          }
-
-          if (currIndex < end) {
-            return currIndex++;
-          } else {
-            return -1;
-          }
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-          return found != -1;
-        }
-
-        @Override
-        public ImmutableBitmap next()
-        {
-          int cur = found;
-
-          if (cur == -1) {
-            throw new NoSuchElementException();
-          }
-
-          found = findNext();
-          return getBitmap(cur);
-        }
-      };
+      return ListFilteredVirtualColumn.getBitmapsInRange(delegate, idMapping, matcher, start, end, includeUnknown);
     }
   }
 
-  private static class ListFilteredNullValueIndex extends BaseListFilteredColumnIndex implements NullValueIndex
+  private static class ListFilteredNullValueIndex implements NullValueIndex
   {
-    private final int numRows;
+    private final Supplier<ImmutableBitmap> nullValueBitmapSupplier;
 
-    private ListFilteredNullValueIndex(DictionaryEncodedStringValueIndex delegate, IdMapping idMapping, int numRows)
+    private ListFilteredNullValueIndex(Supplier<ImmutableBitmap> nullValueBitmapSupplier)
     {
-      super(delegate, idMapping);
-      this.numRows = numRows;
+      this.nullValueBitmapSupplier = nullValueBitmapSupplier;
     }
 
     @Override
-    public BitmapColumnIndex forNull()
+    public BitmapColumnIndex get()
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return 1.0 - Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-        }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknowns)
         {
-          return bitmapResultFactory.complement(
-              bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable()),
-              numRows
-          );
-        }
-
-        @Override
-        protected Iterable<ImmutableBitmap> getBitmapIterable()
-        {
-          final int start = NullHandling.isNullOrEquivalent(delegate.getValue(idMapping.getReverseId(0))) ? 1 : 0;
-          return getBitmapsInRange(v -> true, start, idMapping.getValueCardinality());
+          return bitmapResultFactory.wrapDimensionValue(nullValueBitmapSupplier.get());
         }
       };
     }
   }
 
-  private static class ListFilteredStringValueSetIndex extends BaseListFilteredColumnIndex
-      implements StringValueSetIndex
+  private static class ListFilteredStringValueSetIndexes extends BaseListFilteredColumnIndex
+      implements StringValueSetIndexes
   {
+    private final Supplier<ImmutableBitmap> nullValueBitmapSupplier;
 
-    private ListFilteredStringValueSetIndex(
+    private ListFilteredStringValueSetIndexes(
         DictionaryEncodedStringValueIndex delegate,
-        IdMapping idMapping
+        IdMapping idMapping,
+        Supplier<ImmutableBitmap> nullValueBitmapSupplier
     )
     {
       super(delegate, idMapping);
+      this.nullValueBitmapSupplier = nullValueBitmapSupplier;
     }
 
     @Override
@@ -421,15 +450,15 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Math.min(1, (double) getBitmapForValue().size() / totalRows);
-        }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
+          if (includeUnknown) {
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmapForValue(), nullValueBitmapSupplier.get())
+            );
+          }
           return bitmapResultFactory.wrapDimensionValue(getBitmapForValue());
         }
 
@@ -447,7 +476,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -489,59 +518,74 @@ public class ListFilteredVirtualColumn implements VirtualColumn
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          return nullValueBitmapSupplier.get();
+        }
       };
     }
   }
 
-  private static class ListFilteredDruidPredicateIndex extends BaseListFilteredColumnIndex
-      implements DruidPredicateIndex
+  private static class ListFilteredDruidPredicateIndexes extends BaseListFilteredColumnIndex
+      implements DruidPredicateIndexes
   {
+    private final Supplier<ImmutableBitmap> nullValueBitmapSupplier;
 
-    private ListFilteredDruidPredicateIndex(DictionaryEncodedStringValueIndex delegate, IdMapping idMapping)
+    private ListFilteredDruidPredicateIndexes(
+        DictionaryEncodedStringValueIndex delegate,
+        IdMapping idMapping,
+        Supplier<ImmutableBitmap> nullValueBitmapSupplier
+    )
     {
       super(delegate, idMapping);
+      this.nullValueBitmapSupplier = nullValueBitmapSupplier;
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       return new SimpleBitmapColumnIndex()
       {
         @Override
-        public double estimateSelectivity(int totalRows)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int start = 0, end = getCardinality();
-          return Filters.estimateSelectivity(
-              getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end).iterator(),
-              totalRows
-          );
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-        {
-          final int start = 0, end = getCardinality();
-          return bitmapResultFactory.unionDimensionValueBitmaps(
-              getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end)
-          );
+          Iterable<ImmutableBitmap> bitmaps;
+          if (includeUnknown) {
+            bitmaps = Iterables.concat(
+                getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end, includeUnknown),
+                Collections.singletonList(nullValueBitmapSupplier.get())
+            );
+          } else {
+            bitmaps = getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end, includeUnknown);
+          }
+          return bitmapResultFactory.unionDimensionValueBitmaps(bitmaps);
         }
       };
     }
   }
 
-  private static class ListFilteredLexicographicalRangeIndex extends BaseListFilteredColumnIndex
-      implements LexicographicalRangeIndex
+  private static class ListFilteredLexicographicalRangeIndexes extends BaseListFilteredColumnIndex
+      implements LexicographicalRangeIndexes
   {
+    private final Supplier<ImmutableBitmap> nullValueBitmapSupplier;
 
-    private ListFilteredLexicographicalRangeIndex(
+    private ListFilteredLexicographicalRangeIndexes(
         DictionaryEncodedStringValueIndex delegate,
-        IdMapping idMapping
+        IdMapping idMapping,
+        Supplier<ImmutableBitmap> nullValueBitmapSupplier
     )
     {
       super(delegate, idMapping);
+      this.nullValueBitmapSupplier = nullValueBitmapSupplier;
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
@@ -549,26 +593,28 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         boolean endStrict
     )
     {
-      return forRange(startValue, startStrict, endValue, endStrict, Predicates.alwaysTrue());
+      return forRange(startValue, startStrict, endValue, endStrict, DruidObjectPredicate.alwaysTrue());
     }
 
     @Override
+    @Nullable
     public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict,
-        Predicate<String> matcher
+        DruidObjectPredicate<String> matcher
     )
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           int startIndex, endIndex;
+          final int firstValue = NullHandling.isNullOrEquivalent(delegate.getValue(idMapping.getReverseId(0))) ? 1 : 0;
           if (startValue == null) {
-            startIndex = 0;
+            startIndex = firstValue;
           } else {
             final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(startValue));
             if (found >= 0) {
@@ -591,7 +637,14 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
           endIndex = Math.max(startIndex, endIndex);
           final int start = startIndex, end = endIndex;
-          return getBitmapsInRange(matcher, start, end);
+          return getBitmapsInRange(matcher, start, end, false);
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          return nullValueBitmapSupplier.get();
         }
       };
     }
@@ -619,6 +672,12 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     public String getValue(int index)
     {
       return delegate.getValue(idMapping.getReverseId(index));
+    }
+
+    @Override
+    public BitmapFactory getBitmapFactory()
+    {
+      return delegate.getBitmapFactory();
     }
 
     @Override

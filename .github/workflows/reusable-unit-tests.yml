@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-name: Revised Unit Tests shared workflow
+name: "Unit Tests shared workflow"
 on:
   workflow_call:
     inputs:
@@ -34,6 +34,10 @@ on:
         required: true
         type: string
         description: 'Name of group of tests running (to display)'
+    outputs:
+      coverage_failure:
+        description: 'Indicates if test failed by coverage issues'
+        value: ${{ jobs.unit-tests.outputs.coverage_failure }}
 
 env:
   MVN: mvn -B
@@ -47,15 +51,23 @@ jobs:
   unit-tests:
     name: ${{ inputs.module }} modules test
     runs-on: ubuntu-latest
+    outputs:
+      coverage_failure: ${{ steps.set_outputs.outputs.coverage_failure }}
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: setup jdk${{ inputs.jdk }}
-        run: export JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64
+      # skip the "cache: maven" step from setup-java. We explicitly use a
+      # different cache key since we cannot reuse it across commits.
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ inputs.jdk }}
 
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
         uses: actions/cache/restore@v3
@@ -80,6 +92,11 @@ jobs:
             echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=true" >> $GITHUB_ENV
           fi
 
+      - name: test profiling
+        run: | 
+          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} ${{ github.run_id }} \
+          ${{ github.run_number }} ${{ github.run_attempt }} ${{ inputs.module }} >> $GITHUB_ENV
+
       - name: fetch base branch for test coverage
         if: ${{ github.base_ref != '' }}
         run: |
@@ -92,10 +109,15 @@ jobs:
 
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true'
-        run: |
-          ./it.sh ci
+        run: ./it.sh ci
 
       - name: test & coverage
+        id: test_and_coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
         run: ./.github/scripts/unit_tests_script.sh
+
+      - name: set outputs on failure
+        id: set_outputs
+        if: ${{ failure() }}
+        run: echo "coverage_failure=${{ env.coverage_failure }}" >> "$GITHUB_OUTPUT"

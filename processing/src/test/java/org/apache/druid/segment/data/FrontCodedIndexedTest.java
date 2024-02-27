@@ -444,6 +444,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       }
       index++;
     }
+    Assert.assertEquals(index, writer.getCardinality());
 
     // check 'get' again so that we aren't always reading from current page
     index = 0;

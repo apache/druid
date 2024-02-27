@@ -1,7 +1,7 @@
 ---
 id: tutorial-msq-extern
-title: "Tutorial: Load files with SQL-based ingestion"
-sidebar_label: "Load files using SQL 🆕"
+title: Load files with SQL-based ingestion
+sidebar_label: Load files using SQL
 description: How to generate a query that references externally hosted data
 ---
 
@@ -24,9 +24,11 @@ description: How to generate a query that references externally hosted data
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 This tutorial demonstrates how to generate a query that references externally hosted data using the **Connect external data** wizard.
 

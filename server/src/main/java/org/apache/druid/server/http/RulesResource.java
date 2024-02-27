@@ -30,13 +30,12 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -53,6 +52,8 @@ import java.util.List;
 public class RulesResource
 {
   public static final String RULES_ENDPOINT = "/druid/coordinator/v1/rules";
+
+  private static final String AUDIT_HISTORY_TYPE = "rules";
 
   private final MetadataRuleManager databaseRuleManager;
   private final AuditManager auditManager;
@@ -100,19 +101,22 @@ public class RulesResource
   public Response setDatasourceRules(
       @PathParam("dataSourceName") final String dataSourceName,
       final List<Rule> rules,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
-    if (databaseRuleManager.overrideRule(
-        dataSourceName,
-        rules,
-        new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
-      return Response.ok().build();
+    try {
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+      if (databaseRuleManager.overrideRule(dataSourceName, rules, auditInfo)) {
+        return Response.ok().build();
+      } else {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+      }
     }
-    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
+    }
   }
 
   @GET
@@ -162,16 +166,16 @@ public class RulesResource
   {
     if (interval == null && count != null) {
       if (dataSourceName != null) {
-        return auditManager.fetchAuditHistory(dataSourceName, "rules", count);
+        return auditManager.fetchAuditHistory(dataSourceName, AUDIT_HISTORY_TYPE, count);
       }
-      return auditManager.fetchAuditHistory("rules", count);
+      return auditManager.fetchAuditHistory(AUDIT_HISTORY_TYPE, count);
     }
 
     Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (dataSourceName != null) {
-      return auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval);
+      return auditManager.fetchAuditHistory(dataSourceName, AUDIT_HISTORY_TYPE, theInterval);
     }
-    return auditManager.fetchAuditHistory("rules", theInterval);
+    return auditManager.fetchAuditHistory(AUDIT_HISTORY_TYPE, theInterval);
   }
 
 }

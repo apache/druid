@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -106,8 +107,10 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
   )
   {
     this.runner = runner;
-    this.decoratedRunner = TOOL_CHEST.postMergeQueryDecoration(
-        TOOL_CHEST.mergeResults(TOOL_CHEST.preMergeQueryDecoration(runner)));
+    this.decoratedRunner = FluentQueryRunner.create(runner, TOOL_CHEST)
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   @Test

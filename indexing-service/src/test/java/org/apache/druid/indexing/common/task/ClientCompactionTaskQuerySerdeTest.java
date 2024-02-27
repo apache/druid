@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
@@ -54,7 +55,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -74,9 +74,9 @@ import java.util.HashMap;
 
 public class ClientCompactionTaskQuerySerdeTest
 {
-  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY = new TestUtils()
-      .getRowIngestionMetersFactory();
-  private static final CoordinatorClient COORDINATOR_CLIENT = new CoordinatorClient(null, null);
+  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY =
+      new TestUtils().getRowIngestionMetersFactory();
+  private static final CoordinatorClient COORDINATOR_CLIENT = new NoopCoordinatorClient();
   private static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
 
   @Test
@@ -101,18 +101,16 @@ public class ClientCompactionTaskQuerySerdeTest
             null,
             new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
             new DynamicPartitionsSpec(100, 30000L),
-            new IndexSpec(
-                new DefaultBitmapSerdeFactory(),
-                CompressionStrategy.LZ4,
-                CompressionStrategy.LZF,
-                LongEncodingStrategy.LONGS
-            ),
-            new IndexSpec(
-                new DefaultBitmapSerdeFactory(),
-                CompressionStrategy.LZ4,
-                CompressionStrategy.UNCOMPRESSED,
-                LongEncodingStrategy.AUTO
-            ),
+            IndexSpec.builder()
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build(),
+            IndexSpec.builder()
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                     .withLongEncoding(LongEncodingStrategy.AUTO)
+                     .build(),
             2,
             1000L,
             TmpFileSegmentWriteOutMediumFactory.instance(),
@@ -260,18 +258,16 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
                 new DynamicPartitionsSpec(100, 30000L),
-                new IndexSpec(
-                    new DefaultBitmapSerdeFactory(),
-                    CompressionStrategy.LZ4,
-                    CompressionStrategy.LZF,
-                    LongEncodingStrategy.LONGS
-                ),
-                new IndexSpec(
-                    new DefaultBitmapSerdeFactory(),
-                    CompressionStrategy.LZ4,
-                    CompressionStrategy.UNCOMPRESSED,
-                    LongEncodingStrategy.AUTO
-                ),
+                IndexSpec.builder()
+                         .withDimensionCompression(CompressionStrategy.LZ4)
+                         .withMetricCompression(CompressionStrategy.LZF)
+                         .withLongEncoding(LongEncodingStrategy.LONGS)
+                         .build(),
+                IndexSpec.builder()
+                         .withDimensionCompression(CompressionStrategy.LZ4)
+                         .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                         .withLongEncoding(LongEncodingStrategy.AUTO)
+                         .build(),
                 2,
                 null,
                 null,
@@ -289,6 +285,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 null,
                 2,
+                null,
                 null,
                 null
             )
@@ -322,18 +319,16 @@ public class ClientCompactionTaskQuerySerdeTest
             30000L,
             new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
             new DynamicPartitionsSpec(100, 30000L),
-            new IndexSpec(
-                new DefaultBitmapSerdeFactory(),
-                CompressionStrategy.LZ4,
-                CompressionStrategy.LZF,
-                LongEncodingStrategy.LONGS
-            ),
-            new IndexSpec(
-                new DefaultBitmapSerdeFactory(),
-                CompressionStrategy.LZ4,
-                CompressionStrategy.UNCOMPRESSED,
-                LongEncodingStrategy.AUTO
-            ),
+            IndexSpec.builder()
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build(),
+            IndexSpec.builder()
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                     .withLongEncoding(LongEncodingStrategy.AUTO)
+                     .build(),
             2,
             1000L,
             TmpFileSegmentWriteOutMediumFactory.instance(),

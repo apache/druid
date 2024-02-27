@@ -1,7 +1,7 @@
 ---
 id: tutorial-msq-convert-spec
-title: "Tutorial: Convert an ingestion spec for SQL-based ingestion"
-sidebar_label: "Convert ingestion spec to SQL"
+title: Convert an ingestion spec for SQL-based ingestion
+sidebar_label: Convert ingestion spec to SQL
 description: How to convert an ingestion spec to a query for SQL-based ingestion in the web console.
 ---
 
@@ -24,9 +24,11 @@ description: How to convert an ingestion spec to a query for SQL-based ingestion
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 If you're already ingesting data with [native batch ingestion](../ingestion/native-batch.md), you can use the [web console](../operations/web-console.md) to convert the ingestion spec to a SQL query that the multi-stage query task engine can use to ingest data.
 

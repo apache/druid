@@ -16,15 +16,18 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
-import type { DateRange } from '@blueprintjs/datetime';
-import { DateRangePicker } from '@blueprintjs/datetime';
+import { Button, InputGroup, Position } from '@blueprintjs/core';
+import type { DateRange } from '@blueprintjs/datetime2';
+import { DateRangeInput2 } from '@blueprintjs/datetime2';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { dateToIsoDateString, localToUtcDate, utcToLocalDate } from '../../utils';
 
 import './date-range-selector.scss';
+
+const BASIC_DATE_PARSER = (str: string) => new Date(str);
 
 interface DateRangeSelectorProps {
   startDate: Date;
@@ -39,10 +42,12 @@ export const DateRangeSelector = React.memo(function DateRangeSelector(
   const [intermediateDateRange, setIntermediateDateRange] = useState<DateRange | undefined>();
 
   return (
-    <Popover
+    <Popover2
       className="date-range-selector"
       content={
-        <DateRangePicker
+        <DateRangeInput2
+          formatDate={dateToIsoDateString}
+          parseDate={BASIC_DATE_PARSER}
           value={intermediateDateRange || [utcToLocalDate(startDate), utcToLocalDate(endDate)]}
           contiguousCalendarMonths={false}
           reverseMonthAndYearMenus
@@ -64,6 +69,6 @@ export const DateRangeSelector = React.memo(function DateRangeSelector(
         readOnly
         rightElement={<Button rightIcon={IconNames.CALENDAR} minimal />}
       />
-    </Popover>
+    </Popover2>
   );
 });

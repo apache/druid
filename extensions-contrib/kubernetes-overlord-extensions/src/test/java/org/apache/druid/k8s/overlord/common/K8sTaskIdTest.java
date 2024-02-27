@@ -30,15 +30,15 @@ public class K8sTaskIdTest
   public void testModifyingTaskIDToBeK8sCompliant()
   {
     String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
-    String result = new K8sTaskId(original).getK8sTaskId();
-    assertEquals("coordinatorissuedcompactk8smetricsaeifmefd20220818t153326094z", result);
+    String result = new K8sTaskId(original).getK8sJobName();
+    assertEquals("coordinatorissuedcompactk8smet-2e2c1862cb7ad1d01f4794b27a4438b0", result);
   }
 
   @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(K8sTaskId.class)
-                  .withNonnullFields("k8sTaskId", "originalTaskId")
+                  .withNonnullFields("k8sJobName", "originalTaskId")
                   .usingGetClass()
                   .verify();
   }

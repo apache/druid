@@ -275,11 +275,7 @@ public class ServerManager implements QuerySegmentWalker
   )
   {
 
-    // Short-circuit when the index comes from a tombstone (it has no data by definition),
-    // check for null also since no all segments (higher level ones) will have QueryableIndex...
-    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
-      return new NoopQueryRunner<>();
-    }
+
 
     final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     final SegmentId segmentId = segment.getId();
@@ -289,6 +285,13 @@ public class ServerManager implements QuerySegmentWalker
     // If the segment is closed after this line, ReferenceCountingSegmentQueryRunner will handle and do the right thing.
     if (segmentId == null || segmentInterval == null) {
       return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
+    }
+
+    StorageAdapter storageAdapter = segment.asStorageAdapter();
+    // Short-circuit when the index comes from a tombstone (it has no data by definition),
+    // check for null also since no all segments (higher level ones) will have QueryableIndex...
+    if (storageAdapter.isFromTombstone()) {
+      return new NoopQueryRunner<>();
     }
     String segmentIdString = segmentId.toString();
 
@@ -300,7 +303,6 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    StorageAdapter storageAdapter = segment.asStorageAdapter();
     long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
     long segmentMinTime = storageAdapter.getMinTime().getMillis();
     Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);

@@ -22,6 +22,7 @@ package org.apache.druid.indexer;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Various helper methods useful for checking the validity of arguments to spec constructors.
@@ -36,12 +37,18 @@ public final class Checks
         if (nonNullProperty == null) {
           nonNullProperty = property;
         } else {
-          throw new IAE("At most one of %s must be present", properties);
+          throw new IAE(
+              "At most one of properties[%s] must be present",
+              properties.stream().map(Property::getName).collect(Collectors.toList())
+          );
         }
       }
     }
     if (nonNullProperty == null) {
-      throw new IAE("At least one of %s must be present", properties);
+      throw new IAE(
+          "At least one of properties[%s] must be present",
+          properties.stream().map(Property::getName).collect(Collectors.toList())
+      );
     }
     return nonNullProperty;
   }

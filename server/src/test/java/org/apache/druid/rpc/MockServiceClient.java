@@ -71,13 +71,13 @@ public class MockServiceClient implements ServiceClient
     return this;
   }
 
-  public MockServiceClient expect(final RequestBuilder request, final HttpResponse response)
+  public MockServiceClient expectAndRespond(final RequestBuilder request, final HttpResponse response)
   {
     expectations.add(new Expectation(request, Either.value(response)));
     return this;
   }
 
-  public MockServiceClient expect(
+  public MockServiceClient expectAndRespond(
       final RequestBuilder request,
       final HttpResponseStatus status,
       final Map<String, String> headers,
@@ -91,10 +91,10 @@ public class MockServiceClient implements ServiceClient
     if (content != null) {
       response.setContent(ChannelBuffers.wrappedBuffer(content));
     }
-    return expect(request, response);
+    return expectAndRespond(request, response);
   }
 
-  public MockServiceClient expect(final RequestBuilder request, final Throwable e)
+  public MockServiceClient expectAndThrow(final RequestBuilder request, final Throwable e)
   {
     expectations.add(new Expectation(request, Either.error(e)));
     return this;

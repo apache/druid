@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.datasketches.Family;
+import org.apache.datasketches.common.Family;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.jackson.DefaultObjectMapper;

@@ -183,6 +183,25 @@ public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandli
     );
   }
 
+  protected JoinableClause factToRegionIncludeNull(final JoinType joinType)
+  {
+    return new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        joinType,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "notdistinctfrom(\"%sregionIsoCode\", regionIsoCode) && "
+                + "notdistinctfrom(\"%scountryIsoCode\", countryIsoCode)",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+  }
+
   protected JoinableClause regionToCountry(final JoinType joinType)
   {
     return new JoinableClause(

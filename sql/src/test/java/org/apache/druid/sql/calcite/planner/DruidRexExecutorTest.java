@@ -69,7 +69,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
   private static final SqlOperator OPERATOR = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase("hyper_unique"))
       .operandTypes(SqlTypeFamily.ANY)
-      .requiredOperands(0)
+      .requiredOperandCount(0)
       .returnTypeInference(
           opBinding -> RowSignatures.makeComplexType(
               opBinding.getTypeFactory(),

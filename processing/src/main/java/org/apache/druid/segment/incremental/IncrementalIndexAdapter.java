@@ -22,12 +22,16 @@ package org.apache.druid.segment.incremental;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
@@ -99,11 +103,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
   }
 
-  public IncrementalIndex getIncrementalIndex()
-  {
-    return index;
-  }
-
   @Override
   public Interval getDataInterval()
   {
@@ -140,6 +139,41 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
 
     return indexer.getSortedIndexedValues();
+  }
+
+  @Nullable
+  @Override
+  public NestedColumnMergable getNestedColumnMergeables(String column)
+  {
+    final DimensionAccessor accessor = accessors.get(column);
+    if (accessor == null) {
+      return null;
+    }
+
+    final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
+    if (indexer instanceof NestedDataColumnIndexerV4) {
+      NestedDataColumnIndexerV4 nestedDataColumnIndexer = (NestedDataColumnIndexerV4) indexer;
+
+      return new NestedColumnMergable(
+          nestedDataColumnIndexer.getSortedValueLookups(),
+          nestedDataColumnIndexer.getFieldTypeInfo(),
+          true,
+          false,
+          null
+      );
+    }
+
+    if (indexer instanceof AutoTypeColumnIndexer) {
+      AutoTypeColumnIndexer autoIndexer = (AutoTypeColumnIndexer) indexer;
+      return new NestedColumnMergable(
+          autoIndexer.getSortedValueLookups(),
+          autoIndexer.getFieldTypeInfo(),
+          autoIndexer.getLogicalType().equals(ColumnType.NESTED_DATA),
+          autoIndexer.isConstant(),
+          autoIndexer.getConstantValue()
+      );
+    }
+    return null;
   }
 
   @Override
@@ -179,7 +213,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return index.getColumnHandlerCapabilities(column);
+    return index.getColumnCapabilities(column);
+  }
+
+  @Override
+  public ColumnFormat getFormat(String column)
+  {
+    return index.getColumnFormat(column);
   }
 
   @Override

@@ -102,7 +102,8 @@ public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
     // Run 1: all segments are assigned and loaded
     runCoordinatorCycle();
     loadQueuedSegments();
-    verifyValue(Metric.ASSIGNED_COUNT, 13000L);
+    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.KOALA), 10000L);
+    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.WIKI), 3000L);
 
     for (DruidServer historical : historicals) {
       Assert.assertEquals(1300, historical.getTotalSegments());

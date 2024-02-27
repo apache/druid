@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -73,6 +74,11 @@ public interface CoordinatorSimulation
      * Sets the CoordinatorDynamicConfig.
      */
     void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig);
+
+    /**
+     * Sets the retention rules for the given datasource.
+     */
+    void setRetentionRules(String datasource, Rule... rules);
 
     /**
      * Gets the inventory view of the specified server as maintained by the

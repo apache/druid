@@ -20,10 +20,10 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,22 +66,10 @@ public class ComparableListTest
     Assert.assertEquals(1, comparableList.compareTo(new ComparableList(ImmutableList.of(1, 2))));
     Assert.assertEquals(-1, comparableList.compareTo(new ComparableList(ImmutableList.of(1, 2, 3, 4))));
     Assert.assertTrue(comparableList.compareTo(new ComparableList(ImmutableList.of(2))) < 0);
-    ComparableList nullList = new ComparableList(new ArrayList<Integer>()
-    {
-      {
-        add(null);
-        add(1);
-      }
-    });
+    ComparableList nullList = new ComparableList(Lists.newArrayList(null, 1));
 
     Assert.assertTrue(comparableList.compareTo(nullList) > 0);
     Assert.assertTrue(nullList.compareTo(comparableList) < 0);
-    Assert.assertTrue(nullList.compareTo(new ComparableList(new ArrayList<Integer>()
-    {
-      {
-        add(null);
-        add(1);
-      }
-    })) == 0);
+    Assert.assertTrue(nullList.compareTo(new ComparableList(Lists.newArrayList(null, 1))) == 0);
   }
 }

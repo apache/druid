@@ -55,7 +55,7 @@ public class ConcatSequence<T> implements Sequence<T>
           @Override
           public Sequence<T> accumulate(Sequence<T> accumulated, Sequence<T> in)
           {
-            yield();
+            this.yield();
             return in;
           }
         }

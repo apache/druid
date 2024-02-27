@@ -31,6 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Firehose;
@@ -54,7 +55,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
@@ -80,6 +81,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -118,6 +120,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -324,7 +327,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     // handoff would timeout, resulting in exception
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg()
-                            .contains("java.util.concurrent.TimeoutException: Timeout waiting for task."));
+                            .contains("java.util.concurrent.TimeoutException: Waited 100 milliseconds"));
   }
 
   @Test(timeout = 60_000L)
@@ -1280,6 +1283,20 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
+  @Test(timeout = 60_000L)
+  public void testInputSourceResourcesThrowException()
+  {
+    // Expect 2 segments as we will hit maxTotalRows
+    expectPublishedSegments(2);
+
+    final AppenderatorDriverRealtimeIndexTask task =
+        makeRealtimeTask(null, Integer.MAX_VALUE, 1500L);
+    Assert.assertThrows(
+        UOE.class,
+        task::getInputSourceResources
+    );
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {
@@ -1435,7 +1452,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null
     );
     return new AppenderatorDriverRealtimeIndexTask(
         taskId,
@@ -1491,9 +1509,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     )
     {
       @Override
-      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException
       {
-        Set<DataSegment> result = super.announceHistoricalSegments(segments);
+        Set<DataSegment> result = super.commitSegments(segments);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1507,18 +1525,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       }
 
       @Override
-      public SegmentPublishResult announceHistoricalSegments(
+      public SegmentPublishResult commitSegmentsAndMetadata(
           Set<DataSegment> segments,
-          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
+        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata);
 
-        Assert.assertFalse(
+        Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
-            segmentLatch == null
+            segmentLatch
         );
 
         publishedSegments.addAll(result.getSegments());
@@ -1529,23 +1546,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     };
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
-    final TaskConfig taskConfig = new TaskConfig(
-        directory.getPath(),
-        null,
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(directory.getPath())
+        .setDefaultRowFlushBoundary(50000)
+        .setRestoreTasksOnRestart(true)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
@@ -1602,6 +1608,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     };
     final TestUtils testUtils = new TestUtils();
     taskToolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         taskActionClientFactory,
@@ -1635,12 +1642,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
-        null,
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
         "1",
-        new TaskStorageDirTracker(taskConfig)
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

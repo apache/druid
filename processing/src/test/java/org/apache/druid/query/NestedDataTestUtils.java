@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,12 +40,15 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -74,6 +76,14 @@ public class NestedDataTestUtils
   public static final String TYPES_DATA_FILE = "nested-types-test-data.json";
   public static final String ARRAY_TYPES_DATA_FILE = "nested-array-test-data.json";
 
+  public static final String ARRAY_TYPES_DATA_FILE_2 = "nested-array-test-data-2.json";
+  public static final String ALL_TYPES_TEST_DATA_FILE = "nested-all-types-test-data.json";
+
+  public static final String INCREMENTAL_SEGMENTS_NAME = "incremental";
+  public static final String DEFAULT_SEGMENTS_NAME = "segments";
+  public static final String FRONT_CODED_SEGMENTS_NAME = "segments-frontcoded";
+  public static final String MIX_SEGMENTS_NAME = "mixed";
+
   public static final ObjectMapper JSON_MAPPER;
 
   public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("timestamp", null, null);
@@ -95,23 +105,32 @@ public class NestedDataTestUtils
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
-                            new StringDimensionSchema("dim"),
-                            new NestedDataDimensionSchema("nest_json"),
-                            new NestedDataDimensionSchema("nester_json"),
-                            new NestedDataDimensionSchema("variant_json"),
-                            new NestedDataDimensionSchema("list_json")
+                            new AutoTypeColumnSchema("dim", null),
+                            new AutoTypeColumnSchema("nest_json", null),
+                            new AutoTypeColumnSchema("nester_json", null),
+                            new AutoTypeColumnSchema("variant_json", null),
+                            new AutoTypeColumnSchema("list_json", null),
+                            new AutoTypeColumnSchema("nonexistent", null)
+                        )
+                    )
+                    .build();
+
+  public static final DimensionsSpec TSV_V4_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new NestedDataColumnSchema("dim", 4),
+                            new NestedDataColumnSchema("nest_json", 4),
+                            new NestedDataColumnSchema("nester_json", 4),
+                            new NestedDataColumnSchema("variant_json", 4),
+                            new NestedDataColumnSchema("list_json", 4),
+                            new NestedDataColumnSchema("nonexistent", 4)
                         )
                     )
                     .build();
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
       TIMESTAMP_SPEC,
       AUTO_DISCOVERY,
-      null
-  );
-
-  public static final InputRowSchema SIMPLE_DATA_TSV_SCHEMA = new InputRowSchema(
-      TIMESTAMP_SPEC,
-      TSV_SCHEMA,
       null
   );
 
@@ -160,6 +179,22 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         Granularities.NONE,
+        TSV_SCHEMA,
+        true
+    );
+  }
+
+  public static List<Segment> createSimpleSegmentsTsvV4(
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
+      throws Exception
+  {
+    return createSimpleNestedTestDataTsvSegments(
+        tempFolder,
+        closer,
+        Granularities.NONE,
+        TSV_V4_SCHEMA,
         true
     );
   }
@@ -168,6 +203,7 @@ public class NestedDataTestUtils
       TemporaryFolder tempFolder,
       Closer closer,
       Granularity granularity,
+      DimensionsSpec dimensionsSpec,
       boolean rollup
   ) throws Exception
   {
@@ -177,11 +213,12 @@ public class NestedDataTestUtils
         SIMPLE_DATA_TSV_FILE,
         SIMPLE_DATA_TSV_INPUT_FORMAT,
         TIMESTAMP_SPEC,
-        SIMPLE_DATA_TSV_SCHEMA.getDimensionsSpec(),
+        dimensionsSpec,
         SIMPLE_DATA_TSV_TRANSFORM,
         COUNT,
         granularity,
-        rollup
+        rollup,
+        IndexSpec.DEFAULT
     );
   }
 
@@ -206,7 +243,8 @@ public class NestedDataTestUtils
         closer,
         SIMPLE_DATA_FILE,
         Granularities.NONE,
-        true
+        true,
+        IndexSpec.DEFAULT
     );
   }
 
@@ -247,7 +285,8 @@ public class NestedDataTestUtils
       Closer closer,
       String inputFile,
       Granularity granularity,
-      boolean rollup
+      boolean rollup,
+      IndexSpec indexSpec
   ) throws Exception
   {
     return createSegments(
@@ -260,7 +299,8 @@ public class NestedDataTestUtils
         TransformSpec.NONE,
         COUNT,
         granularity,
-        rollup
+        rollup,
+        indexSpec
     );
   }
 
@@ -289,14 +329,16 @@ public class NestedDataTestUtils
         TransformSpec.NONE,
         COUNT,
         granularity,
-        rollup
+        rollup,
+        IndexSpec.DEFAULT
     );
   }
 
   public static List<Segment> createSegmentsForJsonInput(
       TemporaryFolder tempFolder,
       Closer closer,
-      String inputFile
+      String inputFile,
+      IndexSpec indexSpec
   )
       throws Exception
   {
@@ -305,7 +347,8 @@ public class NestedDataTestUtils
         closer,
         inputFile,
         Granularities.NONE,
-        true
+        true,
+        indexSpec
     );
   }
 
@@ -356,7 +399,8 @@ public class NestedDataTestUtils
       TransformSpec transformSpec,
       AggregatorFactory[] aggregators,
       Granularity queryGranularity,
-      boolean rollup
+      boolean rollup,
+      IndexSpec indexSpec
   ) throws Exception
   {
     return createSegments(
@@ -369,7 +413,8 @@ public class NestedDataTestUtils
         transformSpec,
         aggregators,
         queryGranularity,
-        rollup
+        rollup,
+        indexSpec
     );
   }
 
@@ -383,7 +428,8 @@ public class NestedDataTestUtils
       TransformSpec transformSpec,
       AggregatorFactory[] aggregators,
       Granularity queryGranularity,
-      boolean rollup
+      boolean rollup,
+      IndexSpec indexSpec
   ) throws Exception
   {
     final List<Segment> segments = Lists.newArrayListWithCapacity(inputs.size());
@@ -401,6 +447,7 @@ public class NestedDataTestUtils
                                                                .withMinTimestamp(0)
                                                                .build()
                                      )
+                                     .indexSpec(indexSpec)
                                      .inputSource(inputSource)
                                      .inputFormat(inputFormat)
                                      .transform(transformSpec)
@@ -465,7 +512,8 @@ public class NestedDataTestUtils
                                   NestedDataTestUtils.createSegmentsForJsonInput(
                                       tempFolder,
                                       closer,
-                                      jsonInputFile
+                                      jsonInputFile,
+                                      IndexSpec.DEFAULT
                                   )
                               )
                               .add(NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile))
@@ -479,7 +527,7 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "mixed";
+        return MIX_SEGMENTS_NAME;
       }
     });
     segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
@@ -501,7 +549,7 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "incremental";
+        return INCREMENTAL_SEGMENTS_NAME;
       }
     });
     segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
@@ -515,14 +563,17 @@ public class NestedDataTestUtils
                                   NestedDataTestUtils.createSegmentsForJsonInput(
                                       tempFolder,
                                       closer,
-                                      jsonInputFile
+                                      jsonInputFile,
+                                      IndexSpec.DEFAULT
                                   )
                               )
-                              .addAll(NestedDataTestUtils.createSegmentsForJsonInput(
-                                  tempFolder,
-                                          closer,
-                                          jsonInputFile
-                                      )
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile,
+                                      IndexSpec.DEFAULT
+                                  )
                               )
                               .build();
         }
@@ -534,9 +585,58 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "segments";
+        return DEFAULT_SEGMENTS_NAME;
+      }
+    });
+    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
+    {
+      @Override
+      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
+      {
+        try {
+          return ImmutableList.<Segment>builder()
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile,
+                                      IndexSpec.builder()
+                                               .withStringDictionaryEncoding(
+                                                   new StringEncodingStrategy.FrontCoded(4, (byte) 0x01)
+                                               )
+                                               .build()
+                                  )
+                              )
+                              .addAll(
+                                  NestedDataTestUtils.createSegmentsForJsonInput(
+                                      tempFolder,
+                                      closer,
+                                      jsonInputFile,
+                                      IndexSpec.builder()
+                                               .withStringDictionaryEncoding(
+                                                   new StringEncodingStrategy.FrontCoded(4, (byte) 0x00)
+                                               )
+                                               .build()
+                                  )
+                              )
+                              .build();
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public String toString()
+      {
+        return FRONT_CODED_SEGMENTS_NAME;
       }
     });
     return segmentsGenerators;
+  }
+
+  public static boolean expectSegmentGeneratorCanVectorize(String name)
+  {
+    return DEFAULT_SEGMENTS_NAME.equals(name) || FRONT_CODED_SEGMENTS_NAME.equals(name);
   }
 }

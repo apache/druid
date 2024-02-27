@@ -40,10 +40,9 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -95,11 +94,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
 
       @Override
       public int getBufferGrouperInitialBuckets()
@@ -164,25 +158,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       );
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPools.getProcessingPool()),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            processingConfig,
-            configSupplier,
-            bufferPools.getProcessingPool(),
-            bufferPools.getMergePool(),
-            TestHelper.makeJsonMapper(),
-            mapper,
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        bufferPools.getProcessingPool(),
+        bufferPools.getMergePool(),
+        TestHelper.makeJsonMapper(),
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
-    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -197,10 +183,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
       for (boolean vectorize : ImmutableList.of(false)) {
         // Add vectorization tests for any indexes that support it.
-        if (!vectorize ||
-            config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-          constructors.add(new Object[]{config, factory, vectorize});
-        }
+        constructors.add(new Object[]{config, factory, vectorize});
       }
 
     }
@@ -723,6 +706,228 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     return GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
   }
 
+  @Test
+  public void testGroupByOnUnnestedFilterMatch()
+  {
+    // testGroupByOnUnnestedColumn but with filter to match single value
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+            null,
+            ExprMacroTable.nil()
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        )
+        .setDimFilter(
+            new EqualityFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, ColumnType.STRING, "a", null)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "a",
+            "rows", 2L
+        )
+    );
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
+  }
+
+  @Test
+  public void testGroupByOnUnnestedNotFilterMatch()
+  {
+    // testGroupByOnUnnestedColumn but with negated filter to match everything except 1 value
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+            null,
+            ExprMacroTable.nil()
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        )
+        .setDimFilter(
+            NotDimFilter.of(new EqualityFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, ColumnType.STRING, "a", null))
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "b",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "e",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "h",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "m",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "n",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "p",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "t",
+            "rows", 4L
+        )
+    );
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
+  }
+
+  @Test
+  public void testGroupByOnUnnestedNotFilterMatchNonexistentValue()
+  {
+    // testGroupByOnUnnestedColumn but with negated filter on nonexistent value to still match everything
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+            null,
+            ExprMacroTable.nil()
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        )
+        .setDimFilter(
+            NotDimFilter.of(new EqualityFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, ColumnType.STRING, "noexist", null))
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "a",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "b",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "e",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "h",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "m",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "n",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "p",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "t",
+            "rows", 4L
+        )
+    );
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
+  }
+
   private Map<String, Object> makeContext()
   {
     return ImmutableMap.<String, Object>builder()
@@ -734,7 +939,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private void cannotVectorize()
   {
-    if (vectorize && config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+    if (vectorize) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }

@@ -20,27 +20,30 @@ import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import { T } from 'druid-query-toolkit';
 import React, { useCallback, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
-import type { Execution } from '../../../druid-models';
-import { WorkbenchQuery } from '../../../druid-models';
+import type { TaskStatusWithCanceled } from '../../../druid-models';
+import { Execution, TASK_CANCELED_PREDICATE, WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
-import { downloadQueryDetailArchive, formatDuration, queryDruidSql } from '../../../utils';
+import {
+  downloadQueryDetailArchive,
+  formatDuration,
+  prettyFormatIsoDate,
+  queryDruidSql,
+} from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
 import { workStateStore } from '../work-state-store';
 
 import './recent-query-task-panel.scss';
 
-type TaskStatus = 'RUNNING' | 'WAITING' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELED';
-
-function statusToIconAndColor(status: TaskStatus): [IconName, string] {
+function statusToIconAndColor(status: TaskStatusWithCanceled): [IconName, string] {
   switch (status) {
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
@@ -59,7 +62,7 @@ function statusToIconAndColor(status: TaskStatus): [IconName, string] {
 }
 
 interface RecentQueryEntry {
-  taskStatus: TaskStatus;
+  taskStatus: TaskStatusWithCanceled;
   taskId: string;
   datasource: string;
   createdTime: string;
@@ -69,7 +72,7 @@ interface RecentQueryEntry {
 
 function formatDetail(entry: RecentQueryEntry): string | undefined {
   const lines: string[] = [];
-  if (entry.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER) {
+  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
     lines.push(`Datasource: ${entry.datasource}`);
   }
   if (entry.errorMessage) {
@@ -102,7 +105,7 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
     processQuery: async _ => {
       return await queryDruidSql<RecentQueryEntry>({
         query: `SELECT
-  CASE WHEN "error_msg" = 'Shutdown request from user' THEN 'CANCELED' ELSE "status" END AS "taskStatus",
+  CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' ELSE "status" END AS "taskStatus",
   "task_id" AS "taskId",
   "datasource",
   "created_time" AS "createdTime",
@@ -191,7 +194,7 @@ LIMIT 100`,
                   }}
                 />
                 {w.taskStatus === 'SUCCESS' &&
-                  w.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER && (
+                  w.datasource !== Execution.INLINE_DATASOURCE_MARKER && (
                     <MenuItem
                       icon={IconNames.APPLICATION}
                       text={`SELECT * FROM ${T(w.datasource)}`}
@@ -233,7 +236,7 @@ LIMIT 100`,
                       style={{ color }}
                     />
                     <div className="timing">
-                      {w.createdTime.replace('T', ' ').replace(/\.\d\d\dZ$/, '') +
+                      {prettyFormatIsoDate(w.createdTime) +
                         (duration > 0 ? ` (${formatDuration(duration)})` : '')}
                     </div>
                   </div>
@@ -241,18 +244,18 @@ LIMIT 100`,
                     <Icon
                       className="output-icon"
                       icon={
-                        w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER
+                        w.datasource === Execution.INLINE_DATASOURCE_MARKER
                           ? IconNames.APPLICATION
                           : IconNames.CLOUD_UPLOAD
                       }
                     />
                     <div
                       className={classNames('output-datasource', {
-                        query: w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER,
+                        query: w.datasource === Execution.INLINE_DATASOURCE_MARKER,
                       })}
                     >
-                      {w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER
-                        ? 'data in report'
+                      {w.datasource === Execution.INLINE_DATASOURCE_MARKER
+                        ? 'select query'
                         : w.datasource}
                     </div>
                   </div>

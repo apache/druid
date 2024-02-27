@@ -1,7 +1,7 @@
 ---
 id: tutorial-transform-spec
-title: "Tutorial: Transforming input data"
-sidebar_label: "Transforming input data"
+title: Transform input data
+sidebar_label: Transform input data
 ---
 
 <!--
@@ -29,7 +29,7 @@ This tutorial will demonstrate how to use transform specs to filter and transfor
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+It will also be helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
 
 ## Sample data
 

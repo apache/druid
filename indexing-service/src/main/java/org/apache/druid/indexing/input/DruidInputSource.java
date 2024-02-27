@@ -21,19 +21,23 @@ package org.apache.druid.indexing.input;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -42,11 +46,13 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexing.common.RetryPolicy;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -61,11 +67,12 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.utils.Streams;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -75,19 +82,21 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 /**
- * An {@link org.apache.druid.data.input.InputSource} that allows reading from Druid segments.
+ * An {@link InputSource} that allows reading from Druid segments.
  *
  * Used internally by {@link org.apache.druid.indexing.common.task.CompactionTask}, and can also be used directly.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
+public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>, TaskInputSource
 {
+
+  public static final String TYPE_KEY = "druid";
   private static final Logger LOG = new Logger(DruidInputSource.class);
 
   /**
@@ -132,7 +141,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
-  private final RetryPolicyFactory retryPolicyFactory;
   private final TaskConfig taskConfig;
 
   /**
@@ -144,6 +152,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    * Included for serde backwards-compatibility only. Not used.
    */
   private final List<String> metrics;
+
+  @Nullable
+  private final TaskToolbox toolbox;
 
   @JsonCreator
   public DruidInputSource(
@@ -158,8 +169,36 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       @JacksonInject IndexIO indexIO,
       @JacksonInject CoordinatorClient coordinatorClient,
       @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory,
       @JacksonInject TaskConfig taskConfig
+  )
+  {
+    this(
+        dataSource,
+        interval,
+        segmentIds,
+        dimFilter,
+        dimensions,
+        metrics,
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        taskConfig,
+        null
+    );
+  }
+
+  private DruidInputSource(
+      final String dataSource,
+      @Nullable Interval interval,
+      @Nullable List<WindowedSegmentId> segmentIds,
+      DimFilter dimFilter,
+      List<String> dimensions,
+      List<String> metrics,
+      IndexIO indexIO,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      TaskConfig taskConfig,
+      @Nullable TaskToolbox toolbox
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -175,8 +214,16 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
     this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
-    this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
     this.taskConfig = Preconditions.checkNotNull(taskConfig, "null taskConfig");
+    this.toolbox = toolbox;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return ImmutableSet.of(TYPE_KEY);
   }
 
   @JsonProperty
@@ -224,6 +271,24 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Override
+  public InputSource withTaskToolbox(TaskToolbox toolbox)
+  {
+    return new DruidInputSource(
+        this.dataSource,
+        this.interval,
+        this.segmentIds,
+        this.dimFilter,
+        this.dimensions,
+        this.metrics,
+        this.indexIO,
+        this.coordinatorClient,
+        this.segmentCacheManagerFactory,
+        this.taskConfig,
+        toolbox
+    );
+  }
+
+  @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(temporaryDirectory);
@@ -245,7 +310,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return new InputEntityIteratingReader(
         getInputRowSchemaToUse(inputRowSchema),
         inputFormat,
-        entityIterator,
+        CloseableIterators.withEmptyBaggage(entityIterator),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }
@@ -299,7 +365,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (interval == null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(coordinatorClient, retryPolicyFactory, dataSource, interval);
+      return getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
     }
   }
 
@@ -314,8 +380,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Streams.sequentialStreamFrom(
           createSplits(
+              toolbox,
               coordinatorClient,
-              retryPolicyFactory,
               dataSource,
               interval,
               splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
@@ -334,8 +400,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Iterators.size(
           createSplits(
+              toolbox,
               coordinatorClient,
-              retryPolicyFactory,
               dataSource,
               interval,
               splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
@@ -359,8 +425,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
-        taskConfig
+        taskConfig,
+        toolbox
     );
   }
 
@@ -408,8 +474,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   public static Iterator<InputSplit<List<WindowedSegmentId>>> createSplits(
+      TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
-      RetryPolicyFactory retryPolicyFactory,
       String dataSource,
       Interval interval,
       SplitHintSpec splitHintSpec
@@ -427,8 +493,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval(
+        toolbox,
         coordinatorClient,
-        retryPolicyFactory,
         dataSource,
         interval
     );
@@ -471,41 +537,31 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(
+      TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
-      RetryPolicyFactory retryPolicyFactory,
       String dataSource,
       Interval interval
   )
   {
     Preconditions.checkNotNull(interval);
 
-    // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
-    // as TaskActionClient.
-    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    Collection<DataSegment> usedSegments;
-    while (true) {
+    final Collection<DataSegment> usedSegments;
+    if (toolbox == null) {
+      usedSegments = FutureUtils.getUnchecked(
+          coordinatorClient.fetchUsedSegments(dataSource, Collections.singletonList(interval)),
+          true
+      );
+    } else {
       try {
-        usedSegments = coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
-            dataSource,
-            Collections.singletonList(interval)
-        );
-        break;
+        usedSegments = toolbox.getTaskActionClient()
+                              .submit(new RetrieveUsedSegmentsAction(
+                                  dataSource,
+                                  Collections.singletonList(interval)
+                              ));
       }
-      catch (Throwable e) {
-        LOG.warn(e, "Exception getting database segments");
-        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
-        if (delay == null) {
-          throw e;
-        } else {
-          final long sleepTime = jitter(delay.getMillis());
-          LOG.info("Will try again in [%s].", new Duration(sleepTime).toString());
-          try {
-            Thread.sleep(sleepTime);
-          }
-          catch (InterruptedException e2) {
-            throw new RuntimeException(e2);
-          }
-        }
+      catch (IOException e) {
+        LOG.error(e, "Error retrieving the used segments for interval[%s].", interval);
+        throw new RuntimeException(e);
       }
     }
 
@@ -522,9 +578,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         Comparators.intervalsByStartThenEnd()
     );
     for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds, "segmentIds")) {
-      final DataSegment segment = coordinatorClient.fetchUsedSegment(
-          dataSource,
-          windowedSegmentId.getSegmentId()
+      final DataSegment segment = FutureUtils.getUnchecked(
+          coordinatorClient.fetchSegment(dataSource, windowedSegmentId.getSegmentId(), false),
+          true
       );
       for (Interval interval : windowedSegmentId.getIntervals()) {
         final TimelineObjectHolder<String, DataSegment> existingHolder = timeline.get(interval);
@@ -563,12 +619,5 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     return new ArrayList<>(timeline.values());
-  }
-
-  private static long jitter(long input)
-  {
-    final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
-    long retval = input + (long) jitter;
-    return retval < 0 ? 0 : retval;
   }
 }

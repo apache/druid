@@ -50,16 +50,23 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Base class for writer of global dictionary encoded nested literal columns for {@link NestedDataColumnSerializer}.
- * {@link NestedDataColumnSerializer} while processing the 'raw' nested data will call {@link #addValue(int, Object)}
- * for all literal writers, which for this type of writer entails building a local dictionary to map into to the global
- * dictionary ({@link #localDictionary}) and writes this unsorted localId to an intermediate integer column,
- * {@link #intermediateValueWriter}.
+ * Base class for writer of global dictionary encoded nested field columns for {@link NestedDataColumnSerializer}.
+ * Nested columns are written in multiple passes. The first pass processes the 'raw' nested data with a
+ * {@link StructuredDataProcessor} which will call {@link #addValue(int, Object)} for writers of each field which is
+ * present. For this type of writer, this entails building a local dictionary ({@link #localDictionary}) to map into
+ * the global dictionary ({@link #globalDictionaryIdLookup}) and writes this unsorted localId to an intermediate
+ * integer column, {@link #intermediateValueWriter}.
  * <p>
  * When processing the 'raw' value column is complete, the {@link #writeTo(int, FileSmoosher)} method will sort the
  * local ids and write them out to a local sorted dictionary, iterate over {@link #intermediateValueWriter} swapping
  * the unsorted local ids with the sorted ids and writing to the compressed id column writer
- * {@link #encodedValueSerializer} building the bitmap indexes along the way.
+ * {@link #encodedValueSerializer}, building the bitmap indexes along the way.
+ *
+ * @see ScalarDoubleFieldColumnWriter   - single type double columns
+ * @see ScalarLongFieldColumnWriter     - single type long columns
+ * @see ScalarStringFieldColumnWriter   - single type string columns
+ * @see VariantArrayFieldColumnWriter   - single type array columns of double, long, or string
+ * @see VariantFieldColumnWriter        - mixed type columns of any combination
  */
 public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
 {
@@ -69,7 +76,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final String columnName;
   protected final String fieldName;
   protected final IndexSpec indexSpec;
-  protected final GlobalDictionaryIdLookup globalDictionaryIdLookup;
+  protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
@@ -87,7 +94,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     this.columnName = columnName;
@@ -98,7 +105,8 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   }
 
   /**
-   * Perform any value conversion needed before storing the value in the
+   * Perform any value conversion needed before looking up the global id in the value dictionary (such as null handling
+   * stuff or array processing to add the elements to the dictionary before adding the int[] to the dictionary)
    */
   T processValue(int row, Object value)
   {
@@ -152,6 +160,9 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     cursorPosition++;
   }
 
+  /**
+   * Backfill intermediate column with null values
+   */
   private void fillNull(int row) throws IOException
   {
     final T value = processValue(row, null);
@@ -281,7 +292,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         }
       }
     };
-    final String fieldFileName = NestedDataColumnSerializer.getInternalFileName(columnName, fieldName);
+    final String fieldFileName = NestedCommonFormatColumnSerializer.getInternalFileName(columnName, fieldName);
     final long size = fieldSerializer.getSerializedSize();
     log.debug("Column [%s] serializing [%s] field of size [%d].", columnName, fieldName, size);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(fieldFileName, size)) {

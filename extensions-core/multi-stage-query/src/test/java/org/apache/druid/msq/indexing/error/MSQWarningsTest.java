@@ -23,15 +23,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.ColumnMapping;
-import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -41,6 +41,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,7 +86,8 @@ public class MSQWarningsTest extends MSQTestBase
                                        null,
                                        ImmutableList.of(
                                            toRead.getAbsoluteFile()
-                                       )
+                                       ),
+                                       SystemFields.none()
                                    ),
                                    new JsonInputFormat(null, null, null, null, null),
                                    RowSignature.builder()
@@ -162,12 +165,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(
-                         ImmutableMap.<String, Object>builder()
-                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                     .putAll(userContext)
-                                     .build()
-                     )
+                     .setQueryContext(QueryContexts.override(DEFAULT_MSQ_CONTEXT, userContext))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
@@ -250,12 +248,38 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(
-                         ImmutableMap.<String, Object>builder()
-                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                     .putAll(userContext)
-                                     .build()
-                     )
+                     .setQueryContext(QueryContexts.override(DEFAULT_MSQ_CONTEXT, userContext))
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
+                     .setExpectedMSQSpec(
+                         MSQSpec.builder()
+                                .query(defaultQuery.withOverriddenContext(userContext))
+                                .columnMappings(defaultColumnMappings)
+                                .tuningConfig(MSQTuningConfig.defaultConfig())
+                                .build())
+                     .verifyResults();
+  }
+
+  @Test
+  public void testSuccessWhenParseExceptionsOnLimitOverridesMode()
+  {
+    final Map<String, Object> userContext =
+        ImmutableMap.of(
+            MultiStageQueryContext.CTX_MSQ_MODE, "strict",
+            MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10 // Takes precedence over "strict" mode
+        );
+
+    testSelectQuery().setSql("SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                             + "  count(*) as cnt\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [\"" + toRead.getAbsolutePath() + "\"],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                             + "  )\n"
+                             + ") group by 1")
+                     .setQueryContext(QueryContexts.override(DEFAULT_MSQ_CONTEXT, userContext))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
@@ -270,7 +294,9 @@ public class MSQWarningsTest extends MSQTestBase
   @Test
   public void testSuccessInNonStrictMode()
   {
-    final Map<String, Object> userContext = ImmutableMap.of(MultiStageQueryContext.CTX_MSQ_MODE, "nonStrict");
+    final Map<String, Object> userContext =
+        QueryContexts.override(DEFAULT_MSQ_CONTEXT, ImmutableMap.of(MultiStageQueryContext.CTX_MSQ_MODE, "nonStrict"));
+    userContext.remove(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED);
 
     testSelectQuery().setSql("SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
@@ -282,17 +308,20 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(
-                         ImmutableMap.<String, Object>builder()
-                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                     .putAll(userContext)
-                                     .build()
-                     )
+                     .setQueryContext(userContext)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
                          MSQSpec.builder()
-                                .query(defaultQuery.withOverriddenContext(userContext))
+                                .query(
+                                    defaultQuery.withOverriddenContext(userContext)
+                                                .withOverriddenContext(
+                                                    ImmutableMap.of(
+                                                        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+                                                        -1
+                                                    )
+                                                )
+                                )
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
@@ -339,9 +368,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1  PARTITIONED by day ")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(DEFAULT_MSQ_CONTEXT)
-                                                                                .putAll(ROLLUP_CONTEXT_PARAMS)
-                                                                                .build())
+                     .setQueryContext(QueryContexts.override(DEFAULT_MSQ_CONTEXT, ROLLUP_CONTEXT_PARAMS))
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
@@ -391,12 +418,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1")
-                     .setQueryContext(
-                         ImmutableMap.<String, Object>builder()
-                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                     .putAll(userContext)
-                                     .build()
-                     )
+                     .setQueryContext(QueryContexts.override(DEFAULT_MSQ_CONTEXT, userContext))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(

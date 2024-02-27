@@ -27,8 +27,10 @@ describe('DatasourcesView', () => {
   it('matches snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView
+        filters={[]}
+        onFiltersChange={() => {}}
         goToQuery={() => {}}
-        goToTask={() => null}
+        goToTasks={() => null}
         goToSegments={() => {}}
         capabilities={Capabilities.FULL}
       />,

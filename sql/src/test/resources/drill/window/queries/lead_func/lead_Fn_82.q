@@ -1,0 +1,1 @@
+select col1 , lead(col1) over(partition by col7 order by col1) lead_col1 from "allTypsUniq.parquet" where col1 in (9223372036854775807,-1,0,1,4611686018427387903,13,27,197,17,10000000)

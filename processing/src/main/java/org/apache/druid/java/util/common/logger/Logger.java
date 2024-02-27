@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -32,6 +33,37 @@ import java.util.Iterator;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
+/**
+ * A Logger for usage inside of Druid.  Provides a layer that allows for simple changes to the logging framework
+ * with minimal changes to the Druid code.
+ *
+ * Log levels are used as an indication of urgency around the behavior that is being logged.  The intended generic
+ * rubric for when to use the different logging levels is as follows.
+ *
+ * DEBUG: something that a developer wants to look at while actively debugging, but should not be included by default.
+ *
+ * INFO: a message that is useful to have when trying to retro-actively understand what happened in a running system.
+ * There is often a fine line between INFO and DEBUG.  We want information from INFO logs but do not want to spam log
+ * files either. One rubric to use to help determine if something should be INFO or DEBUG is how often we expect the
+ * line to be logged.  If there is clarity that it will happen in a controlled manner such that it does not spam the
+ * logs, then INFO is fine.  Additionally, it can be okay to log at INFO level even if there is a risk of spamming the
+ * log file in the case that the log line only happens in specific "error-oriented" situations, this is because such
+ * error-oriented situations are more likely to necessitate reading and understanding the logs to eliminate the error.
+ * Additionally, it is perfectly acceptable and reasonable to log an exception at INFO level.
+ *
+ * WARN: a message that indicates something bad has happened in the system that a human should potentially investigate.
+ * While it is bad and deserves investigation, it is of a nature that it should be able to wait until the next
+ * "business day" for investigation instead of needing immediate attention.
+ *
+ * ERROR: a message that indicates that something bad has happened such that a human operator should take immediate
+ * intervention to triage and resolve the issue as it runs a risk to the smooth operations of the system.  Logs at
+ * the ERROR level should generally be severe enough to warrant paging someone in the middle of the night.
+ *
+ * Even though this is the intended rubric, it is very difficult to ensure that, e.g. all ERROR log lines are pageable
+ * offenses.  As such, it is questionable whether an operator should actually ALWAYS page on every ERROR log line,
+ * but as a directional target of when and how to log things, the above rubric should be used to evaluate if a log
+ * line is at the correct level.
+ */
 public class Logger
 {
   @VisibleForTesting
@@ -86,6 +118,13 @@ public class Logger
     }
   }
 
+  public void trace(Marker marker, String message, Object... formatArgs)
+  {
+    if (log.isTraceEnabled()) {
+      log.trace(marker, StringUtils.nonStrictFormat(message, formatArgs));
+    }
+  }
+
   public void debug(String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
@@ -93,6 +132,12 @@ public class Logger
     }
   }
 
+  public void debug(Marker marker, String message, Object... formatArgs)
+  {
+    if (log.isDebugEnabled()) {
+      log.debug(marker, StringUtils.nonStrictFormat(message, formatArgs));
+    }
+  }
   public void debug(Throwable t, String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
@@ -104,6 +149,13 @@ public class Logger
   {
     if (log.isInfoEnabled()) {
       log.info(StringUtils.nonStrictFormat(message, formatArgs));
+    }
+  }
+
+  public void info(Marker marker, String message, Object... formatArgs)
+  {
+    if (log.isInfoEnabled()) {
+      log.info(marker, StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
@@ -131,6 +183,11 @@ public class Logger
     log.warn(StringUtils.nonStrictFormat(message, formatArgs));
   }
 
+  public void warn(Marker marker, String message, Object... formatArgs)
+  {
+    log.warn(marker, StringUtils.nonStrictFormat(message, formatArgs));
+  }
+
   public void warn(Throwable t, String message, Object... formatArgs)
   {
     logException(log::warn, t, StringUtils.nonStrictFormat(message, formatArgs));
@@ -139,6 +196,11 @@ public class Logger
   public void error(String message, Object... formatArgs)
   {
     log.error(StringUtils.nonStrictFormat(message, formatArgs));
+  }
+
+  public void error(Marker marker, String message, Object... formatArgs)
+  {
+    log.error(marker, StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   /**
@@ -156,11 +218,6 @@ public class Logger
   public void error(Throwable t, String message, Object... formatArgs)
   {
     logException(log::error, t, StringUtils.nonStrictFormat(message, formatArgs));
-  }
-
-  public void assertionError(String message, Object... formatArgs)
-  {
-    log.error("ASSERTION_ERROR: " + message, formatArgs);
   }
 
   public void debugSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
@@ -222,6 +279,11 @@ public class Logger
         fn.accept(StringUtils.nonStrictFormat("%s (%s)", message, t.toString()), null);
       }
     }
+  }
+
+  public String getName()
+  {
+    return this.log.getName();
   }
 
   /**

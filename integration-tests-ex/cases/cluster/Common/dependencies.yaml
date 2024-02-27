@@ -27,6 +27,8 @@ services:
   zookeeper:
     image: zookeeper:${ZK_VERSION}
     container_name: zookeeper
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.4
@@ -42,6 +44,8 @@ services:
   kafka:
     image: bitnami/kafka:${KAFKA_VERSION}
     container_name: kafka
+    labels:
+      druid-int-test: "true"
     ports:
       - 9092:9092
       - 9093:9093
@@ -71,6 +75,9 @@ services:
     # platform: linux/x86_64
     image: mysql:$MYSQL_IMAGE_VERSION
     container_name: metadata
+    labels:
+      druid-int-test: "true"
+    restart: always
     command:
       - --character-set-server=utf8mb4
     networks:
@@ -79,7 +86,7 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - ${SHARED_DIR}/db:/var/lib/mysql
+      - ${SHARED_DIR}/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       MYSQL_ROOT_PASSWORD: driud
       MYSQL_DATABASE: druid
@@ -88,11 +95,13 @@ services:
 
   minio:
     container_name: minio
+    labels:
+      druid-int-test: "true"
     command: server /data --console-address ":9001"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.5
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2023-05-27T05-56-19Z
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -120,6 +129,8 @@ services:
   openldap:
     image: osixia/openldap:1.4.0
     container_name: openldap
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.102
@@ -134,6 +145,8 @@ services:
   schema-registry:
     image: confluentinc/cp-schema-registry:5.5.1
     container_name: schema-registry
+    labels:
+      druid-int-test: "true"
     ports:
       - 8085:8085
     networks:
@@ -156,6 +169,8 @@ services:
     ## Giving fake version
     image: druid-it/hadoop:9.9.9
     container_name: druid-it-hadoop
+    labels:
+      druid-int-test: "true"
     ports:
       - 2049:2049
       - 2122:2122

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -31,27 +32,38 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -63,25 +75,30 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -99,11 +116,14 @@ public class CalciteTests
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
   public static final String USERVISITDATASOURCE = "visits";
   public static final String DRUID_SCHEMA_NAME = "druid";
+  public static final String WIKIPEDIA = "wikipedia";
+  public static final String WIKIPEDIA_FIRST_LAST = "wikipedia_first_last";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -131,12 +151,55 @@ public class CalciteTests
             }
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
+          case ResourceType.EXTERNAL:
+            if (Action.WRITE.equals(action)) {
+              if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
+                return new Access(false);
+              } else {
+                return Access.OK;
+              }
+            }
+            return new Access(false);
           default:
             return new Access(false);
         }
       };
     }
   };
+
+  public static final AuthorizerMapper TEST_EXTERNAL_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
+  {
+    @Override
+    public Authorizer getAuthorizer(String name)
+    {
+      return (authenticationResult, resource, action) -> {
+        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
+          return Access.OK;
+        }
+
+        switch (resource.getType()) {
+          case ResourceType.DATASOURCE:
+            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.VIEW:
+            if ("forbiddenView".equals(resource.getName())) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.QUERY_CONTEXT:
+          case ResourceType.EXTERNAL:
+            return Access.OK;
+          default:
+            return new Access(false);
+        }
+      };
+    }
+  };
+
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
 
   static {
@@ -172,19 +235,22 @@ public class CalciteTests
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
       AuthConfig.ALLOW_ALL_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null, null
+      null,
+      null
   );
 
   public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
       TEST_SUPERUSER_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null, null
+      null,
+      null
   );
 
-  public static final Injector INJECTOR = new CalciteTestInjectorBuilder()
-      .withDefaultMacroTable()
+  public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
+      .addModule(new LookylooModule())
+      .addModule(new SqlAggregationModule())
+      .addModule(new CalciteTestOperatorModule())
       .build();
-  public static final GlobalTableDataSource CUSTOM_TABLE = TestDataBuilder.CUSTOM_TABLE;
 
   private CalciteTests()
   {
@@ -280,7 +346,7 @@ public class CalciteTests
 
   public static ExprMacroTable createExprMacroTable()
   {
-    return QueryFrameworkUtils.createExprMacroTable(INJECTOR);
+    return INJECTOR.getInstance(ExprMacroTable.class);
   }
 
   public static JoinableFactoryWrapper createJoinableFactoryWrapper()
@@ -296,11 +362,9 @@ public class CalciteTests
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper
   )
   {
-
     final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
     FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
@@ -309,11 +373,6 @@ public class CalciteTests
     );
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
-    FakeDruidNodeDiscoveryProvider overlordProvider = new FakeDruidNodeDiscoveryProvider(
-        ImmutableMap.of(
-            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, coordinatorNode))
-        )
-    );
 
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         new FakeHttpClient(),
@@ -328,16 +387,48 @@ public class CalciteTests
       }
     };
 
-    final DruidLeaderClient overlordLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        overlordProvider,
-        NodeRole.OVERLORD,
-        "/simple/leader"
-    ) {
+    final OverlordClient overlordClient = new NoopOverlordClient() {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return overlordNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(overlordNode.getHostAndPortToUse()));
+        }
+        catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+          @Nullable String state,
+          @Nullable String dataSource,
+          @Nullable Integer maxCompletedTasks
+      )
+      {
+        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 2L));
+        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(tasks.iterator()));
+      }
+
+      private TaskStatusPlus createTaskStatus(String id, String datasource, Long duration)
+      {
+        return new TaskStatusPlus(
+            id,
+            "testGroupId",
+            "testType",
+            DateTimes.nowUtc(),
+            DateTimes.nowUtc(),
+            TaskState.RUNNING,
+            RunnerTaskState.RUNNING,
+            duration,
+            TaskLocation.create("testHost", 1010, -1),
+            datasource,
+            null
+        );
       }
     };
 
@@ -347,13 +438,13 @@ public class CalciteTests
             druidLeaderClient,
             getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
-            SegmentMetadataCacheConfig.create()
+            BrokerSegmentMetadataCacheConfig.create()
         ),
-        new TestServerInventoryView(walker.getSegments()),
+        new TestTimelineServerView(walker.getSegments()),
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
-        overlordLeaderClient,
+        overlordClient,
         provider,
         getJsonMapper()
     );

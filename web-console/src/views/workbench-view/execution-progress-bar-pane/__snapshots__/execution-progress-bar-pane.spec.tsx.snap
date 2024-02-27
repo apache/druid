@@ -12,7 +12,7 @@ exports[`ExecutionProgressBarPane matches snapshot 1`] = `
         className="cancel"
         onClick={[Function]}
       >
-        (stop waiting)
+        (skip waiting)
       </span>
     </React.Fragment>
   </Unknown>
@@ -20,5 +20,8 @@ exports[`ExecutionProgressBarPane matches snapshot 1`] = `
     className="overall"
     intent="primary"
   />
+  <Unknown>
+    Segments loaded successfully in 0:00:05
+  </Unknown>
 </div>
 `;

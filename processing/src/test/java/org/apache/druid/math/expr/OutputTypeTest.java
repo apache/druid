@@ -21,7 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -329,6 +329,11 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   {
     assertOutputType("array(1, 2, 3)", inspector, ExpressionType.LONG_ARRAY);
     assertOutputType("array(1, 2, 3.0)", inspector, ExpressionType.DOUBLE_ARRAY);
+    assertOutputType(
+        "array(a, b)",
+        inspector,
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.STRING_ARRAY)
+    );
 
     assertOutputType("array_length(a)", inspector, ExpressionType.LONG);
     assertOutputType("array_length(b)", inspector, ExpressionType.LONG);
@@ -448,6 +453,8 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     final ExprEval<?> longEval = ExprEval.of(1L);
     final ExprEval<?> doubleEval = ExprEval.of(1.0);
     final ExprEval<?> arrayEval = ExprEval.ofLongArray(new Long[]{1L, 2L, 3L});
+    final ExprEval<?> complexEval = ExprEval.ofComplex(ExpressionType.UNKNOWN_COMPLEX, new Object());
+    final ExprEval<?> complexEval2 = ExprEval.ofComplex(new ExpressionType(ExprType.COMPLEX, null, null), new Object());
 
     // only long stays long
     Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.autoDetect(longEval, longEval));
@@ -474,6 +481,15 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(nullStringEval, arrayEval));
     Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(doubleEval, arrayEval));
     Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(longEval, arrayEval));
+
+    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(longEval, complexEval));
+    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(doubleEval, complexEval));
+    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(arrayEval, complexEval));
+    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(complexEval, complexEval));
+    Assert.assertEquals(
+        ExpressionTypeConversion.autoDetect(complexEval, complexEval),
+        ExpressionTypeConversion.autoDetect(complexEval2, complexEval)
+    );
   }
 
   @Test
@@ -539,7 +555,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionTypeConversion.operator(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
 
-    ExpressionType nested = ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE);
+    ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
     Assert.assertEquals(
         nested,
         ExpressionTypeConversion.operator(nested, nested)
@@ -616,7 +632,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.function(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
-    ExpressionType nested = ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE);
+    ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
     Assert.assertEquals(
         nested,
         ExpressionTypeConversion.function(nested, nested)

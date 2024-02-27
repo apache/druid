@@ -22,8 +22,19 @@ package org.apache.druid.common.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.ReadableVectorMatch;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.filter.NotFilter;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  * Helper class for NullHandling. This class is used to switch between SQL compatible Null Handling behavior
@@ -58,13 +69,23 @@ public class NullHandling
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new NullValueHandlingConfig(null, null);
+    INSTANCE = new NullValueHandlingConfig(null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean ignoreNullForString)
   {
-    INSTANCE = new NullValueHandlingConfig(useDefForNull, ignoreNullForString);
+    initializeForTestsWithValues(useDefForNull, null, ignoreNullForString);
+  }
+
+  @VisibleForTesting
+  public static void initializeForTestsWithValues(
+      Boolean useDefForNull,
+      Boolean useThreeValueLogic,
+      Boolean ignoreNullForString
+  )
+  {
+    INSTANCE = new NullValueHandlingConfig(useDefForNull, useThreeValueLogic, ignoreNullForString);
   }
 
   /**
@@ -94,6 +115,23 @@ public class NullHandling
   public static boolean sqlCompatible()
   {
     return !replaceWithDefault();
+  }
+
+  /**
+   * Whether filtering uses 3-valued logic. Used primarily by {@link NotFilter} to invert matches in a SQL compliant
+   * manner. When this is set, an "includeUnknown" parameter can be activated in various classes related to filtering;
+   * see below for references.
+   *
+   * @see ValueMatcher#matches(boolean) includeUnknown parameter
+   * @see VectorValueMatcher#match(ReadableVectorMatch, boolean) includeUnknown parameter
+   * @see BitmapColumnIndex#computeBitmapResult(BitmapResultFactory, boolean) includeUnknown parameter
+   * @see DimFilter#optimize(boolean) mayIncludeUnknown parameter
+   */
+  public static boolean useThreeValueLogic()
+  {
+    return NullHandling.sqlCompatible() &&
+           INSTANCE.isUseThreeValueLogicForNativeFilters() &&
+           ExpressionProcessing.useStrictBooleans();
   }
 
   @Nullable
@@ -159,8 +197,72 @@ public class NullHandling
     }
   }
 
+  /**
+   * Returns the default value for the given {@link ValueType}.
+   *
+   * May be null or non-null based on the current SQL-compatible null handling mode.
+   */
+  @Nullable
+  public static Object defaultValueForType(ValueType type)
+  {
+    if (sqlCompatible()) {
+      return null;
+    } else if (type == ValueType.FLOAT) {
+      return defaultFloatValue();
+    } else if (type == ValueType.DOUBLE) {
+      return defaultDoubleValue();
+    } else if (type == ValueType.LONG) {
+      return defaultLongValue();
+    } else if (type == ValueType.STRING) {
+      return defaultStringValue();
+    } else {
+      return null;
+    }
+  }
+
   public static boolean isNullOrEquivalent(@Nullable String value)
   {
     return replaceWithDefault() ? Strings.isNullOrEmpty(value) : value == null;
+  }
+
+  public static boolean isNullOrEquivalent(@Nullable ByteBuffer buffer)
+  {
+    return buffer == null || (replaceWithDefault() && buffer.remaining() == 0);
+  }
+
+  /**
+   * Given a UTF-8 dictionary, returns whether the first two entries must be coalesced into a single null entry.
+   * This happens if we are in default-value mode and the first two entries are null and empty string.
+   *
+   * This and {@link #mustReplaceFirstValueWithNullInDictionary(Indexed)} are never both true.
+   *
+   * Provided to enable compatibility for segments written under {@link #sqlCompatible()} mode but
+   * read under {@link #replaceWithDefault()} mode.
+   */
+  public static boolean mustCombineNullAndEmptyInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
+  {
+    return NullHandling.replaceWithDefault()
+           && dictionaryUtf8.size() >= 2
+           && isNullOrEquivalent(dictionaryUtf8.get(0))
+           && isNullOrEquivalent(dictionaryUtf8.get(1));
+  }
+
+  /**
+   * Given a UTF-8 dictionary, returns whether the first entry must be replaced with null. This happens if we
+   * are in default-value mode and the first entry is an empty string. (Default-value mode expects it to be null.)
+   *
+   * This and {@link #mustCombineNullAndEmptyInDictionary(Indexed)} are never both true.
+   *
+   * Provided to enable compatibility for segments written under {@link #sqlCompatible()} mode but
+   * read under {@link #replaceWithDefault()} mode.
+   */
+  public static boolean mustReplaceFirstValueWithNullInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
+  {
+    if (NullHandling.replaceWithDefault() && dictionaryUtf8.size() >= 1) {
+      final ByteBuffer firstValue = dictionaryUtf8.get(0);
+      return firstValue != null && firstValue.remaining() == 0;
+    }
+
+    return false;
   }
 }

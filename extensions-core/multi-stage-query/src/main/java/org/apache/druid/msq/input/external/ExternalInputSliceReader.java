@@ -20,9 +20,9 @@
 package org.apache.druid.msq.input.external;
 
 import com.google.common.collect.Iterators;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
@@ -32,35 +32,29 @@ import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.CountableInputSourceReader;
-import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
-import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -69,6 +63,7 @@ import java.util.stream.Collectors;
  */
 public class ExternalInputSliceReader implements InputSliceReader
 {
+  public static final String SEGMENT_ID = "__external";
   private final File temporaryDirectory;
 
   public ExternalInputSliceReader(final File temporaryDirectory)
@@ -120,11 +115,11 @@ public class ExternalInputSliceReader implements InputSliceReader
   )
   {
     final InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("__dummy__", "auto", DateTimes.utc(0)),
+        new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "auto", DateTimes.utc(0)),
         new DimensionsSpec(
             signature.getColumnNames().stream().map(
                 column ->
-                    DimensionSchemaUtils.createDimensionSchema(
+                    DimensionSchemaUtils.createDimensionSchemaForExtern(
                         column,
                         signature.getColumnType(column).orElse(null)
                     )
@@ -152,95 +147,26 @@ public class ExternalInputSliceReader implements InputSliceReader
             reader = inputSource.reader(schema, inputFormat, temporaryDirectory);
           }
 
-          final SegmentId segmentId = SegmentId.dummy("dummy");
-          final RowBasedSegment<InputRow> segment = new RowBasedSegment<>(
-              segmentId,
-              new BaseSequence<>(
-                  new BaseSequence.IteratorMaker<InputRow, CloseableIterator<InputRow>>()
-                  {
-                    @Override
-                    public CloseableIterator<InputRow> make()
-                    {
-                      try {
-                        CloseableIterator<InputRow> baseIterator = reader.read(inputStats);
-                        return new CloseableIterator<InputRow>()
-                        {
-                          private InputRow next = null;
-
-                          @Override
-                          public void close() throws IOException
-                          {
-                            baseIterator.close();
-                          }
-
-                          @Override
-                          public boolean hasNext()
-                          {
-                            while (true) {
-                              try {
-                                while (next == null && baseIterator.hasNext()) {
-                                  next = baseIterator.next();
-                                }
-                                break;
-                              }
-                              catch (ParseException e) {
-                                warningCounters.incrementWarningCount(CannotParseExternalDataFault.CODE);
-                                warningPublisher.accept(e);
-                              }
-                            }
-                            return next != null;
-                          }
-
-                          @Override
-                          public InputRow next()
-                          {
-                            if (!hasNext()) {
-                              throw new NoSuchElementException();
-                            }
-                            final InputRow row = next;
-                            next = null;
-                            return row;
-                          }
-                        };
-                      }
-                      catch (IOException e) {
-                        throw new RuntimeException(e);
-                      }
-                    }
-
-                    @Override
-                    public void cleanup(CloseableIterator<InputRow> iterFromMake)
-                    {
-                      try {
-                        iterFromMake.close();
-                        // We increment the file count whenever the caller calls clean up. So we can double count here
-                        // if the callers are not careful.
-                        // This logic only works because we are using FilePerSplitHintSpec. Each input source only
-                        // has one file.
-                        if (incrementCounters) {
-                          channelCounters.incrementFileCount();
-                          channelCounters.incrementBytes(inputStats.getProcessedBytes());
-                        }
-                      }
-                      catch (IOException e) {
-                        throw new RuntimeException(e);
-                      }
-                    }
-                  }
-              ),
-              RowAdapters.standardRow(),
+          final SegmentId segmentId = SegmentId.dummy(SEGMENT_ID);
+          final Segment segment = new ExternalSegment(
+              inputSource,
+              reader,
+              inputStats,
+              warningCounters,
+              warningPublisher,
+              channelCounters,
               signature
           );
-
           return new SegmentWithDescriptor(
-              new LazyResourceHolder<>(() -> Pair.of(segment, () -> {})),
-              segmentId.toDescriptor()
+              () -> ResourceHolder.fromCloseable(segment),
+              null,
+              new RichSegmentDescriptor(segmentId.toDescriptor(), null, null)
           );
         }
     );
   }
 
-  static boolean isFileBasedInputSource(final InputSource inputSource)
+  public static boolean isFileBasedInputSource(final InputSource inputSource)
   {
     return !(inputSource instanceof NilInputSource) && !(inputSource instanceof InlineInputSource);
   }

@@ -59,23 +59,43 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 
-const allColumns: string[] = [
-  'Service',
-  'Type',
-  'Tier',
-  'Host',
-  'Port',
-  'Current size',
-  'Max size',
-  'Usage',
-  'Detail',
-  ACTION_COLUMN_LABEL,
-];
-
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  'full': allColumns,
-  'no-sql': allColumns,
-  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Current size', 'Max size', 'Usage'],
+  'full': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Start time',
+    'Detail',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-sql': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Detail',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-proxy': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Start time',
+  ],
 };
 
 function formatQueues(
@@ -103,13 +123,14 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
 
 export interface ServicesViewState {
   servicesState: QueryState<ServiceResultRow[]>;
-  serviceFilter: Filter[];
   groupServicesBy?: 'service_type' | 'tier';
 
   middleManagerDisableWorkerHost?: string;
@@ -128,6 +149,7 @@ interface ServiceResultRow {
   readonly max_size: NumberLike;
   readonly plaintext_port: number;
   readonly tls_port: number;
+  readonly start_time: string;
   loadQueueInfo?: LoadQueueInfo;
   workerInfo?: WorkerInfo;
 }
@@ -178,7 +200,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
-  "is_leader"
+  "is_leader",
+  "start_time"
 FROM sys.servers
 ORDER BY
   (
@@ -213,11 +236,10 @@ ORDER BY
     });
   }
 
-  constructor(props: ServicesViewProps, context: any) {
-    super(props, context);
+  constructor(props: ServicesViewProps) {
+    super(props);
     this.state = {
       servicesState: QueryState.INIT,
-      serviceFilter: [],
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
@@ -301,14 +323,14 @@ ORDER BY
   }
 
   private renderFilterableCell(field: string) {
-    const { serviceFilter } = this.state;
+    const { filters, onFiltersChange } = this.props;
 
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
         value={row.value}
-        filters={serviceFilter}
-        onFiltersChange={filters => this.setState({ serviceFilter: filters })}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
       >
         {row.value}
       </TableFilterableCell>
@@ -316,8 +338,8 @@ ORDER BY
   }
 
   renderServicesTable() {
-    const { capabilities } = this.props;
-    const { servicesState, serviceFilter, groupServicesBy, visibleColumns } = this.state;
+    const { capabilities, filters, onFiltersChange } = this.props;
+    const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -339,10 +361,8 @@ ORDER BY
           servicesState.isEmpty() ? 'No historicals' : servicesState.getErrorMessage() || ''
         }
         filterable
-        filtered={serviceFilter}
-        onFilteredChange={filtered => {
-          this.setState({ serviceFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         pivotBy={groupServicesBy ? [groupServicesBy] : []}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
@@ -516,6 +536,14 @@ ORDER BY
             },
           },
           {
+            Header: 'Start time',
+            show: visibleColumns.shown('Start time'),
+            accessor: 'start_time',
+            width: 200,
+            Cell: this.renderFilterableCell('start_time'),
+            Aggregated: () => '',
+          },
+          {
             Header: 'Detail',
             show: visibleColumns.shown('Detail'),
             id: 'queue',
@@ -526,11 +554,12 @@ ORDER BY
               switch (row.service_type) {
                 case 'middle_manager':
                 case 'indexer': {
-                  if (deepGet(row, 'worker.version') === '') return 'Disabled';
                   const { workerInfo } = row;
                   if (!workerInfo) {
                     return 'Could not get detail info';
                   }
+
+                  if (workerInfo.worker.version === '') return 'Disabled';
 
                   const details: string[] = [];
                   if (workerInfo.lastCompletedTaskTime) {
@@ -731,7 +760,7 @@ ORDER BY
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const { groupServicesBy, visibleColumns } = this.state;
 

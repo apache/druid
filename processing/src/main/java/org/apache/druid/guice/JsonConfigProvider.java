@@ -79,7 +79,7 @@ import java.util.Properties;
  * @param <T> type of config object to provide.
  */
 @PublicApi
-public class JsonConfigProvider<T> implements Provider<Supplier<T>>
+public class JsonConfigProvider<T> implements Provider<T>
 {
   @SuppressWarnings("unchecked")
   public static <T> void bind(Binder binder, String propertyBase, Class<T> classToProvide)
@@ -148,8 +148,8 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
       Key<Supplier<T>> supplierKey
   )
   {
-    binder.bind(supplierKey).toProvider(of(propertyBase, clazz)).in(LazySingleton.class);
-    binder.bind(instanceKey).toProvider(new SupplierProvider<>(supplierKey));
+    binder.bind(instanceKey).toProvider(new JsonConfigProvider<>(propertyBase, clazz, null)).in(LazySingleton.class);
+    binder.bind(supplierKey).toProvider(new ProviderBasedGoogleSupplierProvider<>(instanceKey)).in(LazySingleton.class);
   }
 
   public static <T> void bind(
@@ -161,8 +161,10 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
       Key<Supplier<T>> supplierKey
   )
   {
-    binder.bind(supplierKey).toProvider(of(propertyBase, clazz, defaultClass)).in(LazySingleton.class);
-    binder.bind(instanceKey).toProvider(new SupplierProvider<>(supplierKey));
+    binder.bind(instanceKey)
+          .toProvider(new JsonConfigProvider<>(propertyBase, clazz, defaultClass))
+          .in(LazySingleton.class);
+    binder.bind(supplierKey).toProvider(new ProviderBasedGoogleSupplierProvider<>(instanceKey)).in(LazySingleton.class);
   }
 
   @SuppressWarnings("unchecked")
@@ -209,7 +211,7 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   private Properties props;
   private JsonConfigurator configurator;
 
-  private Supplier<T> retVal = null;
+  private T retVal = null;
 
   public JsonConfigProvider(
       String propertyBase,
@@ -233,23 +235,10 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   }
 
   @Override
-  public Supplier<T> get()
+  public T get()
   {
-    if (retVal != null) {
-      return retVal;
-    }
-
-    try {
-      final T config = configurator.configurate(props, propertyBase, classToProvide, defaultClass);
-      retVal = Suppliers.ofInstance(config);
-    }
-    catch (RuntimeException e) {
-      // When a runtime exception gets thrown out, this provider will get called again if the object is asked for again.
-      // This will have the same failed result, 'cause when it's called no parameters will have actually changed.
-      // Guice will then report the same error multiple times, which is pretty annoying. Cache a null supplier and
-      // return that instead.  This is technically enforcing a singleton, but such is life.
-      retVal = Suppliers.ofInstance(null);
-      throw e;
+    if (retVal == null) {
+      retVal = configurator.configurate(props, propertyBase, classToProvide, defaultClass);
     }
     return retVal;
   }

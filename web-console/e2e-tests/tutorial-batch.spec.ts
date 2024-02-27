@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import { T } from 'druid-query-toolkit';
+import { T } from '@druid-toolkit/query';
 import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
-import { IngestionOverview } from './component/ingestion/overview';
+import { TasksOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
 import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
@@ -36,7 +36,7 @@ import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
 
-const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Россия 한국 中国!?~';
+const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中国!?~';
 
 describe('Tutorial: Loading a file', () => {
   let browser: playwright.Browser;
@@ -56,7 +56,7 @@ describe('Tutorial: Loading a file', () => {
   });
 
   it('Loads data from local disk', async () => {
-    const testName = 'load-data-from-local-disk-';
+    const testName = 'load-data-from-local-disk';
     const datasourceName = testName + ALL_SORTS_OF_CHARS + new Date().toISOString();
     const dataLoader = new DataLoader({
       page: page,
@@ -143,10 +143,10 @@ function validateConnectLocalData(preview: string) {
 }
 
 async function validateTaskStatus(page: playwright.Page, datasourceName: string) {
-  const ingestionOverview = new IngestionOverview(page, UNIFIED_CONSOLE_URL);
+  const tasksOverview = new TasksOverview(page, UNIFIED_CONSOLE_URL);
 
   await retryIfJestAssertionError(async () => {
-    const tasks = await ingestionOverview.getTasks();
+    const tasks = await tasksOverview.getTasks();
     const task = tasks.find(t => t.datasource === datasourceName);
     expect(task).toBeDefined();
     expect(task!.status).toMatch('SUCCESS');

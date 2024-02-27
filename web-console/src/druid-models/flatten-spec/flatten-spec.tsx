@@ -21,7 +21,7 @@ import React from 'react';
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { typeIs } from '../../utils';
+import { typeIsKnown } from '../../utils';
 
 export interface FlattenSpec {
   useFieldDiscovery?: boolean;
@@ -34,6 +34,7 @@ export interface FlattenField {
   expr: string;
 }
 
+const KNOWN_TYPES = ['path', 'jq', 'root'];
 export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
   {
     name: 'name',
@@ -44,14 +45,14 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['path', 'jq', 'root'],
+    suggestions: KNOWN_TYPES,
     required: true,
   },
   {
     name: 'expr',
     type: 'string',
     placeholder: '$.thing',
-    defined: typeIs('path', 'jq'),
+    defined: typeIsKnown(KNOWN_TYPES, 'path', 'jq'),
     required: true,
     info: (
       <>

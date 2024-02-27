@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
@@ -108,12 +109,12 @@ public class AvroFlattenerMakerTest
 
     // map
     Assert.assertEquals(2, flattener.makeJsonPathExtractor("$.someMultiMemberUnion.map.two").apply(
-        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(new HashMap<String, Integer>() {{
-            put("one", 1);
-            put("two", 2);
-            put("three", 3);
-          }
-        }
+        AvroStreamInputRowParserTest.buildSomeAvroDatumWithUnionValue(
+            ImmutableMap.<String, Integer>builder()
+                        .put("one", 1)
+                        .put("two", 2)
+                        .put("three", 3)
+                        .build()
         )));
 
     // array
@@ -348,6 +349,10 @@ public class AvroFlattenerMakerTest
     Assert.assertEquals(
         list,
         flattener.getRootField(record, "someRecordArray")
+    );
+    Assert.assertEquals(
+        null,
+        flattener.getRootField(record, "invalidField")
     );
   }
 

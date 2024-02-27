@@ -203,19 +203,11 @@ public class MaterializedViewSupervisorSpecTest
       SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
 
-      try {
-        supervisor.computeLagStats();
-      }
-      catch (Exception e) {
-        Assert.assertTrue(e instanceof UnsupportedOperationException);
-      }
+      Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.computeLagStats());
 
-      try {
-        int count = supervisor.getActiveTaskGroupsCount();
-      }
-      catch (Exception e) {
-        Assert.assertTrue(e instanceof UnsupportedOperationException);
-      }
+      Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.getActiveTaskGroupsCount());
+
+      Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.getActiveRealtimeSequencePrefixes());
 
       Callable<Integer> noop = new Callable<Integer>() {
         @Override

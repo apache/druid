@@ -1,0 +1,1 @@
+SELECT MIN(COUNT(DISTINCT c2)) OVER( ) FROM "tblWnulls.parquet"

@@ -18,10 +18,17 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column } from 'druid-query-toolkit';
+import type { Column } from '@druid-toolkit/query';
+
+export function columnToSummary(column: Column): string {
+  const lines: string[] = [column.name];
+  if (column.sqlType) lines.push(`SQL type: ${column.sqlType}`);
+  if (column.nativeType) lines.push(`Native type: ${column.nativeType}`);
+  return lines.join('\n');
+}
 
 function getEffectiveColumnType(column: Column): string | undefined {
-  if (column.sqlType === 'TIMESTAMP') return column.sqlType;
+  if (column.sqlType === 'TIMESTAMP' || column.sqlType === 'BOOLEAN') return column.sqlType;
   return column.nativeType || column.sqlType;
 }
 
@@ -37,28 +44,53 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'TIMESTAMP':
       return IconNames.TIME;
 
+    case 'BOOLEAN':
+      return IconNames.SEGMENTED_CONTROL;
+
     case 'VARCHAR':
     case 'STRING':
       return IconNames.FONT;
 
     case 'BIGINT':
+    case 'LONG':
+      return IconNames.NUMERICAL;
+
     case 'DECIMAL':
     case 'REAL':
-    case 'LONG':
     case 'FLOAT':
     case 'DOUBLE':
-      return IconNames.NUMERICAL;
+      return IconNames.FLOATING_POINT;
 
     case 'ARRAY<STRING>':
       return IconNames.ARRAY_STRING;
 
     case 'ARRAY<LONG>':
+      return IconNames.ARRAY_NUMERIC;
+
     case 'ARRAY<FLOAT>':
     case 'ARRAY<DOUBLE>':
-      return IconNames.ARRAY_NUMERIC;
+      return IconNames.ARRAY_FLOATING_POINT;
 
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
+
+    case 'COMPLEX<HYPERUNIQUE>':
+    case 'COMPLEX<HLLSKETCHBUILD>':
+    case 'COMPLEX<THETASKETCHBUILD>':
+      return IconNames.SNOWFLAKE;
+
+    case 'COMPLEX<QUANTILESDOUBLESSKETCH>':
+      return IconNames.HORIZONTAL_DISTRIBUTION;
+
+    case 'COMPLEX<VARIANCE>':
+      return IconNames.ALIGNMENT_HORIZONTAL_CENTER;
+
+    case 'COMPLEX<IPADDRESS>':
+    case 'COMPLEX<IPPREFIX>':
+      return IconNames.IP_ADDRESS;
+
+    case 'COMPLEX<SERIALIZABLEPAIRLONGSTRING>':
+      return IconNames.DOUBLE_CHEVRON_RIGHT;
 
     case 'NULL':
       return IconNames.CIRCLE;
@@ -81,6 +113,9 @@ export function dataTypeToWidth(dataType: string | undefined): number {
   switch (typeUpper) {
     case 'TIMESTAMP':
       return 180;
+
+    case 'BOOLEAN':
+      return 100;
 
     case 'VARCHAR':
     case 'STRING':

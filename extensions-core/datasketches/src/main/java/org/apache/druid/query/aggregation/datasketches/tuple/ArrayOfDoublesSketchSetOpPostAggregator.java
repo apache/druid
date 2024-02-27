@@ -21,7 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.common.Util;
+import org.apache.datasketches.thetacommon.ThetaUtil;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -58,9 +59,9 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
   {
     super(name, fields);
     this.operation = ArrayOfDoublesSketchOperations.Operation.valueOf(operation);
-    this.nominalEntries = nominalEntries == null ? Util.DEFAULT_NOMINAL_ENTRIES : nominalEntries;
+    this.nominalEntries = nominalEntries == null ? ThetaUtil.DEFAULT_NOMINAL_ENTRIES : nominalEntries;
     this.numberOfValues = numberOfValues == null ? 1 : numberOfValues;
-    Util.checkIfPowerOf2(this.nominalEntries, "size");
+    Util.checkIfIntPowerOf2(this.nominalEntries, "size");
 
     if (fields.size() <= 1) {
       throw new IAE("Illegal number of fields[%d], must be > 1", fields.size());

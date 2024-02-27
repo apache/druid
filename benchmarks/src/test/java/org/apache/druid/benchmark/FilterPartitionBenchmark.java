@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -41,6 +40,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -93,7 +93,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -137,11 +136,6 @@ public class FilterPartitionBenchmark
         JSON_MAPPER,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -152,7 +146,7 @@ public class FilterPartitionBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
@@ -179,7 +173,7 @@ public class FilterPartitionBenchmark
     indexFile = INDEX_MERGER_V9.persist(
         incIndex,
         tmpDir,
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     qIndex = INDEX_IO.loadIndex(indexFile);
@@ -548,34 +542,27 @@ public class FilterPartitionBenchmark
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public Predicate<String> makeStringPredicate()
+          public DruidObjectPredicate<String> makeStringPredicate()
           {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                return Objects.equals(valueOrNull, input);
-              }
-            };
+            return valueOrNull == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(valueOrNull);
           }
 
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return DruidLongPredicate.ALWAYS_FALSE;
+            return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return DruidFloatPredicate.ALWAYS_FALSE;
+            return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
           }
 
           @Override
           public DruidDoublePredicate makeDoublePredicate()
           {
-            return DruidDoublePredicate.ALWAYS_FALSE;
+            return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
           }
         };
 

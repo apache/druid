@@ -24,7 +24,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.easymock.EasyMock;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import org.junit.Assert;
@@ -36,6 +35,12 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 /**
  */
 public class CloudFilesDataSegmentPusherTest
@@ -46,16 +51,12 @@ public class CloudFilesDataSegmentPusherTest
   @Test
   public void testPush() throws Exception
   {
-    ObjectApi objectApi = EasyMock.createStrictMock(ObjectApi.class);
-    EasyMock.expect(objectApi.put(EasyMock.anyString(), EasyMock.anyObject())).andReturn(null).atLeastOnce();
-    EasyMock.replay(objectApi);
+    ObjectApi objectApi = mock(ObjectApi.class);
+    when(objectApi.put(any(), any())).thenReturn(null);
 
-    CloudFilesApi api = EasyMock.createStrictMock(CloudFilesApi.class);
-    EasyMock.expect(api.getObjectApi(EasyMock.anyString(), EasyMock.anyString()))
-            .andReturn(objectApi)
-            .atLeastOnce();
-    EasyMock.replay(api);
-
+    CloudFilesApi api = mock(CloudFilesApi.class);
+    when(api.getObjectApi(any(), any()))
+            .thenReturn(objectApi);
 
     CloudFilesDataSegmentPusherConfig config = new CloudFilesDataSegmentPusherConfig();
     config.setRegion("region");
@@ -87,6 +88,7 @@ public class CloudFilesDataSegmentPusherTest
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
 
-    EasyMock.verify(api);
+    verify(objectApi, atLeastOnce()).put(any(), any());
+    verify(api, atLeastOnce()).getObjectApi(any(), any());
   }
 }

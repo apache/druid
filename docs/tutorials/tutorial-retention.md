@@ -1,7 +1,7 @@
 ---
 id: tutorial-retention
-title: "Tutorial: Configuring data retention"
-sidebar_label: "Configuring data retention"
+title: Configure data retention
+sidebar_label: Configure data retention
 ---
 
 <!--
@@ -29,7 +29,7 @@ This tutorial demonstrates how to configure retention rules on a datasource to s
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+It will also be helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
 
 ## Load the example data
 

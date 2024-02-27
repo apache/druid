@@ -28,7 +28,8 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.util.TimestampString;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +39,7 @@ import java.util.List;
  * Replaces all {@link SqlDynamicParam} encountered in an {@link SqlNode} tree
  * with a {@link SqlLiteral} if a value binding exists for the parameter, if
  * possible. This is used in tandem with {@link RelParameterizerShuttle}.
- *
+ * <p>
  * It is preferable that all parameters are placed here to pick up as many
  * optimizations as possible, but the facilities to convert jdbc types to
  * {@link SqlLiteral} are a bit less rich here than exist for converting a
@@ -46,7 +47,7 @@ import java.util.List;
  * {@link org.apache.calcite.rex.RexLiteral}, which is why
  * {@link SqlParameterizerShuttle} and {@link RelParameterizerShuttle}
  * both exist.
- *
+ * <p>
  * As it turns out, most parameters will be replaced in this shuttle.
  * The one exception are DATE types expressed as integers. For reasons
  * known only to Calcite, the {@code RexBuilder.clean()} method, used by
@@ -69,11 +70,11 @@ public class SqlParameterizerShuttle extends SqlShuttle
   public SqlNode visit(SqlDynamicParam param)
   {
     if (plannerContext.getParameters().size() <= param.getIndex()) {
-      throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
+      throw unbound(param);
     }
     TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
     if (paramBinding == null) {
-      throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
+      throw unbound(param);
     }
     if (paramBinding.value == null) {
       return SqlLiteral.createNull(param.getParserPosition());
@@ -85,13 +86,13 @@ public class SqlParameterizerShuttle extends SqlShuttle
     if (SqlTypeName.TIMESTAMP.equals(typeName) && paramBinding.value instanceof Long) {
       return SqlLiteral.createTimestamp(
           TimestampString.fromMillisSinceEpoch((Long) paramBinding.value),
-          0,
+          DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION,
           param.getParserPosition()
       );
     }
 
     if (typeName == SqlTypeName.ARRAY) {
-      return createArrayLiteral(paramBinding.value);
+      return createArrayLiteral(paramBinding.value, param.getIndex());
     }
     try {
       // This throws ClassCastException for a DATE parameter given as
@@ -105,6 +106,11 @@ public class SqlParameterizerShuttle extends SqlShuttle
     }
   }
 
+  private static DruidException unbound(SqlDynamicParam param)
+  {
+    return InvalidSqlInput.exception("No value bound for parameter (position [%s])", param.getIndex() + 1);
+  }
+
   /**
    * Convert an ARRAY parameter to the equivalent of the ARRAY[a, b, ...]
    * syntax. This is not well-supported in the present version of Calcite,
@@ -112,7 +118,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
    * structure. Supports a limited set of member types. Does not attempt
    * to enforce that all elements have the same type.
    */
-  private SqlNode createArrayLiteral(Object value)
+  private SqlNode createArrayLiteral(Object value, int posn)
   {
     List<?> list;
     if (value instanceof List) {
@@ -121,9 +127,10 @@ public class SqlParameterizerShuttle extends SqlShuttle
       list = Arrays.asList((Object[]) value);
     }
     List<SqlNode> args = new ArrayList<>(list.size());
-    for (Object element : list) {
+    for (int i = 0, listSize = list.size(); i < listSize; i++) {
+      Object element = list.get(i);
       if (element == null) {
-        throw new IAE("An array parameter cannot contain null values");
+        throw InvalidSqlInput.exception("parameter [%d] is an array, with an illegal null at index [%d]", posn + 1, i);
       }
       SqlNode node;
       if (element instanceof String) {
@@ -135,9 +142,11 @@ public class SqlParameterizerShuttle extends SqlShuttle
       } else if (element instanceof Boolean) {
         node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
       } else {
-        throw new IAE(
-            "An array parameter does not allow values of type %s",
-            value.getClass().getSimpleName()
+        throw InvalidSqlInput.exception(
+            "parameter [%d] is an array, with an illegal value of type [%s] at index [%d]",
+            posn + 1,
+            value.getClass(),
+            i
         );
       }
       args.add(node);

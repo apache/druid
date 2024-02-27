@@ -53,7 +53,11 @@ public class LongGreatestPostAggregator implements PostAggregator
       @JsonProperty("fields") List<PostAggregator> fields
   )
   {
-    Preconditions.checkArgument(fields != null && fields.size() > 0, "Illegal number of fields[%s], must be > 0");
+    Preconditions.checkArgument(
+        fields != null && fields.size() > 0,
+        "Illegal number of fields[%s], must be > 0",
+        fields.size()
+    );
 
     this.name = name;
     this.fields = fields;

@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -55,7 +54,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DirectQueryProcessingPool;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -81,17 +79,16 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
 import org.apache.druid.segment.nested.NestedPathFinder;
@@ -241,7 +238,8 @@ public class DumpSegment extends GuiceRunnable
         null,
         EnumSet.allOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null
     );
     withOutputStream(
         new Function<OutputStream, Object>()
@@ -475,9 +473,9 @@ public class DumpSegment extends GuiceRunnable
                 }
                 jg.writeEndArray();
 
-                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getStringDictionary();
-                FixedIndexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
-                FixedIndexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
+                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getUtf8BytesDictionary();
+                Indexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
+                Indexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
                 jg.writeFieldName("dictionaries");
                 jg.writeStartObject();
                 {
@@ -732,44 +730,10 @@ public class DumpSegment extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-            binder.bind(DruidProcessingConfig.class).toInstance(
-                new DruidProcessingConfig()
-                {
-                  @Override
-                  public String getFormatString()
-                  {
-                    return "processing-%s";
-                  }
-
-                  @Override
-                  public int intermediateComputeSizeBytes()
-                  {
-                    return 100 * 1024 * 1024;
-                  }
-
-                  @Override
-                  public int getNumThreads()
-                  {
-                    return 1;
-                  }
-
-                  @Override
-                  public int columnCacheSizeBytes()
-                  {
-                    return 25 * 1024 * 1024;
-                  }
-                }
-            );
-            binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-          }
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
         }
     );
   }

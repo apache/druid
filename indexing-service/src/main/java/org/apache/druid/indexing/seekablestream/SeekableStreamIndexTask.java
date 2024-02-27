@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -106,7 +107,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
-    this.lockTypeToUse = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    this.lockTypeToUse = TaskLocks.determineLockTypeForAppend(getContext());
   }
 
   protected static String getFormattedGroupId(String dataSource, String type)
@@ -186,6 +187,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   )
   {
     return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
+        toolbox.getSegmentLoaderConfig(),
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
@@ -204,7 +206,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
         parseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -268,7 +271,27 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   protected abstract SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType> createTaskRunner();
 
-  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier();
+  /**
+   * Deprecated method for providing the {@link RecordSupplier} that connects with the stream. New extensions should
+   * override {@link #newTaskRecordSupplier(TaskToolbox)} instead.
+   */
+  @Deprecated
+  protected RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Subclasses must override this method to provide the {@link RecordSupplier} that connects with the stream.
+   *
+   * The default implementation delegates to {@link #newTaskRecordSupplier()}, which is deprecated, in order to support
+   * existing extensions that have implemented that older method instead of this newer one. New extensions should
+   * override this method, not {@link #newTaskRecordSupplier()}.
+   */
+  protected RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier(final TaskToolbox toolbox)
+  {
+    return newTaskRecordSupplier();
+  }
 
   @VisibleForTesting
   public Appenderator getAppenderator()

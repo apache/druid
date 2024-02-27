@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from '@druid-toolkit/query';
 import React from 'react';
 
 import type { ColumnMetadata } from '../../../utils';

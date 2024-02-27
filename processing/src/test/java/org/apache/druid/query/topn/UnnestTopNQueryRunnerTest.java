@@ -167,7 +167,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             DateTimes.of("2020-04-02T00:00:00.000Z"),
-            new TopNResultValue(ImmutableList.of())
+            TopNResultValue.create(ImmutableList.of())
         )
     );
     assertExpectedResultsWithCustomRunner(expectedResults, query, queryRunner);
@@ -208,7 +208,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "a",
@@ -287,7 +287,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "preferred",
@@ -372,7 +372,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "spot",

@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.destination.IngestDestination;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -77,6 +78,35 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
             new Object[]{"1-1_1"},
             new Object[]{"def-def_def"},
             new Object[]{"abc-abc_abc"}
+        )
+    );
+  }
+
+  @Test
+  public void testScanSignatureWithDimAsValuePrimitiveByteArr()
+  {
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT CAST(dim1 AS BIGINT) as dimX FROM foo2 limit 2",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE2)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .virtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "CAST(\"dim1\", 'LONG')",
+                    ColumnType.LONG
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(context)
+                .limit(2)
+                .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{0L}, new Object[]{0L}
+        ) : ImmutableList.of(
+            new Object[]{null}, new Object[]{null}
         )
     );
   }
@@ -139,7 +169,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+    public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
     {
       throw new UnsupportedOperationException();
     }

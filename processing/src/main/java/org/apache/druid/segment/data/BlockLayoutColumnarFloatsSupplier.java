@@ -45,7 +45,7 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
       CompressionStrategy strategy
   )
   {
-    baseFloatBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(byteOrder, strategy));
+    baseFloatBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }

@@ -23,14 +23,12 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -825,16 +823,16 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.VECTORIZABLE
         )
     );
-    Assert.assertEquals(NestedDataExpressions.TYPE, thePlan.getOutputType());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(
         ExpressionType.toColumnType(thePlan.getOutputType())
     );
     Assert.assertEquals(
-        NestedDataComplexTypeSerde.TYPE.getType(),
+        ColumnType.NESTED_DATA.getType(),
         inferred.getType()
     );
     Assert.assertEquals(
-        NestedDataExpressions.TYPE.getComplexTypeName(),
+        ColumnType.NESTED_DATA.getComplexTypeName(),
         inferred.getComplexTypeName()
     );
   }

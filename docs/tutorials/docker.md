@@ -1,6 +1,7 @@
 ---
 id: docker
-title: "Tutorial: Run with Docker"
+title:  Run with Docker
+sidebar_label: Run with Docker
 ---
 
 <!--
@@ -35,7 +36,7 @@ This tutorial assumes you will download the required files from GitHub. The file
 
 ### Docker memory requirements
 
-The default `docker-compose.yml` launches eight containers: Zookeeper, PostgreSQL, and six Druid containers based upon the [micro quickstart configuration](../operations/single-server.html#single-server-reference-configurations-deprecated).
+The default `docker-compose.yml` launches eight containers: Zookeeper, PostgreSQL, and six Druid containers based upon the [micro quickstart configuration](../operations/single-server.md#single-server-reference-configurations-deprecated).
 Each Druid service is configured to use up to 7 GiB of memory (6 GiB direct memory and 1 GiB heap). However, the quickstart will not use all the available memory.
 
 For this setup, Docker needs at least 6 GiB of memory available for the Druid cluster. For Docker Desktop on Mac OS, adjust the memory settings in the [Docker Desktop preferences](https://docs.docker.com/desktop/mac/). If you experience a crash with a 137 error code you likely don't have enough memory allocated to Docker.

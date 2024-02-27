@@ -20,18 +20,19 @@
 package org.apache.druid.data.input.kafkainput;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -55,6 +56,7 @@ public class KafkaInputReader implements InputEntityReader
   private final InputEntityReader valueParser;
   private final String keyColumnName;
   private final String timestampColumnName;
+  private final String topicColumnName;
 
   /**
    *
@@ -73,7 +75,8 @@ public class KafkaInputReader implements InputEntityReader
       @Nullable Function<KafkaRecordEntity, InputEntityReader> keyParserSupplier,
       InputEntityReader valueParser,
       String keyColumnName,
-      String timestampColumnName
+      String timestampColumnName,
+      String topicColumnName
   )
   {
     this.inputRowSchema = inputRowSchema;
@@ -83,6 +86,7 @@ public class KafkaInputReader implements InputEntityReader
     this.valueParser = valueParser;
     this.keyColumnName = keyColumnName;
     this.timestampColumnName = timestampColumnName;
+    this.topicColumnName = topicColumnName;
   }
 
   @Override
@@ -112,18 +116,6 @@ public class KafkaInputReader implements InputEntityReader
     }
   }
 
-  private List<String> getFinalDimensionList(Set<String> newDimensions)
-  {
-    final List<String> schemaDimensions = inputRowSchema.getDimensionsSpec().getDimensionNames();
-    if (!schemaDimensions.isEmpty()) {
-      return schemaDimensions;
-    } else {
-      return Lists.newArrayList(
-          Sets.difference(newDimensions, inputRowSchema.getDimensionsSpec().getDimensionExclusions())
-      );
-    }
-  }
-
   private Map<String, Object> extractHeader(KafkaRecordEntity record)
   {
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
@@ -138,6 +130,9 @@ public class KafkaInputReader implements InputEntityReader
     // Add kafka record timestamp to the mergelist, we will skip record timestamp if the same key exists already in
     // the header list
     mergedHeaderMap.putIfAbsent(timestampColumnName, record.getRecord().timestamp());
+
+    // Add kafka record topic to the mergelist, only if the key doesn't already exist
+    mergedHeaderMap.putIfAbsent(topicColumnName, record.getRecord().topic());
 
     return mergedHeaderMap;
   }
@@ -195,9 +190,14 @@ public class KafkaInputReader implements InputEntityReader
           // Remove the dummy timestamp added in KafkaInputFormat
           newDimensions.remove(KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
 
+          final DateTime timestamp = MapInputRowParser.parseTimestamp(inputRowSchema.getTimestampSpec(), event);
           return new MapBasedInputRow(
-              inputRowSchema.getTimestampSpec().extractTimestamp(event),
-              getFinalDimensionList(newDimensions),
+              timestamp,
+              MapInputRowParser.findDimensions(
+                  inputRowSchema.getTimestampSpec(),
+                  inputRowSchema.getDimensionsSpec(),
+                  newDimensions
+              ),
               event
           );
         }
@@ -269,7 +269,11 @@ public class KafkaInputReader implements InputEntityReader
               newInputRows.add(
                   new MapBasedInputRow(
                       inputRowSchema.getTimestampSpec().extractTimestamp(event),
-                      getFinalDimensionList(newDimensions),
+                      MapInputRowParser.findDimensions(
+                          inputRowSchema.getTimestampSpec(),
+                          inputRowSchema.getDimensionsSpec(),
+                          newDimensions
+                      ),
                       event
                   )
               );
@@ -279,13 +283,17 @@ public class KafkaInputReader implements InputEntityReader
         }
     );
   }
-  
+
   private List<InputRow> buildInputRowsForMap(Map<String, Object> headerKeyList)
   {
     return Collections.singletonList(
         new MapBasedInputRow(
             inputRowSchema.getTimestampSpec().extractTimestamp(headerKeyList),
-            getFinalDimensionList(headerKeyList.keySet()),
+            MapInputRowParser.findDimensions(
+                inputRowSchema.getTimestampSpec(),
+                inputRowSchema.getDimensionsSpec(),
+                headerKeyList.keySet()
+            ),
             headerKeyList
         )
     );

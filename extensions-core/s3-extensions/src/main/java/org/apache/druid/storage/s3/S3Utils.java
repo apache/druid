@@ -28,8 +28,7 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -42,7 +41,6 @@ import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,6 +54,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -74,12 +73,19 @@ public class S3Utils
       if (e == null) {
         return false;
       } else if (e instanceof IOException) {
+        if (e.getCause() != null) {
+          // Recurse with the underlying cause to see if it's retriable.
+          return apply(e.getCause());
+        }
         return true;
       } else if (e instanceof SdkClientException
                  && e.getMessage().contains("Data read has a different length than the expected")) {
         // Can happen when connections to S3 are dropped; see https://github.com/apache/druid/pull/11941.
         // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
         // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
+        return true;
+      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to execute HTTP request")) {
+        // This is likely due to a temporary DNS issue and can be retried.
         return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
@@ -209,34 +215,20 @@ public class S3Utils
   }
 
   /**
-   * Gets a single {@link S3ObjectSummary} from s3. Since this method might return a wrong object if there are multiple
-   * objects that match the given key, this method should be used only when it's guaranteed that the given key is unique
-   * in the given bucket.
+   * Gets a single {@link ObjectMetadata} from s3.
    *
    * @param s3Client s3 client
    * @param bucket   s3 bucket
-   * @param key      unique key for the object to be retrieved
+   * @param key      s3 object key
    */
-  public static S3ObjectSummary getSingleObjectSummary(ServerSideEncryptingAmazonS3 s3Client, String bucket, String key)
+  public static ObjectMetadata getSingleObjectMetadata(ServerSideEncryptingAmazonS3 s3Client, String bucket, String key)
   {
-    final ListObjectsV2Request request = new ListObjectsV2Request()
-        .withBucketName(bucket)
-        .withPrefix(key)
-        .withMaxKeys(1);
-    final ListObjectsV2Result result = s3Client.listObjectsV2(request);
-
-    // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
-    // it is observed that even though the getObjectSummaries returns some data
-    // keyCount is still zero.
-    if (result.getObjectSummaries().size() == 0) {
-      throw new ISE("Cannot find object for bucket[%s] and key[%s]", bucket, key);
+    try {
+      return retryS3Operation(() -> s3Client.getObjectMetadata(bucket, key));
     }
-    final S3ObjectSummary objectSummary = result.getObjectSummaries().get(0);
-    if (!objectSummary.getBucketName().equals(bucket) || !objectSummary.getKey().equals(key)) {
-      throw new ISE("Wrong object[%s] for bucket[%s] and key[%s]", objectSummary, bucket, key);
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
-
-    return objectSummary;
   }
 
   /**
@@ -273,6 +265,8 @@ public class S3Utils
   )
       throws Exception
   {
+    log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
+
     final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(maxListingLength);
     final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
         s3Client,
@@ -304,6 +298,10 @@ public class S3Utils
   )
       throws Exception
   {
+    if (keysToDelete != null && log.isDebugEnabled()) {
+      List<String> keys = keysToDelete.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
+      log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
+    }
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
     S3Utils.retryS3Operation(() -> {
       s3Client.deleteObjects(deleteRequest);

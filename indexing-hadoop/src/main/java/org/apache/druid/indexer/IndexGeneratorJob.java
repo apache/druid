@@ -47,7 +47,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.timeline.DataSegment;
@@ -292,7 +292,7 @@ public class IndexGeneratorJob implements Jobby
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
       Iterable<String> oldDimOrder,
-      Map<String, ColumnCapabilities> oldCapabilities
+      Map<String, ColumnFormat> oldCapabilities
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -456,7 +456,7 @@ public class IndexGeneratorJob implements Jobby
             dimOrder.addAll(index.getDimensionOrder());
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder, index.getColumnHandlerCapabilities());
+            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder, index.getColumnFormats());
           }
 
           index.add(value);
@@ -752,7 +752,7 @@ public class IndexGeneratorJob implements Jobby
                 combiningAggs,
                 config,
                 allDimensionNames,
-                persistIndex.getColumnHandlerCapabilities()
+                persistIndex.getColumnFormats()
             );
             startTime = System.currentTimeMillis();
             ++indexCount;

@@ -55,7 +55,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(777d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(777d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -68,7 +68,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(-133d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(-133d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -81,7 +81,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(3.1d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(3.1d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -94,7 +94,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(0.1d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(0.1d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -123,7 +123,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
       Assert.assertThrows(
-          IndexOutOfBoundsException.class,
+          Exception.class,
           () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).toByteArray()
       );
     }
@@ -132,7 +132,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
     Assert.assertThrows(
-        IndexOutOfBoundsException.class,
+        Exception.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).toByteArray()
     );
   }

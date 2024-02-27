@@ -25,10 +25,8 @@ import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -37,6 +35,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +76,7 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
     validateJoinAlgorithm(queryContext);
@@ -107,17 +106,19 @@ public class NativeSqlEngine implements SqlEngine
       case WINDOW_FUNCTIONS:
       case UNNEST:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
+      case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
       case TIME_BOUNDARY_QUERY:
         return plannerContext.queryContext().isTimeBoundaryPlanningEnabled();
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
         return false;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(NativeSqlEngine.class.getSimpleName(), feature);
     }
   }
 
@@ -134,7 +135,7 @@ public class NativeSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )
@@ -146,18 +147,12 @@ public class NativeSqlEngine implements SqlEngine
    * Validates that {@link PlannerContext#CTX_SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
    * only join algorithm supported by native queries.
    */
-  private static void validateJoinAlgorithm(final Map<String, Object> queryContext) throws ValidationException
+  private static void validateJoinAlgorithm(final Map<String, Object> queryContext)
   {
     final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
 
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
-      throw new ValidationException(
-          StringUtils.format(
-              "Join algorithm [%s] is not supported by engine [%s]",
-              joinAlgorithm,
-              NAME
-          )
-      );
+      throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);
     }
   }
 }

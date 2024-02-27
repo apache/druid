@@ -23,13 +23,21 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 164;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 167;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 const initialFunctionDocs = {
   TABLE: [['external', convertMarkdownToHtml('Defines a logical table from an external.')]],
   EXTERN: [
-    ['inputSource, inputFormat, rowSignature?', convertMarkdownToHtml('Reads external data')],
+    ['inputSource, inputFormat, rowSignature?', convertMarkdownToHtml('Reads external data.')],
+  ],
+  TYPE: [
+    [
+      'nativeType',
+      convertMarkdownToHtml(
+        'A purely type system modification function what wraps a Druid native type to make it into a SQL type.',
+      ),
+    ],
   ],
 };
 
@@ -67,6 +75,7 @@ const readDoc = async () => {
     await fs.readFile('../docs/querying/sql-data-types.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-array-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),

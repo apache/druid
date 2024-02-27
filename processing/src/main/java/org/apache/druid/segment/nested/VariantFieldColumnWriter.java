@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializer}
+ * Nested field writer for mixed type scalar or array columns of {@link NestedDataColumnSerializer}.
  */
 public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
 {
@@ -37,7 +37,7 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
-      GlobalDictionaryIdLookup globalDictionaryIdLookup
+      DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
@@ -47,6 +47,7 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
   @Override
   Object processValue(int row, Object value)
   {
+    // replace arrays represented as Object[] with int[] composed of the global ids
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
       final int[] globalIds = new int[array.length];
@@ -66,6 +67,7 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
       }
       return globalIds;
     }
+    // non-arrays can be passed directly through
     return super.processValue(row, value);
   }
 

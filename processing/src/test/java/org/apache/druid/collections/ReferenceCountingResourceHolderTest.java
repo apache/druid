@@ -45,7 +45,7 @@ public class ReferenceCountingResourceHolderTest
     List<Thread> threads = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
       Thread thread = new Thread(() -> {
-        try (Releaser r = resourceHolder.increment()) {
+        try (ResourceHolder<Closeable> r = resourceHolder.increment()) {
           try {
             Thread.sleep(1);
           }

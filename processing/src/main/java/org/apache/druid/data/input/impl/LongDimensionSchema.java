@@ -22,6 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.LongDimensionHandler;
 import org.apache.druid.segment.column.ColumnType;
 
 
@@ -46,5 +48,11 @@ public class LongDimensionSchema extends DimensionSchema
   public ColumnType getColumnType()
   {
     return ColumnType.LONG;
+  }
+
+  @Override
+  public DimensionHandler getDimensionHandler()
+  {
+    return new LongDimensionHandler(getName());
   }
 }

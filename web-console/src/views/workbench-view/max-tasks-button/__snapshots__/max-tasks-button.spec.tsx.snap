@@ -97,23 +97,39 @@ exports[`MaxTasksButton matches snapshot 1`] = `
             active={false}
             disabled={false}
             icon="tick"
-            multiline={false}
+            multiline={true}
             onClick={[Function]}
             popoverProps={Object {}}
             selected={false}
             shouldDismissPopover={false}
-            text="max - Use as many tasks as possible, up to the maximum."
+            text={
+              <React.Fragment>
+                <strong>
+                  max
+                </strong>
+                : 
+                Use as many tasks as possible, up to the maximum.
+              </React.Fragment>
+            }
           />
           <Blueprint4.MenuItem
             active={false}
             disabled={false}
             icon="blank"
-            multiline={false}
+            multiline={true}
             onClick={[Function]}
             popoverProps={Object {}}
             selected={false}
             shouldDismissPopover={false}
-            text="auto - Use as few tasks as possible without exceeding 10 GiB or 10,000 files per task."
+            text={
+              <React.Fragment>
+                <strong>
+                  auto
+                </strong>
+                : 
+                Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.
+              </React.Fragment>
+            }
           />
         </Blueprint4.MenuItem>
       </Blueprint4.Menu>

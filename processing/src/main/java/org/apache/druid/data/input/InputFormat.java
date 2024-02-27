@@ -30,6 +30,9 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
 
@@ -67,4 +70,32 @@ public interface InputFormat
       InputEntity source,
       File temporaryDirectory
   );
+
+  /**
+   * Computes the weighted size of a given input object of the underyling input format type, weighted
+   * for its cost during ingestion. The weight calculated is dependent on the format type and compression type
+   * ({@link CompressionUtils.Format}) used if any. Uncompressed newline delimited json is used as baseline
+   * with scale factor 1. This means that when computing the byte weight that an uncompressed newline delimited
+   * json input object has towards ingestion, we take the file size as is, 1:1.
+   *
+   * @param path The path of the input object. Used to tell whether any compression is used.
+   * @param size The size of the input object in bytes.
+   *
+   * @return The weighted size of the input object.
+   */
+  default long getWeightedSize(String path, long size)
+  {
+    return size;
+  }
+
+  /**
+   * Returns an adapter that can read the rows from {@link #createReader(InputRowSchema, InputEntity, File)},
+   * given a particular {@link InputRowSchema}. Note that {@link RowAdapters#standardRow()} always works, but the
+   * one returned by this method may be more performant.
+   */
+  @SuppressWarnings("unused") // inputRowSchema is currently unused, but may be used in the future for ColumnsFilter
+  default RowAdapter<InputRow> createRowAdapter(InputRowSchema inputRowSchema)
+  {
+    return RowAdapters.standardRow();
+  }
 }

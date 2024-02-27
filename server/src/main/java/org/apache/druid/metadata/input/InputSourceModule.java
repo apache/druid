@@ -41,7 +41,7 @@ public class InputSourceModule implements DruidModule
     return ImmutableList.<Module>of(
         new SimpleModule("InputSourceModule")
             .registerSubtypes(
-                new NamedType(SqlInputSource.class, "sql")
+                new NamedType(SqlInputSource.class, SqlInputSource.TYPE_KEY)
             )
     );
   }

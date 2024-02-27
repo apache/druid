@@ -92,7 +92,7 @@ export const KillDatasourceDialog = function KillDatasourceDialog(
               format.
             </p>
             <p>
-              If you have streaming ingestion running make sure that your interval range doe not
+              If you have streaming ingestion running make sure that your interval range does not
               overlap with intervals where streaming data is being added - otherwise the kill task
               will not start.
             </p>

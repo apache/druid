@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import hasOwnProp from 'has-own-prop';
-
 // This is set to the latest available version and should be updated to the next version before release
 const DRUID_DOCS_VERSION = 'latest';
 
@@ -50,7 +48,7 @@ const links = DEFAULT_LINKS;
 export function setLinkOverrides(linkOverrides: Links) {
   const keys = Object.keys(DEFAULT_LINKS) as (keyof Links)[];
   for (const k of keys) {
-    if (hasOwnProp(linkOverrides, k)) {
+    if (Object.hasOwn(linkOverrides, k)) {
       links[k] = fillVersion(String(linkOverrides[k]));
     }
   }
@@ -82,7 +80,7 @@ export function getLink(linkName: LinkNames): string {
     case 'DOCS_RUNE':
       return `${links.docsHref}/querying/querying.html`;
     case 'DOCS_API':
-      return `${links.docsHref}/operations/api-reference.html`;
+      return `${links.docsHref}/api-reference/api-reference.html`;
     case 'DOCS_MSQ_ERROR':
       return `${links.docsHref}/multi-stage-query/reference.html`;
     case 'COMMUNITY':

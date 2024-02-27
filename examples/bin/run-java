@@ -24,31 +24,24 @@ if [ -z "$JAVA_BIN" ]; then
   exit 1
 fi
 
-JAVA_MAJOR="$("$JAVA_BIN" -version 2>&1 | sed -n -E 's/.* version "([^."]*).*/\1/p')"
+JAVA_MAJOR="$("$JAVA_BIN" -version 2>&1 | sed -n -E 's/.* version "([^."-]*).*/\1/p')"
 
-if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "17" ]
+if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
 then
-  # Must disable strong encapsulation for certain packages on Java 17.
-  # The last one is required for metric emit, see https://github.com/apache/druid/issues/12312
+  # Disable strong encapsulation for certain packages on Java 11+.
+  # When updating this list, update all four:
+  #  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES
+  #  2) docs/operations/java.md, "Strong encapsulation" section
+  #  3) pom.xml, jdk.strong.encapsulation.argLine
+  #  4) examples/bin/run-java script (here)
   exec "$JAVA_BIN" \
     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
-    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED \
     --add-opens=java.base/java.nio=ALL-UNNAMED \
     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED \
     --add-opens=java.base/java.io=ALL-UNNAMED \
     --add-opens=java.base/java.lang=ALL-UNNAMED \
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
-    "$@"
-elif [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
-then
-  # The first 4 parameters below are required to use datasketches-memory as a library.
-  # And the last one is required for metric emit, see https://github.com/apache/druid/issues/12312
-  exec "$JAVA_BIN" \
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
-    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
-    --add-opens=java.base/java.nio=ALL-UNNAMED \
-    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
     "$@"
 else

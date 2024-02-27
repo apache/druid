@@ -48,6 +48,12 @@ public class NoopTaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskStatus(String taskid, File statusFile)
+  {
+    log.info("Not pushing status for task: %s", taskid);
+  }
+
+  @Override
   public void killAll()
   {
     log.info("Noop: No task logs are deleted.");
@@ -57,5 +63,17 @@ public class NoopTaskLogs implements TaskLogs
   public void killOlderThan(long timestamp)
   {
     log.info("Noop: No task logs are deleted.");
+  }
+
+  @Override
+  public void pushTaskPayload(String taskid, File taskPayloadFile)
+  {
+    log.info("Not pushing payload for task: %s", taskid);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskid)
+  {
+    return Optional.absent();
   }
 }

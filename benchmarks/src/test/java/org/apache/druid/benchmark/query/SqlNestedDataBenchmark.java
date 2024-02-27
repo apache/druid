@@ -34,8 +34,8 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -45,6 +45,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
@@ -57,7 +58,6 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -90,7 +90,7 @@ public class SqlNestedDataBenchmark
 
   static {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
+    ExpressionProcessing.initializeForTests();
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -111,12 +111,6 @@ public class SqlNestedDataBenchmark
     public int getNumThreads()
     {
       return 1;
-    }
-
-    @Override
-    public boolean useParallelMergePoolConfigured()
-    {
-      return true;
     }
 
     @Override
@@ -175,7 +169,31 @@ public class SqlNestedDataBenchmark
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 1005.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
       // 28, 29
       "SELECT SUM(long1) FROM foo WHERE double3 < 2000.0 AND double3 > 1000.0",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 2000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0"
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 2000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      // 30, 31
+      "SELECT SUM(long1) FROM foo WHERE double3 < 3000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 3000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      // 32,33
+      "SELECT SUM(long1) FROM foo WHERE double3 < 5000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 5000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      // 34,35 smaller cardinality like range filter
+      "SELECT SUM(long1) FROM foo WHERE string1 LIKE '1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') LIKE '1%'",
+      // 36,37 smaller cardinality like predicate filter
+      "SELECT SUM(long1) FROM foo WHERE string1 LIKE '%1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') LIKE '%1%'",
+      // 38-39 moderate cardinality like range
+      "SELECT SUM(long1) FROM foo WHERE string5 LIKE '1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '1%'",
+      // 40, 41 big cardinality lex range
+      "SELECT SUM(long1) FROM foo WHERE string5 > '1'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') > '1'",
+      // 42, 43 big cardinality like predicate filter
+      "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
+      // 44, 45 big cardinality like filter + selector filter
+      "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'"
   );
 
   @Param({"5000000"})
@@ -187,7 +205,11 @@ public class SqlNestedDataBenchmark
   })
   private String vectorize;
 
-  @Param({"none", "front-coded-4", "front-coded-16"})
+  @Param({
+      "none",
+      "front-coded-4",
+      "front-coded-16"
+  })
   private String stringEncoding;
 
   @Param({
@@ -220,7 +242,23 @@ public class SqlNestedDataBenchmark
       "26",
       "27",
       "28",
-      "29"
+      "29",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+      "45"
   })
   private String query;
 
@@ -253,14 +291,14 @@ public class SqlNestedDataBenchmark
         ImmutableList.of(
             new ExpressionTransform(
                 "nested",
-                "json_object('long1', long1, 'nesteder', json_object('string1', string1, 'long2', long2, 'double3',double3))",
+                "json_object('long1', long1, 'nesteder', json_object('string1', string1, 'long2', long2, 'double3',double3, 'string5', string5))",
                 TestExprMacroTable.INSTANCE
             )
         )
     );
     List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
                                               .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new NestedDataDimensionSchema("nested"))
+                                              .add(new AutoTypeColumnSchema("nested", null))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
 
@@ -278,15 +316,7 @@ public class SqlNestedDataBenchmark
         schemaInfo,
         dimsSpec,
         transformSpec,
-        new IndexSpec(
-            null,
-            null,
-            encodingStrategy,
-            null,
-            null,
-            null,
-            null
-        ),
+        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
         Granularities.NONE,
         rowsPerSegment
     );
@@ -296,7 +326,7 @@ public class SqlNestedDataBenchmark
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );
@@ -339,7 +369,7 @@ public class SqlNestedDataBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void querySql(Blackhole blackhole) throws Exception
+  public void querySql(Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,

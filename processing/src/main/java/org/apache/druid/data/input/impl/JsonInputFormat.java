@@ -26,9 +26,11 @@ import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -120,6 +122,11 @@ public class JsonInputFormat extends NestedInputFormat
     return featureSpec;
   }
 
+  boolean isLineSplittable()
+  {
+    return lineSplittable;
+  }
+
   @JsonProperty // No @JsonInclude, since default is variable, so we can't assume false is default
   public boolean isKeepNullColumns()
   {
@@ -154,6 +161,16 @@ public class JsonInputFormat extends NestedInputFormat
     } else {
       return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
     }
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
+    if (CompressionUtils.Format.GZ == compressionFormat) {
+      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
+    }
+    return size;
   }
 
   /**
@@ -203,5 +220,32 @@ public class JsonInputFormat extends NestedInputFormat
         assumeNewlineDelimited,
         useJsonNodeReader
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JsonInputFormat{" +
+           "featureSpec=" + featureSpec +
+           ", keepNullColumns=" + keepNullColumns +
+           ", lineSplittable=" + lineSplittable +
+           ", assumeNewlineDelimited=" + assumeNewlineDelimited +
+           ", useJsonNodeReader=" + useJsonNodeReader +
+           '}';
+  }
+
+  /**
+   * If the provided format is {@link JsonInputFormat}, return a version with {@link #withLineSplittable(boolean)}
+   * called. Otherwise return the provided format itself. This is a hack in order to get the same "json" input format
+   * to use {@link JsonReader} by default for streaming ingestion, and {@link JsonLineReader} by default for batch
+   * file-based ingestion.
+   */
+  public static InputFormat withLineSplittable(InputFormat format, boolean lineSplittable)
+  {
+    if (format instanceof JsonInputFormat) {
+      return ((JsonInputFormat) format).withLineSplittable(lineSplittable);
+    } else {
+      return format;
+    }
   }
 }

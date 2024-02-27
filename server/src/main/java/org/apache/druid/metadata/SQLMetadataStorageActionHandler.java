@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.apache.druid.common.exception.DruidException;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
@@ -61,6 +62,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.IntStream;
 
 public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -165,34 +167,61 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     try {
       getConnector().retryWithHandle(
-          (HandleCallback<Void>) handle -> {
-            final String sql = StringUtils.format(
-                "INSERT INTO %s (id, created_date, datasource, payload, type, group_id, active, status_payload) "
-                + "VALUES (:id, :created_date, :datasource, :payload, :type, :group_id, :active, :status_payload)",
-                getEntryTable()
-            );
-            handle.createStatement(sql)
-                  .bind("id", id)
-                  .bind("created_date", timestamp.toString())
-                  .bind("datasource", dataSource)
-                  .bind("payload", jsonMapper.writeValueAsBytes(entry))
-                  .bind("type", type)
-                  .bind("group_id", groupId)
-                  .bind("active", active)
-                  .bind("status_payload", jsonMapper.writeValueAsBytes(status))
-                  .execute();
-            return null;
-          },
-          e -> getConnector().isTransientException(e) && !(isStatementException(e) && getEntry(id).isPresent())
+          handle -> insertEntryWithHandle(handle, id, timestamp, dataSource, entry, active, status, type, groupId),
+          this::isTransientDruidException
       );
     }
+    catch (CallbackFailedException e) {
+      propagateAsRuntimeException(e.getCause());
+    }
     catch (Exception e) {
-      if (isStatementException(e) && getEntry(id).isPresent()) {
-        throw new EntryExistsException(id, e);
-      } else {
-        Throwables.propagateIfPossible(e);
-        throw new RuntimeException(e);
-      }
+      propagateAsRuntimeException(e);
+    }
+  }
+
+  private void propagateAsRuntimeException(Throwable t)
+  {
+    Throwables.propagateIfPossible(t);
+    throw new RuntimeException(t);
+  }
+
+  /**
+   * Inserts the given entry into the metadata store. This method wraps any
+   * exception thrown in a {@link DruidException}. When used in a HandleCallback,
+   * that exception is further wrapped in a {@link CallbackFailedException}.
+   */
+  private Void insertEntryWithHandle(
+      Handle handle,
+      String entryId,
+      DateTime timestamp,
+      String dataSource,
+      EntryType entry,
+      boolean active,
+      StatusType status,
+      String type,
+      String groupId
+  )
+  {
+    try {
+      final String sql = StringUtils.format(
+          "INSERT INTO %s (id, created_date, datasource, payload, type, group_id, active, status_payload) "
+          + "VALUES (:id, :created_date, :datasource, :payload, :type, :group_id, :active, :status_payload)",
+          getEntryTable()
+      );
+      handle.createStatement(sql)
+            .bind("id", entryId)
+            .bind("created_date", timestamp.toString())
+            .bind("datasource", dataSource)
+            .bind("payload", jsonMapper.writeValueAsBytes(entry))
+            .bind("type", type)
+            .bind("group_id", groupId)
+            .bind("active", active)
+            .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+            .execute();
+      return null;
+    }
+    catch (Throwable t) {
+      throw wrapInDruidException(entryId, t);
     }
   }
 
@@ -200,6 +229,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     return e instanceof StatementException ||
            (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
+  }
+
+  private boolean isTransientDruidException(Throwable t)
+  {
+    if (t instanceof CallbackFailedException) {
+      return isTransientDruidException(t.getCause());
+    } else if (t instanceof DruidException) {
+      return ((DruidException) t).isTransient();
+    } else {
+      return getConnector().isTransientException(t);
+    }
   }
 
   @Override
@@ -304,10 +344,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
               case ACTIVE:
-                query = createActiveTaskStreamingQuery(
-                    handle,
-                    dataSource
-                );
+                query = createActiveTaskStreamingQuery(handle, dataSource);
                 tasks.addAll(query.map(taskInfoMapper).list());
                 break;
               case COMPLETE:
@@ -388,6 +425,35 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
+  }
+
+  /**
+   * Wraps the given error in a user friendly DruidException.
+   */
+  private DruidException wrapInDruidException(String taskId, Throwable t)
+  {
+    if (isStatementException(t) && getEntry(taskId).isPresent()) {
+      return new EntryExistsException("Task", taskId);
+    } else if (connector.isRootCausePacketTooBigException(t)) {
+      return new DruidException(
+          StringUtils.format(
+              "Payload for task [%s] exceeds the packet limit."
+              + " Update the max_allowed_packet on your metadata store"
+              + " server or in the connection properties.",
+              taskId
+          ),
+          DruidException.HTTP_CODE_BAD_REQUEST,
+          t,
+          false
+      );
+    } else {
+      return new DruidException(
+          StringUtils.format("Encountered metadata exception for task [%s]", taskId),
+          DruidException.HTTP_CODE_SERVER_ERROR,
+          t,
+          connector.isTransientException(t)
+      );
+    }
   }
 
   /**
@@ -793,7 +859,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     DateTime dateTime = DateTimes.utc(timestamp);
     connector.retryWithHandle(
-        (HandleCallback<Void>) handle -> {
+        handle -> {
           handle.createStatement(getSqlRemoveLogsOlderThan())
                 .bind("date_time", dateTime.toString())
                 .execute();
@@ -883,9 +949,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   @Deprecated
   public String getSqlRemoveLogsOlderThan()
   {
-    return StringUtils.format("DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
-                              + "WHERE b.created_date < :date_time and b.active = false",
-                              logTable, entryTable, entryTypeName
+    return StringUtils.format(
+        "DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
+        + "WHERE b.created_date < :date_time and b.active = false",
+        logTable, entryTable, entryTypeName
     );
   }
 
@@ -966,47 +1033,38 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                             .orElse(null);
   }
 
-  private List<TaskIdentifier> fetchTaskMetadatas(String tableName, String id, int limit)
+  private List<TaskIdentifier> fetchTasksWithTypeColumnNullAndIdGreaterThan(String id, int limit)
   {
     List<TaskIdentifier> taskIdentifiers = new ArrayList<>();
     connector.retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            String sql = StringUtils.format(
-                "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
-                tableName,
-                id,
-                connector.limitClause(limit)
-            );
-            Query<Map<String, Object>> query = handle.createQuery(sql);
-            taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
-            return null;
-          }
+        handle -> {
+          String sql = StringUtils.format(
+              "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
+              entryTable, id, connector.limitClause(limit)
+          );
+          Query<Map<String, Object>> query = handle.createQuery(sql);
+          taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
+          return null;
         }
     );
     return taskIdentifiers;
   }
 
-  private void updateTaskMetadatas(String tasksTable, List<TaskIdentifier> taskIdentifiers)
+  private int updateColumnsTypeAndGroupIdForTasks(List<TaskIdentifier> taskIdentifiers)
   {
-    connector.retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            Batch batch = handle.createBatch();
-            String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
-            for (TaskIdentifier metadata : taskIdentifiers) {
-              batch.add(StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
-              );
-            }
-            batch.execute();
-            return null;
+    return connector.retryWithHandle(
+        handle -> {
+          final Batch batch = handle.createBatch();
+          for (TaskIdentifier task : taskIdentifiers) {
+            batch.add(
+                StringUtils.format(
+                    "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'",
+                    entryTable, task.getType(), task.getGroupId(), task.getId()
+                )
+            );
           }
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
         }
     );
   }
@@ -1015,9 +1073,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public void populateTaskTypeAndGroupIdAsync()
   {
     ExecutorService executorService = Executors.newSingleThreadExecutor();
-    taskMigrationCompleteFuture = executorService.submit(
-        () -> populateTaskTypeAndGroupId()
-    );
+    taskMigrationCompleteFuture = executorService.submit(this::populateTaskTypeAndGroupId);
   }
 
   /**
@@ -1028,14 +1084,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   @VisibleForTesting
   boolean populateTaskTypeAndGroupId()
   {
-    log.info("Populate fields task and group_id of task entry table [%s] from payload", entryTable);
-    String id = "";
-    int limit = 100;
-    int count = 0;
+    log.debug("Populating columns [task] and [group_id] in task table[%s] from payload.", entryTable);
+    String lastUpdatedTaskId = "";
+    final int limit = 100;
+    int numUpdatedTasks = 0;
     while (true) {
       List<TaskIdentifier> taskIdentifiers;
       try {
-        taskIdentifiers = fetchTaskMetadatas(entryTable, id, limit);
+        taskIdentifiers = fetchTasksWithTypeColumnNullAndIdGreaterThan(lastUpdatedTaskId, limit);
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while reading entries from task table");
@@ -1045,15 +1101,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         break;
       }
       try {
-        updateTaskMetadatas(entryTable, taskIdentifiers);
-        count += taskIdentifiers.size();
-        log.info("Successfully updated type and groupId for [%d] tasks", count);
+        final int updatedCount = updateColumnsTypeAndGroupIdForTasks(taskIdentifiers);
+        if (updatedCount > 0) {
+          numUpdatedTasks += updatedCount;
+          log.info("Successfully updated columns [type] and [group_id] for [%d] tasks.", numUpdatedTasks);
+        }
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while updating entries in task table");
         return false;
       }
-      id = taskIdentifiers.get(taskIdentifiers.size() - 1).getId();
+      lastUpdatedTaskId = taskIdentifiers.get(taskIdentifiers.size() - 1).getId();
 
       try {
         Thread.sleep(1000);
@@ -1063,7 +1121,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         Thread.currentThread().interrupt();
       }
     }
-    log.info("Task migration for table [%s] successful", entryTable);
+    if (numUpdatedTasks > 0) {
+      log.info("Task migration for table[%s] successful.", entryTable);
+    }
     return true;
   }
 }

@@ -1,7 +1,7 @@
 ---
 id: tutorial-ingestion-spec
-title: "Tutorial: Writing an ingestion spec"
-sidebar_label: "Writing an ingestion spec"
+title: Write an ingestion spec
+sidebar_label: Write an ingestion spec
 ---
 
 <!--

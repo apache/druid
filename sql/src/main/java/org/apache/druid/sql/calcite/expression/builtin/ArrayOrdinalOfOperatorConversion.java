@@ -33,7 +33,7 @@ public class ArrayOrdinalOfOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_ORDINAL_OF")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,expr)",
+              "'ARRAY_ORDINAL_OF(array, expr)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)

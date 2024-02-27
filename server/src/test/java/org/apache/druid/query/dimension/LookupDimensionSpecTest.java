@@ -34,6 +34,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,7 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RunWith(JUnitParamsRunner.class)
-public class LookupDimensionSpecTest
+public class LookupDimensionSpecTest extends InitializedNullHandlingTest
 {
   private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
   private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(STRING_MAP, true);

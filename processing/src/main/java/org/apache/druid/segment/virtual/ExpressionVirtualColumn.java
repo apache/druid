@@ -34,6 +34,7 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -41,6 +42,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -63,6 +65,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private final Supplier<Expr> parsedExpression;
   private final Supplier<byte[]> cacheKey;
 
+  /**
+   * Constructor for deserialization.
+   */
   @JsonCreator
   public ExpressionVirtualColumn(
       @JsonProperty("name") String name,
@@ -71,28 +76,57 @@ public class ExpressionVirtualColumn implements VirtualColumn
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    this.name = Preconditions.checkNotNull(name, "name");
-    this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.outputType = outputType;
-    this.parsedExpression = Parser.lazyParse(expression, macroTable);
-    this.cacheKey = makeCacheKeySupplier();
+    this(name, expression, outputType, Parser.lazyParse(expression, macroTable));
   }
 
   /**
-   * Constructor for creating an ExpressionVirtualColumn from a pre-parsed expression.
+   * Constructor for creating an ExpressionVirtualColumn from a pre-parsed-and-analyzed expression, where the original
+   * expression string is known.
    */
   public ExpressionVirtualColumn(
-      String name,
-      Expr parsedExpression,
-      @Nullable ColumnType outputType
+      final String name,
+      final String expression,
+      final Expr parsedExpression,
+      @Nullable final ColumnType outputType
+  )
+  {
+    this(name, expression, outputType, () -> parsedExpression);
+  }
+
+  /**
+   * Constructor for creating an ExpressionVirtualColumn from a pre-parsed expression, where the original
+   * expression string is not known.
+   *
+   * This constructor leads to an instance where {@link #getExpression()} is the toString representation of the
+   * parsed expression, which is not necessarily a valid expression. Do not try to reparse it as an expression, as
+   * this will not work.
+   *
+   * If you know the original expression, use
+   * {@link ExpressionVirtualColumn#ExpressionVirtualColumn(String, String, Expr, ColumnType)} instead.
+   */
+  public ExpressionVirtualColumn(
+      final String name,
+      final Expr parsedExpression,
+      @Nullable final ColumnType outputType
+  )
+  {
+    this(name, parsedExpression.toString(), outputType, () -> parsedExpression);
+  }
+
+  /**
+   * Private constructor used by the public ones.
+   */
+  private ExpressionVirtualColumn(
+      final String name,
+      final String expression,
+      @Nullable final ColumnType outputType,
+      final Supplier<Expr> parsedExpression
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
-    // Unfortunately this string representation can't be reparsed into the same expression, might be useful
-    // if the expression system supported that
-    this.expression = parsedExpression.toString();
+    this.expression = Preconditions.checkNotNull(expression, "expression");
     this.outputType = outputType;
-    this.parsedExpression = Suppliers.ofInstance(parsedExpression);
+    this.parsedExpression = parsedExpression;
     this.cacheKey = makeCacheKeySupplier();
   }
 
@@ -206,6 +240,16 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
 
     return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+  }
+
+  @Nullable
+  @Override
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector columnIndexSelector
+  )
+  {
+    return getParsedExpression().get().asColumnIndexSupplier(columnIndexSelector, outputType);
   }
 
   @Override

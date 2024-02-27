@@ -95,9 +95,6 @@ public class JoinAndLookupBenchmark
   @Param({"500000"})
   int rows;
 
-  @Param({"0", "16384"})
-  int columnCacheSizeBytes;
-
   private File tmpDir = null;
   private QueryableIndex index = null;
   private Segment baseSegment = null;
@@ -123,8 +120,7 @@ public class JoinAndLookupBenchmark
   public void setup() throws IOException
   {
     tmpDir = FileUtils.createTempDir();
-    ColumnConfig columnConfig = () -> columnCacheSizeBytes;
-    index = JoinTestHelper.createFactIndexBuilder(columnConfig, tmpDir, rows).buildMMappedIndex();
+    index = JoinTestHelper.createFactIndexBuilder(ColumnConfig.DEFAULT, tmpDir, rows).buildMMappedIndex();
 
     final String prefix = "c.";
 

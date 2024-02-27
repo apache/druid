@@ -73,7 +73,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,7 +82,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -1190,15 +1188,17 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
+    public Builder setPostAggregatorSpecs(PostAggregator... postAggregatorSpecs)
+    {
+      this.postAggregatorSpecs = Lists.newArrayList(postAggregatorSpecs);
+      this.postProcessingFn = null;
+      return this;
+    }
+
     public Builder setContext(Map<String, Object> context)
     {
       this.context = context;
       return this;
-    }
-
-    public Builder randomQueryId()
-    {
-      return queryId(UUID.randomUUID().toString());
     }
 
     public Builder queryId(String queryId)

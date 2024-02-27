@@ -23,9 +23,11 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
 extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
@@ -44,9 +46,38 @@ Once a query is submitted, it executes as a [`query_controller`](concepts.md#exe
 users submit to the MSQ task engine are Overlord tasks, so they follow the Overlord's security model. This means that
 users with access to the Overlord API can perform some actions even if they didn't submit the query, including
 retrieving status or canceling a query. For more information about the Overlord API and the task API, see [APIs for
-SQL-based ingestion](./api.md).
+SQL-based ingestion](../api-reference/sql-ingestion-api.md). 
 
-To interact with a query through the Overlord API, users need the following permissions:
+:::info
+ Keep in mind that any user with access to Overlord APIs can submit `query_controller` tasks with only the WRITE DATASOURCE permission.
+:::
 
-- `INSERT` or `REPLACE` queries: Users must have READ DATASOURCE permission on the output datasource.
-- `SELECT` queries: Users must have read permissions on the `__query_select` datasource, which is a stub datasource that gets created.
+Depending on what a user is trying to do, they might also need the following permissions:
+
+- `INSERT` or `REPLACE` queries: Users must have DATASOURCE READ permission on the output datasource.
+- `SELECT` queries: Users must have READ permission on the `__query_select` datasource, which is a stub datasource that gets created.
+  
+
+
+
+## Permissions for durable storage
+
+The MSQ task engine can use Amazon S3 or Azure Blog Storage to store intermediate files when running queries. To upload, read, move and delete these intermediate files, the MSQ task engine requires certain permissions specific to the storage provider. 
+
+### S3
+
+The MSQ task engine needs the following permissions for pushing,  fetching, and removing intermediate stage results to and from S3:
+
+- `s3:GetObject` to retrieve files. Note that `GetObject` also requires read permission on the object that gets retrieved. 
+- `s3:PutObject` to upload files.
+- `s3:AbortMultipartUpload` to cancel the upload of files
+- `s3:DeleteObject` to delete files when they're no longer needed. 
+
+### Azure
+
+The MSQ task engine needs the following permissions for pushing, fetching, and removing intermediate stage results to and from Azure:
+
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read` to read and list files in durable storage 
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write files in durable storage.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create files in durable storage.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.

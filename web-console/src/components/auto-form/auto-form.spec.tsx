@@ -136,5 +136,26 @@ describe('AutoForm', () => {
         COMPACTION_CONFIG_FIELDS,
       ),
     ).toEqual('field tuningConfig.totalNumMergeTasks is defined but it should not be');
+
+    expect(
+      AutoForm.issueWithModel(
+        {
+          dataSource: 'ds',
+          taskPriority: 25,
+          skipOffsetFromLatest: 'P4D',
+          tuningConfig: {
+            partitionsSpec: {
+              type: 'not_a_know_partition_spec',
+              maxRowsPerSegment: 5000000,
+            },
+            totalNumMergeTasks: 5,
+            type: 'index_parallel',
+            forceGuaranteedRollup: false,
+          },
+          taskContext: null,
+        },
+        COMPACTION_CONFIG_FIELDS,
+      ),
+    ).toBeUndefined();
   });
 });

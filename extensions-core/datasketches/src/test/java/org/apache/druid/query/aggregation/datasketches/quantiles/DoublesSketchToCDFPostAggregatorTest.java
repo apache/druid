@@ -142,7 +142,7 @@ public class DoublesSketchToCDFPostAggregatorTest
     final PostAggregator postAgg = new DoublesSketchToCDFPostAggregator(
         "cdf",
         new FieldAccessPostAggregator("field", "sketch"),
-        new double[] {4} // half of the distribution is below 4
+        new double[] {3} // half of the distribution is less or equals 3
     );
 
     final double[] cdf = (double[]) postAgg.compute(fields);

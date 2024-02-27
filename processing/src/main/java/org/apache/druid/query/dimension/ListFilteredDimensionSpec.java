@@ -79,9 +79,9 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
 
     if (isWhitelist) {
-      return filterAllowList(values, selector);
+      return filterAllowList(values, selector, delegate.getExtractionFn() != null);
     } else {
-      return filterDenyList(values, selector);
+      return filterDenyList(values, selector, delegate.getExtractionFn() != null);
     }
   }
 
@@ -125,9 +125,9 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     return builder.build();
   }
 
-  public static DimensionSelector filterAllowList(Set<String> values, DimensionSelector selector)
+  public static DimensionSelector filterAllowList(Set<String> values, DimensionSelector selector, boolean forcePredicateFilter)
   {
-    if (selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
+    if (forcePredicateFilter || selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
       return new PredicateFilteredDimensionSelector(selector, Predicates.in(values));
     }
     final IdMapping idMapping = buildAllowListIdMapping(
@@ -139,9 +139,9 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     return new ForwardingFilteredDimensionSelector(selector, idMapping);
   }
 
-  public static DimensionSelector filterDenyList(Set<String> values, DimensionSelector selector)
+  public static DimensionSelector filterDenyList(Set<String> values, DimensionSelector selector, boolean forcePredicateFilter)
   {
-    if (selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
+    if (forcePredicateFilter || selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
       return new PredicateFilteredDimensionSelector(
           selector,
           input -> !values.contains(input)

@@ -21,11 +21,9 @@ package org.apache.druid.msq.querykit;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.Closeable;
 import java.util.function.Supplier;
 
 @NotThreadSafe
@@ -33,11 +31,10 @@ public class LazyResourceHolder<T> implements ResourceHolder<T>
 {
   private static final Logger log = new Logger(LazyResourceHolder.class);
 
-  private final Supplier<Pair<T, Closeable>> supplier;
-  private T resource = null;
-  private Closeable closer = null;
+  private final Supplier<ResourceHolder<T>> supplier;
+  private ResourceHolder<T> supplied = null;
 
-  public LazyResourceHolder(final Supplier<Pair<T, Closeable>> supplier)
+  public LazyResourceHolder(final Supplier<ResourceHolder<T>> supplier)
   {
     this.supplier = Preconditions.checkNotNull(supplier, "supplier");
   }
@@ -45,28 +42,25 @@ public class LazyResourceHolder<T> implements ResourceHolder<T>
   @Override
   public T get()
   {
-    if (resource == null) {
-      final Pair<T, Closeable> supplied = supplier.get();
-      resource = Preconditions.checkNotNull(supplied.lhs, "resource");
-      closer = Preconditions.checkNotNull(supplied.rhs, "closer");
+    if (supplied == null) {
+      supplied = supplier.get();
     }
 
-    return resource;
+    return supplied.get();
   }
 
   @Override
   public void close()
   {
-    if (resource != null) {
+    if (supplied != null) {
       try {
-        closer.close();
+        supplied.close();
       }
       catch (Throwable e) {
-        log.noStackTrace().warn(e, "Exception encountered while closing resource: %s", resource);
+        log.noStackTrace().warn(e, "Exception encountered while closing resource: %s", supplied.get());
       }
       finally {
-        resource = null;
-        closer = null;
+        supplied = null;
       }
     }
   }

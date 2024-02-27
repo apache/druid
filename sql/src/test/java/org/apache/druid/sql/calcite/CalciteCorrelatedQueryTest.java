@@ -29,9 +29,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
@@ -54,7 +55,6 @@ import java.util.Map;
 @RunWith(JUnitParamsRunner.class)
 public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 {
-
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testCorrelatedSubquery(Map<String, Object> queryContext)
@@ -88,7 +88,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
-                                                                .setDimFilter(not(selector("country", null, null)))
+                                                                .setDimFilter(notNull("country"))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
@@ -128,12 +128,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
-                                                    new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                                    new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                                     useDefault
                                                     ? new CountAggregatorFactory("_a0:count")
                                                     : new FilteredAggregatorFactory(
                                                         new CountAggregatorFactory("_a0:count"),
-                                                        not(selector("a0", null, null))
+                                                        notNull("a0")
                                                     )
                                                 )
                                                 .setPostAggregatorSpecs(Collections.singletonList(new ArithmeticPostAggregator(
@@ -159,15 +159,15 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                         )
                         .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                         .setDimensions(new DefaultDimensionSpec("country", "d0"))
-                        .setAggregatorSpecs(new LongAnyAggregatorFactory("a0", "j0._a0"))
+                        .setAggregatorSpecs(new DoubleAnyAggregatorFactory("a0", "j0._a0"))
                         .setGranularity(new AllGranularity())
                         .setContext(queryContext)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"India", 2L},
-            new Object[]{"USA", 1L},
-            new Object[]{"canada", 3L}
+            new Object[]{"India", 2.0},
+            new Object[]{"USA", 1.0},
+            new Object[]{"canada", 3.0}
         )
     );
   }
@@ -206,7 +206,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
-                                                                .setDimFilter(not(selector("country", null, null)))
+                                                                .setDimFilter(notNull("country"))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
@@ -244,7 +244,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                     makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT,
-                                selector("city", "B", null)
+                                equality("city", "B", ColumnType.STRING)
                             )
                         )
                         .setQuerySegmentSpec(querySegmentSpec(Intervals.of(
@@ -284,7 +284,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                 new QueryDataSource(newScanQueryBuilder().dataSource(CalciteTests.USERVISITDATASOURCE)
                                                                          .intervals(querySegmentSpec(Intervals.of(
                                                                              "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z")))
-                                                                         .filters(selector("city", "B", null))
+                                                                         .filters(equality(
+                                                                             "city",
+                                                                             "B",
+                                                                             ColumnType.STRING
+                                                                         ))
                                                                          .columns("__time", "city", "country")
                                                                          .build()),
                                 new QueryDataSource(
@@ -299,7 +303,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
-                                                                .setDimFilter(not(selector("country", null, null)))
+                                                                .setDimFilter(notNull("country"))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
@@ -399,11 +403,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 )
                                                                 .setAggregatorSpecs(new FilteredAggregatorFactory(
                                                                     new CountAggregatorFactory("a0"),
-                                                                    not(selector("user", null, null))
+                                                                    notNull("user")
                                                                 ))
                                                                 .setDimFilter(and(
-                                                                    selector("city", "A", null),
-                                                                    not(selector("country", null, null))
+                                                                    equality("city", "A", ColumnType.STRING),
+                                                                    notNull("country")
                                                                 ))
                                                                 .setContext(
                                                                     withTimestampResultContext(
@@ -430,7 +434,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                     makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT,
-                                selector("city", "B", null)
+                                equality("city", "B", ColumnType.STRING)
                             )
                         )
                         .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
@@ -492,11 +496,11 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 )
                                                                 .setAggregatorSpecs(new FilteredAggregatorFactory(
                                                                     new CountAggregatorFactory("a0"),
-                                                                    not(selector("user", null, null))
+                                                                    notNull("user")
                                                                 ))
                                                                 .setDimFilter(and(
-                                                                    selector("city", "A", null),
-                                                                    not(selector("country", null, null))
+                                                                    equality("city", "A", ColumnType.STRING),
+                                                                    notNull("country")
                                                                 ))
                                                                 .setContext(
                                                                     withTimestampResultContext(
@@ -523,7 +527,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                     makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT,
-                                selector("city", "B", null)
+                                equality("city", "B", ColumnType.STRING)
                             )
                         )
                         .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))

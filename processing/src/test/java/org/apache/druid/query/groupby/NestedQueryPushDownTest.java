@@ -61,10 +61,6 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategy;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
@@ -74,6 +70,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -116,10 +113,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
             ExprMacroTable.nil()
         )
     );
-    INDEX_IO = new IndexIO(
-        JSON_MAPPER,
-        () -> 0
-    );
+    INDEX_IO = new IndexIO(JSON_MAPPER, ColumnConfig.DEFAULT);
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
@@ -138,7 +132,6 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
                 ))
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
   }
@@ -191,7 +184,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -235,7 +228,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
@@ -261,11 +254,6 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return "v2";
-      }
 
       @Override
       public int getBufferGrouperInitialBuckets()
@@ -280,8 +268,6 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
       }
     };
     config.setSingleThreaded(false);
-    config.setMaxIntermediateRows(Integer.MAX_VALUE);
-    config.setMaxResults(Integer.MAX_VALUE);
 
     DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
     {
@@ -300,50 +286,33 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine engine1 = new GroupingEngine(
+        druidProcessingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            druidProcessingConfig,
-            configSupplier,
-            bufferPool,
-            mergePool,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergePool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        NOOP_QUERYWATCHER
     );
-
-    final GroupByStrategySelector strategySelector2 = new GroupByStrategySelector(
+    final GroupingEngine engine2 = new GroupingEngine(
+        druidProcessingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            druidProcessingConfig,
-            configSupplier,
-            bufferPool,
-            mergePool2,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergePool2,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        NOOP_QUERYWATCHER
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(
-        strategySelector,
-        new GroupByQueryQueryToolChest(strategySelector)
+        engine1,
+        new GroupByQueryQueryToolChest(engine1)
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
-        strategySelector2,
-        new GroupByQueryQueryToolChest(strategySelector2)
+        engine2,
+        new GroupByQueryQueryToolChest(engine2)
     );
   }
 
@@ -771,14 +740,13 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         ),
         (QueryToolChest) toolChest
     );
-    GroupByStrategy strategy = ((GroupByQueryRunnerFactory) groupByFactory).getStrategySelector()
-                                                                           .strategize(nestedQuery);
+    GroupingEngine groupingEngine = ((GroupByQueryRunnerFactory) groupByFactory).getGroupingEngine();
     // Historicals execute the query with force push down flag as false
     GroupByQuery queryWithPushDownDisabled = pushDownQuery.withOverriddenContext(ImmutableMap.of(
         GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
         false
     ));
-    Sequence<ResultRow> pushDownQueryResults = strategy.mergeResults(
+    Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(
         queryRunnerForSegments,
         queryWithPushDownDisabled,
         context

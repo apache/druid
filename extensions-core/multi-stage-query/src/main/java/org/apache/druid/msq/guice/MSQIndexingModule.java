@@ -36,7 +36,6 @@ import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
-import org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
@@ -45,14 +44,15 @@ import org.apache.druid.msq.indexing.error.ColumnTypeNotSupportedFault;
 import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
+import org.apache.druid.msq.indexing.error.NotEnoughTemporaryStorageFault;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
+import org.apache.druid.msq.indexing.error.QueryRuntimeFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
@@ -68,11 +68,16 @@ import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
+import org.apache.druid.msq.input.inline.InlineInputSlice;
+import org.apache.druid.msq.input.inline.InlineInputSpec;
+import org.apache.druid.msq.input.lookup.LookupInputSlice;
+import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
@@ -83,6 +88,8 @@ import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -107,13 +114,14 @@ public class MSQIndexingModule implements DruidModule
       DurableStorageConfigurationFault.class,
       InsertCannotAllocateSegmentFault.class,
       InsertCannotBeEmptyFault.class,
-      InsertCannotOrderByDescendingFault.class,
       InsertLockPreemptedFault.class,
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,
       InvalidNullByteFault.class,
+      NotEnoughTemporaryStorageFault.class,
       NotEnoughMemoryFault.class,
       QueryNotSupportedFault.class,
+      QueryRuntimeFault.class,
       RowTooLargeFault.class,
       TaskStartTimeoutFault.class,
       TooManyBucketsFault.class,
@@ -149,14 +157,9 @@ public class MSQIndexingModule implements DruidModule
         GroupByPostShuffleFrameProcessorFactory.class,
         OffsetLimitFrameProcessorFactory.class,
         NilExtraInfoHolder.class,
-
-        // FrameChannelWorkerFactory and FrameChannelWorkerFactoryExtraInfoHolder classes
-        ScanQueryFrameProcessorFactory.class,
-        GroupByPreShuffleFrameProcessorFactory.class,
-        GroupByPostShuffleFrameProcessorFactory.class,
         SortMergeJoinFrameProcessorFactory.class,
-        OffsetLimitFrameProcessorFactory.class,
-        NilExtraInfoHolder.class,
+        QueryResultFrameProcessorFactory.class,
+        ExportResultsFrameProcessorFactory.class,
 
         // DataSource classes (note: ExternalDataSource is in MSQSqlModule)
         InputNumberDataSource.class,
@@ -172,11 +175,15 @@ public class MSQIndexingModule implements DruidModule
 
         // InputSpec classes
         ExternalInputSpec.class,
+        InlineInputSpec.class,
+        LookupInputSpec.class,
         StageInputSpec.class,
         TableInputSpec.class,
 
         // InputSlice classes
         ExternalInputSlice.class,
+        InlineInputSlice.class,
+        LookupInputSlice.class,
         NilInputSlice.class,
         SegmentsInputSlice.class,
         StageInputSlice.class,

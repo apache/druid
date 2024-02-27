@@ -39,14 +39,14 @@ import java.util.Set;
 
 /**
  * Describes the basic shape for any 'nested data' ({@link StructuredData}) {@link ComplexColumn} implementation along
- * with basic facilities for caching any columns created and methods for retrieving selectors for nested literal field
- * columns.
+ * with basic facilities for caching any columns created and methods for retrieving selectors for nested field columns.
+ * <p>
+ * {@link org.apache.druid.segment.virtual.NestedFieldVirtualColumn} allows query time use of the nested fields.
  */
 public abstract class NestedDataComplexColumn implements ComplexColumn
 {
   /**
-   * Make a {@link DimensionSelector} for a nested literal field column associated with this nested
-   * complex column specified by a sequence of {@link NestedPathPart}.
+   * Make a {@link DimensionSelector} for a nested field column
    */
   public abstract DimensionSelector makeDimensionSelector(
       List<NestedPathPart> path,
@@ -55,8 +55,7 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
   );
 
   /**
-   * Make a {@link ColumnValueSelector} for a nested literal field column associated with this nested
-   * complex column specified by a sequence of {@link NestedPathPart}.
+   * Make a {@link ColumnValueSelector} for a nested field column
    */
   public abstract ColumnValueSelector<?> makeColumnValueSelector(
       List<NestedPathPart> path,
@@ -64,8 +63,7 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
   );
 
   /**
-   * Make a {@link SingleValueDimensionVectorSelector} for a nested literal field column associated with this nested
-   * complex column specified by a sequence of {@link NestedPathPart}.
+   * Make a {@link SingleValueDimensionVectorSelector} for a nested field column
    */
   public abstract SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
       List<NestedPathPart> path,
@@ -73,8 +71,7 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
   );
 
   /**
-   * Make a {@link VectorObjectSelector} for a nested literal field column associated with this nested
-   * complex column located at the 'path' represented as a sequence of {@link NestedPathPart}.
+   * Make a {@link VectorObjectSelector} for a nested field column
    */
   public abstract VectorObjectSelector makeVectorObjectSelector(
       List<NestedPathPart> path,
@@ -82,29 +79,40 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
   );
 
   /**
-   * Make a {@link VectorValueSelector} for a nested literal field column associated with this nested
-   * complex column located at the 'path' represented as a sequence of {@link NestedPathPart}.
+   * Make a {@link VectorValueSelector} for a nested field column
    */
   public abstract VectorValueSelector makeVectorValueSelector(
       List<NestedPathPart> path,
       ReadableVectorOffset readableOffset
   );
 
+  /**
+   * Get list of fields represented as a sequence of {@link NestedPathPart}
+   */
   public abstract List<List<NestedPathPart>> getNestedFields();
 
+  /**
+   * Get all {@link ColumnType} for the nested field column
+   */
   @Nullable
   public abstract Set<ColumnType> getColumnTypes(List<NestedPathPart> path);
 
+  /**
+   * Get a {@link ColumnHolder} for a nested field column to retrieve metadata, the column itself, or indexes.
+   */
   @Nullable
   public abstract ColumnHolder getColumnHolder(List<NestedPathPart> path);
 
   /**
-   * Make a {@link ColumnIndexSupplier} for a nested literal field column associated with this nested
-   * complex column located at the 'path' represented as a sequence of {@link NestedPathPart}.
+   * Make a {@link ColumnIndexSupplier} for a nested field column
    */
   @Nullable
   public abstract ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path);
 
+  /**
+   * Shortcut to check if a nested field column is {@link ColumnType#isNumeric()}, useful when broadly choosing the
+   * type of vector selector to be used when dealing with the path
+   */
   public abstract boolean isNumeric(List<NestedPathPart> path);
 
   @Override

@@ -21,11 +21,14 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -331,6 +334,49 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
+    Map<String, Object> nested1 = ImmutableMap.of("x", 1L, "y", 2L);
+    List<Object> mixedObject = ImmutableList.of(
+        "a",
+        1L,
+        3.0,
+        nested1
+    );
+    coerced = ExprEval.coerceListToArray(mixedObject, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            "a",
+            1L,
+            3.0,
+            nested1
+        },
+        coerced.rhs
+    );
+
+    List<Object> mixedObject2 = ImmutableList.of(
+        nested1,
+        "a",
+        1L,
+        3.0
+    );
+    coerced = ExprEval.coerceListToArray(mixedObject2, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            nested1,
+            "a",
+            1L,
+            3.0
+        },
+        coerced.rhs
+    );
+
     List<List<String>> nestedLists = ImmutableList.of(
         ImmutableList.of("a", "b", "c"),
         ImmutableList.of("d", "e", "f")
@@ -342,35 +388,35 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
-    Map<String, Object> unknown1 = ImmutableMap.of("x", 1L, "y", 2L);
-    Map<String, Object> unknown2 = ImmutableMap.of("x", 4L, "y", 5L);
-    List<Map<String, Object>> listUnknownComplex = ImmutableList.of(unknown1, unknown2);
+
+    Map<String, Object> nested2 = ImmutableMap.of("x", 4L, "y", 5L);
+    List<Map<String, Object>> listUnknownComplex = ImmutableList.of(nested1, nested2);
     coerced = ExprEval.coerceListToArray(listUnknownComplex, false);
-    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX), coerced.lhs);
+    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA), coerced.lhs);
     Assert.assertArrayEquals(
-        new Object[]{unknown1, unknown2},
+        new Object[]{nested1, nested2},
         coerced.rhs
     );
 
 
-    Map<String, Object> unknown3 = ImmutableMap.of("x", 5L, "y", 7L);
-    Map<String, Object> unknown4 = ImmutableMap.of("x", 6L, "y", 8L);
+    Map<String, Object> nested3 = ImmutableMap.of("x", 5L, "y", 7L);
+    Map<String, Object> nested4 = ImmutableMap.of("x", 6L, "y", 8L);
 
     List<List<Map<String, Object>>> nestedListsComplex = ImmutableList.of(
-        ImmutableList.of(unknown1, unknown2),
-        ImmutableList.of(unknown3, unknown4)
+        ImmutableList.of(nested1, nested2),
+        ImmutableList.of(nested3, nested4)
     );
     coerced = ExprEval.coerceListToArray(nestedListsComplex, false);
     Assert.assertEquals(
         ExpressionTypeFactory.getInstance().ofArray(
-            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX)
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA)
         ),
         coerced.lhs
     );
     Assert.assertArrayEquals(
         new Object[]{
-            new Object[]{unknown1, unknown2},
-            new Object[]{unknown3, unknown4}
+            new Object[]{nested1, nested2},
+            new Object[]{nested3, nested4}
         },
         coerced.rhs
     );
@@ -395,20 +441,307 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         },
         coerced.rhs
     );
+
+    List<List<Object>> mixedNested = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of("a", 2L, 3.0, nested1)
+    );
+    coerced = ExprEval.coerceListToArray(mixedNested, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA)
+        ),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{"a", "b", "c"},
+            new Object[]{1L, 2L, 3L},
+            new Object[]{3.0, 4.0, 5.0},
+            new Object[]{"a", 2L, 3.0, nested1}
+        },
+        coerced.rhs
+    );
+
+    List<Object> mixedNested2 = ImmutableList.of(
+        "a",
+        1L,
+        3.0,
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of(nested1, nested2, nested3)
+    );
+    coerced = ExprEval.coerceListToArray(mixedNested2, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA)
+        ),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{"a"},
+            new Object[]{1L},
+            new Object[]{3.0},
+            new Object[]{"a", "b", "c"},
+            new Object[]{1L, 2L, 3L},
+            new Object[]{3.0, 4.0, 5.0},
+            new Object[]{nested1, nested2, nested3}
+        },
+        coerced.rhs
+    );
+
+
+    List<Object> mixedNested3 = ImmutableList.of(
+        "a",
+        1L,
+        3.0,
+        nested1,
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of(nested1, nested2, nested3)
+    );
+    coerced = ExprEval.coerceListToArray(mixedNested3, false);
+    // this one is only ARRAY<COMPLEX<json>> instead of ARRAY<ARRAY<COMPLEX<json>> because of a COMPLEX<json> element..
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            "a",
+            1L,
+            3.0,
+            nested1,
+            new Object[]{"a", "b", "c"},
+            new Object[]{1L, 2L, 3L},
+            new Object[]{3.0, 4.0, 5.0},
+            new Object[]{nested1, nested2, nested3}
+        },
+        coerced.rhs
+    );
+
+    List<List<Object>> mixedUnknown = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0, new SerializablePair<>("hello", 1234L)),
+        ImmutableList.of("a", 2L, 3.0, nested1)
+    );
+    Throwable t = Assert.assertThrows(
+        Types.IncompatibleTypeException.class,
+        () -> ExprEval.coerceListToArray(mixedUnknown, false)
+    );
+    Assert.assertEquals("Cannot implicitly cast [DOUBLE] to [COMPLEX]", t.getMessage());
   }
 
   @Test
-  public void testStringArrayToNumberArray()
+  public void testCastString()
   {
-    ExprEval someStringArray = ExprEval.ofStringArray(new String[]{"1", "2", "foo", null, "3.3"});
-    Assert.assertArrayEquals(
-        new Object[]{1L, 2L, null, null, 3L},
-        someStringArray.castTo(ExpressionType.LONG_ARRAY).asArray()
+    ExprEval<?> eval = ExprEval.of("hello");
+
+    ExprEval<?> cast = eval.castTo(ExpressionType.DOUBLE);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertArrayEquals(new Object[]{"hello"}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertArrayEquals(new Object[]{null}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertArrayEquals(new Object[]{null}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertEquals("hello", cast.value());
+
+    cast = eval.castTo(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA));
+    Assert.assertArrayEquals(new Object[]{"hello"}, (Object[]) cast.value());
+
+    eval = ExprEval.of("1234.3");
+
+    cast = eval.castTo(ExpressionType.DOUBLE);
+    Assert.assertEquals(1234.3, cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertEquals(1234L, cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1234.3}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1234L}, (Object[]) cast.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING, null);
+
+    cast = eval.castTo(ExpressionType.DOUBLE);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertNull(cast.value());
+  }
+
+  @Test
+  public void testCastDouble()
+  {
+    ExprEval<?> eval = ExprEval.of(123.4);
+
+    ExprEval<?> cast = eval.castTo(ExpressionType.STRING);
+    Assert.assertEquals("123.4", cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertEquals(123L, cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertArrayEquals(new Object[]{"123.4"}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertArrayEquals(new Object[]{123L}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertArrayEquals(new Object[]{123.4}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertEquals(123.4, cast.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE, null);
+
+    cast = eval.castTo(ExpressionType.STRING);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertNull(cast.value());
+  }
+
+  @Test
+  public void testCastLong()
+  {
+    ExprEval<?> eval = ExprEval.of(1234L);
+
+    ExprEval<?> cast = eval.castTo(ExpressionType.STRING);
+    Assert.assertEquals("1234", cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE);
+    Assert.assertEquals(1234.0, cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertArrayEquals(new Object[]{"1234"}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1234L}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1234.0}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertEquals(1234L, cast.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG, null);
+
+    cast = eval.castTo(ExpressionType.STRING);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertNull(cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertNull(cast.value());
+  }
+
+  @Test
+  public void testCastArray()
+  {
+    ExprEval<?> eval = ExprEval.ofStringArray(new String[]{"1", "2", "foo", null, "3.3"});
+
+    ExprEval<?> cast = eval.castTo(ExpressionType.LONG_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1L, 2L, null, null, 3L}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1.0, 2.0, null, null, 3.3}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.NESTED_DATA);
+    Assert.assertArrayEquals(new Object[]{"1", "2", "foo", null, "3.3"}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA));
+    Assert.assertArrayEquals(new Object[]{"1", "2", "foo", null, "3.3"}, (Object[]) cast.value());
+
+    ExprEval<?> finalEval = eval;
+    Throwable t = Assert.assertThrows(IAE.class, () -> finalEval.castTo(ExpressionType.LONG));
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [LONG]", t.getMessage());
+
+    t = Assert.assertThrows(IAE.class, () -> finalEval.castTo(ExpressionType.DOUBLE));
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [DOUBLE]", t.getMessage());
+
+    t = Assert.assertThrows(IAE.class, () -> finalEval.castTo(ExpressionType.STRING));
+    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [STRING]", t.getMessage());
+
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[]{1234L});
+
+    cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
+    Assert.assertArrayEquals(new Object[]{1234.0}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING_ARRAY);
+    Assert.assertArrayEquals(new Object[]{"1234"}, (Object[]) cast.value());
+
+    cast = eval.castTo(ExpressionType.STRING);
+    Assert.assertEquals("1234", cast.value());
+
+    cast = eval.castTo(ExpressionType.DOUBLE);
+    Assert.assertEquals(1234.0, cast.value());
+
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertEquals(1234L, cast.value());
+  }
+
+  @Test
+  public void testCastNestedData()
+  {
+    ExprEval<?> eval = ExprEval.ofType(ExpressionType.NESTED_DATA, ImmutableMap.of("x", 1234L, "y", 12.34));
+    Assert.assertEquals(
+        ImmutableMap.of("x", 1234L, "y", 12.34),
+        eval.castTo(ExpressionType.NESTED_DATA).value()
     );
-    Assert.assertArrayEquals(
-        new Object[]{1.0, 2.0, null, null, 3.3},
-        someStringArray.castTo(ExpressionType.DOUBLE_ARRAY).asArray()
-    );
+    Throwable t = Assert.assertThrows(IAE.class, () -> eval.castTo(ExpressionType.LONG));
+    Assert.assertEquals("Invalid type, cannot cast [COMPLEX<json>] to [LONG]", t.getMessage());
   }
 
   @Test

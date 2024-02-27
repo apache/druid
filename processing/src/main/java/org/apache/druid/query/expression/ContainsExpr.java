@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -28,42 +29,38 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.function.Function;
 
 /**
  * {@link Expr} class returned by {@link ContainsExprMacro} and {@link CaseInsensitiveContainsExprMacro} for
  * evaluating the expression.
  */
-class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+class ContainsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
 {
+  private final Expr arg;
   private final Function<String, Boolean> searchFunction;
-  private final Expr searchStrExpr;
-  private final Function<Shuttle, Expr> visitFunction;
 
   ContainsExpr(
-      final String functionName,
+      final ExprMacroTable.ExprMacro macro,
       final Expr arg,
       final Expr searchStrExpr,
-      final boolean caseSensitive,
-      final Function<Shuttle, Expr> visitFunction
+      final boolean caseSensitive
   )
   {
-    this(functionName, arg, searchStrExpr, createFunction(searchStrExpr, caseSensitive), visitFunction);
+    this(macro, arg, searchStrExpr, createFunction(getSearchString(searchStrExpr, macro.name()), caseSensitive));
   }
 
   private ContainsExpr(
-      final String functionName,
+      final ExprMacroTable.ExprMacro macro,
       final Expr arg,
       final Expr searchStrExpr,
-      final Function<String, Boolean> searchFunction,
-      final Function<Shuttle, Expr> visitFunction
+      final Function<String, Boolean> searchFunction
   )
   {
-    super(functionName, arg);
+    super(macro, ImmutableList.of(arg, searchStrExpr));
+    this.arg = arg;
     this.searchFunction = searchFunction;
-    this.searchStrExpr = validateSearchExpr(searchStrExpr, functionName);
-    this.visitFunction = visitFunction;
+    getSearchString(searchStrExpr, macro.name());
   }
 
   @Nonnull
@@ -81,39 +78,26 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     }
   }
 
-  @Nullable
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return ExpressionType.LONG;
   }
 
-  @Override
-  public Expr visit(Expr.Shuttle shuttle)
-  {
-    return visitFunction.apply(shuttle);
-  }
-
-  @Override
-  public String stringify()
-  {
-    return StringUtils.format("%s(%s, %s)", name, arg.stringify(), searchStrExpr.stringify());
-  }
-
-  private Expr validateSearchExpr(Expr searchExpr, String functioName)
+  private static String getSearchString(Expr searchExpr, String functioName)
   {
     if (!ExprUtils.isStringLiteral(searchExpr)) {
       throw new IAE("Function[%s] substring must be a string literal", functioName);
     }
-    return searchExpr;
+    return StringUtils.nullToEmptyNonDruidDataString((String) searchExpr.getLiteralValue());
   }
 
-  private static Function<String, Boolean> createFunction(Expr searchStrExpr, boolean caseSensitive)
+  private static Function<String, Boolean> createFunction(String searchString, boolean caseSensitive)
   {
-    String searchStr = StringUtils.nullToEmptyNonDruidDataString((String) searchStrExpr.getLiteralValue());
     if (caseSensitive) {
-      return s -> s.contains(searchStr);
+      return s -> s.contains(searchString);
+    } else {
+      return s -> org.apache.commons.lang.StringUtils.containsIgnoreCase(s, searchString);
     }
-    return s -> org.apache.commons.lang.StringUtils.containsIgnoreCase(s, searchStr);
   }
 }

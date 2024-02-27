@@ -23,7 +23,7 @@ title: "Bloom Filter"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-bloom-filter` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-bloom-filter` in the extensions load list.
 
 This extension adds the ability to both construct bloom filters from query results, and filter query results by testing
 against a bloom filter. A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom
@@ -98,7 +98,7 @@ SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_byte
 
 ### Expression and Virtual Column Support
 
-The bloom filter extension also adds a bloom filter [Druid expression](../../misc/math-expr.md) which shares syntax
+The bloom filter extension also adds a bloom filter [Druid expression](../../querying/math-expr.md) which shares syntax
 with the SQL operator.
 
 ```sql

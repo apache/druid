@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
@@ -40,6 +41,7 @@ public class KafkaInputFormat implements InputFormat
 {
   private static final String DEFAULT_HEADER_COLUMN_PREFIX = "kafka.header.";
   private static final String DEFAULT_TIMESTAMP_COLUMN_NAME = "kafka.timestamp";
+  private static final String DEFAULT_TOPIC_COLUMN_NAME = "kafka.topic";
   private static final String DEFAULT_KEY_COLUMN_NAME = "kafka.key";
   public static final String DEFAULT_AUTO_TIMESTAMP_STRING = "__kif_auto_timestamp";
 
@@ -54,6 +56,7 @@ public class KafkaInputFormat implements InputFormat
   private final String headerColumnPrefix;
   private final String keyColumnName;
   private final String timestampColumnName;
+  private final String topicColumnName;
 
   public KafkaInputFormat(
       @JsonProperty("headerFormat") @Nullable KafkaHeaderFormat headerFormat,
@@ -61,7 +64,8 @@ public class KafkaInputFormat implements InputFormat
       @JsonProperty("valueFormat") InputFormat valueFormat,
       @JsonProperty("headerColumnPrefix") @Nullable String headerColumnPrefix,
       @JsonProperty("keyColumnName") @Nullable String keyColumnName,
-      @JsonProperty("timestampColumnName") @Nullable String timestampColumnName
+      @JsonProperty("timestampColumnName") @Nullable String timestampColumnName,
+      @JsonProperty("topicColumnName") @Nullable String topicColumnName
   )
   {
     this.headerFormat = headerFormat;
@@ -70,6 +74,7 @@ public class KafkaInputFormat implements InputFormat
     this.headerColumnPrefix = headerColumnPrefix != null ? headerColumnPrefix : DEFAULT_HEADER_COLUMN_PREFIX;
     this.keyColumnName = keyColumnName != null ? keyColumnName : DEFAULT_KEY_COLUMN_NAME;
     this.timestampColumnName = timestampColumnName != null ? timestampColumnName : DEFAULT_TIMESTAMP_COLUMN_NAME;
+    this.topicColumnName = topicColumnName != null ? topicColumnName : DEFAULT_TOPIC_COLUMN_NAME;
   }
 
   @Override
@@ -105,18 +110,19 @@ public class KafkaInputFormat implements InputFormat
             record ->
                 (record.getRecord().key() == null) ?
                     null :
-                    keyFormat.createReader(
+                    JsonInputFormat.withLineSplittable(keyFormat, false).createReader(
                         newInputRowSchema,
                         new ByteEntity(record.getRecord().key()),
                         temporaryDirectory
                     ),
-        valueFormat.createReader(
+        JsonInputFormat.withLineSplittable(valueFormat, false).createReader(
             newInputRowSchema,
             source,
             temporaryDirectory
         ),
         keyColumnName,
-        timestampColumnName
+        timestampColumnName,
+        topicColumnName
     );
   }
 
@@ -161,6 +167,13 @@ public class KafkaInputFormat implements InputFormat
     return timestampColumnName;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getTopicColumnName()
+  {
+    return topicColumnName;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -176,14 +189,15 @@ public class KafkaInputFormat implements InputFormat
            && Objects.equals(keyFormat, that.keyFormat)
            && Objects.equals(headerColumnPrefix, that.headerColumnPrefix)
            && Objects.equals(keyColumnName, that.keyColumnName)
-           && Objects.equals(timestampColumnName, that.timestampColumnName);
+           && Objects.equals(timestampColumnName, that.timestampColumnName)
+           && Objects.equals(topicColumnName, that.topicColumnName);
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(headerFormat, valueFormat, keyFormat,
-                        headerColumnPrefix, keyColumnName, timestampColumnName
+                        headerColumnPrefix, keyColumnName, timestampColumnName, topicColumnName
     );
   }
 }

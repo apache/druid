@@ -1,7 +1,7 @@
 ---
 id: tutorial-sql-query-view
-title: "Tutorial: Get to know Query view"
-sidebar_label: "Get to know Query view"
+title: Get to know Query view
+sidebar_label: Get to know Query view
 ---
 
 <!--
@@ -26,9 +26,9 @@ sidebar_label: "Get to know Query view"
 
 This tutorial demonstrates some useful features built into Query view in Apache Druid.
 
-Query view lets you run [Druid SQL queries](../querying/sql.md) and [native (JSON-based) queries](../querying/querying.md) against ingested data. Try out the [Introduction to Druid SQL](./tutorial-jupyter-index.md#tutorials) tutorial to learn more about Druid SQL.
+Query view lets you run [Druid SQL queries](../querying/sql.md) and [native (JSON-based) queries](../querying/querying.md) against ingested data.
 
-You can use Query view to test and tune queries before you use them in API requests&mdash;for example, to perform [SQL-based ingestion](../multi-stage-query/api.md). You can also ingest data directly in Query view.
+You can use Query view to test and tune queries before you use them in API requests&mdash;for example, to perform [SQL-based ingestion](../api-reference/sql-ingestion-api.md). You can also ingest data directly in Query view.
 
 The tutorial guides you through the steps to ingest sample data and query the ingested data using some Query view features.
 
@@ -193,3 +193,5 @@ For more information on ingestion and querying data, see the following topics:
 - [Ingestion](../ingestion/index.md) for an overview of ingestion and the ingestion methods available in Druid.
 - [SQL-based ingestion](../multi-stage-query/index.md) for an overview of SQL-based ingestion.
 - [SQL-based ingestion query examples](../multi-stage-query/examples.md) for examples of SQL-based ingestion for various use cases.
+- [Introduction to Druid SQL](https://github.com/implydata/learn-druid/tree/main/notebooks) to learn more about Druid SQL.
+

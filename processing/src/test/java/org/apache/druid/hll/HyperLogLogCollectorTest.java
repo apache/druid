@@ -857,6 +857,33 @@ public class HyperLogLogCollectorTest
     }
   }
 
+  @Test
+  @Ignore("Doesn't pass; see https://github.com/apache/druid/issues/13950")
+  public void testAddEmptyString()
+  {
+    final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    collector.add(HyperLogLogHash.getDefault().hash(""));
+    Assert.assertEquals(1, collector.estimateCardinality(), 0.01);
+
+    final byte[] collectorByteArray = collector.toByteArray();
+    final HyperLogLogCollector collector2 = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(collectorByteArray));
+    Assert.assertEquals(1, collector2.estimateCardinality(), 0.01);
+  }
+
+  @Test
+  @Ignore("Doesn't pass; see https://github.com/apache/druid/issues/13950")
+  public void testAddEmptyStringAndOneOtherValue()
+  {
+    final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    collector.add(HyperLogLogHash.getDefault().hash("abc"));
+    collector.add(HyperLogLogHash.getDefault().hash(""));
+    Assert.assertEquals(2, collector.estimateCardinality(), 0.01);
+
+    final byte[] collectorByteArray = collector.toByteArray();
+    final HyperLogLogCollector collector2 = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(collectorByteArray));
+    Assert.assertEquals(2, collector2.estimateCardinality(), 0.01);
+  }
+
   // Provides a nice printout of error rates as a function of cardinality
   @Ignore
   @Test

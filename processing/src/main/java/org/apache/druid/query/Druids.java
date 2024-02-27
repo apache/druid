@@ -36,6 +36,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -659,6 +660,7 @@ public class Druids
     private EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes;
     private Boolean merge;
     private Boolean lenientAggregatorMerge;
+    private AggregatorMergeStrategy aggregatorMergeStrategy;
     private Boolean usingDefaultInterval;
     private Map<String, Object> context;
 
@@ -670,6 +672,7 @@ public class Druids
       analysisTypes = null;
       merge = null;
       lenientAggregatorMerge = null;
+      aggregatorMergeStrategy = null;
       usingDefaultInterval = null;
       context = null;
     }
@@ -684,7 +687,8 @@ public class Druids
           context,
           analysisTypes,
           usingDefaultInterval,
-          lenientAggregatorMerge
+          lenientAggregatorMerge,
+          aggregatorMergeStrategy
       );
     }
 
@@ -696,7 +700,7 @@ public class Druids
           .toInclude(query.getToInclude())
           .analysisTypes(query.getAnalysisTypes())
           .merge(query.isMerge())
-          .lenientAggregatorMerge(query.isLenientAggregatorMerge())
+          .aggregatorMergeStrategy(query.getAggregatorMergeStrategy())
           .usingDefaultInterval(query.isUsingDefaultInterval())
           .context(query.getContext());
     }
@@ -761,9 +765,16 @@ public class Druids
       return this;
     }
 
+    @Deprecated
     public SegmentMetadataQueryBuilder lenientAggregatorMerge(boolean lenientAggregatorMerge)
     {
       this.lenientAggregatorMerge = lenientAggregatorMerge;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder aggregatorMergeStrategy(AggregatorMergeStrategy aggregatorMergeStrategy)
+    {
+      this.aggregatorMergeStrategy = aggregatorMergeStrategy;
       return this;
     }
 
@@ -855,6 +866,11 @@ public class Druids
     public ScanQueryBuilder dataSource(String ds)
     {
       dataSource = new TableDataSource(ds);
+      return this;
+    }
+    public ScanQueryBuilder dataSource(Query<?> q)
+    {
+      dataSource = new QueryDataSource(q);
       return this;
     }
 

@@ -55,7 +55,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  public void testFreshClusterGetsBalanced()
+  public void testNewClusterGetsBalanced()
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
@@ -64,7 +64,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
                              .withBalancer(strategy)
                              .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
@@ -77,7 +76,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     verifyValue(Metric.ASSIGNED_COUNT, 1000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
-    verifyNotEmitted(Metric.UNMOVED_COUNT);
 
     for (DruidServer historical : historicals) {
       Assert.assertEquals(200, historical.getTotalSegments());
@@ -86,9 +84,8 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     // Run 2: nothing is assigned, nothing is moved as servers are already balanced
     runCoordinatorCycle();
     loadQueuedSegments();
-    verifyValue(Metric.ASSIGNED_COUNT, 0L);
-    verifyValue(Metric.MOVED_COUNT, 0L);
-    verifyValue(Metric.UNMOVED_COUNT, 1000L);
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
+    verifyNotEmitted(Metric.MOVED_COUNT);
   }
 
   @Test
@@ -101,7 +98,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
                              .withBalancer(strategy)
                              .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
@@ -114,7 +110,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     verifyValue(Metric.ASSIGNED_COUNT, 1000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
-    verifyNotEmitted(Metric.UNMOVED_COUNT);
 
     // Verify that each server is equally loaded
     for (DruidServer historical : historicals) {
@@ -127,7 +122,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     historicals.add(newHistorical);
 
     // Run the coordinator for a few cycles
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 7; ++i) {
       runCoordinatorCycle();
       loadQueuedSegments();
     }
@@ -135,7 +130,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     // Verify that the segments have been balanced
     for (DruidServer historical : historicals) {
       long loadedSegments = historical.getTotalSegments();
-      Assert.assertTrue(loadedSegments >= 199 && loadedSegments <= 201);
+      Assert.assertTrue(loadedSegments >= 195 && loadedSegments <= 205);
     }
   }
 
@@ -149,7 +144,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
                              .withBalancer(strategy)
                              .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
@@ -162,7 +156,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     verifyValue(Metric.ASSIGNED_COUNT, 1000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
-    verifyNotEmitted(Metric.UNMOVED_COUNT);
 
     // Verify that each server is equally loaded
     for (DruidServer historical : historicals) {
@@ -183,4 +176,5 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
       Assert.assertEquals(250, historical.getTotalSegments());
     }
   }
+
 }

@@ -21,11 +21,10 @@ package org.apache.druid.server.http;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.security.AuthConfig;
 import org.eclipse.jetty.client.HttpClient;
@@ -41,18 +40,18 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class OverlordProxyServlet extends ProxyServlet
 {
-  private final DruidLeaderClient druidLeaderClient;
+  private final OverlordClient overlordClient;
   private final Provider<HttpClient> httpClientProvider;
   private final DruidHttpClientConfig httpClientConfig;
 
   @Inject
   OverlordProxyServlet(
-      @IndexingService DruidLeaderClient druidLeaderClient,
+      OverlordClient overlordClient,
       @Global Provider<HttpClient> httpClientProvider,
       @Global DruidHttpClientConfig httpClientConfig
   )
   {
-    this.druidLeaderClient = druidLeaderClient;
+    this.overlordClient = overlordClient;
     this.httpClientProvider = httpClientProvider;
     this.httpClientConfig = httpClientConfig;
   }
@@ -60,10 +59,7 @@ public class OverlordProxyServlet extends ProxyServlet
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
-    final String overlordLeader = druidLeaderClient.findCurrentLeader();
-    if (overlordLeader == null) {
-      throw new ISE("Can't find Overlord leader.");
-    }
+    final String overlordLeader = FutureUtils.getUnchecked(overlordClient.findCurrentLeader(), true).toString();
 
     return JettyUtils.concatenateForRewrite(
         overlordLeader,

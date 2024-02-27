@@ -26,10 +26,6 @@ public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
 
   private final Float[] floats;
 
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private int index = 0;
 
   public TestNullableFloatColumnSelector(Float[] floats)

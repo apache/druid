@@ -23,8 +23,10 @@ sidebar_label: "All functions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 This page provides a reference of all Druid SQL functions in alphabetical order.
@@ -48,11 +50,7 @@ Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
-`ANY_VALUE(<NUMERIC>)`
-
-`ANY_VALUE(<BOOLEAN>)`
-
-`ANY_VALUE(<CHARACTER>, <NUMERIC>)`
+`ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -116,7 +114,7 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 
 `ARRAY[expr1, expr2, ...]`
 
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
+**Function type:** [Array](sql-array-functions.md)
 
 Constructs a SQL ARRAY literal from the expression arguments. The arguments must be of the same type.
 
@@ -128,6 +126,22 @@ Constructs a SQL ARRAY literal from the expression arguments. The arguments must
 
 Returns an array of all values of the specified expression.
 
+## ARRAY_APPEND
+
+`ARRAY_APPEND(arr1, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Appends `expr` to `arr`, the resulting array type determined by the type of `arr1`.
+
+## ARRAY_CONCAT
+
+`ARRAY_CONCAT(arr1, arr2)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
+
 ## ARRAY_CONCAT_AGG
 
 `ARRAY_CONCAT_AGG([DISTINCT] expr, [<NUMERIC>])`
@@ -135,6 +149,94 @@ Returns an array of all values of the specified expression.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Concatenates array inputs into a single array.
+
+## ARRAY_CONTAINS
+
+`ARRAY_CONTAINS(arr, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+If `expr` is a scalar type, returns 1 if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns 0.
+
+
+## ARRAY_LENGTH
+
+`ARRAY_LENGTH(arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns length of the array expression.
+
+## ARRAY_OFFSET
+
+`ARRAY_OFFSET(arr, long)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the array element at the 0-based index supplied, or null for an out of range index.
+
+## ARRAY_OFFSET_OF
+
+`ARRAY_OFFSET_OF(arr, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+
+## ARRAY_ORDINAL
+
+**Function type:** [Array](./sql-array-functions.md)
+
+`ARRAY_ORDINAL(arr, long)`
+
+Returns the array element at the 1-based index supplied, or null for an out of range index.
+## ARRAY_ORDINAL_OF
+
+`ARRAY_ORDINAL_OF(arr, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+
+## ARRAY_OVERLAP
+
+`ARRAY_OVERLAP(arr1, arr2)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns 1 if `arr1` and `arr2` have any elements in common, else 0.|
+
+## ARRAY_PREPEND
+
+`ARRAY_PREPEND(expr, arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Prepends `expr` to `arr` at the beginning, the resulting array type determined by the type of `arr`.
+
+## ARRAY_SLICE
+
+`ARRAY_SLICE(arr, start, end)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.
+
+## ARRAY_TO_MV
+
+`ARRAY_TO_MV(arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Converts an `ARRAY` of any type into a multi-value string `VARCHAR`.
+
+## ARRAY_TO_STRING
+
+`ARRAY_TO_STRING(arr, str)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Joins all elements of `arr` by the delimiter specified by `str`.
 
 ## ASIN
 
@@ -402,6 +504,23 @@ Returns the current timestamp in the connection's time zone.
 
 Rounds down a timestamp by a given time unit.
 
+## DECODE_BASE64_COMPLEX
+
+`DECODE_BASE64_COMPLEX(dataType, expr)`
+
+**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+
+Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+
+## DECODE_BASE64_UTF8
+
+`DECODE_BASE64_UTF8(expr)`
+
+**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+
+
+Decodes a Base64-encoded string into a UTF-8 encoded string.
+
 ## DEGREES
 
 `DEGREES(<NUMERIC>)`
@@ -535,9 +654,7 @@ Returns a union of Tuple sketches which each contain an array of double values a
 
 ## EARLIEST
 
-`EARLIEST(expr)`
-
-`EARLIEST(expr, maxBytesPerString)`
+`EARLIEST(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -545,9 +662,7 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 ## EARLIEST_BY
 
-`EARLIEST_BY(expr, timestampExpr)`
-
-`EARLIEST_BY(expr, timestampExpr, maxBytesPerString)`
+`EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -671,7 +786,7 @@ Finds whether a string is in a given expression, case-insensitive.
 
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-Returns true if the `address` belongs to the `subnet` literal, else false.
+Returns true if the IPv4 `address` belongs to the `subnet` literal, else false.
 
 ## IPV4_PARSE
 
@@ -688,6 +803,14 @@ Parses `address` into an IPv4 address stored as an integer.
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
 Converts `address` into an IPv4 address in dot-decimal notation.
+
+## IPV6_MATCH
+
+`IPV6_MATCH(address, subnet)`
+
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+
+Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 ## JSON_KEYS
 
@@ -721,6 +844,14 @@ Returns an array of all paths which refer to literal values in `expr` in JSONPat
 
 Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
 
+## JSON_QUERY_ARRAY
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_QUERY_ARRAY(expr, path)`
+
+Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+
 ## JSON_VALUE
 
 **Function type:** [JSON](sql-json-functions.md)
@@ -731,9 +862,7 @@ Extracts a literal value from `expr` at the specified `path`. If you specify `RE
 
 ## LATEST
 
-`LATEST(expr)`
-
-`LATEST(expr, maxBytesPerString)`
+`LATEST(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -741,9 +870,7 @@ Returns the value of a numeric or string expression corresponding to the latest 
 
 ## LATEST_BY
 
-`LATEST_BY(expr, timestampExpr)`
-
-`LATEST_BY(expr, timestampExpr, maxBytesPerString)`
+`LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -791,7 +918,7 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-`LOOKUP(<CHARACTER>, <CHARACTER>)`
+`LOOKUP(<CHARACTER>, <CHARACTER>[, <CHARACTER>])`
 
 **Function type:** [Scalar, string](sql-scalar.md#string-functions)
 
@@ -1037,6 +1164,15 @@ Applies a regular expression to the string expression and returns the _n_th matc
 
 Returns true or false signifying whether the regular expression finds a match in the string expression.
 
+## REGEXP_REPLACE
+
+`REGEXP_REPLACE(<CHARACTER>, <CHARACTER>, <CHARACTER>)`
+
+**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+
+Replaces all occurrences of a regular expression in a string expression with a replacement string. The replacement
+string may refer to capture groups using `$1`, `$2`, etc.
+
 ## REPEAT
 
 `REPEAT(<CHARACTER>, [<INTEGER>])`
@@ -1149,6 +1285,15 @@ Calculates the sample standard deviation of a set of values.
 
 Collects all values of an expression into a single string.
 
+## STRING_TO_ARRAY
+
+`STRING_TO_ARRAY(str1, str2)`
+
+**Function type:** [Array](sql-array-functions.md)
+
+Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.
+
+
 ## STRING_FORMAT
 
 `STRING_FORMAT(pattern[, args...])`
@@ -1163,7 +1308,7 @@ Returns a string formatted in accordance to Java's String.format method.
 
 **Function type:** [Multi-value string](sql-multivalue-string-functions.md)
 
-Converts a string into an array, split by the given delimiter.
+Splits `str1` into an multi-value string on the delimiter specified by `str2`, which is a regular expression.
 
 ## STRLEN
 
@@ -1399,6 +1544,13 @@ Truncates a numerical expression to a specific number of decimal digits.
 
 Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
 
+## UNNEST
+
+`UNNEST(source_expression) as table_alias_name(column_alias_name)`
+
+Unnests a source expression that includes arrays into a target column with an aliased name. 
+
+For more information, see [UNNEST](./sql.md#unnest).
 
 ## UPPER
 

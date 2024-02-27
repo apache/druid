@@ -1,0 +1,1 @@
+SELECT AVG(SUM(DISTINCT c1)) OVER( ) FROM "tblWnulls.parquet"

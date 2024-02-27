@@ -36,7 +36,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -161,10 +161,6 @@ public class BoundFilterBenchmark
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
     final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final List<Integer> ints = generateInts();
-    final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
-        FluentIterable.from(ints).transform(Object::toString),
-        GenericIndexed.STRING_STRATEGY
-    );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(
@@ -183,7 +179,7 @@ public class BoundFilterBenchmark
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
-        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
+        new StringUtf8ColumnIndexSupplier<>(bitmapFactory, dictionaryUtf8::singleThreaded, bitmaps, null)
     );
   }
 

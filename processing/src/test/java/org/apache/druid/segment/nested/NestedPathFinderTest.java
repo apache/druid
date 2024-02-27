@@ -21,11 +21,9 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.List;
 import java.util.Map;
@@ -38,11 +36,9 @@ public class NestedPathFinderTest
       "y", ImmutableMap.of("a", "hello", "b", "world"),
       "z", "foo",
       "[sneaky]", "bar",
-      "[also_sneaky]", ImmutableList.of(ImmutableMap.of("a", "x"), ImmutableMap.of("b", "y", "c", "z"))
+      "[also_sneaky]", ImmutableList.of(ImmutableMap.of("a", "x"), ImmutableMap.of("b", "y", "c", "z")),
+      "objarray", new Object[]{"a", "b", "c"}
   );
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testParseJqPath()
@@ -188,7 +184,10 @@ public class NestedPathFinderTest
     Assert.assertEquals("f?o.o", pathParts.get(2).getPartIdentifier());
     Assert.assertTrue(pathParts.get(3) instanceof NestedPathField);
     Assert.assertEquals(".b?.a.r.", pathParts.get(3).getPartIdentifier());
-    Assert.assertEquals(".\"x.y.z]?[\\\"]][]\".\"13234.12[]][23\".\"f?o.o\".\".b?.a.r.\"", NestedPathFinder.toNormalizedJqPath(pathParts));
+    Assert.assertEquals(
+        ".\"x.y.z]?[\\\"]][]\".\"13234.12[]][23\".\"f?o.o\".\".b?.a.r.\"",
+        NestedPathFinder.toNormalizedJqPath(pathParts)
+    );
   }
 
   @Test
@@ -334,83 +333,82 @@ public class NestedPathFinderTest
   @Test
   public void testBadFormatMustStartWithDot()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, 'x.y' is not a valid 'jq' path: must start with '.'");
-    NestedPathFinder.parseJqPath("x.y");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [x.y] is invalid, it must start with '.'"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath("x.y"));
   }
 
   @Test
   public void testBadFormatNoDot()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage(".\"x\"\"y\"' is not a valid 'jq' path: path parts must be separated with '.'");
-    NestedPathFinder.parseJqPath(".\"x\"\"y\"");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.\"x\"\"y\"] is invalid, path parts must be separated with '.'"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".\"x\"\"y\""));
   }
 
   @Test
   public void testBadFormatWithDot2()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '..\"x\"' is not a valid 'jq' path: path parts separated by '.' must not be empty");
-    NestedPathFinder.parseJqPath("..\"x\"");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [..\"x\"] is invalid, path parts separated by '.' must not be empty"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath("..\"x\""));
   }
 
   @Test
   public void testBadFormatWithDot3()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x.[1]' is not a valid 'jq' path: invalid position 3 for '[', must not follow '.' or must be contained with '\"'");
-    NestedPathFinder.parseJqPath(".x.[1]");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x.[1]] is invalid, found '[' at invalid position [3], must not follow '.' or must be contained with '\"'"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x.[1]"));
   }
 
   @Test
   public void testBadFormatWithDot4()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x[1].[2]' is not a valid 'jq' path: invalid position 6 for '[', must not follow '.' or must be contained with '\"'");
-    NestedPathFinder.parseJqPath(".x[1].[2]");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x[1].[2]] is invalid, found '[' at invalid position [6], must not follow '.' or must be contained with '\"'"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x[1].[2]"));
   }
 
   @Test
   public void testBadFormatNotANumber()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x[.1]' is not a valid 'jq' path: expected number for array specifier got .1 instead. Use \"\" if this value was meant to be a field name");
-    NestedPathFinder.parseJqPath(".x[.1]");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x[.1]] is invalid, array specifier [.1] should be a number, it was not.  Use \"\" if this value was meant to be a field name"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x[.1]"));
   }
 
   @Test
   public void testBadFormatUnclosedArray()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x[1' is not a valid 'jq' path: unterminated '['");
-    NestedPathFinder.parseJqPath(".x[1");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x[1] is invalid, unterminated '['"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x[1"));
   }
 
   @Test
   public void testBadFormatUnclosedArray2()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x[\"1\"' is not a valid 'jq' path: unterminated '['");
-    NestedPathFinder.parseJqPath(".x[\"1\"");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x[\"1\"] is invalid, unterminated '['"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x[\"1\""));
   }
 
   @Test
   public void testBadFormatUnclosedQuote()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x.\"1' is not a valid 'jq' path: unterminated '\"'");
-    NestedPathFinder.parseJqPath(".x.\"1");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x.\"1] is invalid, unterminated '\"'"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x.\"1"));
   }
 
   @Test
   public void testBadFormatUnclosedQuote2()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Bad format, '.x[\"1]' is not a valid 'jq' path: unterminated '\"'");
-    NestedPathFinder.parseJqPath(".x[\"1]");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "jq path [.x[\"1]] is invalid, unterminated '\"'"
+    ).assertThrowsAndMatches(() -> NestedPathFinder.parseJqPath(".x[\"1]"));
   }
-
 
 
   @Test
@@ -420,51 +418,52 @@ public class NestedPathFinderTest
 
     pathParts = NestedPathFinder.parseJqPath(".");
     Assert.assertEquals(NESTER, NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".z");
     Assert.assertEquals("foo", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("foo", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x");
     Assert.assertEquals(NESTER.get("x"), NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[1]");
     Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("b", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-1]");
     Assert.assertEquals("c", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("c", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-2]");
     Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("b", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-4]");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
+
+    // object array
+    pathParts = NestedPathFinder.parseJqPath(".objarray[1]");
+    Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".objarray[-1]");
+    Assert.assertEquals("c", NestedPathFinder.find(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".objarray[-2]");
+    Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".objarray[-4]");
+    Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
 
     // nonexistent
     pathParts = NestedPathFinder.parseJqPath(".x[1].y.z");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".y.a");
     Assert.assertEquals("hello", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("hello", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".y[1]");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".\"[sneaky]\"");
     Assert.assertEquals("bar", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("bar", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".\"[also_sneaky]\"[1].c");
     Assert.assertEquals("z", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("z", NestedPathFinder.findStringLiteral(NESTER, pathParts));
   }
 }

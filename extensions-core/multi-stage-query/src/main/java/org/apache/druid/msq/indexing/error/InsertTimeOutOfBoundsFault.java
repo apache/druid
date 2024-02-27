@@ -20,26 +20,47 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Objects;
 
+@JsonTypeName(InsertTimeOutOfBoundsFault.CODE)
 public class InsertTimeOutOfBoundsFault extends BaseMSQFault
 {
   static final String CODE = "InsertTimeOutOfBounds";
 
   private final Interval interval;
+  private final List<Interval> intervalBounds;
 
-  public InsertTimeOutOfBoundsFault(@JsonProperty("interval") Interval interval)
+  public InsertTimeOutOfBoundsFault(
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("intervalBounds") List<Interval> intervalBounds
+  )
   {
-    super(CODE, "Query generated time chunk [%s] out of bounds specified by replaceExistingTimeChunks", interval);
+    super(
+        CODE,
+        "Inserted data contains time chunk[%s] outside of bounds specified by OVERWRITE WHERE[%s]. "
+        + "If you want to include this data, expand your OVERWRITE WHERE. "
+        + "If you do not want to include this data, use SELECT ... WHERE to filter it from your inserted data.",
+        interval,
+        intervalBounds
+    );
     this.interval = interval;
+    this.intervalBounds = intervalBounds;
   }
 
   @JsonProperty
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @JsonProperty
+  public List<Interval> getIntervalBounds()
+  {
+    return intervalBounds;
   }
 
   @Override
@@ -55,12 +76,24 @@ public class InsertTimeOutOfBoundsFault extends BaseMSQFault
       return false;
     }
     InsertTimeOutOfBoundsFault that = (InsertTimeOutOfBoundsFault) o;
-    return Objects.equals(interval, that.interval);
+    return Objects.equals(interval, that.interval) && Objects.equals(
+        intervalBounds,
+        that.intervalBounds
+    );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), interval);
+    return Objects.hash(super.hashCode(), interval, intervalBounds);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "InsertTimeOutOfBoundsFault{" +
+           "interval=" + interval +
+           ", intervalBounds=" + intervalBounds +
+           '}';
   }
 }
