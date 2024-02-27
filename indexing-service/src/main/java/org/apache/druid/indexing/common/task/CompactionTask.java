@@ -521,7 +521,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             Optional.ofNullable(eachSpec.getCompletionReports())
                     .ifPresent(reports -> completionReports.putAll(CollectionUtils.mapKeys(
                         reports,
-                        key -> String.format(
+                        key -> StringUtils.format(
                             "%s-%s",
                             eachSpec.getBaseSubtaskSpecName(),
                             key
@@ -677,7 +677,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                     segmentCacheManagerFactory,
                     ioConfig
                 ),
-                compactionTuningConfig
+                compactionTuningConfig,
+                true
             )
         );
       }
@@ -718,7 +719,8 @@ public class CompactionTask extends AbstractBatchIndexTask
                   segmentCacheManagerFactory,
                   ioConfig
               ),
-              compactionTuningConfig
+              compactionTuningConfig,
+              true
           )
       );
     }

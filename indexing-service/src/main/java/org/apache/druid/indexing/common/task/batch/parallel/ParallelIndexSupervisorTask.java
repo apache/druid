@@ -667,6 +667,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
+    if (!ingestionSchema.isSkipPublishingReports()) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    }
     return taskStatus;
   }
 
@@ -834,6 +837,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
+    if (!ingestionSchema.isSkipPublishingReports()) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    }
     return taskStatus;
   }
 
@@ -931,6 +937,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
+    if (!ingestionSchema.isSkipPublishingReports()) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    }
     return taskStatus;
   }
 

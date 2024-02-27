@@ -33,12 +33,14 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
   private final DataSchema dataSchema;
   private final ParallelIndexIOConfig ioConfig;
   private final ParallelIndexTuningConfig tuningConfig;
+  private final boolean skipPublishingReports;
 
   @JsonCreator
   public ParallelIndexIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") ParallelIndexIOConfig ioConfig,
-      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
+      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig,
+      @JsonProperty("skipPublishingReports") boolean skipPublishingReports
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
@@ -58,11 +60,21 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? ParallelIndexTuningConfig.defaultConfig() : tuningConfig;
+    this.skipPublishingReports = skipPublishingReports;
+  }
+
+  public ParallelIndexIngestionSpec(
+      DataSchema dataSchema,
+      ParallelIndexIOConfig ioConfig,
+      ParallelIndexTuningConfig tuningConfig
+  )
+  {
+    this(dataSchema, ioConfig, tuningConfig, false);
   }
 
   public ParallelIndexIngestionSpec withDataSchema(DataSchema dataSchema)
   {
-    return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
+    return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig, true);
   }
 
   @Override
@@ -84,5 +96,11 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
   public ParallelIndexTuningConfig getTuningConfig()
   {
     return tuningConfig;
+  }
+
+  @JsonProperty("skipPublishingReports")
+  public boolean isSkipPublishingReports()
+  {
+    return skipPublishingReports;
   }
 }
