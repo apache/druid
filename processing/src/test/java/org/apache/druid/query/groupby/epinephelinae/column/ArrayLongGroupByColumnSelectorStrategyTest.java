@@ -102,8 +102,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
 
   private void testSanity(Object[] storedValue, int expectedIndex)
   {
-    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(storedValue);
+    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(storedValue);
     Assert.assertEquals(expectedIndex, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -118,8 +117,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   @Test
   public void testAddingInDictionary()
   {
-    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of(4L, 2L));
+    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(ImmutableList.of(4L, 2L));
     Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -134,8 +132,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   @Test
   public void testAddingInDictionaryWithObjects()
   {
-    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(new Object[]{4L, 2L});
+    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(new Object[]{4L, 2L});
     Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -149,8 +146,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
 
   private void addToStrategy(Object value)
   {
-    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(value);
+    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(value);
     strategy.computeDictionaryId(columnValueSelector);
   }
 
