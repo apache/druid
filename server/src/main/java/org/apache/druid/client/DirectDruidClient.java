@@ -215,11 +215,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           final InputStreamHolder holder = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
           if (holder == null) {
-            throw new QueryTimeoutException(StringUtils.nonStrictFormat(
-                "Query[%s] url[%s] timed out.",
-                query.getId(),
-                url
-            ));
+            throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
           }
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
@@ -456,11 +452,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       long timeLeft = timeoutAt - System.currentTimeMillis();
 
       if (timeLeft <= 0) {
-        throw new QueryTimeoutException(StringUtils.nonStrictFormat(
-            "Query[%s] url[%s] timed out.",
-            query.getId(),
-            url
-        ));
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
       }
 
       // increment is moved up so that if future initialization is queued by some other process,
@@ -558,14 +550,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
             new Request(HttpMethod.DELETE, new URL(cancelUrl))
-                .setContent(objectMapper.writeValueAsBytes(query))
-                .setHeader(
-                    HttpHeaders.Names.CONTENT_TYPE,
-                    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-                ),
+            .setContent(objectMapper.writeValueAsBytes(query))
+            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
             StatusResponseHandler.getInstance(),
-            Duration.standardSeconds(1)
-        );
+            Duration.standardSeconds(1));
 
         Runnable checkRunnable = () -> {
           try {
@@ -574,12 +562,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             }
             StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
-              log.error(
-                  "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+              log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
                   response.getStatus().getCode(),
-                  response.getStatus().getReasonPhrase()
-              );
+                  response.getStatus().getReasonPhrase());
             }
           }
           catch (ExecutionException | InterruptedException e) {
