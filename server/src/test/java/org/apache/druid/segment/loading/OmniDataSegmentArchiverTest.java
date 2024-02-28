@@ -58,9 +58,9 @@ public class OmniDataSegmentArchiverTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
     Assert.assertThrows(
-            "Unknown loader type[unknown-type]. Known types are [explode]",
-            SegmentLoadingException.class,
-            () -> segmentArchiver.archive(segment)
+        "Unknown loader type[unknown-type]. Known types are [explode]",
+        SegmentLoadingException.class,
+        () -> segmentArchiver.archive(segment)
     );
   }
 
@@ -73,30 +73,30 @@ public class OmniDataSegmentArchiverTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
     Assert.assertThrows(
-            "BadSegmentArchiver must not have been initialized",
-            RuntimeException.class,
-            () -> segmentArchiver.archive(segment)
+        "BadSegmentArchiver must not have been initialized",
+        RuntimeException.class,
+        () -> segmentArchiver.archive(segment)
     );
   }
 
   private static Injector createInjector(@Nullable DataSegmentArchiver archiver)
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
-            ImmutableList.of(
-                    binder -> {
-                      MapBinder<String, DataSegmentArchiver> mapBinder = Binders.dataSegmentArchiverBinder(binder);
-                      if (archiver != null) {
-                        mapBinder.addBinding("sane").toInstance(archiver);
-                      }
-                    },
-                    binder -> {
-                      MapBinder<String, DataSegmentArchiver> mapBinder = Binders.dataSegmentArchiverBinder(binder);
-                      mapBinder.addBinding("bad").to(BadSegmentArchiver.class);
-                    }
-            )
+        ImmutableList.of(
+            binder -> {
+              MapBinder<String, DataSegmentArchiver> mapBinder = Binders.dataSegmentArchiverBinder(binder);
+              if (archiver != null) {
+                mapBinder.addBinding("sane").toInstance(archiver);
+              }
+            },
+            binder -> {
+              MapBinder<String, DataSegmentArchiver> mapBinder = Binders.dataSegmentArchiverBinder(binder);
+              mapBinder.addBinding("bad").to(BadSegmentArchiver.class);
+            }
+        )
     );
   }
-
+  
   @LazySingleton
   private static class BadSegmentArchiver implements DataSegmentArchiver
   {
