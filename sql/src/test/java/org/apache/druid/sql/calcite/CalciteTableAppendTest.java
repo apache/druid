@@ -92,7 +92,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    Druids.unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3)
+                    unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("d1", "dim1", "dim4", "f1")
@@ -134,7 +134,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    Druids.unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3, CalciteTests.DATASOURCE1)
+                    unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3, CalciteTests.DATASOURCE1)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("d1", "dim1", "dim4", "f1")
@@ -163,7 +163,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    Druids.unionDataSource(CalciteTests.DATASOURCE1)
+                    unionDataSource(CalciteTests.DATASOURCE1)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1")
@@ -194,7 +194,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
-                    Druids.unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2)
+                    unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim3")
