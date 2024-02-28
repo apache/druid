@@ -202,8 +202,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
-  private Long segmentsRead = 0L;
-  private Long segmentsPublished = 0L;
+  private Long segmentsRead;
+  private Long segmentsPublished;
 
 
   @JsonCreator
@@ -1626,6 +1626,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
+      long totalSegmentsRead = 0L;
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
         Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
         if (taskReport == null || taskReport.isEmpty()) {
@@ -1636,7 +1637,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
-        segmentsRead += generatedPartitionsReport.getSegmentsRead();
+        if (generatedPartitionsReport.getSegmentsRead() != null) {
+          totalSegmentsRead += generatedPartitionsReport.getSegmentsRead();
+        }
       }
 
       RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
@@ -1645,6 +1648,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           includeUnparseable
       );
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+      if (totalSegmentsRead > 0) {
+        segmentsRead = totalSegmentsRead;
+      }
 
       return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
     }
