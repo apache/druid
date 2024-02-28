@@ -48,8 +48,8 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -62,6 +62,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -125,7 +126,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
                 "All arguments to APPEND should be literal strings. "
-                    + "Argument #" + (i+1) + " is not literal",
+                    + "Argument #" + (i + 1) + " is not literal",
                 operand
             );
           } else {
@@ -138,7 +139,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
                 "All arguments to APPEND should be literal strings. "
-                    + "Argument #" + (i+1) + " is not string",
+                    + "Argument #" + (i + 1) + " is not string",
                 operand
             );
           } else {
