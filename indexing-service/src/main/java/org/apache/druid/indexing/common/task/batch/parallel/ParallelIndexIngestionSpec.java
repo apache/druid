@@ -40,7 +40,7 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") ParallelIndexIOConfig ioConfig,
       @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig,
-      @JsonProperty("skipPublishingReports") boolean skipPublishingReports
+      @JsonProperty("skipPublishingReports") Boolean skipPublishingReports
   )
   {
     super(dataSchema, ioConfig, tuningConfig);

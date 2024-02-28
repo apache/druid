@@ -519,14 +519,8 @@ public class CompactionTask extends AbstractBatchIndexTask
               log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
             }
             Optional.ofNullable(eachSpec.getCompletionReports())
-                    .ifPresent(reports -> completionReports.putAll(CollectionUtils.mapKeys(
-                        reports,
-                        key -> StringUtils.format(
-                            "%s-%s",
-                            eachSpec.getBaseSubtaskSpecName(),
-                            key
-                        )
-                    )));
+                    .ifPresent(reports -> completionReports.putAll(
+                        CollectionUtils.mapKeys(reports, key -> getReportkey(eachSpec.getBaseSubtaskSpecName(), key))));
           } else {
             failCnt++;
             log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
@@ -575,6 +569,11 @@ public class CompactionTask extends AbstractBatchIndexTask
   private String createIndexTaskSpecId(int i)
   {
     return StringUtils.format("%s_%d", getId(), i);
+  }
+
+  private String getReportkey(String baseSequenceName, String currentKey)
+  {
+    return StringUtils.format("%s_%s", currentKey, baseSequenceName.substring(baseSequenceName.lastIndexOf('_') + 1));
   }
 
   /**
