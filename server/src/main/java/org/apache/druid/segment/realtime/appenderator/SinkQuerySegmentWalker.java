@@ -61,8 +61,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
-import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.QuerySwappingQueryRunner;
+import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -152,11 +151,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> theQuery, final Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    final Query<T> newQuery = ClientQuerySegmentWalker.populateResourceId(theQuery);
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
-    final DataSource dataSourceFromQuery = newQuery.getDataSource();
+    final DataSource dataSourceFromQuery = query.getDataSource();
     final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
 
     // Sanity check: make sure the query is based on the table we're meant to handle.
@@ -164,13 +162,13 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
-    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(newQuery);
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
-      throw new ISE("Unknown query type[%s].", newQuery.getClass());
+      throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final boolean skipIncrementalSegment = newQuery.context().getBoolean(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
+    final boolean skipIncrementalSegment = query.context().getBoolean(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     // Make sure this query type can handle the subquery, if present.
@@ -182,12 +180,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn =
         dataSourceFromQuery.createSegmentMapFunction(
-            newQuery,
+            query,
             cpuTimeAccumulator
         );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
-    final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(newQuery.getDataSource().getCacheKey());
+    final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
 
     // We need to report data for each Sink all-or-nothing, which means we need to acquire references for all
     // subsegments (FireHydrants) of a segment (Sink) at once. To ensure they are properly released even when a
@@ -304,7 +302,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
       final QueryRunner<T> mergedRunner;
 
-      if (newQuery.context().isBySegment()) {
+      if (query.context().isBySegment()) {
         // bySegment: merge all hydrants for a Sink first, then merge Sinks. Necessary to keep results for the
         // same segment together, but causes additional memory usage due to the extra layer of materialization,
         // so we only do this if we need to.
@@ -336,10 +334,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         );
       }
 
-      // 1) Merge results using the toolChest, finalize if necessary.
-      // 2) Measure CPU time of that operation.
-      // 3) Release all sink segment references.
-      return new QuerySwappingQueryRunner<T>(
+      // 1) Populate resource id to the query
+      // 2) Merge results using the toolChest, finalize if necessary.
+      // 3) Measure CPU time of that operation.
+      // 4) Release all sink segment references.
+      return new ResourceIdPopulatingQueryRunner<>(
           QueryRunnerHelper.makeClosingQueryRunner(
               CPUTimeMetricQueryRunner.safeBuild(
                   new FinalizeResultsQueryRunner<>(toolChest.mergeResults(mergedRunner, true), toolChest),
@@ -349,9 +348,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                   true
               ),
               () -> CloseableUtils.closeAll(allSegmentReferences)
-          ),
-          theQuery,
-          newQuery
+          )
       );
     }
     catch (Throwable e) {

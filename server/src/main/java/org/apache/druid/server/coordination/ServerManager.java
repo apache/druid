@@ -62,7 +62,7 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.QuerySwappingQueryRunner;
+import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -224,7 +224,7 @@ public class ServerManager implements QuerySegmentWalker
             )
         );
 
-    return new QuerySwappingQueryRunner<T>(
+    return new ResourceIdPopulatingQueryRunner<>(
         CPUTimeMetricQueryRunner.safeBuild(
             new FinalizeResultsQueryRunner<>(
                 toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
@@ -234,9 +234,7 @@ public class ServerManager implements QuerySegmentWalker
             emitter,
             cpuTimeAccumulator,
             true
-        ),
-        theQuery,
-        newQuery
+        )
     );
   }
 
