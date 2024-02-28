@@ -468,6 +468,21 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
+    SeekableStreamSupervisorSpec activeSpecWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor activeSupervisorWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(activeSpecWithConcurrentLocks.getId()).andReturn("activeSpecWithConcurrentLocks").anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.getDataSources())
+            .andReturn(ImmutableList.of("activeConcurrentLocksDS")).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.createSupervisor())
+            .andReturn(activeSupervisorWithConcurrentLocks).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.createAutoscaler(activeSupervisorWithConcurrentLocks))
+            .andReturn(null).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.getContext())
+            .andReturn(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true)).anyTimes();
+    EasyMock.replay(activeSpecWithConcurrentLocks);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
     SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
     Supervisor activeAppendSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeAppendSpec.getId()).andReturn("activeAppendSpec").anyTimes();
@@ -498,6 +513,9 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.createOrUpdateAndStartSupervisor(activeAppendSpec);
     Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeAppendDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks);
+    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeConcurrentLocksDS").isPresent());
 
     verifyAll();
   }
