@@ -219,6 +219,13 @@ SELECT * from (
 
 However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
 
+:::info
+Only tables defined in the catalog are supported in `TABLE(APPEND())` - due to that; common table expressions result in `table not found` errors for queries like:
+```sql
+WITH cte_table AS (SELECT * from TABLE1) SELECT * FROM TABLE(APPEND('cte_table'))
+```
+:::
+
 ### `inline`
 
 <Tabs>
