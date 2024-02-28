@@ -175,7 +175,7 @@ public class KubernetesOverlordModule implements DruidModule
     Map<String, TaskLane> labelToTaskLanes = new HashMap<>();
     for (TaskLaneConfig taskLaneConfig : taskLanes) {
       TaskLaneCapacityPolicy policy = TaskLaneCapacityPolicy.valueOf(taskLaneConfig.getPolicy());
-      Set<String> labelSet = Arrays.stream(taskLaneConfig.getLabel().split(",\\s*"))
+      Set<String> labelSet = Arrays.stream(taskLaneConfig.getLabels().split(",\\s*"))
                                    .map(String::trim)
                                    .filter(label -> !label.isEmpty())
                                    .collect(Collectors.toSet());
