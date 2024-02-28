@@ -290,6 +290,9 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
                     <ExternalLink href="https://avro.apache.org">Avro</ExternalLink>
                   </li>
                   <li>
+                    <ExternalLink href="https://protobuf.dev">Protobuf</ExternalLink>
+                  </li>
+                  <li>
                     Any line format that can be parsed with a custom regular expression (regex)
                   </li>
                 </ul>

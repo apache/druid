@@ -84,8 +84,8 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -162,6 +162,9 @@ import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.calcite.export.TestExportStorageConnectorProvider;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -314,7 +317,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
-  protected LoadedSegmentDataProvider loadedSegmentDataProvider = mock(LoadedSegmentDataProvider.class);
+  protected DataServerQueryHandler dataServerQueryHandler = mock(DataServerQueryHandler.class);
 
   private MSQTestSegmentManager segmentManager;
   private SegmentCacheManager segmentCacheManager;
@@ -351,6 +354,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
             binder.install(new NestedDataModule());
             NestedDataModule.registerHandlersAndSerde();
             SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+            SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+            SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+            SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
           }
 
           @Override
@@ -440,7 +446,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
                 .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
-          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
+          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
@@ -604,12 +610,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return array;
   }
 
-  private LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  private DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
-    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
-    doReturn(loadedSegmentDataProvider)
+    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
+    doReturn(dataServerQueryHandler)
         .when(mockFactory)
-        .createLoadedSegmentDataProvider(anyString(), any());
+        .createDataServerQueryHandler(anyString(), any(), any());
     return mockFactory;
   }
 

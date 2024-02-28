@@ -12,3 +12,6 @@ updates:
       # pin Jetty dependencies to 9.4.x
       - dependency-name: "org.eclipse.jetty"
         versions: "[9.5,)"
+      # pin Testng dependencies to 7.3.0
+      - dependency-name: "org.testng"
+        versions: "[7.4.0,)"
