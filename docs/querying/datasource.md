@@ -174,7 +174,7 @@ table unions.
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
-### `dynamic table append`
+#### Dynamic table append
 
 <Tabs>
 <TabItem value="sql" label="SQL">
@@ -182,20 +182,6 @@ use union datasources.
 ```sql
 SELECT column1, column2, column3
 FROM TABLE(APPEND('table1','table2','table3'))
-```
-</TabItem>
-<TabItem value="native" label="Native">
-
-```json
-{
-  "queryType": "scan",
-  "dataSource": {
-    "type": "union",
-    "dataSources": ["table1", "table2", "table3"]
-  },
-  "columns": ["column1", "column2"],
-  "intervals": ["0000/3000"]
-}
 ```
 </TabItem>
 </Tabs>
