@@ -19,16 +19,28 @@
 
 package org.apache.druid.msq.input.table;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.jboss.netty.util.internal.ThreadLocalRandom;
 
-public class SegmentWithDescriptorTest
+import java.util.Set;
+import java.util.function.Function;
+
+public enum DataServerSelector
 {
-  @Test
-  public void testEquals()
+  RANDOM(servers -> servers.stream()
+                           .skip(ThreadLocalRandom.current().nextInt(servers.size()))
+                           .findFirst()
+                           .orElse(null));
+
+  private final Function<Set<DruidServerMetadata>, DruidServerMetadata> selectServer;
+
+  DataServerSelector(Function<Set<DruidServerMetadata>, DruidServerMetadata> selectServer)
   {
-    EqualsVerifier.forClass(SegmentWithDescriptor.class)
-                  .usingGetClass()
-                  .verify();
+    this.selectServer = selectServer;
+  }
+
+  public Function<Set<DruidServerMetadata>, DruidServerMetadata> getSelectServerFunction()
+  {
+    return selectServer;
   }
 }
