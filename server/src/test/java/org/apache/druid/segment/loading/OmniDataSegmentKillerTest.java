@@ -68,9 +68,9 @@ public class OmniDataSegmentKillerTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertThrows(
-            "Unknown loader type[unknown-type]. Known types are [explode]",
-            SegmentLoadingException.class,
-            () -> segmentKiller.kill(segment)
+        "Unknown loader type[unknown-type]. Known types are [explode]",
+        SegmentLoadingException.class,
+        () -> segmentKiller.kill(segment)
     );
   }
 
@@ -83,27 +83,27 @@ public class OmniDataSegmentKillerTest
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertThrows(
-            "BadSegmentKiller must not have been initialized",
-            RuntimeException.class,
-            () -> segmentKiller.kill(segment)
+        "BadSegmentKiller must not have been initialized",
+        RuntimeException.class,
+        () -> segmentKiller.kill(segment)
     );
   }
 
   private static Injector createInjector(@Nullable DataSegmentKiller killer)
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
-            ImmutableList.of(
-                    binder -> {
-                      MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
-                      if (killer != null) {
-                        mapBinder.addBinding("sane").toInstance(killer);
-                      }
-                    },
-                    binder -> {
-                      MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
-                      mapBinder.addBinding("bad").to(BadSegmentKiller.class);
-                    }
-            )
+        ImmutableList.of(
+            binder -> {
+              MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
+              if (killer != null) {
+                mapBinder.addBinding("sane").toInstance(killer);
+              }
+            },
+            binder -> {
+              MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
+              mapBinder.addBinding("bad").to(BadSegmentKiller.class);
+            }
+        )
     );
   }
 
@@ -125,14 +125,14 @@ public class OmniDataSegmentKillerTest
   {
     // tombstone
     DataSegment tombstone =
-            DataSegment.builder()
-                    .dataSource("test")
-                    .interval(Intervals.of("2021-01-01/P1D"))
-                    .version("version")
-                    .size(1)
-                    .loadSpec(ImmutableMap.of("type", "tombstone", "path", "null"))
-                    .shardSpec(new TombstoneShardSpec())
-                    .build();
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(Intervals.of("2021-01-01/P1D"))
+                   .version("version")
+                   .size(1)
+                   .loadSpec(ImmutableMap.of("type", "tombstone", "path", "null"))
+                   .shardSpec(new TombstoneShardSpec())
+                   .build();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
@@ -159,9 +159,9 @@ public class OmniDataSegmentKillerTest
     segmentKiller.kill(ImmutableList.of(segment1, segment2, segment3));
 
     Mockito.verify(killerSane, Mockito.times(1))
-            .kill((List<DataSegment>) argThat(containsInAnyOrder(segment1, segment2)));
+           .kill((List<DataSegment>) argThat(containsInAnyOrder(segment1, segment2)));
     Mockito.verify(killerSaneTwo, Mockito.times(1))
-            .kill((List<DataSegment>) argThat(containsInAnyOrder(segment3)));
+           .kill((List<DataSegment>) argThat(containsInAnyOrder(segment3)));
   }
 
   @LazySingleton
