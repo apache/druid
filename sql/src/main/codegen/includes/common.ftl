@@ -63,7 +63,7 @@ SqlGranularityLiteral PartitionGranularity() :
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      granularity = DruidSqlParserUtils.convertSqlNodeToGranularity(e);
       unparseString = e.toString();
     }
   )

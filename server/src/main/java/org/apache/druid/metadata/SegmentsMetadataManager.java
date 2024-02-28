@@ -164,7 +164,8 @@ public interface SegmentsMetadataManager
   Set<String> retrieveAllDataSourceNames();
 
   /**
-   * Returns a list of up to {@code limit} unused segment intervals for the specified datasource. Segments are filtered based on the following criteria:
+   * Returns a list of up to {@code limit} unused segment intervals for the specified datasource. Segments are filtered
+   * based on the following criteria:
    *
    * <li> The start time of the segment must be no earlier than the specified {@code minStartTime} (if not null). </li>
    * <li> The end time of the segment must be no later than the specified {@code maxEndTime}. </li>
@@ -172,9 +173,9 @@ public interface SegmentsMetadataManager
    *      Segments that have no {@code used_status_last_updated} time (due to an upgrade from legacy Druid) will
    *      have {@code maxUsedStatusLastUpdatedTime} ignored. </li>
    *
-   * <p>
-   * The list of intervals is ordered by segment start time and then by end time.
-   * </p>
+   * @return list of intervals ordered by segment start time and then by end time. Note that the list may contain
+   * duplicate intervals.
+   *
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,
