@@ -296,6 +296,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 null,
                 columns,
                 false,
+                null,
                 null
             )
         )

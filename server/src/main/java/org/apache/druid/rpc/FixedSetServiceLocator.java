@@ -67,10 +67,15 @@ public class FixedSetServiceLocator implements ServiceLocator
     }
 
     Set<ServiceLocation> locationSet = serviceLocations.getLocations();
+    int size = locationSet.size();
+    if (size == 1) {
+      return Futures.immediateFuture(ServiceLocations.forLocation(locationSet.stream().findFirst().get()));
+    }
+
     return Futures.immediateFuture(
         ServiceLocations.forLocation(
             locationSet.stream()
-                       .skip(ThreadLocalRandom.current().nextInt(locationSet.size()))
+                       .skip(ThreadLocalRandom.current().nextInt(size))
                        .findFirst()
                        .orElse(null)
         )

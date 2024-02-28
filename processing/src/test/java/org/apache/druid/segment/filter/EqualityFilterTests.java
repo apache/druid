@@ -124,6 +124,7 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("vdim0", ColumnType.LONG, 1L, null), ImmutableList.of("1"));
     }
 
+
     @Test
     public void testListFilteredVirtualColumn()
     {
@@ -405,6 +406,20 @@ public class EqualityFilterTests
             ImmutableList.of("0", "1", "2", "3", "4", "5")
         );
       }
+    }
+
+
+    @Test
+    public void testSingleValueVirtualStringColumnMissingColumnCoalesce()
+    {
+      assertFilterMatches(
+          new EqualityFilter("fake-nvl", ColumnType.STRING, "0", null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter("fake-nvl", ColumnType.STRING, "hello", null),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
     }
 
     @Test

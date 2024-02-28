@@ -71,7 +71,10 @@ public enum EngineFeature
   /**
    * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their
    * query contexts.
+   *
+   * {@link Deprecated} Instead of the context value {@link org.apache.druid.query.scan.ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   SCAN_NEEDS_SIGNATURE,
 
   /**

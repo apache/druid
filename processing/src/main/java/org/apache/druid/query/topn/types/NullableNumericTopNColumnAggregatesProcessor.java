@@ -45,10 +45,10 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
     implements TopNColumnAggregatesProcessor<Selector>
 {
   private final boolean hasNulls = !NullHandling.replaceWithDefault();
-  final Function<Object, Comparable<?>> converter;
+  final Function<Object, Object> converter;
   Aggregator[] nullValueAggregates;
 
-  protected NullableNumericTopNColumnAggregatesProcessor(Function<Object, Comparable<?>> converter)
+  protected NullableNumericTopNColumnAggregatesProcessor(Function<Object, Object> converter)
   {
     this.converter = converter;
   }
@@ -67,8 +67,9 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
   /**
    * Method to convert primitive numeric value keys used by {@link #getAggregatesStore} into the correct representation
    * for the {@link TopNResultBuilder}, called by {@link #updateResults}
+   * @return
    */
-  abstract Comparable<?> convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
+  abstract Object convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
 
   @Override
   public int getCardinality(Selector selector)
@@ -123,7 +124,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
           vals[i] = aggs[i].get();
         }
 
-        final Comparable<?> key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
+        final Object key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
         resultBuilder.addEntry(key, key, vals);
       }
     }

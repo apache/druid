@@ -33,16 +33,18 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -57,6 +59,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -74,6 +77,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private Yielder<ResultRow> resultYielder;
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
+  private SegmentsInputSlice handedOffSegments = null;
+  private Yielder<Yielder<ResultRow>> currentResultsYielder;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
@@ -100,23 +105,38 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
-    if (resultYielder == null) {
-      Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ResultRow>> statusSequencePair =
-          segment.fetchRowsFromDataServer(groupingEngine.prepareGroupByQuery(query), Function.identity(), closer);
-      if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
-        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.",
-                 segment.getDescriptor());
-        return runWithSegment(segment);
+    if (resultYielder == null || resultYielder.isDone()) {
+      if (currentResultsYielder == null) {
+        final DataServerQueryResult<ResultRow> dataServerQueryResult =
+            dataServerQueryHandler.fetchRowsFromDataServer(
+                groupingEngine.prepareGroupByQuery(query),
+                Function.identity(),
+                closer
+            );
+        handedOffSegments = dataServerQueryResult.getHandedOffSegments();
+        if (!handedOffSegments.getDescriptors().isEmpty()) {
+          log.info(
+              "Query to dataserver for segments found [%d] handed off segments",
+              handedOffSegments.getDescriptors().size()
+          );
+        }
+        List<Yielder<ResultRow>> yielders = dataServerQueryResult.getResultsYielders();
+        currentResultsYielder = Yielders.each(Sequences.simple(yielders));
       }
-      resultYielder = statusSequencePair.rhs;
+      if (currentResultsYielder.isDone()) {
+        return ReturnOrAwait.returnObject(handedOffSegments);
+      } else {
+        resultYielder = currentResultsYielder.get();
+        currentResultsYielder = currentResultsYielder.next(null);
+      }
     }
 
     populateFrameWriterAndFlushIfNeeded();
 
-    if (resultYielder == null || resultYielder.isDone()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+    if ((resultYielder == null || resultYielder.isDone()) && currentResultsYielder.isDone()) {
+      return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();
     }
