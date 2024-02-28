@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -33,13 +34,13 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.sql.calcite.export.TestExportModule;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.hamcrest.CoreMatchers;
@@ -56,7 +57,23 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModule(new TestExportModule());
+    builder.addModule(
+        new DruidModule()
+        {
+          @Override
+          public void configure(Binder binder)
+          {}
+
+          @Override
+          public List<? extends Module> getJacksonModules()
+          {
+            return ImmutableList.of(
+                new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
+                    new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
+                )
+            );
+          }
+        });
     builder.addModule(new DruidModule()
     {
       @Override

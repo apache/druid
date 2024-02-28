@@ -17,10 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.msq.exec;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.ExportStorageProvider;
+import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;

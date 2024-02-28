@@ -26,7 +26,6 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.storage.ManifestFileManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -138,17 +137,19 @@ public class MSQExportTest extends MSQTestBase
 
   private void verifyManifestFile(File manifestFile, List<File> resultFiles) throws IOException
   {
-    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-        Files.newInputStream(manifestFile.toPath()),
-        StringUtils.UTF8_STRING
-    ));
+    try (
+        BufferedReader bufferedReader = new BufferedReader(
+            new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StringUtils.UTF8_STRING)
+        )
+    ) {
 
-    for (File file : resultFiles) {
-      Assert.assertEquals(
-          bufferedReader.readLine(),
-          StringUtils.format("file:%s", file.getAbsolutePath())
-      );
+      for (File file : resultFiles) {
+        Assert.assertEquals(
+            bufferedReader.readLine(),
+            StringUtils.format("file:%s", file.getAbsolutePath())
+        );
+      }
+      Assert.assertNull(bufferedReader.readLine());
     }
-    Assert.assertNull(bufferedReader.readLine());
   }
 }
