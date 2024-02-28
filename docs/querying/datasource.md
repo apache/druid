@@ -174,6 +174,51 @@ table unions.
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
+### dynamic table append
+
+<Tabs>
+<TabItem value="sql" label="SQL">
+
+```sql
+SELECT column1, column2, column3
+FROM TABLE(APPEND('table1','table2','table3'))
+```
+</TabItem>
+<TabItem value="native" label="Native">
+
+```json
+{
+  "queryType": "scan",
+  "dataSource": {
+    "type": "union",
+    "dataSources": ["table1", "table2", "table3"]
+  },
+  "columns": ["column1", "column2"],
+  "intervals": ["0000/3000"]
+}
+```
+</TabItem>
+</Tabs>
+
+Perform dynamic table appends in SQL using `TABLE(APPEND(...))`. This simplifies SQL syntax to match columns by name from multiple tables. The native query syntax remains the same as for native union datasources.
+Suppose you have three tables:
+* `table1` has `column1`
+* `table2` has `column2`
+* `table3` has `column1`, `column2`, `column3`
+
+You can create a union view of all the tables by using [table-level union](sql.md#table-level):
+```sql
+SELECT * from (
+  SELECT column1,NULL AS column2,NULL AS column3 FROM table1
+  UNION ALL
+  SELECT NULL AS column1,column2,NULL AS column3 FROM table2
+  UNION ALL
+  SELECT column1,column2,column3 FROM table3
+) t
+```
+
+However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
+
 ### `inline`
 
 <Tabs>
@@ -218,50 +263,6 @@ Inline datasources are not available in Druid SQL.
 
 Refer to the [Query execution](query-execution.md#inline) page for more details on how queries are executed when you
 use inline datasources.
-
-### Dynamic table append `TABLE(APPEND(...))`
-
-Perform dynamic table appends in SQL using `TABLE(APPEND(...))`. This simplifies SQL syntax to match columns by name from multiple tables. The native query syntax remains the same as for native union datasources.
-Suppose you have three tables:
-* `table1` has `column1`
-* `table2` has `column2`
-* `table3` has `column1`, `column2`, `column3`
-
-You can create a union view of all the tables by using UNION ALL:
-```sql
-SELECT column1,NULL AS column2,NULL AS column3 FROM table1
-UNION ALL
-SELECT NULL AS column1,column2,NULL AS column3 FROM table2
-UNION ALL
-SELECT column1,column2,column3 FROM table3
-```
-
-However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
-
-<Tabs>
-<TabItem value="sql" label="SQL">
-
-```sql
-SELECT column1, column2, column3
-FROM TABLE(APPEND('table1','table2','table3'))
-```
-</TabItem>
-<TabItem value="native" label="Native">
-
-```json
-{
-  "queryType": "scan",
-  "dataSource": {
-    "type": "union",
-    "dataSources": ["table1", "table2", "table3"]
-  },
-  "columns": ["column1", "column2"],
-  "intervals": ["0000/3000"]
-}
-```
-</TabItem>
-</Tabs>
-
 
 ### `query`
 
