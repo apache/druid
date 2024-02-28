@@ -79,9 +79,9 @@ public class RowsTest extends InitializedNullHandlingTest
     validCases.put("2.1", 2.1);
 
     // Strings that are valid special doubles
+    //CHECKSTYLE.OFF: Regexp
     validCases.put(String.valueOf(Double.MAX_VALUE), Double.MAX_VALUE);
     validCases.put(String.valueOf(Double.MIN_VALUE), Double.MIN_VALUE);
-    //CHECKSTYLE.OFF: Regexp
     validCases.put(String.valueOf(Double.POSITIVE_INFINITY), Double.POSITIVE_INFINITY);
     validCases.put(String.valueOf(Double.NEGATIVE_INFINITY), Double.NEGATIVE_INFINITY);
     //CHECKSTYLE.ON: Regexp
