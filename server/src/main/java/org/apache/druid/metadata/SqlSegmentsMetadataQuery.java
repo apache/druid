@@ -112,7 +112,7 @@ public class SqlSegmentsMetadataQuery
    *
    * This call does not return any information about realtime segments.
    *
-   * Returns a closeable iterator. You should close it when you are done.
+   * @return a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,
@@ -139,22 +139,25 @@ public class SqlSegmentsMetadataQuery
    * unused segments.
    * <p>
    * This call does not return any information about realtime segments.
+   * </p>
    *
-   * @param dataSource                   The name of the datasource
-   * @param intervals                    The intervals to search over
-   * @param version
-   * @param limit                        The limit of segments to return
-   * @param lastSegmentId                the last segment id from which to search for results. All segments returned are >
-   *                                     this segment lexigraphically if sortOrder is null or ASC, or < this segment
-   *                                     lexigraphically if sortOrder is DESC.
-   * @param sortOrder                    Specifies the order with which to return the matching segments by start time, end time.
-   *                                     A null value indicates that order does not matter.
+   * @param dataSource    The name of the datasource
+   * @param intervals     The intervals to search over
+   * @param version       An optional version of unused segments to retrieve in the given {@code intervals}.
+   *                      If unspecified, all versions of unused segments in the {@code intervals} must be retrieved.
+   * @param limit         The limit of segments to return
+   * @param lastSegmentId the last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or ASC, or < this segment
+   *                      lexigraphically if sortOrder is DESC.
+   * @param sortOrder     Specifies the order with which to return the matching segments by start time, end time.
+   *                      A null value indicates that order does not matter.
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code intervals}
    *                                     with {@code used_status_last_updated} no later than this time will be included in the
    *                                     iterator. Segments without {@code used_status_last_updated} time (due to an upgrade
    *                                     from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
-   *                                     <p>
-   *                                     Returns a closeable iterator. You should close it when you are done.
+   *
+   * @return a closeable iterator. You should close it when you are done.
+   *
    */
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
       final String dataSource,
@@ -199,7 +202,7 @@ public class SqlSegmentsMetadataQuery
    *                                   iterator. Segments without {@code used_status_last_updated} time (due to an upgrade
    *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
 
-   * Returns a closeable iterator. You should close it when you are done.
+   * @return a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegmentPlus> retrieveUnusedSegmentsPlus(
       final String dataSource,
@@ -231,7 +234,7 @@ public class SqlSegmentsMetadataQuery
    * 1) ensure that the caller passes only used segments to this method when marking them as unused.
    * 2) Similarly, please try to call this method only on unused segments when marking segments as used with this method.
    *
-   * Returns the number of segments actually modified.
+   * @return the number of segments actually modified.
    */
   public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
   {
@@ -268,7 +271,7 @@ public class SqlSegmentsMetadataQuery
   /**
    * Marks all used segments that are *fully contained by* a particular interval as unused.
    *
-   * Returns the number of segments actually modified.
+   * @return the number of segments actually modified.
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval)
   {

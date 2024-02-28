@@ -83,6 +83,11 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
    */
   private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
 
+  /**
+   * The version of segments to delete in this {@link #getInterval()}.
+   */
+  @Nullable private final String version;
+
   @Deprecated
   private final boolean markAsUnused;
   /**
@@ -101,11 +106,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
    * {@code used_status_last_updated} no later than this time will be included in the kill task.
    */
   @Nullable private final DateTime maxUsedStatusLastUpdatedTime;
-
-  /**
-   * The version of segments to delete in this {@link #getInterval()}.
-   */
-  @Nullable private final String version;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -145,6 +145,14 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
 
+
+  @Nullable
+  @JsonProperty
+  public String getVersion()
+  {
+    return version;
+  }
+
   /**
    * This field has been deprecated as "kill" tasks should not be responsible for
    * marking segments as unused. Instead, users should call the Coordinator API
@@ -165,13 +173,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public int getBatchSize()
   {
     return batchSize;
-  }
-
-  @Nullable
-  @JsonProperty
-  public String getVersion()
-  {
-    return version;
   }
 
   @Nullable
@@ -253,8 +254,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       unusedSegments = toolbox
               .getTaskActionClient()
               .submit(
-                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersion(), nextBatchSize, maxUsedStatusLastUpdatedTime
-                  ));
+                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersion(), nextBatchSize, maxUsedStatusLastUpdatedTime)
+              );
 
       // Fetch locks each time as a revokal could have occurred in between batches
       final NavigableMap<DateTime, List<TaskLock>> taskLockMap

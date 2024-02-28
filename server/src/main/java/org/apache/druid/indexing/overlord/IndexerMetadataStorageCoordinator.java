@@ -105,17 +105,20 @@ public interface IndexerMetadataStorageCoordinator
    * <p>
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
+   * </p>
    *
    * @param dataSource The data source to query
    * @param intervals  The intervals for which all applicable and used segments are requested.
-   * @param version    The segment version to retrieve in the given {@code intervals}
+   * @param version    An optional version of segments to retrieve in the given {@code intervals}. If unspecified,
+   *                   all versions of used segments in the {@code intervals} must be retrieved.
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified intervals: that is, a segment which is visible
    *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
    *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
    *                   {@link Segments}.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   * requested intervals.
+   *         requested intervals.
+   *
    * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
    * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
    * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
@@ -132,10 +135,11 @@ public interface IndexerMetadataStorageCoordinator
    * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
    * metadata store.
    *
-   * @param dataSource                   The data source the segments belong to
-   * @param interval                     Filter the data segments to ones that include data in this interval exclusively.
-   * @param version                      The segment version to retrieve in the given {@code interval}.
-   * @param limit                        The maximum number of unused segments to retreive. If null, no limit is applied.
+   * @param dataSource  The data source the segments belong to
+   * @param interval    Filter the data segments to ones that include data in this interval exclusively.
+   * @param version     An optional version of segments to retrieve in the given {@code interval}. If unspecified, all
+   *                    versions of unused segments in the {@code interval} must be retrieved.
+   * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                     with {@code used_status_last_updated} no later than this time will be included in the
    *                                     kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
@@ -146,7 +150,7 @@ public interface IndexerMetadataStorageCoordinator
   List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      String version,
+      @Nullable String version,
       @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   );

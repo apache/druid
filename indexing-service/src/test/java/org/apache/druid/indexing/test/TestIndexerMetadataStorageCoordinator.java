@@ -108,7 +108,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      String version, @Nullable Integer limit,
+      @Nullable String version,
+      @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
