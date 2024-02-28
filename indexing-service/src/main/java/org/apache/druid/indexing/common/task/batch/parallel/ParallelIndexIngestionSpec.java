@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 
+import javax.annotation.Nullable;
+
 public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOConfig, ParallelIndexTuningConfig>
 {
   private final DataSchema dataSchema;
@@ -60,7 +62,7 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? ParallelIndexTuningConfig.defaultConfig() : tuningConfig;
-    this.skipPublishingReports = skipPublishingReports;
+    this.skipPublishingReports = skipPublishingReports == null ? false : skipPublishingReports;
   }
 
   public ParallelIndexIngestionSpec(
@@ -99,7 +101,8 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
   }
 
   @JsonProperty("skipPublishingReports")
-  public boolean isSkipPublishingReports()
+  @Nullable
+  public Boolean isSkipPublishingReports()
   {
     return skipPublishingReports;
   }
