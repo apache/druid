@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 
@@ -33,11 +34,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Creates new instances of {@link LoadedSegmentDataProvider} and manages the cancellation threadpool.
+ * Creates new instances of {@link DataServerQueryHandler} and manages the cancellation threadpool.
  */
-public class LoadedSegmentDataProviderFactory implements Closeable
+public class DataServerQueryHandlerFactory implements Closeable
 {
-  private static final Logger log = new Logger(LoadedSegmentDataProviderFactory.class);
+  private static final Logger log = new Logger(DataServerQueryHandlerFactory.class);
   private static final int DEFAULT_THREAD_COUNT = 4;
   private final CoordinatorClient coordinatorClient;
   private final ServiceClientFactory serviceClientFactory;
@@ -45,7 +46,7 @@ public class LoadedSegmentDataProviderFactory implements Closeable
   private final QueryToolChestWarehouse warehouse;
   private final ScheduledExecutorService queryCancellationExecutor;
 
-  public LoadedSegmentDataProviderFactory(
+  public DataServerQueryHandlerFactory(
       CoordinatorClient coordinatorClient,
       ServiceClientFactory serviceClientFactory,
       ObjectMapper objectMapper,
@@ -59,19 +60,21 @@ public class LoadedSegmentDataProviderFactory implements Closeable
     this.queryCancellationExecutor = ScheduledExecutors.fixed(DEFAULT_THREAD_COUNT, "query-cancellation-executor");
   }
 
-  public LoadedSegmentDataProvider createLoadedSegmentDataProvider(
+  public DataServerQueryHandler createDataServerQueryHandler(
       String dataSource,
-      ChannelCounters channelCounters
+      ChannelCounters channelCounters,
+      DataServerRequestDescriptor dataServerRequestDescriptor
   )
   {
-    return new LoadedSegmentDataProvider(
+    return new DataServerQueryHandler(
         dataSource,
         channelCounters,
         serviceClientFactory,
         coordinatorClient,
         objectMapper,
         warehouse,
-        queryCancellationExecutor
+        queryCancellationExecutor,
+        dataServerRequestDescriptor
     );
   }
 
