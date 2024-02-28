@@ -221,13 +221,13 @@ use inline datasources.
 
 ### Dynamic table append `TABLE(APPEND(...))`
 
-This is essentially an SQL level syntactic sugar which matches columns by name from multiple tables.
-Suppose you have 3 tables:
+Perform dynamic table appends in SQL using `TABLE(APPEND(...))`. This simplifies SQL syntax to match columns by name from multiple tables. The native query syntax remains the same as for native union datasources.
+Suppose you have three tables:
 * `table1` has `column1`
 * `table2` has `column2`
 * `table3` has `column1`, `column2`, `column3`
 
-It is possible to create an union view of the above tables is possible by using UNION ALL:
+You can create a union view of all the tables by using UNION ALL:
 ```sql
 SELECT column1,NULL AS column2,NULL AS column3 FROM table1
 UNION ALL
