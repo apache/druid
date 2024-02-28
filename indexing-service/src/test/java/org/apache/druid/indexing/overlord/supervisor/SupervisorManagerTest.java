@@ -497,6 +497,25 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeAppendSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
+    // A supervisor with useConcurrentLocks set to false explicitly must not use an append lock
+    SeekableStreamSupervisorSpec specWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor supervisorWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(specWithUseConcurrentLocksFalse.getId()).andReturn("useConcurrentLocksFalse").anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.getDataSources())
+            .andReturn(ImmutableList.of("dsWithuseConcurrentLocksFalse")).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.createSupervisor()).andReturn(supervisorWithUseConcurrentLocksFalse).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.createAutoscaler(supervisorWithUseConcurrentLocksFalse))
+            .andReturn(null).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.getContext()).andReturn(ImmutableMap.of(
+        Tasks.USE_CONCURRENT_LOCKS,
+        false,
+        Tasks.TASK_LOCK_TYPE,
+        TaskLockType.APPEND.name()
+    )).anyTimes();
+    EasyMock.replay(specWithUseConcurrentLocksFalse);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
     replayAll();
     manager.start();
 
@@ -516,6 +535,11 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks);
     Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeConcurrentLocksDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(specWithUseConcurrentLocksFalse);
+    Assert.assertFalse(
+        manager.getActiveSupervisorIdForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isPresent()
+    );
 
     verifyAll();
   }

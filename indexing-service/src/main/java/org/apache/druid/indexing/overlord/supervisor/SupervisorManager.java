@@ -87,7 +87,7 @@ public class SupervisorManager
       final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec supervisorSpec = entry.getValue().rhs;
 
-      boolean useConcurrentLocks = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
+      Boolean useConcurrentLocks = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
       TaskLockType taskLockType = Tasks.DEFAULT_TASK_LOCK_TYPE;
       if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
         SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
@@ -95,15 +95,17 @@ public class SupervisorManager
         if (context != null) {
           useConcurrentLocks = QueryContexts.getAsBoolean(
               Tasks.USE_CONCURRENT_LOCKS,
-              context.get(Tasks.USE_CONCURRENT_LOCKS),
-              Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+              context.get(Tasks.USE_CONCURRENT_LOCKS)
           );
 
-          taskLockType = QueryContexts.getAsEnum(
-              Tasks.TASK_LOCK_TYPE,
-              context.get(Tasks.TASK_LOCK_TYPE),
-              TaskLockType.class
-          );
+          if (useConcurrentLocks == null) {
+            useConcurrentLocks = false;
+            taskLockType = QueryContexts.getAsEnum(
+                Tasks.TASK_LOCK_TYPE,
+                context.get(Tasks.TASK_LOCK_TYPE),
+                TaskLockType.class
+            );
+          }
         }
       }
 
