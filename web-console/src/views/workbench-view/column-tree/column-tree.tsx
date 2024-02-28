@@ -642,7 +642,9 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         }}
         rightElement={
           <ButtonGroup minimal>
-            <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
+            {searchString !== '' && (
+              <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
+            )}
             <Popover2
               position="bottom-left"
               content={
@@ -694,7 +696,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render() {
     const { columnMetadataLoading } = this.props;
-    const { currentSchemaSubtree } = this.state;
+    const { currentSchemaSubtree, searchString } = this.state;
 
     if (columnMetadataLoading) {
       return (
@@ -711,11 +713,17 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         {this.renderSchemaSelector()}
         {this.renderSearch()}
         <div className="tree-container">
-          <Tree
-            contents={currentSchemaSubtree}
-            onNodeCollapse={this.handleNodeCollapse}
-            onNodeExpand={this.handleNodeExpand}
-          />
+          {currentSchemaSubtree.length ? (
+            <Tree
+              contents={currentSchemaSubtree}
+              onNodeCollapse={this.handleNodeCollapse}
+              onNodeExpand={this.handleNodeExpand}
+            />
+          ) : (
+            <div className="message-box">
+              {searchString ? 'The search returned no results' : 'No tables'}
+            </div>
+          )}
         </div>
       </div>
     );

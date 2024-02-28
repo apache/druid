@@ -31,10 +31,6 @@ exports[`ColumnTree matches snapshot 1`] = `
       <Blueprint4.ButtonGroup
         minimal={true}
       >
-        <Blueprint4.Button
-          icon="cross"
-          onClick={[Function]}
-        />
         <Blueprint4.Popover2
           boundary="clippingParents"
           captureDismiss={false}
