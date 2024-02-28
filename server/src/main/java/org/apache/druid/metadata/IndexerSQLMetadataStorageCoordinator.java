@@ -35,6 +35,7 @@ import com.google.inject.Inject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.PendingSegmentUpgradeRecord;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
@@ -501,7 +502,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult commitReplaceSegments(
       final Set<DataSegment> replaceSegments,
-      final Set<ReplaceTaskLock> locksHeldByReplaceTask
+      final Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      final Set<String> activeRealtimeSequencePrefixes
   )
   {
     verifySegmentsToCommit(replaceSegments);
@@ -514,7 +516,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask)
             );
             return SegmentPublishResult.ok(
-                insertSegments(handle, segmentsToInsert)
+                insertSegments(handle, segmentsToInsert),
+                upgradePendingSegmentsOverlappingWith(replaceSegments, activeRealtimeSequencePrefixes)
             );
           },
           3,
@@ -705,14 +708,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  @Override
-  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+  private List<PendingSegmentUpgradeRecord> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments,
       Set<String> activeRealtimeSequencePrefixes
   )
   {
     if (replaceSegments.isEmpty()) {
-      return Collections.emptyMap();
+      return Collections.emptyList();
     }
 
     // Any replace interval has exactly one version of segments
@@ -741,9 +743,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * those versions.</li>
    * </ul>
    *
-   * @return Map from original pending segment to the new upgraded ID.
+   * @return List of PendingSegmentUpgradeRecords which map the original pending segment to the new upgraded ID.
    */
-  private Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(
+  private List<PendingSegmentUpgradeRecord> upgradePendingSegments(
       Handle handle,
       String datasource,
       Map<Interval, DataSegment> replaceIntervalToMaxId,
@@ -751,7 +753,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
-    final Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> pendingSegmentToNewId = new HashMap<>();
+    final List<PendingSegmentUpgradeRecord> pendingSegmentToNewId = new ArrayList<>();
 
     for (Map.Entry<Interval, DataSegment> entry : replaceIntervalToMaxId.entrySet()) {
       final Interval replaceInterval = entry.getKey();
@@ -788,7 +790,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               ),
               newId
           );
-          pendingSegmentToNewId.put(pendingSegmentId, newId);
+          pendingSegmentToNewId.add(new PendingSegmentUpgradeRecord(pendingSegmentId, newId));
         }
       }
     }

@@ -325,32 +325,14 @@ public interface IndexerMetadataStorageCoordinator
    * in {@link #commitAppendSegments}</li>
    * </ul>
    *
-   * @param replaceSegments        All segments created by a REPLACE task that
-   *                               must be committed in a single transaction.
-   * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
+   * @param replaceSegments                All segments created by a REPLACE task that
+   *                                       must be committed in a single transaction.
+   * @param locksHeldByReplaceTask         All active non-revoked REPLACE locks held by the task
+   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task group
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
-  );
-
-  /**
-   * Creates and inserts new IDs for the pending segments hat overlap with the given
-   * replace segments being committed. The newly created pending segment IDs:
-   * <ul>
-   * <li>Have the same interval and version as that of an overlapping segment
-   * committed by the REPLACE task.</li>
-   * <li>Cannot be committed but are only used to serve realtime queries against
-   * those versions.</li>
-   * </ul>
-   *
-   * @param replaceSegments Segments being committed by a REPLACE task
-   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task groups
-   *                                       of the supervisor (if any) for this datasource
-   * @return Map from originally allocated pending segment to its new upgraded ID.
-   */
-  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
       Set<String> activeRealtimeSequencePrefixes
   );
 

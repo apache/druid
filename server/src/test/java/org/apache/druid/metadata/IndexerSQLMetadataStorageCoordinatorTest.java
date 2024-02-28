@@ -689,7 +689,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       replacingSegments.add(segment);
     }
 
-    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock));
+    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), ImmutableSet.of());
 
     Assert.assertEquals(
         2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),

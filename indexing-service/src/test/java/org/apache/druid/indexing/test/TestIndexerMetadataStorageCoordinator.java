@@ -154,7 +154,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      Set<String> activeRealtimeSequencePrefixes
   )
   {
     return SegmentPublishResult.ok(commitSegments(replaceSegments));
@@ -225,15 +226,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         maxVersion,
         partialShardSpec.complete(objectMapper, 0, 0)
     );
-  }
-
-  @Override
-  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments,
-      Set<String> activeBaseSequenceNames
-  )
-  {
-    return Collections.emptyMap();
   }
 
   @Override

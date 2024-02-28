@@ -22,11 +22,13 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -43,28 +45,38 @@ import java.util.Set;
 public class SegmentPublishResult
 {
   private final Set<DataSegment> segments;
+  private final List<PendingSegmentUpgradeRecord> pendingSegmentUpgrades;
   private final boolean success;
   @Nullable
   private final String errorMsg;
 
+  public static SegmentPublishResult ok(Set<DataSegment> segments, List<PendingSegmentUpgradeRecord> pendingSegmentUpgrades)
+  {
+    return new SegmentPublishResult(segments, pendingSegmentUpgrades, true, null);
+  }
+
   public static SegmentPublishResult ok(Set<DataSegment> segments)
   {
-    return new SegmentPublishResult(segments, true, null);
+    return new SegmentPublishResult(segments, ImmutableList.of(), true, null);
   }
 
   public static SegmentPublishResult fail(String errorMsg)
   {
-    return new SegmentPublishResult(ImmutableSet.of(), false, errorMsg);
+    return new SegmentPublishResult(ImmutableSet.of(), ImmutableList.of(), false, errorMsg);
   }
 
   @JsonCreator
   private SegmentPublishResult(
       @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("pendingSegmentUpgrades") @Nullable List<PendingSegmentUpgradeRecord> pendingSegmentUpgrades,
       @JsonProperty("success") boolean success,
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
     this.segments = Preconditions.checkNotNull(segments, "segments");
+    this.pendingSegmentUpgrades = pendingSegmentUpgrades == null
+                                  ? ImmutableList.of()
+                                  : ImmutableList.copyOf(pendingSegmentUpgrades);
     this.success = success;
     this.errorMsg = errorMsg;
 
@@ -77,6 +89,12 @@ public class SegmentPublishResult
   public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  public List<PendingSegmentUpgradeRecord> getPendingSegmentUpgrades()
+  {
+    return pendingSegmentUpgrades;
   }
 
   @JsonProperty
@@ -104,13 +122,14 @@ public class SegmentPublishResult
     SegmentPublishResult that = (SegmentPublishResult) o;
     return success == that.success &&
            Objects.equals(segments, that.segments) &&
+           Objects.equals(pendingSegmentUpgrades, that.pendingSegmentUpgrades) &&
            Objects.equals(errorMsg, that.errorMsg);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segments, success, errorMsg);
+    return Objects.hash(segments, pendingSegmentUpgrades, success, errorMsg);
   }
 
   @Override

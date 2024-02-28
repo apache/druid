@@ -27,15 +27,15 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
+import org.apache.druid.indexing.overlord.PendingSegmentUpgradeRecord;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -92,6 +92,17 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     // Find the active replace locks held only by this task
     final Set<ReplaceTaskLock> replaceLocksForTask
         = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
+    final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
+    final Optional<String> activeSupervisorIdWithAppendLock =
+        supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
+    final Set<String> activeRealtimeSequencePrefixes;
+    if (!activeSupervisorIdWithAppendLock.isPresent()) {
+      activeRealtimeSequencePrefixes = ImmutableSet.of();
+    } else {
+      activeRealtimeSequencePrefixes
+          = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorIdWithAppendLock.get());
+    }
+
 
     final SegmentPublishResult publishResult;
     try {
@@ -101,7 +112,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask)
+                               .commitReplaceSegments(segments, replaceLocksForTask, activeRealtimeSequencePrefixes)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(
@@ -123,7 +134,12 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     // failure to upgrade pending segments does not affect success of the commit
     if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
       try {
-        tryUpgradeOverlappingPendingSegments(task, toolbox);
+        tryUpgradeOverlappingPendingSegments(
+            task,
+            toolbox,
+            activeSupervisorIdWithAppendLock,
+            publishResult.getPendingSegmentUpgrades()
+        );
       }
       catch (Exception e) {
         log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
@@ -136,32 +152,29 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   /**
    * Tries to upgrade any pending segments that overlap with the committed segments.
    */
-  private void tryUpgradeOverlappingPendingSegments(Task task, TaskActionToolbox toolbox)
+  private void tryUpgradeOverlappingPendingSegments(
+      Task task,
+      TaskActionToolbox toolbox,
+      Optional<String> activeSupervisorIdWithAppendLock,
+      List<PendingSegmentUpgradeRecord> upgradedPendingSegments
+  )
   {
-    final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
-    final Optional<String> activeSupervisorIdWithAppendLock =
-        supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
       return;
     }
 
-    final Set<String> activeRealtimeSequencePrefixes
-        = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorIdWithAppendLock.get());
-    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
-        toolbox.getIndexerMetadataStorageCoordinator()
-               .upgradePendingSegmentsOverlappingWith(segments, activeRealtimeSequencePrefixes);
     log.info(
         "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
         upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
     );
 
     upgradedPendingSegments.forEach(
-        (oldId, newId) -> toolbox.getSupervisorManager()
-                                 .registerNewVersionOfPendingSegmentOnSupervisor(
-                                     activeSupervisorIdWithAppendLock.get(),
-                                     oldId,
-                                     newId
-                                 )
+        (upgradeRecord) -> toolbox.getSupervisorManager()
+                                                .registerNewVersionOfPendingSegmentOnSupervisor(
+                                                    activeSupervisorIdWithAppendLock.get(),
+                                                    upgradeRecord.getOldId(),
+                                                    upgradeRecord.getNewId()
+                                                )
     );
   }
 
