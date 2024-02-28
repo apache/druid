@@ -80,10 +80,11 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__")
   {
+    @Override
     public boolean isConcrete()
     {
       return false;
-    };
+    }
   };
   private static final String BASE_UNNEST_OUTPUT_COLUMN = "unnest";
 
