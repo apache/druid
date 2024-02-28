@@ -93,8 +93,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final Set<ReplaceTaskLock> replaceLocksForTask
         = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
-    final Optional<String> activeSupervisorIdWithAppendLock =
-        supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
+    final Optional<String> activeSupervisorIdWithAppendLock = supervisorManager == null
+        ? Optional.absent()
+        : supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
     final Set<String> activeRealtimeSequencePrefixes;
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
       activeRealtimeSequencePrefixes = ImmutableSet.of();
