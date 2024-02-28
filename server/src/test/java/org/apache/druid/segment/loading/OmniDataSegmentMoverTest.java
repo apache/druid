@@ -42,7 +42,8 @@ public class OmniDataSegmentMoverTest
   public void testMoveSegmentWithType() throws SegmentLoadingException
   {
     final DataSegmentMover mover = Mockito.mock(DataSegmentMover.class);
-    final DataSegment segment = new CreateMockDataSegment("type", "sane").getSegment();
+    final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
 
     final Injector injector = createInjector(mover);
     final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
@@ -53,46 +54,48 @@ public class OmniDataSegmentMoverTest
   @Test
   public void testMoveSegmentUnknownType()
   {
-    final DataSegment segment = new CreateMockDataSegment("type", "unknown-type").getSegment();
+    final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "unknown-type"));
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
     Assert.assertThrows(
-        "Unknown loader type[unknown-type]. Known types are [explode]",
-        SegmentLoadingException.class,
-        () -> segmentMover.move(segment, ImmutableMap.of())
+            "Unknown loader type[unknown-type]. Known types are [explode]",
+            SegmentLoadingException.class,
+            () -> segmentMover.move(segment, ImmutableMap.of())
     );
   }
 
   @Test
   public void testBadSegmentMoverAccessException()
   {
-    final DataSegment segment = new CreateMockDataSegment("type", "bad").getSegment();
+    final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
     Assert.assertThrows(
-        "BadSegmentMover must not have been initialized",
-        RuntimeException.class,
-        () -> segmentMover.move(segment, null)
+            "BadSegmentMover must not have been initialized",
+            RuntimeException.class,
+            () -> segmentMover.move(segment, null)
     );
   }
 
   private static Injector createInjector(@Nullable DataSegmentMover mover)
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            binder -> {
-              MapBinder<String, DataSegmentMover> mapBinder = Binders.dataSegmentMoverBinder(binder);
-              if (mover != null) {
-                mapBinder.addBinding("sane").toInstance(mover);
-              }
-            },
-            binder -> {
-              MapBinder<String, DataSegmentMover> mapBinder = Binders.dataSegmentMoverBinder(binder);
-              mapBinder.addBinding("bad").to(BadSegmentMover.class);
-            }
-        )
+            ImmutableList.of(
+                    binder -> {
+                      MapBinder<String, DataSegmentMover> mapBinder = Binders.dataSegmentMoverBinder(binder);
+                      if (mover != null) {
+                        mapBinder.addBinding("sane").toInstance(mover);
+                      }
+                    },
+                    binder -> {
+                      MapBinder<String, DataSegmentMover> mapBinder = Binders.dataSegmentMoverBinder(binder);
+                      mapBinder.addBinding("bad").to(BadSegmentMover.class);
+                    }
+            )
     );
   }
 
