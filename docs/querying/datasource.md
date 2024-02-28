@@ -174,7 +174,7 @@ table unions.
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
-### dynamic table append
+### `dynamic table append`
 
 <Tabs>
 <TabItem value="sql" label="SQL">
