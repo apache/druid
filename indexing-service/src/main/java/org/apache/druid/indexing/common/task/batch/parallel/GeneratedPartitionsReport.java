@@ -108,7 +108,7 @@ public class GeneratedPartitionsReport implements SubTaskReport
         "taskId='" + taskId + '\'' +
         ", partitionStats=" + partitionStats +
         ", taskReport=" + taskReport +
-           ", segmentsRead=" + segmentsRead +
+        ", segmentsRead=" + segmentsRead +
         '}';
   }
 }
