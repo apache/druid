@@ -78,10 +78,8 @@ public class BaseNodeRoleWatcher
     this.nodeRole = nodeRole;
     this.listenerExecutor = listenerExecutor;
     this.listenerExecutor.schedule(
-        () -> {
-          checkCacheInitialization(1L);
-        },
-        30,
+        this::cacheInitializedTimedOut,
+        30L,
         TimeUnit.SECONDS
     );
   }
@@ -91,24 +89,18 @@ public class BaseNodeRoleWatcher
     if (cacheInitializationTimedOut) {
       return unmodifiableNodes;
     }
-    checkCacheInitialization(30L);
-    return unmodifiableNodes;
-  }
-
-  private void checkCacheInitialization(long timeoutSeconds)
-  {
     boolean nodeViewInitialized;
     try {
-      nodeViewInitialized = cacheInitialized.await(timeoutSeconds, TimeUnit.SECONDS);
+      nodeViewInitialized = cacheInitialized.await(30L, TimeUnit.SECONDS);
     }
     catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
       nodeViewInitialized = false;
     }
     if (!nodeViewInitialized) {
-      LOGGER.warn("Cache for node role [%s] could not be initialized before timeout.", nodeRole.getJsonName());
       cacheInitializedTimedOut();
     }
+    return unmodifiableNodes;
   }
 
   public void registerListener(DruidNodeDiscovery.Listener listener)
@@ -232,6 +224,7 @@ public class BaseNodeRoleWatcher
   public void cacheInitializedTimedOut()
   {
     synchronized (lock) {
+      LOGGER.warn("Cache for node role [%s] could not be initialized before timeout.", nodeRole.getJsonName());
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
       // counted down.
       if (cacheInitialized.getCount() == 0) {
