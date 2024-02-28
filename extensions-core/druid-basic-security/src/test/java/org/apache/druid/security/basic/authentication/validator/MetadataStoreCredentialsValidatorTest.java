@@ -23,10 +23,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
 import com.google.inject.util.Providers;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -135,9 +137,10 @@ public class MetadataStoreCredentialsValidatorTest
     String username = "userA";
     String password = "badpassword";
 
-    Assert.assertThrows(
-        IAE.class,
+    Exception exception = Assert.assertThrows(
+        BasicSecurityAuthenticationException.class,
         () -> VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray())
     );
+    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, exception.getMessage());
   }
 }
