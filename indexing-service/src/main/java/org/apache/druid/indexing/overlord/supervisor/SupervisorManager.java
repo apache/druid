@@ -87,24 +87,30 @@ public class SupervisorManager
       final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec supervisorSpec = entry.getValue().rhs;
 
-      Boolean useConcurrentLocks = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
-      TaskLockType taskLockType = Tasks.DEFAULT_TASK_LOCK_TYPE;
+      boolean hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
       if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
         SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
         Map<String, Object> context = seekableStreamSupervisorSpec.getContext();
         if (context != null) {
-          useConcurrentLocks = QueryContexts.getAsBoolean(
+          Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
               Tasks.USE_CONCURRENT_LOCKS,
               context.get(Tasks.USE_CONCURRENT_LOCKS)
           );
-
           if (useConcurrentLocks == null) {
-            useConcurrentLocks = false;
-            taskLockType = QueryContexts.getAsEnum(
+            TaskLockType taskLockType = QueryContexts.getAsEnum(
                 Tasks.TASK_LOCK_TYPE,
                 context.get(Tasks.TASK_LOCK_TYPE),
                 TaskLockType.class
             );
+            if (taskLockType == null) {
+              hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
+            } else if (taskLockType == TaskLockType.APPEND) {
+              hasAppendLock = true;
+            } else {
+              hasAppendLock = false;
+            }
+          } else {
+            hasAppendLock = useConcurrentLocks;
           }
         }
       }
@@ -112,7 +118,7 @@ public class SupervisorManager
       if (supervisor instanceof SeekableStreamSupervisor
           && !supervisorSpec.isSuspended()
           && supervisorSpec.getDataSources().contains(datasource)
-          && (useConcurrentLocks || TaskLockType.APPEND.equals(taskLockType))) {
+          && (hasAppendLock)) {
         return Optional.of(supervisorId);
       }
     }
