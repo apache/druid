@@ -178,6 +178,7 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
                 </exclusion>
+                <!-- removing the complete bundle sdk to be replaced with only logs-sdk  -->
                 <exclusion>
                     <groupId>com.amazonaws</groupId>
                     <artifactId>aws-java-sdk-bundle</artifactId>
@@ -197,7 +198,13 @@
             </exclusions>
             <scope>compile</scope>
         </dependency>
-
+        <!-- This is a transitive dependency of ranger-plugins-audit
+             added here to replace bloated bundle sdk -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-logs</artifactId>
+            <version>1.12.669</version>
+        </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
