@@ -67,7 +67,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
     return new ColumnPlus(
         frameCol,
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
-                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+                              .setHasNulls(frameCol.hasNulls),
         frame.numRows()
     );
   }

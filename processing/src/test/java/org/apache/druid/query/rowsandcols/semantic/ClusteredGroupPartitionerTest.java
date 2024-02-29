@@ -172,4 +172,49 @@ public class ClusteredGroupPartitionerTest extends SemanticTestBase
     }
     Assert.assertFalse(partedChunks.hasNext());
   }
+
+  @Test
+  public void testDefaultClusteredGroupPartitionerWithNulls2()
+  {
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new ObjectArrayColumn(new Object[]{null, null, null, 1.0, 1.0, 2.0, 4.0, 4.0, 4.0}, ColumnType.DOUBLE),
+            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
+        )
+    ));
+
+    ClusteredGroupPartitioner parter = ClusteredGroupPartitioner.fromRAC(rac);
+
+    int[] expectedBounds = new int[]{0, 3, 5, 6, 9};
+
+    List<RowsAndColumnsHelper> expectations = Arrays.asList(
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new Object[]{null, null, null}, ColumnType.DOUBLE)
+            .expectColumn("unsorted", new int[]{3, 54, 21})
+            .allColumnsRegistered(),
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new double[]{1.0, 1.0})
+            .expectColumn("unsorted", new int[]{1, 5})
+            .allColumnsRegistered(),
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new double[]{2.0})
+            .expectColumn("unsorted", new int[]{54})
+            .allColumnsRegistered(),
+        new RowsAndColumnsHelper()
+            .expectColumn("sorted", new double[]{4.0, 4.0, 4.0})
+            .expectColumn("unsorted", new int[]{2, 3, 92})
+            .allColumnsRegistered()
+    );
+
+    final List<String> partCols = Collections.singletonList("sorted");
+    Assert.assertArrayEquals(expectedBounds, parter.computeBoundaries(partCols));
+
+    final Iterator<RowsAndColumns> partedChunks = parter.partitionOnBoundaries(partCols).iterator();
+    for (RowsAndColumnsHelper expectation : expectations) {
+      Assert.assertTrue(partedChunks.hasNext());
+      expectation.validate(partedChunks.next());
+    }
+    Assert.assertFalse(partedChunks.hasNext());
+  }
+
 }
