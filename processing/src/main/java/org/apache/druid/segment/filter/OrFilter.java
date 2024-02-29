@@ -56,7 +56,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Logical OR filter operation
@@ -97,6 +96,7 @@ public class OrFilter implements BooleanFilter
     // 3 - no clauses support indexes. in this case, we make a matcher only bundle using makeMatcher/makeVectorMatcher
 
     final List<FilterBundle.IndexBundle> indexOnlyBundles = new ArrayList<>();
+    final List<FilterBundle.IndexBundleInfo> indexOnlyBundlesInfo = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> partialIndexBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> matcherOnlyBundles = new ArrayList<>();
     ImmutableBitmap index = null;
@@ -122,8 +122,14 @@ public class OrFilter implements BooleanFilter
           // an empty index means the matcher can be skipped
           emptyCount++;
         } else {
-          if (!bundle.hasMatcher()) {
+          if (bundle.hasMatcher()) {
+            // index and matcher bundles must be handled separately, they will need to be a single value matcher built
+            // by doing an AND operation between the index and the value matcher
+            // (a bundle is basically an AND operation between the index and matcher if the matcher is present)
+            partialIndexBundles.add(convertBundleToMatcherOnlyBundle(bundle, bundleIndex));
+          } else {
             indexOnlyBundles.add(bundle.getIndex());
+            indexOnlyBundlesInfo.add(bundle.getIndex().getIndexInfo());
             merged.merge(bundle.getIndex().getIndexCapabilities());
             // union index only bitmaps together; if all sub-filters are 'index only' bundles we will make an index only
             // bundle ourselves, else we will use this index as a single value matcher
@@ -132,11 +138,6 @@ public class OrFilter implements BooleanFilter
             } else {
               index = index.union(bundle.getIndex().getBitmap());
             }
-          } else {
-            // index and matcher bundles must be handled separately, they will need to be a single value matcher built
-            // by doing an AND operation between the index and the value matcher
-            // (a bundle is basically an AND operation between the index and matcher if the matcher is present)
-            partialIndexBundles.add(convertBundleToMatcherOnlyBundle(bundle, bundleIndex));
           }
         }
       } else {
@@ -156,11 +157,7 @@ public class OrFilter implements BooleanFilter
       }
       if (indexOnlyBundles.size() == 1) {
         return new FilterBundle(
-            new FilterBundle.SimpleIndexBundle(
-                indexOnlyBundles.get(0).getIndexInfo(),
-                index,
-                indexOnlyBundles.get(0).getIndexCapabilities()
-            ),
+            indexOnlyBundles.get(0),
             null
         );
       }
@@ -170,7 +167,7 @@ public class OrFilter implements BooleanFilter
                   () -> "OR",
                   selectionRowCount,
                   totalBitmapConstructTimeNs,
-                  indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
+                  indexOnlyBundlesInfo
               ),
               index,
               merged
@@ -180,17 +177,31 @@ public class OrFilter implements BooleanFilter
     }
 
     // if not the index only outcome, we build a matcher only bundle from all the matchers
-    final List<FilterBundle.MatcherBundle> allMatcherBundles = Lists.newArrayListWithCapacity(
-        (indexOnlyBundles.isEmpty() ? 0 : 1) + partialIndexBundles.size() + matcherOnlyBundles.size()
-    );
+    final int estimatedSize = (indexOnlyBundles.isEmpty() ? 0 : 1)
+                              + partialIndexBundles.size()
+                              + matcherOnlyBundles.size();
+    final List<FilterBundle.MatcherBundle> allMatcherBundles = Lists.newArrayListWithCapacity(estimatedSize);
+    final List<FilterBundle.MatcherBundleInfo> allMatcherBundlesInfo = Lists.newArrayListWithCapacity(estimatedSize);
     if (!indexOnlyBundles.isEmpty()) {
       // translate the indexOnly bundles into a single matcher
-      allMatcherBundles.add(
-          convertIndexToMatcherBundle(selectionRowCount, indexOnlyBundles, totalBitmapConstructTimeNs, index)
+      final FilterBundle.MatcherBundle matcherBundle = convertIndexToMatcherBundle(
+          selectionRowCount,
+          indexOnlyBundles,
+          indexOnlyBundlesInfo,
+          totalBitmapConstructTimeNs,
+          index
       );
+      allMatcherBundles.add(matcherBundle);
+      allMatcherBundlesInfo.add(matcherBundle.getMatcherInfo());
     }
-    allMatcherBundles.addAll(partialIndexBundles);
-    allMatcherBundles.addAll(matcherOnlyBundles);
+    for (FilterBundle.MatcherBundle bundle : partialIndexBundles) {
+      allMatcherBundles.add(bundle);
+      allMatcherBundlesInfo.add(bundle.getMatcherInfo());
+    }
+    for (FilterBundle.MatcherBundle bundle : matcherOnlyBundles) {
+      allMatcherBundles.add(bundle);
+      allMatcherBundlesInfo.add(bundle.getMatcherInfo());
+    }
 
     return new FilterBundle(
         null,
@@ -202,18 +213,18 @@ public class OrFilter implements BooleanFilter
             return new FilterBundle.MatcherBundleInfo(
                 () -> "OR",
                 null,
-                allMatcherBundles.stream().map(FilterBundle.MatcherBundle::getMatcherInfo).collect(Collectors.toList())
+                allMatcherBundlesInfo
             );
           }
 
           @Override
           public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
           {
-            return makeMatcher(
-                allMatcherBundles.stream()
-                                 .map(x -> x.valueMatcher(selectorFactory, baseOffset, descending))
-                                 .toArray(ValueMatcher[]::new)
-            );
+            final ValueMatcher[] matchers = new ValueMatcher[allMatcherBundles.size()];
+            for (int i = 0; i < allMatcherBundles.size(); i++) {
+              matchers[i] = allMatcherBundles.get(i).valueMatcher(selectorFactory, baseOffset, descending);
+            }
+            return makeMatcher(matchers);
           }
 
           @Override
@@ -222,11 +233,11 @@ public class OrFilter implements BooleanFilter
               ReadableVectorOffset baseOffset
           )
           {
-            return makeVectorMatcher(
-                allMatcherBundles.stream()
-                                 .map(x -> x.vectorMatcher(selectorFactory, baseOffset))
-                                 .toArray(VectorValueMatcher[]::new)
-            );
+            final VectorValueMatcher[] matchers = new VectorValueMatcher[allMatcherBundles.size()];
+            for (int i = 0; i < allMatcherBundles.size(); i++) {
+              matchers[i] = allMatcherBundles.get(i).vectorMatcher(selectorFactory, baseOffset);
+            }
+            return makeVectorMatcher(matchers);
           }
         }
     );
@@ -523,6 +534,7 @@ public class OrFilter implements BooleanFilter
   private static FilterBundle.MatcherBundle convertIndexToMatcherBundle(
       int selectionRowCount,
       List<FilterBundle.IndexBundle> indexOnlyBundles,
+      List<FilterBundle.IndexBundleInfo> indexOnlyBundlesInfo,
       long totalBitmapConstructTimeNs,
       ImmutableBitmap partialIndex
   )
@@ -545,7 +557,7 @@ public class OrFilter implements BooleanFilter
                 () -> "OR",
                 selectionRowCount,
                 totalBitmapConstructTimeNs,
-                indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
+                indexOnlyBundlesInfo
             ),
             null
         );

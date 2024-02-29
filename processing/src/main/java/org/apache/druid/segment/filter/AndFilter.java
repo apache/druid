@@ -22,7 +22,6 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -82,8 +81,9 @@ public class AndFilter implements BooleanFilter
       boolean includeUnknown
   )
   {
-    final List<FilterBundle.IndexBundleInfo> indexBundles = new ArrayList<>();
+    final List<FilterBundle.IndexBundleInfo> indexBundleInfos = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
+    final List<FilterBundle.MatcherBundleInfo> matcherBundleInfos = new ArrayList<>();
 
     int selectionCount = selectionRowCount;
     ImmutableBitmap index = null;
@@ -114,7 +114,7 @@ public class AndFilter implements BooleanFilter
           );
         }
         merged = merged.merge(subBundle.getIndex().getIndexCapabilities());
-        indexBundles.add(subBundle.getIndex().getIndexInfo());
+        indexBundleInfos.add(subBundle.getIndex().getIndexInfo());
         if (index == null) {
           index = subBundle.getIndex().getBitmap();
         } else {
@@ -124,14 +124,15 @@ public class AndFilter implements BooleanFilter
       }
       if (subBundle.getMatcherBundle() != null) {
         matcherBundles.add(subBundle.getMatcherBundle());
+        matcherBundleInfos.add(subBundle.getMatcherBundle().getMatcherInfo());
       }
     }
 
     final FilterBundle.IndexBundle indexBundle;
     if (index != null) {
-      if (indexBundles.size() == 1) {
+      if (indexBundleInfos.size() == 1) {
         indexBundle = new FilterBundle.SimpleIndexBundle(
-            indexBundles.get(0),
+            indexBundleInfos.get(0),
             index,
             merged
         );
@@ -141,7 +142,7 @@ public class AndFilter implements BooleanFilter
                 () -> "AND",
                 selectionCount,
                 System.nanoTime() - bitmapConstructionStartNs,
-                indexBundles
+                indexBundleInfos
             ),
             index,
             merged
@@ -159,16 +160,12 @@ public class AndFilter implements BooleanFilter
         public FilterBundle.MatcherBundleInfo getMatcherInfo()
         {
           if (matcherBundles.size() == 1) {
-            return matcherBundles.get(0).getMatcherInfo();
-          }
-          ImmutableList.Builder<FilterBundle.MatcherBundleInfo> bob = new ImmutableList.Builder<>();
-          for (FilterBundle.MatcherBundle bundle : matcherBundles) {
-            bob.add(bundle.getMatcherInfo());
+            return matcherBundleInfos.get(0);
           }
           return new FilterBundle.MatcherBundleInfo(
               () -> "AND",
               null,
-              bob.build()
+              matcherBundleInfos
           );
         }
 
