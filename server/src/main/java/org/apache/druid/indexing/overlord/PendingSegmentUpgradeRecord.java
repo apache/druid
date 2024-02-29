@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import java.util.Objects;
@@ -28,20 +30,23 @@ public class PendingSegmentUpgradeRecord
   private final SegmentIdWithShardSpec oldId;
   private final SegmentIdWithShardSpec newId;
 
+  @JsonCreator
   public PendingSegmentUpgradeRecord(
-      SegmentIdWithShardSpec oldId,
-      SegmentIdWithShardSpec newId
+      @JsonProperty("oldId") SegmentIdWithShardSpec oldId,
+      @JsonProperty("newId") SegmentIdWithShardSpec newId
   )
   {
     this.oldId = oldId;
     this.newId = newId;
   }
 
+  @JsonProperty
   public SegmentIdWithShardSpec getOldId()
   {
     return oldId;
   }
 
+  @JsonProperty
   public SegmentIdWithShardSpec getNewId()
   {
     return newId;
