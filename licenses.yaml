@@ -4650,13 +4650,23 @@ libraries:
 
 ---
 
-name: com.amazonaws aws-java-sdk-bundle
+name: com.amazonaws aws-java-sdk-logs
 license_category: binary
 version: 1.12.638
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
-  - com.amazonaws: aws-java-sdk-bundle
+  - com.amazonaws: aws-java-sdk-logs
+
+---
+
+name: com.amazonaws jmespath-java
+license_category: binary
+version: 1.12.638
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: jmespath-java
 
 ---
 
