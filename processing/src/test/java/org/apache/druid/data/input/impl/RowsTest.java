@@ -46,7 +46,7 @@ public class RowsTest extends InitializedNullHandlingTest
   private final List<Object> invalidCases = new ArrayList<>();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     // Null
     validCases.put(null, NullHandling.sqlCompatible() ? null : 0L);
@@ -188,7 +188,7 @@ public class RowsTest extends InitializedNullHandlingTest
     for (final Object o : invalidCases) {
       Assert.assertEquals(
           o + " (nothrow)",
-          NullHandling.defaultLongValue(),
+          NullHandling.defaultFloatValue(),
           Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, false)
       );
 
@@ -223,7 +223,7 @@ public class RowsTest extends InitializedNullHandlingTest
     for (final Object o : invalidCases) {
       Assert.assertEquals(
           o + " (nothrow)",
-          NullHandling.defaultLongValue(),
+          NullHandling.defaultDoubleValue(),
           Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, false)
       );
 
