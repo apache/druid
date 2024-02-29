@@ -313,6 +313,7 @@ public class CliPeon extends GuiceRunnable
                     DruidMetrics.TASK_ID, task.getId(),
                     DruidMetrics.DATASOURCE, task.getDataSource(),
                     DruidMetrics.TASK_TYPE, task.getType(),
+                    DruidMetrics.TASK_LABEL, task.getLabel(),
                     DruidMetrics.GROUP_ID, task.getGroupId()
                 )
             );
