@@ -74,6 +74,6 @@ public class DruidJoin extends Join implements DruidLogicalNode, SourceDescProdu
   {
     SourceDesc leftDesc = sources.get(0);
     SourceDesc rightDesc = sources.get(1);
-    return DruidJoinQueryRel.buildJoinDataSource(leftDesc, rightDesc, plannerContext, this, null);
+    return DruidJoinQueryRel.buildJoinSourceDesc(leftDesc, rightDesc, plannerContext, this, null);
   }
 }

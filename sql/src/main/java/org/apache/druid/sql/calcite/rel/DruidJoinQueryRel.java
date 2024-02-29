@@ -137,7 +137,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     );
   }
 
-  private SourceDesc buildLeftDesc()
+  private SourceDesc buildLeftSourceDesc()
   {
     final SourceDesc leftDesc;
     final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
@@ -156,7 +156,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return leftDesc;
   }
 
-  private SourceDesc buildRightDesc()
+  private SourceDesc buildRightSourceDesc()
   {
     final SourceDesc rightDesc;
     final DruidRel<?> rightDruidRel = (DruidRel<?>) right;
@@ -172,7 +172,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return rightDesc;
   }
 
-  public static SourceDesc buildJoinDataSource(final SourceDesc leftDesc, final SourceDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
+  public static SourceDesc buildJoinSourceDesc(final SourceDesc leftDesc, final SourceDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
   {
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
         leftDesc.rowSignature,
@@ -229,10 +229,10 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final SourceDesc leftDesc = buildLeftDesc();
-    final SourceDesc rightDesc = buildRightDesc();
+    final SourceDesc leftDesc = buildLeftSourceDesc();
+    final SourceDesc rightDesc = buildRightSourceDesc();
 
-    SourceDesc sourceDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
+    SourceDesc sourceDesc = buildJoinSourceDesc(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
 
     return partialQuery.build(
         sourceDesc.dataSource,
