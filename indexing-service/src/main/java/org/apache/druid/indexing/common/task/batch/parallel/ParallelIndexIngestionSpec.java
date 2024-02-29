@@ -28,21 +28,17 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 
-import javax.annotation.Nullable;
-
 public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOConfig, ParallelIndexTuningConfig>
 {
   private final DataSchema dataSchema;
   private final ParallelIndexIOConfig ioConfig;
   private final ParallelIndexTuningConfig tuningConfig;
-  private final boolean skipPublishingReports;
 
   @JsonCreator
   public ParallelIndexIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") ParallelIndexIOConfig ioConfig,
-      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig,
-      @JsonProperty("skipPublishingReports") Boolean skipPublishingReports
+      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
@@ -62,21 +58,11 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? ParallelIndexTuningConfig.defaultConfig() : tuningConfig;
-    this.skipPublishingReports = skipPublishingReports == null ? false : skipPublishingReports;
-  }
-
-  public ParallelIndexIngestionSpec(
-      DataSchema dataSchema,
-      ParallelIndexIOConfig ioConfig,
-      ParallelIndexTuningConfig tuningConfig
-  )
-  {
-    this(dataSchema, ioConfig, tuningConfig, false);
   }
 
   public ParallelIndexIngestionSpec withDataSchema(DataSchema dataSchema)
   {
-    return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig, true);
+    return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
   }
 
   @Override
@@ -98,12 +84,5 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
   public ParallelIndexTuningConfig getTuningConfig()
   {
     return tuningConfig;
-  }
-
-  @JsonProperty("skipPublishingReports")
-  @Nullable
-  public Boolean isSkipPublishingReports()
-  {
-    return skipPublishingReports;
   }
 }

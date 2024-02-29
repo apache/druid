@@ -551,7 +551,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         getTaskResource(),
         ingestionSpec,
         baseSequenceName,
-        createContextForSubtask()
+        createContextForSubtask(),
+        true
     );
   }
 
@@ -676,8 +677,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                     segmentCacheManagerFactory,
                     ioConfig
                 ),
-                compactionTuningConfig,
-                true
+                compactionTuningConfig
             )
         );
       }
@@ -718,8 +718,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                   segmentCacheManagerFactory,
                   ioConfig
               ),
-              compactionTuningConfig,
-              true
+              compactionTuningConfig
           )
       );
     }

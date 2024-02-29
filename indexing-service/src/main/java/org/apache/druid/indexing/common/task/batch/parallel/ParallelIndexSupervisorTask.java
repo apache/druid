@@ -203,6 +203,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private IngestionState ingestionState;
   private Map<String, TaskReport> completionReports;
+  private final Boolean skipPublishingReports;
 
 
   @JsonCreator
@@ -214,7 +215,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(id, groupId, taskResource, ingestionSchema, null, context);
+    this(id, groupId, taskResource, ingestionSchema, null, context, false);
   }
 
   public ParallelIndexSupervisorTask(
@@ -223,7 +224,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       TaskResource taskResource,
       ParallelIndexIngestionSpec ingestionSchema,
       @Nullable String baseSubtaskSpecName,
-      Map<String, Object> context
+      Map<String, Object> context,
+      Boolean skipPublishingReports
   )
   {
     super(
@@ -260,6 +262,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.skipPublishingReports = skipPublishingReports;
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -667,7 +670,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!ingestionSchema.isSkipPublishingReports()) {
+    if (!skipPublishingReports) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
     return taskStatus;
@@ -837,7 +840,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!ingestionSchema.isSkipPublishingReports()) {
+    if (!skipPublishingReports) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
     return taskStatus;
@@ -937,7 +940,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!ingestionSchema.isSkipPublishingReports()) {
+    if (!skipPublishingReports) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
     return taskStatus;
