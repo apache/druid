@@ -259,15 +259,14 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
 
     // Query: used only to retrieve configured join from context
     final Query<?> mockQuery = EasyMock.mock(Query.class);
-    EasyMock.expect(mockQuery.context())
-            .andReturn(
-                QueryContext.of(
-                    ImmutableMap.of(
-                        PlannerContext.CTX_SQL_JOIN_ALGORITHM,
-                        JoinAlgorithm.SORT_MERGE.getId()
-                    )
-                )
-            );
+    EasyMock.expect(mockQuery.context()).andReturn(
+        QueryContext.of(
+            ImmutableMap.of(
+                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                JoinAlgorithm.SORT_MERGE.getId()
+            )
+        )
+    );
     EasyMock.replay(mockQuery);
     final BroadcastJoinSegmentMapFnProcessor broadcastJoinHelper = new BroadcastJoinSegmentMapFnProcessor(
         mockQuery,
