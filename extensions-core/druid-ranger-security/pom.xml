@@ -179,6 +179,10 @@
                     <artifactId>hadoop-common</artifactId>
                 </exclusion>
                 <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-bundle</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>org.elasticsearch</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
