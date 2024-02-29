@@ -81,6 +81,7 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
     </dependency>
+    <!-- commons-codec is runtime dependency of commons-compress starting with 1.26.0 -->
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
