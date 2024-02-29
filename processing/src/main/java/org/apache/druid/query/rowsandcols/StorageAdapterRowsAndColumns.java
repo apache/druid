@@ -39,7 +39,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -85,7 +84,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
   }
 
