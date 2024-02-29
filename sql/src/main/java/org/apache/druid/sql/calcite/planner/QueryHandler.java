@@ -61,11 +61,11 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -93,27 +93,24 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 {
   static final EmittingLogger log = new EmittingLogger(QueryHandler.class);
 
-  protected SqlNode queryNode;
   protected SqlExplain explain;
-  protected SqlNode validatedQueryNode;
   private boolean isPrepared;
   protected RelRoot rootQueryRel;
   private PrepareResult prepareResult;
   protected RexBuilder rexBuilder;
 
-  public QueryHandler(SqlStatementHandler.HandlerContext handlerContext, SqlNode sqlNode, SqlExplain explain)
+  public QueryHandler(HandlerContext handlerContext, SqlExplain explain)
   {
     super(handlerContext);
-    this.queryNode = sqlNode;
     this.explain = explain;
   }
 
-  @Override
-  public void validate()
+  protected SqlNode validate(SqlNode root)
   {
     CalcitePlanner planner = handlerContext.planner();
+    SqlNode validatedQueryNode;
     try {
-      validatedQueryNode = planner.validate(rewriteParameters());
+      validatedQueryNode = planner.validate(rewriteParameters(root));
     }
     catch (ValidationException e) {
       throw DruidPlanner.translateException(e);
@@ -126,9 +123,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
     validatedQueryNode.accept(resourceCollectorShuttle);
     resourceActions = resourceCollectorShuttle.getResourceActions();
+    return validatedQueryNode;
   }
 
-  private SqlNode rewriteParameters()
+  private SqlNode rewriteParameters(SqlNode original)
   {
     // Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
     // {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
@@ -140,9 +138,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     // contains parameters, but no values were provided.
     PlannerContext plannerContext = handlerContext.plannerContext();
     if (plannerContext.getParameters().isEmpty()) {
-      return queryNode;
+      return original;
     } else {
-      return queryNode.accept(new SqlParameterizerShuttle(plannerContext));
+      return original.accept(new SqlParameterizerShuttle(plannerContext));
     }
   }
 
@@ -153,6 +151,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       return;
     }
     isPrepared = true;
+    SqlNode validatedQueryNode = validatedQueryNode();
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
     handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
@@ -176,6 +175,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   {
     return prepareResult;
   }
+
+  protected abstract SqlNode validatedQueryNode();
 
   protected abstract RelDataType returnedRowType();
 
@@ -238,6 +239,17 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       DruidException de = Throwables.getCauseOfType(e, DruidException.class);
       if (de != null) {
         throw de;
+      }
+
+      // Exceptions during rule evaluations could be wrapped inside a RuntimeException by VolcanoRuleCall class.
+      // This block will extract a user-friendly message from the exception chain.
+      if (e.getMessage() != null
+          && e.getCause() != null
+          && e.getCause().getMessage() != null
+          && e.getMessage().startsWith("Error while applying rule")) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.UNCATEGORIZED)
+                            .build(e, "%s", e.getCause().getMessage());
       }
       throw DruidPlanner.translateException(e);
     }
@@ -548,36 +560,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
-      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext);
-      newRoot.accept(shuttle);
-      log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
-      shuttle.getQueryList().add(shuttle.getPartialDruidQuery()); // add topmost query to the list
-      shuttle.getQueryTables().add(shuttle.getCurrentTable());
-      assert !shuttle.getQueryList().isEmpty();
-      log.info("query list size " + shuttle.getQueryList().size());
-      log.info("query tables size " + shuttle.getQueryTables().size());
-      // build bottom-most query
-      DruidQuery baseQuery = shuttle.getQueryList().get(0).build(
-          shuttle.getQueryTables().get(0).getDataSource(),
-          shuttle.getQueryTables().get(0).getRowSignature(),
-          plannerContext,
-          rexBuilder,
-          shuttle.getQueryList().size() != 1,
-          null
-      );
-      // build outer queries
-      for (int i = 1; i < shuttle.getQueryList().size(); i++) {
-        baseQuery = shuttle.getQueryList().get(i).build(
-            new QueryDataSource(baseQuery.getQuery()),
-            baseQuery.getOutputRowSignature(),
-            plannerContext,
-            rexBuilder,
-            false
-        );
-      }
+
+      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, newRoot, rexBuilder);
+      DruidQuery baseQuery = generator.buildQuery();
       try {
-        log.info("final query : " +
-                 new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery()));
+        log.info(
+            "final query : " +
+                new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery())
+        );
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);
@@ -681,9 +671,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
-    if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
-      errorMessage = exception.getMessage();
-    }
     if (errorMessage == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
@@ -704,13 +691,17 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   public static class SelectHandler extends QueryHandler
   {
+    private final SqlNode queryNode;
+    private SqlNode validatedQueryNode;
+
     public SelectHandler(
         HandlerContext handlerContext,
         SqlNode sqlNode,
         SqlExplain explain
     )
     {
-      super(handlerContext, sqlNode, explain);
+      super(handlerContext, explain);
+      this.queryNode = sqlNode;
     }
 
     @Override
@@ -719,7 +710,13 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
         throw InvalidSqlInput.exception("Cannot execute SELECT with SQL engine [%s]", handlerContext.engine().name());
       }
-      super.validate();
+      validatedQueryNode = validate(queryNode);
+    }
+
+    @Override
+    protected SqlNode validatedQueryNode()
+    {
+      return validatedQueryNode;
     }
 
     @Override

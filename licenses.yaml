@@ -191,7 +191,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.497
+version: 1.12.638
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -397,7 +397,7 @@ name: JsonPath
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.3.0
+version: 2.9.0
 libraries:
   - com.jayway.jsonpath: json-path
 
@@ -809,9 +809,19 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 7.9
+version: 8.22.1
 libraries:
   - com.nimbusds: nimbus-jose-jwt
+
+---
+
+name: com.nimbusds content-type
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 2.1
+libraries:
+  - com.nimbusds: content-type
 
 ---
 
@@ -819,7 +829,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 6.5
+version: 8.22
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -1791,7 +1801,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.0
+version: 2.22.1
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -1989,7 +1999,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.53.v20231009
+version: 9.4.54.v20240208
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2802,6 +2812,16 @@ libraries:
 
 ---
 
+name: com.rabbitmq stream-client
+license_category: binary
+version: 0.9
+module: extensions-contrib/rabbit-stream-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.rabbitmq: stream-client
+
+---
+
 name: swagger-annotations
 version: 1.6.0
 license_category: binary
@@ -3451,7 +3471,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3463,7 +3483,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3475,7 +3495,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4632,7 +4652,7 @@ libraries:
 
 name: com.amazonaws aws-java-sdk-bundle
 license_category: binary
-version: 1.12.497
+version: 1.12.638
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5056,7 +5076,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.21.4
+version: 0.21.9
 
 ---
 

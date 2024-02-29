@@ -22,10 +22,15 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.batch.BlobBatchClient;
+import com.azure.storage.blob.batch.BlobBatchClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
+import org.apache.druid.java.util.common.Pair;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,8 +41,8 @@ import java.util.Map;
 public class AzureClientFactory
 {
 
-  private final AzureAccountConfig config;
-  private final Map<Integer, BlobServiceClient> cachedBlobServiceClients;
+  protected final AzureAccountConfig config;
+  private final Map<Pair<String, Integer>, BlobServiceClient> cachedBlobServiceClients;
 
   public AzureClientFactory(AzureAccountConfig config)
   {
@@ -46,31 +51,26 @@ public class AzureClientFactory
   }
 
   // It's okay to store clients in a map here because all the configs for specifying azure retries are static, and there are only 2 of them.
-  // The 2 configs are AzureAccountConfig.maxTries and AzureOutputConfig.maxRetrr.
-  // We will only ever have at most 2 clients in cachedBlobServiceClients.
-  public BlobServiceClient getBlobServiceClient(Integer retryCount)
+  // The 2 configs are AzureAccountConfig.maxTries and AzureOutputConfig.maxRetry.
+  // We will only ever have at most 2 clients in cachedBlobServiceClients per storage account.
+  public BlobServiceClient getBlobServiceClient(@Nullable Integer retryCount, String storageAccount)
   {
-    if (!cachedBlobServiceClients.containsKey(retryCount)) {
-      BlobServiceClientBuilder clientBuilder = getAuthenticatedBlobServiceClientBuilder()
-          .retryOptions(new RetryOptions(
-              new ExponentialBackoffOptions()
-                  .setMaxRetries(retryCount != null ? retryCount : config.getMaxTries())
-                  .setBaseDelay(Duration.ofMillis(1000))
-                  .setMaxDelay(Duration.ofMillis(60000))
-          ));
-      cachedBlobServiceClients.put(retryCount, clientBuilder.buildClient());
-    }
-
-    return cachedBlobServiceClients.get(retryCount);
+    return cachedBlobServiceClients.computeIfAbsent(Pair.of(storageAccount, retryCount != null ? retryCount : config.getMaxTries()), key -> buildNewClient(key.rhs, key.lhs));
   }
 
-  private BlobServiceClientBuilder getAuthenticatedBlobServiceClientBuilder()
+  // Mainly here to make testing easier.
+  public BlobBatchClient getBlobBatchClient(BlobContainerClient blobContainerClient)
+  {
+    return new BlobBatchClientBuilder(blobContainerClient).buildClient();
+  }
+
+  protected BlobServiceClient buildNewClient(Integer retryCount, String storageAccount)
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + config.getAccount() + "." + config.getBlobStorageEndpoint());
+        .endpoint("https://" + storageAccount + "." + config.getBlobStorageEndpoint());
 
     if (config.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getUseAzureCredentialsChain()) {
@@ -79,6 +79,13 @@ public class AzureClientFactory
           .managedIdentityClientId(config.getManagedIdentityClientId());
       clientBuilder.credential(defaultAzureCredentialBuilder.build());
     }
-    return clientBuilder;
+    return clientBuilder
+        .retryOptions(new RetryOptions(
+            new ExponentialBackoffOptions()
+                .setMaxRetries(retryCount)
+                .setBaseDelay(Duration.ofMillis(1000))
+                .setMaxDelay(Duration.ofMillis(60000))
+        ))
+        .buildClient();
   }
 }

@@ -1240,7 +1240,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 rowStatsAndUnparseableEvents.lhs,
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap()
             )
         )
     );
@@ -1272,7 +1273,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions(),
         tuningConfig.getMaxColumnsToMerge(),
-        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+        tuningConfig.getNumPersistThreads()
     );
   }
 

@@ -27,15 +27,15 @@ For rolling Apache Druid cluster updates with no downtime, we recommend updating
 following order:
 
 1. Historical
-2. \*Overlord (if any)
-3. \*Middle Manager/Indexers (if any)
-4. Standalone Real-time (if any)
-5. Broker
+2. Middle Manager and Indexer (if any)
+3. Broker
+4. Router
+5. Overlord (Note that you can upgrade the Overlord before any MiddleManager processes if you use [autoscaling-based replacement](#autoscaling-based-replacement).)
 6. Coordinator ( or merged Coordinator+Overlord )
 
-For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
+If you need to do a rolling downgrade, reverse the order and start with the Coordinator processes.
 
-\* In 0.12.0, there are protocol changes between the Kafka supervisor and Kafka Indexing task and also some changes to the metadata formats persisted on disk. Therefore, to support rolling upgrade, all the Middle Managers will need to be upgraded first before the Overlord. Note that this ordering is different from the standard order of upgrade, also note that this ordering is only necessary when using the Kafka Indexing Service. If one is not using Kafka Indexing Service or can handle down time for Kafka Supervisor then one can upgrade in any order.
+For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
 
 ## Historical
 

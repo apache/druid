@@ -35,6 +35,8 @@ import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.Indexed;
@@ -86,6 +88,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
   Supplier<Indexed<ByteBuffer>> globalStrings;
   Supplier<FixedIndexed<Long>> globalLongs;
   Supplier<FixedIndexed<Double>> globalDoubles;
+  Supplier<FrontCodedIntArrayIndexed> globalArrays;
 
 
   @Before
@@ -94,6 +97,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     ByteBuffer stringBuffer = ByteBuffer.allocate(1 << 12);
     ByteBuffer longBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
     ByteBuffer doubleBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
+    ByteBuffer arrayBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
+
 
     GenericIndexedWriter<String> stringWriter = new GenericIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
@@ -148,10 +153,19 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     doubleWriter.write(9.9);
     writeToBuffer(doubleBuffer, doubleWriter);
 
+    FrontCodedIntArrayIndexedWriter arrayWriter = new FrontCodedIntArrayIndexedWriter(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        ByteOrder.nativeOrder(),
+        4
+    );
+    arrayWriter.open();
+    writeToBuffer(arrayBuffer, arrayWriter);
+
     GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY);
     globalStrings = () -> strings.singleThreaded();
     globalLongs = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
+    globalArrays = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder());
   }
 
   @Test
@@ -1309,6 +1323,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         stringIndexed,
         longIndexed,
         doubleIndexed,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -1509,6 +1524,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -1593,6 +1609,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -1673,6 +1690,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -1758,6 +1776,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -1838,6 +1857,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -1923,6 +1943,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT
@@ -2018,6 +2039,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalStrings,
         globalLongs,
         globalDoubles,
+        globalArrays,
         null,
         null,
         ROW_COUNT

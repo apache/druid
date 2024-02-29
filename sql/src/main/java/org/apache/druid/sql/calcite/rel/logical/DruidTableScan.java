@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel.logical;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -28,37 +29,35 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.List;
 
 /**
  * {@link DruidLogicalNode} convention node for {@link TableScan} plan node.
  */
-public class DruidTableScan extends TableScan implements DruidLogicalNode
+public class DruidTableScan extends TableScan implements DruidLogicalNode, InputDescProducer
 {
-  private final Project project;
-
   public DruidTableScan(
       RelOptCluster cluster,
       RelTraitSet traitSet,
-      RelOptTable table,
-      Project project
+      RelOptTable table
   )
   {
     super(cluster, traitSet, table);
-    this.project = project;
     assert getConvention() instanceof DruidLogicalConvention;
   }
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs)
   {
-    return new DruidTableScan(getCluster(), traitSet, table, project);
+    return new DruidTableScan(getCluster(), traitSet, table);
   }
 
   @Override
@@ -76,24 +75,13 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    if (project != null) {
-      project.explainTerms(pw);
-    }
     return super.explainTerms(pw).item("druid", "logical");
   }
 
   @Override
   public RelDataType deriveRowType()
   {
-    if (project != null) {
-      return project.getRowType();
-    }
     return super.deriveRowType();
-  }
-
-  public Project getProject()
-  {
-    return project;
   }
 
   public static DruidTableScan create(RelOptCluster cluster, final RelOptTable relOptTable)
@@ -106,6 +94,21 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode
           }
           return ImmutableList.of();
         });
-    return new DruidTableScan(cluster, traitSet, relOptTable, null);
+    return new DruidTableScan(cluster, traitSet, relOptTable);
+  }
+
+  @Override
+  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
+  {
+    final DruidTable druidTable = getDruidTable();
+    return new InputDesc(druidTable.getDataSource(), druidTable.getRowSignature());
+  }
+
+  private DruidTable getDruidTable()
+  {
+    final RelOptTable table = getTable();
+    final DruidTable druidTable = table.unwrap(DruidTable.class);
+    Preconditions.checkNotNull(druidTable, "DruidTable may not be null");
+    return druidTable;
   }
 }

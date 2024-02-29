@@ -21,12 +21,15 @@ package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -76,5 +79,16 @@ public class FrameSegment implements Segment
   public void close()
   {
     // Nothing to close.
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(@Nonnull Class<T> clazz)
+  {
+    if (CloseableShapeshifter.class.equals(clazz)) {
+      return (T) new FrameRowsAndColumns(frame, frameReader.signature());
+    }
+    return Segment.super.as(clazz);
   }
 }

@@ -57,6 +57,8 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
+[PIVOT (aggregation_function(column_to_aggregate) FOR column_with_values_to_pivot IN (pivoted_column1 [, pivoted_column2 ...]))]
+[UNPIVOT (values_column FOR names_column IN (unpivoted_column1 [, unpivoted_column2 ... ]))]
 [ CROSS JOIN UNNEST(source_expression) as table_alias_name(column_alias_name) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
@@ -84,6 +86,121 @@ FROM clause, metadata tables are not considered datasources. They exist only in 
 
 For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)
 documentation.
+
+## PIVOT
+
+:::info
+The PIVOT operator is an [experimental feature](../development/experimental.md).
+:::
+
+The PIVOT operator carries out an aggregation and transforms rows into columns in the output.
+
+The following is the general syntax for the PIVOT operator. Note that the PIVOT operator is enclosed in parentheses and forms part of the FROM clause of the query.
+
+```sql
+PIVOT (aggregation_function(column_to_aggregate)
+  FOR column_with_values_to_pivot
+  IN (pivoted_column1 [, pivoted_column2 ...])
+)
+```
+
+PIVOT syntax parameters:
+
+* `aggregation_function`: An aggregation function, such as SUM, COUNT, MIN, MAX, or AVG.
+* `column_to_aggregate`: The source column to be aggregated.
+* `column_with_values_to_pivot`: The column that contains values for the pivoted column names.
+* `pivoted_columnN`: The list of values to pivot into headers in the output.
+
+The following example demonstrates how to transform `cityName` values into column headers `ba_sum_deleted` and `ny_sum_deleted`:
+
+```sql
+SELECT user, channel, ba_sum_deleted, ny_sum_deleted
+FROM "wikipedia"
+PIVOT (SUM(deleted) AS "sum_deleted" FOR "cityName" IN ( 'Buenos Aires' AS ba, 'New York' AS ny))
+WHERE ba_sum_deleted IS NOT NULL OR ny_sum_deleted IS NOT NULL
+LIMIT 15
+```
+
+<details>
+<summary> View results </summary>
+
+|`user`|`channel`|`ba_sum_deleted`|`ny_sum_deleted`|
+|------|---------|----------------|----------------|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|69.86.6.150|`#en.wikipedia`|null|1|
+|190.123.145.147|`#es.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|16|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|190.192.179.192|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+
+</details>
+
+## UNPIVOT
+
+:::info
+The UNPIVOT operator is an [experimental feature](../development/experimental.md).
+:::
+
+The UNPIVOT operator transforms existing column values into rows.
+Note that UNPIVOT isn't the exact reverse operation of PIVOT. The PIVOT operator carries out an aggregation and merges rows as needed. UNPIVOT doesn't reproduce the original rows that have been merged.
+
+The following is the general syntax for the UNPIVOT operator. Note that the UNPIVOT operator is enclosed in parentheses and forms part of the FROM clause of the query.
+
+```sql
+UNPIVOT (values_column 
+  FOR names_column
+  IN (unpivoted_column1 [, unpivoted_column2 ... ])
+)
+```
+
+UNPIVOT syntax parameters:
+
+* `values_column`: The column that contains the values of the unpivoted columns.
+* `names_column`: The column that contains the names of the unpivoted columns.
+* `unpivoted_columnN`: The list of columns to transform into rows in the output.
+
+The following example demonstrates how to transform the columns `added` and `deleted` into row values that correspond to a particular `channel`:
+
+```sql
+SELECT channel, user, action, SUM(changes) AS total_changes
+FROM "wikipedia" 
+UNPIVOT ( changes FOR action IN ("added", "deleted") )
+WHERE channel LIKE '#ar%'
+GROUP BY channel, user, action
+LIMIT 15
+```
+
+<details>
+<summary> View results </summary>
+
+|`channel`|`user`|`action`|`total_changes`|
+|---------|------|--------|---------------|
+|`#ar.wikipedia`|156.202.189.223|added|0|
+|`#ar.wikipedia`|156.202.189.223|deleted|30|
+|`#ar.wikipedia`|156.202.76.160|added|0|
+|`#ar.wikipedia`|156.202.76.160|deleted|0|
+|`#ar.wikipedia`|156.212.124.165|added|451|
+|`#ar.wikipedia`|156.212.124.165|deleted|0|
+|`#ar.wikipedia`|160.166.147.167|added|1|
+|`#ar.wikipedia`|160.166.147.167|deleted|0|
+|`#ar.wikipedia`|185.99.32.50|added|1|
+|`#ar.wikipedia`|185.99.32.50|deleted|0|
+|`#ar.wikipedia`|197.18.109.148|added|0|
+|`#ar.wikipedia`|197.18.109.148|deleted|24|
+|`#ar.wikipedia`|`2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C`|added|1|
+|`#ar.wikipedia`|`2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C`|deleted|0|
+|`#ar.wikipedia`|41.108.33.83|added|0|
+
+</details>
 
 ## UNNEST
 
@@ -138,7 +255,6 @@ WHERE stringDim IN ('1', '2', '3')
 ```
 
 Note that explicit type casting does not lead to significant performance improvement when comparing strings and numbers involving numeric dimensions since numeric dimensions are not indexed.
-
 
 ## GROUP BY
 
@@ -284,8 +400,3 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 ```
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
-
-
-
-
-
