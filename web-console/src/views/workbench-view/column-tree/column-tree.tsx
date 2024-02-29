@@ -17,7 +17,19 @@
  */
 
 import type { TreeNodeInfo } from '@blueprintjs/core';
-import { Classes, HTMLSelect, Icon, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Classes,
+  HTMLSelect,
+  Icon,
+  InputGroup,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Position,
+  Tree,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlExpression } from '@druid-toolkit/query';
@@ -37,7 +49,14 @@ import React from 'react';
 
 import { Deferred, Loader } from '../../../components';
 import type { ColumnMetadata } from '../../../utils';
-import { copyAndAlert, dataTypeToIcon, groupBy, oneOf, prettyPrintSql } from '../../../utils';
+import {
+  copyAndAlert,
+  dataTypeToIcon,
+  groupBy,
+  oneOf,
+  prettyPrintSql,
+  tickIcon,
+} from '../../../utils';
 
 import {
   ComplexMenuItems,
@@ -80,6 +99,16 @@ interface HandleColumnClickOptions {
   defaultWhere: SqlExpression | undefined;
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
+
+type SearchMode = 'tables-and-columns' | 'tables-only' | 'columns-only';
+
+const SEARCH_MODES: SearchMode[] = ['tables-and-columns', 'tables-only', 'columns-only'];
+
+const SEARCH_MDOE_TITLE: Record<SearchMode, string> = {
+  'tables-and-columns': 'Tables and columns',
+  'tables-only': 'Tables only',
+  'columns-only': 'Columns only',
+};
 
 function handleColumnShow(options: HandleColumnClickOptions): void {
   const {
@@ -147,6 +176,14 @@ export interface ColumnTreeState {
   columnTree?: TreeNodeInfo[];
   currentSchemaSubtree?: TreeNodeInfo[];
   selectedTreeIndex: number;
+  searchString: string;
+  searchMode: SearchMode;
+  prevSearchHash?: string;
+}
+
+function computeSearchHash(searchString: string, searchMode: SearchMode): string {
+  if (!searchString) return '';
+  return `${searchString.toLowerCase()}_${searchMode}`;
 }
 
 export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
@@ -181,8 +218,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       onQueryChange,
       highlightTable,
     } = props;
+    const { searchString, searchMode } = state;
+    const searchHash = computeSearchHash(searchString, searchMode);
 
-    if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+    if (
+      columnMetadata &&
+      (columnMetadata !== state.prevColumnMetadata || searchHash !== state.prevSearchHash)
+    ) {
+      const lowerSearchString = searchString.toLowerCase();
+      const isSearching = Boolean(lowerSearchString);
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
@@ -190,12 +234,27 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
           id: schemaName,
           label: schemaName,
           childNodes: groupBy(
-            metadata,
+            isSearching
+              ? metadata.filter(
+                  r =>
+                    (searchMode === 'tables-and-columns' &&
+                      (r.TABLE_NAME.toLowerCase().includes(lowerSearchString) ||
+                        r.COLUMN_NAME.toLowerCase().includes(lowerSearchString))) ||
+                    (searchMode === 'tables-only' &&
+                      r.TABLE_NAME.toLowerCase().includes(lowerSearchString)) ||
+                    (searchMode === 'columns-only' &&
+                      r.COLUMN_NAME.toLowerCase().includes(lowerSearchString)),
+                )
+              : metadata,
             r => r.TABLE_NAME,
             (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
               className: tableName === highlightTable ? 'highlight' : undefined,
+              isExpanded:
+                isSearching &&
+                (searchMode === 'columns-only' ||
+                  !tableName.toLowerCase().includes(lowerSearchString)),
               label: (
                 <Popover2
                   position={Position.RIGHT}
@@ -513,12 +572,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
       if (selectedTreeIndex > -1) {
         const treeNodes = columnTree[selectedTreeIndex].childNodes;
-        if (treeNodes) {
-          if (defaultTable) {
-            expandedNode = treeNodes.findIndex(node => {
-              return node.id === defaultTable;
-            });
-          }
+        if (treeNodes && defaultTable) {
+          expandedNode = treeNodes.findIndex(node => {
+            return node.id === defaultTable;
+          });
         }
       }
 
@@ -536,6 +593,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         columnTree,
         selectedTreeIndex,
         currentSchemaSubtree,
+        prevSearchHash: searchHash,
       };
     }
     return null;
@@ -545,12 +603,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     super(props);
     this.state = {
       selectedTreeIndex: -1,
+      searchString: '',
+      searchMode: 'tables-and-columns',
     };
   }
 
   private renderSchemaSelector() {
     const { columnTree, selectedTreeIndex } = this.state;
-    if (!columnTree) return null;
 
     return (
       <HTMLSelect
@@ -561,12 +620,52 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         minimal
         large
       >
-        {columnTree.map((treeNode, i) => (
+        {columnTree?.map((treeNode, i) => (
           <option key={i} value={i}>
             {treeNode.label}
           </option>
         ))}
       </HTMLSelect>
+    );
+  }
+
+  private renderSearch() {
+    const { searchString, searchMode } = this.state;
+
+    return (
+      <InputGroup
+        className="search-box"
+        placeholder="Search"
+        value={searchString}
+        onChange={e => {
+          this.setState({ searchString: e.target.value.substring(0, 100) });
+        }}
+        rightElement={
+          <ButtonGroup minimal>
+            {searchString !== '' && (
+              <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
+            )}
+            <Popover2
+              position="bottom-left"
+              content={
+                <Menu>
+                  <MenuDivider title="Search in" />
+                  {SEARCH_MODES.map(mode => (
+                    <MenuItem
+                      key={mode}
+                      icon={tickIcon(mode === searchMode)}
+                      text={SEARCH_MDOE_TITLE[mode]}
+                      onClick={() => this.setState({ searchMode: mode })}
+                    />
+                  ))}
+                </Menu>
+              }
+            >
+              <Button icon={IconNames.SETTINGS} />
+            </Popover2>
+          </ButtonGroup>
+        }
+      />
     );
   }
 
@@ -597,7 +696,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render() {
     const { columnMetadataLoading } = this.props;
-    const { currentSchemaSubtree } = this.state;
+    const { currentSchemaSubtree, searchString } = this.state;
 
     if (columnMetadataLoading) {
       return (
@@ -612,12 +711,19 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
+        {this.renderSearch()}
         <div className="tree-container">
-          <Tree
-            contents={currentSchemaSubtree}
-            onNodeCollapse={this.handleNodeCollapse}
-            onNodeExpand={this.handleNodeExpand}
-          />
+          {currentSchemaSubtree.length ? (
+            <Tree
+              contents={currentSchemaSubtree}
+              onNodeCollapse={this.handleNodeCollapse}
+              onNodeExpand={this.handleNodeExpand}
+            />
+          ) : (
+            <div className="message-box">
+              {searchString ? 'The search returned no results' : 'No tables'}
+            </div>
+          )}
         </div>
       </div>
     );
