@@ -203,7 +203,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private IngestionState ingestionState;
   private Map<String, TaskReport> completionReports;
-  private final Boolean skipPublishingReports;
+  private final Boolean isCompactionTask;
 
 
   @JsonCreator
@@ -225,7 +225,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       ParallelIndexIngestionSpec ingestionSchema,
       @Nullable String baseSubtaskSpecName,
       Map<String, Object> context,
-      Boolean skipPublishingReports
+      Boolean isCompactionTask
   )
   {
     super(
@@ -262,7 +262,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.skipPublishingReports = skipPublishingReports;
+    this.isCompactionTask = isCompactionTask;
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -670,7 +670,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!skipPublishingReports) {
+    if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
     return taskStatus;
@@ -840,7 +840,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!skipPublishingReports) {
+    if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
     return taskStatus;
@@ -940,7 +940,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!skipPublishingReports) {
+    if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
     return taskStatus;
