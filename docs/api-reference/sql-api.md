@@ -124,6 +124,16 @@ The request body takes the following properties:
 </TabItem>
 </Tabs>
 
+#### Client-side error handling and truncated responses
+
+Druid reports errors that occur before the response body is sent as JSON, with an HTTP 500 status code, using the same format as [native Druid query errors](../querying/querying.md#query-errors).
+If an error occurs while Druid is sending the response body, the server handling the request stops the response midstream and logs an error.
+
+This means that when you call the SQL API, you must properly handle response truncation.
+For  `object` and `array` formats, truncated responses will be invalid JSON.
+For line-oriented formats, Druid includes a newline character as the final character of every complete response. Absence of a final newline character indicates a truncated response.
+
+If you detect a truncated response, treat it as an error.
 
 ---
 
