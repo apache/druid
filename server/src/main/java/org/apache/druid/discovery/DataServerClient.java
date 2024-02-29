@@ -92,7 +92,7 @@ public class DataServerClient
     }
 
     if (log.isDebugEnabled()) {
-      log.debug("Sending request to servers for query[%s], request[%s]", query.getId(), requestBuilder.toString());
+      log.debug("Sending request to servers for query[%s], request[%s]", query.getId(), requestBuilder);
     }
     ListenableFuture<InputStream> resultStreamFuture = serviceClient.asyncRequest(
         requestBuilder,
