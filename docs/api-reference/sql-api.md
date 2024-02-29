@@ -53,11 +53,25 @@ The request body takes the following properties:
 * `query`: SQL query string.
 
 * `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
-  * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.
-  * `array`: Returns a JSON array of JSON arrays with the HTTP response header `Content-Type: application/json`.
-  * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Returns the HTTP response header `Content-Type: text/plain`.
-  * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP response header `Content-Type: text/plain`.
-  * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP response header `Content-Type: text/csv`.
+  * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
+     Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.
+
+  * `array`: Returns a JSON array of JSON arrays with the HTTP response header `Content-Type: application/json`.  
+     Each inner array has elements matching the columns returned by the SQL query, in order.
+
+  * `objectLines`: Returns newline-delimited JSON objects with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation can make it easier to parse the entire response set as a stream if you don't have a streaming JSON parser.
+     To make it possible to detect a truncated response, this format includes a trailer of one blank newline character.
+
+  * `arrayLines`: Returns newline-delimited JSON arrays with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation can make it easier to parse the entire response set as a stream if you don't have a streaming JSON parser.
+     To make it possible to detect a truncated response, this format includes a trailer of one blank newline character.
+
+  * `csv`: Returns comma-separated values with one row per line. Sent with the HTTP response header `Content-Type: text/csv`.  
+     Druid uses double quotes to escape individual field values. For example a value with a comma returns `"A,B"`.
+     If the field value contains a double quote character, Druid escapes it with a second double quote character.
+     For example `foo"bar` becomes `foo""bar`.
+     To make it possible to detect a truncated response, this format includes a trailer of one blank newline character.
 
 * `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
 
