@@ -6925,7 +6925,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGG_COL_EXCHANGE)
   @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators()
   {
@@ -10511,7 +10511,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.IMPROVED_PLAN)
   @Test
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
