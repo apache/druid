@@ -383,6 +383,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", 1L);
     assertExpr("array_overlap([1, 2, 3], [4, 5, 6])", 0L);
     assertExpr("array_overlap(null, [4, 5, 6])", null);
+    assertExpr("array_overlap([4, 5, 6], null)", null);
   }
 
   @Test
