@@ -66,4 +66,66 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
   {
     return ignoreDurationToRetain;
   }
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static class Builder
+  {
+    private Boolean cleanupEnabled;
+    private Duration durationToRetain;
+    private Duration cleanupPeriod;
+    private Boolean ignoreDurationToRetain;
+    private Duration bufferPeriod;
+    private Integer maxSegments;
+
+    private Builder()
+    {
+
+    }
+
+    public KillUnusedSegmentsConfig build()
+    {
+      return new KillUnusedSegmentsConfig(
+          cleanupEnabled,
+          cleanupPeriod,
+          durationToRetain,
+          ignoreDurationToRetain,
+          bufferPeriod,
+          maxSegments
+      );
+    }
+
+    public Builder withCleanupPeriod(Duration cleanupPeriod)
+    {
+      this.cleanupPeriod = cleanupPeriod;
+      return this;
+    }
+
+    public Builder withDurationToRetain(Duration durationToRetain)
+    {
+      this.durationToRetain = durationToRetain;
+      return this;
+    }
+
+    public Builder withIgnoreDurationToRetain(Boolean ignoreDurationToRetain)
+    {
+      this.ignoreDurationToRetain = ignoreDurationToRetain;
+      return this;
+    }
+
+    public Builder withMaxSegmentsToKill(Integer maxSegments)
+    {
+      this.maxSegments = maxSegments;
+      return this;
+    }
+
+    public Builder withBufferPeriod(Duration bufferPeriod)
+    {
+      this.bufferPeriod = bufferPeriod;
+      return this;
+    }
+  }
 }

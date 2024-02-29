@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.inject.Inject;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
@@ -105,7 +105,7 @@ public class DruidCoordinatorConfig
     // Validate config for killing unused segments
     final KillUnusedSegmentsConfig killUnusedConfig = killConfigs.unusedSegments();
     if (killUnusedConfig.getCleanupPeriod().getMillis() <= getCoordinatorIndexingPeriod().getMillis()) {
-      throw InvalidInput.exception(
+      throw newInvalidInputExceptionForOperator(
           "'druid.coordinator.kill.period'[%s] must be greater than or equal to"
           + " 'druid.coordinator.period.indexingPeriod'[%s]",
           killUnusedConfig.getCleanupPeriod(), getCoordinatorIndexingPeriod()
@@ -123,7 +123,7 @@ public class DruidCoordinatorConfig
     final Duration metadataManagementPeriod = getCoordinatorMetadataStoreManagementPeriod();
     final Duration period = config.getCleanupPeriod();
     if (period == null || period.getMillis() < metadataManagementPeriod.getMillis()) {
-      throw InvalidInput.exception(
+      throw newInvalidInputExceptionForOperator(
           "'druid.coordinator.kill.%s.period'[%s] must be greater than"
           + " 'druid.coordinator.period.metadataStoreManagementPeriod'[%s]",
           propertyPrefix, period, metadataManagementPeriod
@@ -132,17 +132,24 @@ public class DruidCoordinatorConfig
 
     final Duration retainDuration = config.getDurationToRetain();
     if (retainDuration == null || retainDuration.getMillis() < 0) {
-      throw InvalidInput.exception(
+      throw newInvalidInputExceptionForOperator(
           "'druid.coordinator.kill.%s.durationToRetain'[%s] must be 0 milliseconds or higher",
           propertyPrefix, retainDuration
       );
     }
     if (retainDuration.getMillis() > System.currentTimeMillis()) {
-      throw InvalidInput.exception(
+      throw newInvalidInputExceptionForOperator(
           "'druid.coordinator.kill.%s.durationToRetain'[%s] cannot be greater than current time in milliseconds",
           propertyPrefix, retainDuration
       );
     }
+  }
+
+  private static DruidException newInvalidInputExceptionForOperator(String msgFormat, Object... args)
+  {
+    return DruidException.forPersona(DruidException.Persona.OPERATOR)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .build(msgFormat, args);
   }
 
 }

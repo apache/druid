@@ -283,7 +283,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   public RelRoot rel(SqlNode sql)
   {
     ensure(CalcitePlanner.State.STATE_4_VALIDATED);
-    SqlNode validatedSqlNode = Objects.requireNonNull(
+    Objects.requireNonNull(
         this.validatedSqlNode,
         "validatedSqlNode is null. Need to call #validate() first"
     );
@@ -295,11 +295,11 @@ public class CalcitePlanner implements Planner, ViewExpander
     final SqlToRelConverter.Config config =
         sqlToRelConverterConfig.withTrimUnusedFields(false);
     final SqlToRelConverter sqlToRelConverter =
-        new SqlToRelConverter(this, validator,
+        new DruidSqlToRelConverter(this, validator,
                               createCatalogReader(), cluster, convertletTable, config
         );
     RelRoot root =
-        sqlToRelConverter.convertQuery(validatedSqlNode, false, true);
+        sqlToRelConverter.convertQuery(sql, false, true);
     root = root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
     final RelBuilder relBuilder =
         config.getRelBuilderFactory().create(cluster, null);

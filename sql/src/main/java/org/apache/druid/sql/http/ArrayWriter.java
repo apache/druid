@@ -43,9 +43,6 @@ public class ArrayWriter implements ResultFormat.Writer
     this.serializers = jsonMapper.getSerializerProviderInstance();
     this.jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream);
     this.outputStream = outputStream;
-
-    // Disable automatic JSON termination, so clients can detect truncated responses.
-    jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
   }
 
   @Override

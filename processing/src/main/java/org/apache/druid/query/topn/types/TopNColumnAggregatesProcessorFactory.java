@@ -49,7 +49,7 @@ public class TopNColumnAggregatesProcessorFactory
     if (capabilities.is(ValueType.STRING)) {
       return new StringTopNColumnAggregatesProcessor(capabilities, dimensionType);
     } else if (capabilities.isNumeric()) {
-      final Function<Object, Comparable<?>> converter;
+      final Function<Object, Object> converter;
       final ColumnType strategyType;
       // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
       // a numeric type and then converts to the desired output type after aggregating. We must be careful not to

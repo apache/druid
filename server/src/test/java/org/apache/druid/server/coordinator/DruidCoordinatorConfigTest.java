@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -32,6 +33,7 @@ import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -148,7 +150,8 @@ public class DruidCoordinatorConfigTest
   @Test
   public void testKillUnusedSegmentsConfigDefaultValues()
   {
-    final KillUnusedSegmentsConfig config = new KillUnusedSegmentsConfig(null, null, null, null, null, null);
+    CoordinatorKillConfigs killConfigs = createKillConfig().build();
+    final KillUnusedSegmentsConfig config = killConfigs.unusedSegments();
 
     Assert.assertFalse(config.isCleanupEnabled());
     Assert.assertFalse(config.isIgnoreDurationToRetain());
@@ -161,7 +164,7 @@ public class DruidCoordinatorConfigTest
   @Test
   public void testKillUnusedSegmentsConfigOverrideValues()
   {
-    final KillUnusedSegmentsConfig config = new KillUnusedSegmentsConfig(
+    KillUnusedSegmentsConfig inputConfig = new KillUnusedSegmentsConfig(
         true,
         Period.parse("PT30M").toStandardDuration(),
         Period.parse("PT12H").toStandardDuration(),
@@ -169,13 +172,30 @@ public class DruidCoordinatorConfigTest
         Period.parse("PT60M").toStandardDuration(),
         500
     );
+    CoordinatorKillConfigs killConfigs = createKillConfig().unusedSegments(inputConfig).build();
 
+    final KillUnusedSegmentsConfig config = killConfigs.unusedSegments();
     Assert.assertTrue(config.isCleanupEnabled());
     Assert.assertTrue(config.isIgnoreDurationToRetain());
     Assert.assertEquals(Duration.standardMinutes(30), config.getCleanupPeriod());
     Assert.assertEquals(Duration.standardMinutes(60), config.getBufferPeriod());
     Assert.assertEquals(Duration.standardHours(12), config.getDurationToRetain());
     Assert.assertEquals(500, config.getMaxSegments());
+  }
+
+  @Test
+  public void testKillUnusedSegmentsPeriodLessThanIndexingPeriod()
+  {
+    KillUnusedSegmentsConfig killUnusedConfig
+        = KillUnusedSegmentsConfig.builder()
+                                  .withCleanupPeriod(Duration.standardSeconds(5))
+                                  .build();
+    verifyCoordinatorConfigFailsWith(
+        createKillConfig().unusedSegments(killUnusedConfig).build(),
+        new CoordinatorPeriodConfig(null, Duration.standardSeconds(10)),
+        "'druid.coordinator.kill.period'[PT5S] must be greater than or equal to"
+        + " 'druid.coordinator.period.indexingPeriod'[PT10S]"
+    );
   }
 
   @Test
@@ -250,35 +270,35 @@ public class DruidCoordinatorConfigTest
     // Validation fails when cleanup period is less than metadata store management period
     final MetadataCleanupConfig cleanupConfig
         = new MetadataCleanupConfig(true, Duration.standardMinutes(30), null);
-    final Duration metadataStoreManagementPeriod = Duration.standardHours(1);
+    final CoordinatorPeriodConfig periodConfig = new CoordinatorPeriodConfig(Duration.standardHours(1), null);
 
     verifyCoordinatorConfigFailsWith(
         createKillConfig().audit(cleanupConfig).build(),
-        metadataStoreManagementPeriod,
+        periodConfig,
         "'druid.coordinator.kill.audit.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().compaction(cleanupConfig).build(),
-        metadataStoreManagementPeriod,
+        periodConfig,
         "'druid.coordinator.kill.compaction.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().datasource(cleanupConfig).build(),
-        metadataStoreManagementPeriod,
+        periodConfig,
         "'druid.coordinator.kill.datasource.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().rules(cleanupConfig).build(),
-        metadataStoreManagementPeriod,
+        periodConfig,
         "'druid.coordinator.kill.rule.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().supervisors(cleanupConfig).build(),
-        metadataStoreManagementPeriod,
+        periodConfig,
         "'druid.coordinator.kill.supervisor.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
@@ -289,29 +309,31 @@ public class DruidCoordinatorConfigTest
   {
     final MetadataCleanupConfig cleanupConfig
         = new MetadataCleanupConfig(true, null, Duration.standardSeconds(1).negated());
+
+    final CoordinatorPeriodConfig defaultPeriodConfig = new CoordinatorPeriodConfig(null, null);
     verifyCoordinatorConfigFailsWith(
         createKillConfig().audit(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.audit.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().compaction(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.compaction.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().datasource(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.datasource.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().rules(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.rule.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().supervisors(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.supervisor.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
   }
@@ -321,33 +343,34 @@ public class DruidCoordinatorConfigTest
   {
     final Duration futureRetainDuration = Duration.millis(System.currentTimeMillis()).plus(10_000);
     final MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(true, null, futureRetainDuration);
+    final CoordinatorPeriodConfig defaultPeriodConfig = new CoordinatorPeriodConfig(null, null);
     verifyCoordinatorConfigFailsWith(
         createKillConfig().audit(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.audit.durationToRetain'[%s] cannot be greater than current time in milliseconds",
         futureRetainDuration
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().compaction(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.compaction.durationToRetain'[%s] cannot be greater than current time in milliseconds",
         futureRetainDuration
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().datasource(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.datasource.durationToRetain'[%s] cannot be greater than current time in milliseconds",
         futureRetainDuration
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().rules(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.rule.durationToRetain'[%s] cannot be greater than current time in milliseconds",
         futureRetainDuration
     );
     verifyCoordinatorConfigFailsWith(
         createKillConfig().supervisors(cleanupConfig).build(),
-        null,
+        defaultPeriodConfig,
         "'druid.coordinator.kill.supervisor.durationToRetain'[%s] cannot be greater than current time in milliseconds",
         futureRetainDuration
     );
@@ -368,7 +391,7 @@ public class DruidCoordinatorConfigTest
 
   private void verifyCoordinatorConfigFailsWith(
       CoordinatorKillConfigs killConfig,
-      Duration metadataStoreManagementPeriod,
+      CoordinatorPeriodConfig periodConfig,
       String expectedMessageFormat,
       Object... args
   )
@@ -377,7 +400,7 @@ public class DruidCoordinatorConfigTest
         DruidException.class,
         () -> new DruidCoordinatorConfig(
             new CoordinatorRunConfig(null, null),
-            new CoordinatorPeriodConfig(metadataStoreManagementPeriod, null),
+            periodConfig,
             killConfig,
             null,
             null
@@ -385,7 +408,14 @@ public class DruidCoordinatorConfigTest
     );
 
     final String expectedMessage = StringUtils.format(expectedMessageFormat, args);
-    Assert.assertEquals(expectedMessage, exception.getMessage());
+    MatcherAssert.assertThat(
+        exception,
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.INVALID_INPUT,
+            "general"
+        ).expectMessageIs(expectedMessage)
+    );
   }
 
   private Injector createInjector(String propertyPrefix, Class<?> clazz)
@@ -413,6 +443,7 @@ public class DruidCoordinatorConfigTest
     MetadataCleanupConfig rules;
     MetadataCleanupConfig supervisors;
     MetadataCleanupConfig pendingSegments;
+    KillUnusedSegmentsConfig unusedSegments;
 
     KillConfigBuilder audit(MetadataCleanupConfig config)
     {
@@ -444,6 +475,12 @@ public class DruidCoordinatorConfigTest
       return this;
     }
 
+    KillConfigBuilder unusedSegments(KillUnusedSegmentsConfig config)
+    {
+      this.unusedSegments = config;
+      return this;
+    }
+
     CoordinatorKillConfigs build()
     {
       return new CoordinatorKillConfigs(
@@ -453,12 +490,12 @@ public class DruidCoordinatorConfigTest
           datasource,
           rules,
           compaction,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          unusedSegments == null ? null : unusedSegments.isCleanupEnabled(),
+          unusedSegments == null ? null : unusedSegments.getCleanupPeriod(),
+          unusedSegments == null ? null : unusedSegments.getDurationToRetain(),
+          unusedSegments == null ? null : unusedSegments.isIgnoreDurationToRetain(),
+          unusedSegments == null ? null : unusedSegments.getBufferPeriod(),
+          unusedSegments == null ? null : unusedSegments.getMaxSegments()
       );
     }
   }
