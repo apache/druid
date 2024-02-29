@@ -856,17 +856,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("MV_CONTAINS(lookup(dim1, 'lookyloo'), 'xabc') IS NOT TRUE"),
         QUERY_CONTEXT,
-        NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
-            not(equality("v0", "xabc", ColumnType.STRING))
-        )
-        : buildFilterTestExpectedQuery(
-            not(equality("dim1", "abc", ColumnType.STRING))
+        buildFilterTestExpectedQuery(
+            NullHandling.sqlCompatible()
+            ? not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+            : not(equality("dim1", "abc", ColumnType.STRING))
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of()
-        : ImmutableList.of(new Object[]{"", 5L})
+        ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
     );
   }
 
@@ -912,12 +907,10 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
             NullHandling.sqlCompatible()
-            ? not(in("dim1", ImmutableList.of("x6", "xabc", "nonexistent"), EXTRACTION_FN))
+            ? not(istrue(in("dim1", ImmutableList.of("6", "abc"), null)))
             : not(in("dim1", ImmutableList.of("6", "abc"), null))
         ),
-        NullHandling.sqlCompatible()
-        ? Collections.emptyList()
-        : ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
+        ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
     );
   }
 
