@@ -45,7 +45,6 @@ import java.util.List;
  * because the cursor might be advanced independently after extracting out the {@link ColumnSelectorFactory} like in
  * {@link org.apache.druid.frame.segment.FrameCursorUtils#cursorToFramesSequence}. This ensures that the selectors always return
  * the value pointed by the {@link #currentCursor}.
- * TODO(laksh): This can reuse SettableCursorColumnSelectorFactory
  */
 @NotThreadSafe
 public class ConcatCursor implements Cursor

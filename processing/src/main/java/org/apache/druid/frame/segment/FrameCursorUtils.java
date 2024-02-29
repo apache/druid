@@ -77,6 +77,11 @@ public class FrameCursorUtils
     }
   }
 
+  /**
+   * Writes a {@link Cursor} to a sequence of {@link Frame}. This method iterates over the rows of the cursor,
+   * and writes the columns to the frames. The iterable is lazy, and it traverses the required portion of the cursor
+   * as required
+   */
   public static Iterable<Frame> cursorToFramesIterable(
       final Cursor cursor,
       final FrameWriterFactory frameWriterFactory
@@ -131,7 +136,7 @@ public class FrameCursorUtils
    *
    * @param cursor                 Cursor to write to the frame
    * @param frameWriterFactory     Frame writer factory to write to the frame.
-   *                               Determines the signature of the rows that are written to the frames
+   *                               It also determines the signature of the rows that are written to the frames
    */
   public static Sequence<Frame> cursorToFramesSequence(
       final Cursor cursor,

@@ -136,7 +136,7 @@ public class AppendableMemory implements Closeable
       // Allocation needed.
       // Math.max(allocationSize, bytes) in case "bytes" is greater than SOFT_MAXIMUM_ALLOCATION_SIZE.
       final Optional<ResourceHolder<WritableMemory>> newMemory =
-          allocator.allocate(Math.max(nextAllocationSize, bytes));
+          allocator.allocate(Math.min(allocator.available(), Math.max(nextAllocationSize, bytes)));
 
       if (!newMemory.isPresent()) {
         return false;

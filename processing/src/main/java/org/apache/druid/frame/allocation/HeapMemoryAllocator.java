@@ -53,7 +53,7 @@ public class HeapMemoryAllocator implements MemoryAllocator
   @Override
   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)
   {
-    if (bytesAllocated < capacity - size) {
+    if (size <= capacity - bytesAllocated) {
       bytesAllocated += size;
 
       return Optional.of(

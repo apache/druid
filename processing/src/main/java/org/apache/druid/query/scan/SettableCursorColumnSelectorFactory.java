@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.scan;
 
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -39,29 +38,31 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.util.function.Supplier;
 
 /**
- * Expected to work correctly if the individual cursors have the same corresponding columns, columnTypes,
- * and column capabilities since the usual pattern is to cache these methods and assume that the signature is
- * fixed throughout
+ * A column selector factory, that represents the column values from multiple underlying cursors. It essentially
+ * wraps over the multiple cursors and can be passed to methods that expect column value selector from a single cursor.
+ * It is the duty of the caller to know when to switch from one cursor to another
+ *
+ * It is expected to work correctly if the individual cursors have the same corresponding columns, columnTypes,
+ * and column capabilities since the usual pattern throughout the code is to cache these values and
+ * assume they are fixed throughout.
  */
 @NotThreadSafe
 public class SettableCursorColumnSelectorFactory implements ColumnSelectorFactory
 {
-
-  // supplier should never return null
+  /**
+   * Cursor supplier whose supplied value will determine what cursor and the values to expose to the caller
+   */
   private final Supplier<Cursor> cursorSupplier;
+
+  /**
+   * Overarching row signature of the values returned by the cursor
+   */
   private final RowSignature rowSignature;
 
   public SettableCursorColumnSelectorFactory(final Supplier<Cursor> cursorSupplier, final RowSignature rowSignature)
   {
     this.cursorSupplier = cursorSupplier;
     this.rowSignature = rowSignature;
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getType(String name)
-  {
-    return cursorSupplier.get().getColumnSelectorFactory().getType(name);
   }
 
   @Override
@@ -159,6 +160,9 @@ public class SettableCursorColumnSelectorFactory implements ColumnSelectorFactor
 
       }
 
+      /**
+       * Cardinality of the concatenation of these selectors would be unknown
+       */
       @Override
       public int getValueCardinality()
       {
@@ -175,6 +179,10 @@ public class SettableCursorColumnSelectorFactory implements ColumnSelectorFactor
                              .lookupName(id);
       }
 
+      /**
+       * Name lookup is not possible in advance, because not all may support name lookups in the first place and they
+       * will have their own name lookups that will conflict with one another
+       */
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
@@ -190,6 +198,9 @@ public class SettableCursorColumnSelectorFactory implements ColumnSelectorFactor
     };
   }
 
+  /**
+   * Create {@link ColumnValueSelector} for the give column name
+   */
   @Override
   public ColumnValueSelector makeColumnValueSelector(String columnName)
   {
@@ -256,6 +267,12 @@ public class SettableCursorColumnSelectorFactory implements ColumnSelectorFactor
     };
   }
 
+  /**
+   * Return column capabilities from the signature. This returns the capabilities with the minimal assumptions.
+   * For example, one cursor can have capabilities with multivalues set to FALSE, while other can have it set to TRUE
+   * Creating the capabilites from the signature would leave the state undefined. If the caller has more knowledge
+   * about all the cursors that will get created, the caller can subclass and override the function with that information
+   */
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
@@ -264,7 +281,10 @@ public class SettableCursorColumnSelectorFactory implements ColumnSelectorFactor
     return rowSignature.getColumnCapabilities(column);
   }
 
-  // Row Id cannot be unique
+  /**
+   * Since we don't know all the cursors beforehand, we can't reconcile their row id suppliers to provide
+   * one here
+   */
   @Nullable
   @Override
   public RowIdSupplier getRowIdSupplier()
