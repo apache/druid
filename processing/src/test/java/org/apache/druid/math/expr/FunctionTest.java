@@ -374,6 +374,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_contains([1, 2, 3], [3, 4])", 0L);
     assertExpr("array_contains(b, [3, 4])", 1L);
     assertExpr("array_contains(null, [3, 4])", null);
+    assertExpr("array_contains([1, null, 2], null)", 1L);
   }
 
   @Test

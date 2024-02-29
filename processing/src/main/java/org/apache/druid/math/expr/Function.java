@@ -3783,24 +3783,33 @@ public interface Function extends NamedFunction
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final ExprEval arrayExpr1 = args.get(0).eval(bindings);
-      final ExprEval arrayExpr2 = args.get(1).eval(bindings);
+      final ExprEval lhsExpr = args.get(0).eval(bindings);
+      final ExprEval rhsExpr = args.get(1).eval(bindings);
 
-      final Object[] array1 = arrayExpr1.asArray();
-      final Object[] array2 = arrayExpr2.asArray();
+      final Object[] array1 = lhsExpr.asArray();
       if (array1 == null) {
         return ExprEval.ofLong(null);
       }
-      if (array2 == null) {
-        return ExprEval.ofLongBoolean(Arrays.stream(array1).anyMatch(Objects::isNull));
+      ExpressionType array1Type = lhsExpr.asArrayType();
+
+      if (rhsExpr.isArray()) {
+        final Object[] array2 = rhsExpr.asArray();
+
+        if (array2 == null) {
+          return ExprEval.ofLongBoolean(false);
+        }
+        final Set<Object> set = array1Type.isPrimitiveArray()
+                                ? new HashSet<>()
+                                // use sorted set so we can use type comparator for complex array types
+                                : new ObjectRBTreeSet<>(array1Type.getNullableStrategy());
+        set.addAll(Arrays.asList(array1));
+        return ExprEval.ofLongBoolean(set.containsAll(Arrays.asList(array2)));
+      } else {
+        if (rhsExpr.value() == null) {
+          return ExprEval.ofLongBoolean(Arrays.stream(array1).anyMatch(Objects::isNull));
+        }
+        return ExprEval.ofLongBoolean(Arrays.stream(array1).anyMatch(x -> Objects.equals(rhsExpr.value(), x)));
       }
-      ExpressionType array1Type = arrayExpr1.asArrayType();
-      final Set<Object> set = array1Type.isPrimitiveArray()
-                              ? new HashSet<>()
-                              // use sorted set so we can use type comparator for complex array types
-                              : new ObjectRBTreeSet<>(array1Type.getNullableStrategy());
-      set.addAll(Arrays.asList(array1));
-      return ExprEval.ofLongBoolean(set.containsAll(Arrays.asList(array2)));
     }
 
     @Override
