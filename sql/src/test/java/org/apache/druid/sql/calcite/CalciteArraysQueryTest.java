@@ -1346,7 +1346,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT ARRAY_CONTAINS(null, ARRAY['a','b'])",
         ImmutableList.of(
-            newScanQueryBuilder()
+            NullHandling.sqlCompatible()
+            ? newScanQueryBuilder()
                 .dataSource(
                     InlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{NullHandling.defaultLongValue()}),
@@ -1358,9 +1359,22 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
+            : newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{0L}),
+                        RowSignature.builder().add("ZERO", ColumnType.LONG).build()
+                    )
+                )
+                .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultLongValue()}
+            new Object[]{NullHandling.sqlCompatible() ? null : false}
         )
     );
   }
