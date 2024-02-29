@@ -20,10 +20,10 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
