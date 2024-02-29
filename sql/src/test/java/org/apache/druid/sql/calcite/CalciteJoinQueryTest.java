@@ -3826,13 +3826,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(queryContext)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"", ""},
-            new Object[]{"10.1", "10.1"},
-            new Object[]{"2", "2"},
-            new Object[]{"1", "1"},
-            new Object[]{"def", "def"},
-            new Object[]{"abc", "abc"}
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[]{"", ""},
+                new Object[]{"10.1", "10.1"},
+                new Object[]{"2", "2"},
+                new Object[]{"1", "1"},
+                new Object[]{"def", "def"},
+                new Object[]{"abc", "abc"}
+            ),
+            0
         )
     );
   }
@@ -3841,11 +3844,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext)
   {
-    if (sortBasedJoin) {
-      // Cannot handle the [l1.k = 'abc'] condition.
-      msqIncompatible();
-    }
-
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();
 
