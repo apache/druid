@@ -94,27 +94,24 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 {
   static final EmittingLogger log = new EmittingLogger(QueryHandler.class);
 
-  protected SqlNode queryNode;
   protected SqlExplain explain;
-  protected SqlNode validatedQueryNode;
   private boolean isPrepared;
   protected RelRoot rootQueryRel;
   private PrepareResult prepareResult;
   protected RexBuilder rexBuilder;
 
-  public QueryHandler(SqlStatementHandler.HandlerContext handlerContext, SqlNode sqlNode, SqlExplain explain)
+  public QueryHandler(HandlerContext handlerContext, SqlExplain explain)
   {
     super(handlerContext);
-    this.queryNode = sqlNode;
     this.explain = explain;
   }
 
-  @Override
-  public void validate()
+  protected SqlNode validate(SqlNode root)
   {
     CalcitePlanner planner = handlerContext.planner();
+    SqlNode validatedQueryNode;
     try {
-      validatedQueryNode = planner.validate(rewriteParameters());
+      validatedQueryNode = planner.validate(rewriteParameters(root));
     }
     catch (ValidationException e) {
       throw DruidPlanner.translateException(e);
@@ -127,9 +124,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
     validatedQueryNode.accept(resourceCollectorShuttle);
     resourceActions = resourceCollectorShuttle.getResourceActions();
+    return validatedQueryNode;
   }
 
-  private SqlNode rewriteParameters()
+  private SqlNode rewriteParameters(SqlNode original)
   {
     // Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
     // {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
@@ -141,9 +139,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     // contains parameters, but no values were provided.
     PlannerContext plannerContext = handlerContext.plannerContext();
     if (plannerContext.getParameters().isEmpty()) {
-      return queryNode;
+      return original;
     } else {
-      return queryNode.accept(new SqlParameterizerShuttle(plannerContext));
+      return original.accept(new SqlParameterizerShuttle(plannerContext));
     }
   }
 
@@ -154,6 +152,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       return;
     }
     isPrepared = true;
+    SqlNode validatedQueryNode = validatedQueryNode();
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
     handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
@@ -177,6 +176,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   {
     return prepareResult;
   }
+
+  protected abstract SqlNode validatedQueryNode();
 
   protected abstract RelDataType returnedRowType();
 
@@ -691,13 +692,17 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   public static class SelectHandler extends QueryHandler
   {
+    private final SqlNode queryNode;
+    private SqlNode validatedQueryNode;
+
     public SelectHandler(
         HandlerContext handlerContext,
         SqlNode sqlNode,
         SqlExplain explain
     )
     {
-      super(handlerContext, sqlNode, explain);
+      super(handlerContext, explain);
+      this.queryNode = sqlNode;
     }
 
     @Override
@@ -706,7 +711,13 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
         throw InvalidSqlInput.exception("Cannot execute SELECT with SQL engine [%s]", handlerContext.engine().name());
       }
-      super.validate();
+      validatedQueryNode = validate(queryNode);
+    }
+
+    @Override
+    protected SqlNode validatedQueryNode()
+    {
+      return validatedQueryNode;
     }
 
     @Override

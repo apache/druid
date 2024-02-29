@@ -32,8 +32,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTime;
@@ -200,10 +198,6 @@ public class SqlResults
         lst.add(f);
       }
       return lst;
-    } else if (value instanceof ComparableStringArray) {
-      return Arrays.asList(((ComparableStringArray) value).getDelegate());
-    } else if (value instanceof ComparableList) {
-      return ((ComparableList) value).getDelegate();
     } else if (mustCoerce) {
       return null;
     }
