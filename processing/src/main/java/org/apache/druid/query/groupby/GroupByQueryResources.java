@@ -49,6 +49,10 @@ import java.util.stream.Collectors;
  *    and the subtotals.
  * b) {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner} - Required for merging the results
  *    of the individual runners created by {@link GroupByQueryRunnerFactory#createRunner(Segment)}
+ *
+ * The resources should be acquired once throughout the execution of the query (with caveats such as union being treated
+ * as separate queries on the data servers) or it should release all the resources before re-acquiring them (if needed),
+ * to prevent deadlocks.
  */
 public class GroupByQueryResources implements Closeable
 {
@@ -100,12 +104,20 @@ public class GroupByQueryResources implements Closeable
     return Math.max(1, numMergeBuffersNeededForSubQuerySubtotal);
   }
 
+  /**
+   * Counts the number of merge buffers required for {@link GroupByQueryQueryToolChest#mergeResults}. For a given query,
+   * it is dependent on the structure of the group by query.
+   */
   @VisibleForTesting
   public static int countRequiredMergeBufferNumForToolchestMerge(GroupByQuery query)
   {
     return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
   }
 
+  /**
+   * Count the number of merge buffers required for {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
+   * It can be either 1 or 2, depending on the query's config
+   */
   public static int countRequiredMergeBufferNumForMergingQueryRunner(GroupByQueryConfig config, GroupByQuery query)
   {
     GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -138,7 +150,7 @@ public class GroupByQueryResources implements Closeable
   }
 
   /**
-   * Returns a merge buffer associated with the toolchest merge
+   * Returns a merge buffer associate with the {@link GroupByQueryQueryToolChest#mergeResults}
    */
   public ResourceHolder<ByteBuffer> getToolchestMergeBuffer()
   {
@@ -146,7 +158,7 @@ public class GroupByQueryResources implements Closeable
   }
 
   /**
-   * Returns a merge buffer associated with the merging query runner's merge buffer
+   * Returns a merge buffer associated with the {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
    */
   public ResourceHolder<ByteBuffer> getMergingQueryRunnerMergeBuffer()
   {
@@ -154,7 +166,7 @@ public class GroupByQueryResources implements Closeable
   }
 
   /**
-   * Returns the number of the currently present merging query runner merge buffers present
+   * Returns the number of the currently unused merge buffers reserved for {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
    */
   public int getNumMergingQueryRunnerMergeBuffers()
   {
@@ -188,6 +200,13 @@ public class GroupByQueryResources implements Closeable
     };
   }
 
+  /**
+   * Closes the query resource. It must be called to release back the acquired merge buffers back into the global
+   * merging pool from where all the merge buffers are acquired. The references to the merge buffers will become invalid
+   * once this method is called. The user must ensure that the callers are not using the stale references to the merge
+   * buffers after this method is called, as reading them would give incorrect results and writing there would interfere
+   * with other users of the merge buffers
+   */
   @Override
   public void close()
   {

@@ -77,8 +77,9 @@ import java.util.concurrent.TimeoutException;
  * using a buffer provided by {@code mergeBufferPool} and a parallel executor provided by {@code exec}. Outputs a
  * fully aggregated stream of {@link ResultRow} objects. Does not apply post-aggregators.
  *
- * The input {@code queryables} are expected to come from a {@link GroupByQueryEngine}. This code runs on data
- * servers, like Historicals (????? incorrect ????)
+ * The input {@code queryables} are expected to come from a {@link GroupByQueryEngine}. This code primarily runs on data
+ * servers like Historicals and Realtime Tasks. This can also run on Brokers, if the query is operating on local
+ * data sources, like inlined data, where the broker itself acts like a data server
  *
  * This class has some resemblance to {@link GroupByRowProcessor}. See the javadoc of that class for a discussion of
  * similarities and differences.
@@ -315,14 +316,17 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     String queryResourceId = query.context().getQueryResourceId();
     GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
-      throw DruidException.defensive("Expected merge buffers to be reserved in the reservation pool, however while executing the "
-                                     + "GroupByMergingQueryRunnerV2, however none were provided.");
+      throw DruidException.defensive(
+          "Expected merge buffers to be reserved in the reservation pool for the query id [%s] however while executing "
+          + "the GroupByMergingQueryRunner, however none were provided.",
+          queryResourceId
+      );
     }
     if (numBuffers > resource.getNumMergingQueryRunnerMergeBuffers()) {
       // Defensive exception, because we should have acquired the correct number of merge buffers beforehand, or
       // thrown an RLE in the caller of the runner
       throw DruidException.defensive(
-          "Query needs %d merge buffers for GroupByMergingQueryRunnerV2, however only %d were provided.",
+          "Query needs [%d] merge buffers for GroupByMergingQueryRunner, however only [%d] were provided.",
           numBuffers,
           resource.getNumMergingQueryRunnerMergeBuffers()
       );

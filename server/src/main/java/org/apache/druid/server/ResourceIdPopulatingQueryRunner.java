@@ -24,6 +24,9 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
 
+/**
+ * Populates {@link org.apache.druid.query.QueryContexts#QUERY_RESOURCE_ID} in the query context
+ */
 public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;

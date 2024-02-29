@@ -138,14 +138,10 @@ public class GroupingEngine
   }
 
   /**
-   * Initializes resources required to run {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} for a
-   * particular query. That method is also the primary caller of this method.
-   *
-   * Used by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)}.
-   *
-   * @param query a groupBy query to be processed
-   *
-   * @return broker resource
+   * Initializes resources required to run {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} and
+   * {@link GroupByMergingQueryRunner} for a particular query. The resources are to be acquired once throughout the
+   * execution of the query, or need to be re-acquired (if needed). Users must ensure that throughout the execution,
+   * a query already holding the resources shouldn't request for more resources, because that can cause deadlocks.
    */
   public static GroupByQueryResources prepareResource(
       GroupByQuery query,
@@ -420,7 +416,7 @@ public class GroupingEngine
   }
 
   /**
-   * Merge a variety of single-segment query runners into a combined runner. Used by
+   * Merges a variety of single-segment query runners into a combined runner. Used by
    * {@link GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
    * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
    * by that method will be fed into this method).

@@ -88,7 +88,8 @@ import java.util.stream.Stream;
  * Used for non-vectorized processing by
  * {@link GroupingEngine#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
  *
- * This code runs on data servers, like Historicals, (and also on Brokers for inlined data?)
+ * This code runs on data servers, like Historicals and Peons, and also Brokers, if they operate on local datasources like
+ * inlined data wherein the broker needs to process some portion of data like the data server
  *
  * @see org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine for vectorized version of this class
  */

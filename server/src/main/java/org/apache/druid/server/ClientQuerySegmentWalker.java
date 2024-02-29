@@ -837,6 +837,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return InlineDataSource.fromIterable(resultList, signature);
   }
 
+  /**
+   * Assigns a random resource id to the given query
+   */
   public static <T> Query<T> populateResourceId(Query<T> query)
   {
     return query.withOverriddenContext(Collections.singletonMap(

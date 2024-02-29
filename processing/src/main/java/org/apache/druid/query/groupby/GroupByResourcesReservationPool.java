@@ -29,8 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Reserves the {@link GroupByQueryResources} for a given group by query, mapped to the query's resource ID.
- * {@link GroupByQueryResources} consists of the merge buffers required for merging results in Brokers and Data Servers
+ * Reserves the {@link GroupByQueryResources} for a given group by query and maps them to the query's resource ID.
  */
 public class GroupByResourcesReservationPool
 {
@@ -65,7 +64,7 @@ public class GroupByResourcesReservationPool
   public void reserve(String queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {
     if (queryResourceId == null) {
-      throw DruidException.defensive("");
+      throw DruidException.defensive("Query resource id must be populated");
     }
     pool.compute(queryResourceId, (id, existingResource) -> {
       if (existingResource != null) {
@@ -76,7 +75,7 @@ public class GroupByResourcesReservationPool
   }
 
   /**
-   * Fetch resources corresponding to the
+   * Fetches resources corresponding to the given resource id
    */
   @Nullable
   public GroupByQueryResources fetch(String queryResourceId)
@@ -85,11 +84,13 @@ public class GroupByResourcesReservationPool
   }
 
   /**
-   * Removes the entry corresponding to the unique id from the map. It is expected
-   * // TODO(laksh): Close the resource itself to prevent leaking
+   * Removes the entry corresponding to the unique id from the map, and cleans up the resources.
    */
   public void clean(String queryResourceId)
   {
-    pool.remove(queryResourceId);
+    GroupByQueryResources resources = pool.remove(queryResourceId);
+    if (resources != null) {
+      resources.close();
+    }
   }
 }

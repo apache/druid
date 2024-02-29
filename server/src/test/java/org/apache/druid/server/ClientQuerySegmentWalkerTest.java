@@ -408,6 +408,40 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testGroupByOnGroupByOnInlineTable()
+  {
+    final GroupByQuery subquery =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(FOO_INLINE)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("s"))
+                                   .build()
+                                   .withId("queryId");
+
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(new QueryDataSource(subquery))
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster. Also, it gets a subquery id
+        ImmutableList.of(ExpectedQuery.local(query.withDataSource(new QueryDataSource(subquery.withSubQueryId("1.1"))))),
+        ImmutableList.of(new Object[]{3L})
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testGroupByOnUnionOfTwoTables()
   {
     final GroupByQuery query =

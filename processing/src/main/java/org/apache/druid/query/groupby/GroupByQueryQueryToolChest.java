@@ -88,7 +88,7 @@ import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
 /**
- *
+ * Toolchest for GroupBy queries
  */
 public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupByQuery>
 {
@@ -173,12 +173,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       boolean willMergeRunner
   )
   {
-    // .. 1. Historicals, Broker -> Which is using localWalker
-    // MerginV2 ->
+    // Reserve the group by resources (merge buffers) required for executing the query
     final String queryResourceId = query.context().getQueryResourceId();
     groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
 
     final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
+    if (resource == null) {
+      throw DruidException.defensive(
+          "Did not associate any resources with the given query resource id [%s]",
+          queryResourceId
+      );
+    }
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
@@ -187,7 +192,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           context
       );
       Closer closer = Closer.create();
-      closer.register(resource);
+
+      // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
       return Sequences.withBaggage(mergedSequence, closer);
     }
