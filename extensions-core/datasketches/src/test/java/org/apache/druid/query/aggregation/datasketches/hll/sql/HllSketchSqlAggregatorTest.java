@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -1268,6 +1269,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+
   /**
    * This is a test in a similar vein to {@link #testEstimateStringAndDoubleAreDifferent()} except here we are
    * ensuring that float values and doubles values are considered equivalent.  The expected initial inputs were
@@ -1316,6 +1318,20 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{4.0D}
         )
     );
+  }
+
+  @Test
+  public void testDsHllOnTopOfNested()
+  {
+    // this query was not planable: https://github.com/apache/druid/issues/15353
+    testBuilder()
+        .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
+        .sql(
+            "SELECT d1,dim2,APPROX_COUNT_DISTINCT_DS_HLL(dim2, 18) as val"
+                + " FROM (select d1,dim1,dim2 from druid.foo group by d1,dim1,dim2 order by dim1 limit 3) t "
+                + " group by 1,2"
+        )
+        .run();
   }
 
   private ExpressionVirtualColumn makeSketchEstimateExpression(String outputName, String field)
