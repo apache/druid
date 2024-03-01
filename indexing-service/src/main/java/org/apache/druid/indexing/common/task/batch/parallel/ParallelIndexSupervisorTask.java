@@ -42,6 +42,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.ParallelCompactionTaskReportData;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -1261,20 +1262,36 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents =
         doGetRowStatsAndUnparseableEvents("true", true);
+
+    IngestionStatsAndErrorsTaskReportData data;
+    if (isCompactionTask) {
+      data = new ParallelCompactionTaskReportData(
+          IngestionState.COMPLETED,
+          rowStatsAndUnparseableEvents.rhs,
+          rowStatsAndUnparseableEvents.lhs,
+          taskStatus.getErrorMsg(),
+          segmentAvailabilityConfirmed,
+          segmentAvailabilityWaitTimeMs,
+          Collections.emptyMap(),
+          segmentsRead,
+          segmentsPublished
+      );
+    } else {
+      data = new IngestionStatsAndErrorsTaskReportData(
+          IngestionState.COMPLETED,
+          rowStatsAndUnparseableEvents.rhs,
+          rowStatsAndUnparseableEvents.lhs,
+          taskStatus.getErrorMsg(),
+          segmentAvailabilityConfirmed,
+          segmentAvailabilityWaitTimeMs,
+          Collections.emptyMap()
+      );
+    }
+
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                IngestionState.COMPLETED,
-                rowStatsAndUnparseableEvents.rhs,
-                rowStatsAndUnparseableEvents.lhs,
-                taskStatus.getErrorMsg(),
-                segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                segmentsPublished
-            )
+            data
         )
     );
   }

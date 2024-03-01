@@ -264,9 +264,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 "",
                 false, // not applicable for parallel subtask
                 segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                null,
-                null
+                Collections.emptyMap()
             )
         )
     );

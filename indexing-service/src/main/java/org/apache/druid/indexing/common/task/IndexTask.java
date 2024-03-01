@@ -580,9 +580,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 errorMsg,
                 segmentAvailabilityConfirmationCompleted,
                 segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                null,
-                null
+                Collections.emptyMap()
             )
         )
     );
