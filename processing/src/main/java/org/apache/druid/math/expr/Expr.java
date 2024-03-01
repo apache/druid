@@ -764,6 +764,29 @@ public interface Expr extends Cacheable
     }
   }
 
+
+  /**
+   * Returns the single-threaded version of the given expression tree.
+   *
+   * Nested expressions in the subtree are also optimized.
+   *
+   * {@link Expr}-s which could have a singleThreaded implementation should implement {@link SingleThreaded}.
+   *
+   */
+  static Expr singleThreaded(Expr expr)
+  {
+    return expr.visit(
+        node -> {
+          if (node instanceof SingleThreaded) {
+            SingleThreaded canBeSingleThreaded = (SingleThreaded) node;
+            return canBeSingleThreaded.toSingleThreaded();
+          } else {
+            return node;
+          }
+        }
+    );
+  }
+
   public interface SingleThreaded
   {
     /**
@@ -773,25 +796,6 @@ public interface Expr extends Cacheable
      * obtain the single-threaded version of the expression tree.
      */
     Expr toSingleThreaded();
-
-    /**
-     * Returns the single-threaded version of the given expression tree.
-     *
-     * Nested expressions in the subtree are also optimized.
-     */
-    static Expr make(Expr expr)
-    {
-      return expr.visit(
-          node -> {
-            if (node instanceof SingleThreaded) {
-              SingleThreaded canBeSingleThreaded = (SingleThreaded) node;
-              return canBeSingleThreaded.toSingleThreaded();
-            } else {
-              return node;
-            }
-          }
-      );
-    }
   }
 
 

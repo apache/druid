@@ -32,7 +32,7 @@ public class ConstantExprTest extends InitializedNullHandlingTest
   {
     LongExpr expr = new LongExpr(11L);
     assertNotSame(expr.eval(null), expr.eval(null));
-    Expr singleExpr = Expr.SingleThreaded.make(expr);
+    Expr singleExpr = Expr.singleThreaded(expr);
     assertSame(singleExpr.eval(null), singleExpr.eval(null));
   }
 }
