@@ -229,26 +229,11 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
-<<<<<<< HEAD
-        <!-- Do not include the grpc-shaded module when opening the Druid in an IDE.
-             The shaded jar module cannot be opened in your IDE
-             as it will cause Guava conficts. The IDE loads the
-             pre-shaded dependencies, not the shaded jar, if this module is listed here.
-             Instead, use -P shaded profile when
-             building the grpc-query module: it will build the shaded jar for you in
-             lieu of the IDE doing so. Or, just let Maven build all of Druid outside
-             of the IDE, then refresh your IDE state: the shaded jar will appear in
-             your local Maven repo.
-         -->
-        <module>extensions-contrib/grpc-shaded</module>
         <module>extensions-contrib/grpc-query</module>
-=======
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
-
->>>>>>> upstream/master
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
