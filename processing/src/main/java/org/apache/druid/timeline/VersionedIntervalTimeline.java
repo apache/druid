@@ -794,7 +794,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     private final Interval trueInterval;
     private final VersionType version;
     private final PartitionHolder<ObjectType> partitionHolder;
-    private short maxMinorVersion = -1;
+    private short maxMinorVersion = 0;
 
 
     TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
@@ -826,7 +826,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
     public short getMaxMinorVersion()
     {
-      return maxMinorVersion;
+      return partitionHolder.getMaxMinorVersion();
     }
 
     @Override
