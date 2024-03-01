@@ -162,10 +162,6 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
      */
     RowSignature currentRowSignature = null;
 
-    /**
-     * Row signature of the previous row
-     */
-    RowSignature previousRowSignature = null;
 
     public ScanResultValueFramesIterator(
         Sequence<ScanResultValue> resultSequence,
@@ -254,8 +250,8 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
 
     /**
      * This is the most important method of this iterator. This determines if two consecutive scan result values can
-     * be batched or not, populates the value of the {@link #currentCursor}, {@link #currentRowSignature},
-     * and {@link #previousRowSignature} during the course of the iterator, and facilitates the {@link #next()}
+     * be batched or not, populates the value of the {@link #currentCursor} and {@link #currentRowSignature},
+     * during the course of the iterator, and facilitates the {@link #next()}
      * <p>
      * Multiple calls to populateCursor, without advancing the {@link #currentCursor} is idempotent. This allows successive
      * calls to this method in next(), done() and hasNext() methods without having any additional logic in the callers
@@ -268,7 +264,6 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
      * 1. {@link #currentCursor} - Points to the cursor with non-empty value (i.e. isDone()) is false, and the cursor points
      * to the next row present in the sequence of the scan result values. This row would get materialized to frame
      * 2. {@link #currentRowSignature} - Row signature of the row.
-     * 3. {@link #previousRowSignature} - Row signature of the previous row (that was written)
      * <p>
      * Return value -
      * if (hasNext()) is false before calling the method - returns false
@@ -317,7 +312,6 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
         return populateCursor();
       }
 
-      previousRowSignature = currentRowSignature;
       currentRowSignature = modifiedRowSignature;
       return compatible;
     }
