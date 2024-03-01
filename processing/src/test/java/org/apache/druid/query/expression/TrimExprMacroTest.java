@@ -28,7 +28,7 @@ public class TrimExprMacroTest
   public void testEqualsContractForTrimStaticCharsExpr()
   {
     EqualsVerifier.forClass(TrimExprMacro.TrimStaticCharsExpr.class)
-                  .withIgnoredFields("analyzeInputsSupplier", "visitFn")
+                  .withIgnoredFields("analyzeInputsSupplier", "mode", "stringExpr", "chars")
                   .usingGetClass()
                   .verify();
   }
@@ -37,7 +37,7 @@ public class TrimExprMacroTest
   public void testEqualsContractForTrimDynamicCharsExpr()
   {
     EqualsVerifier.forClass(TrimExprMacro.TrimDynamicCharsExpr.class)
-                  .withIgnoredFields("visitFn")
+                  .withIgnoredFields("analyzeInputsSupplier", "mode", "stringExpr", "charsExpr")
                   .usingGetClass()
                   .verify();
   }

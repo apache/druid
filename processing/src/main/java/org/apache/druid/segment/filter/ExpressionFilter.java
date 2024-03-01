@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -274,10 +275,9 @@ public class ExpressionFilter implements Filter
   @Override
   public String toString()
   {
-    return "ExpressionFilter{" +
-           "expr=" + expr +
-           ", filterTuning=" + filterTuning +
-           '}';
+    return new DimFilter.DimFilterToStringBuilder().append(expr.get().stringify())
+                                                   .appendFilterTuning(filterTuning)
+                                                   .build();
   }
 
 

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
@@ -33,9 +34,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -44,25 +43,11 @@ import org.junit.Test;
  */
 public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
-  private TestGroupByBuffers groupByBuffers;
-
-  @Before
-  public void setup2()
-  {
-    groupByBuffers = TestGroupByBuffers.createDefault();
-  }
-
-  @After
-  public void teardown2()
-  {
-    groupByBuffers.close();
-  }
-
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
+    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
   }
 
 
@@ -230,5 +215,19 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
                 + "order by 2 desc limit 1001"
         )
         .run();
+  }
+
+  @Override
+  public void testFilterParseLongNullable()
+  {
+    // this isn't really correct in default value mode, the result should be ImmutableList.of(new Object[]{0L})
+    // but MSQ is missing default aggregator values in empty group results. this override can be removed when this
+    // is fixed
+    testBuilder().queryContext(QUERY_CONTEXT_DEFAULT)
+                 .sql("select count(*) from druid.foo where parse_long(dim1, 10) is null")
+                 .expectedResults(
+                     NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{4L}) : ImmutableList.of()
+                 )
+                 .run();
   }
 }

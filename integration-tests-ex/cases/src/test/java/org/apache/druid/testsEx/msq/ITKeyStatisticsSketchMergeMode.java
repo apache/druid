@@ -106,7 +106,7 @@ public class ITKeyStatisticsSketchMergeMode
 
     // Submit the task and wait for the datasource to get loaded
     SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(
@@ -176,7 +176,7 @@ public class ITKeyStatisticsSketchMergeMode
 
     // Submit the task and wait for the datasource to get loaded
     SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(
@@ -251,7 +251,7 @@ public class ITKeyStatisticsSketchMergeMode
 
     // Submit the task and wait for the datasource to get loaded
     SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(

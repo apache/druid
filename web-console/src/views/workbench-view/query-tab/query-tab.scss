@@ -124,5 +124,25 @@ $vertical-gap: 6px;
         right: 0;
       }
     }
+
+    .generic-status-container {
+      position: relative;
+
+      .generic-status-container-info {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        right: 5px;
+        height: 30px;
+      }
+
+      .execution-stages-pane {
+        position: absolute;
+        top: 40px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+    }
   }
 }

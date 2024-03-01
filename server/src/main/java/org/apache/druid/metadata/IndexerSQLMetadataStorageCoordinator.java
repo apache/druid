@@ -230,29 +230,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
-  }
-
-  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit, null, null)) {
+                                           .retrieveUnusedSegments(
+                                               dataSource,
+                                               Collections.singletonList(interval),
+                                               limit,
+                                               null,
+                                               null,
+                                               maxUsedStatusLastUpdatedTime
+                                           )
+          ) {
             return ImmutableList.copyOf(iterator);
           }
         }
     );
 
-    log.info("Found %,d unused segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedStatusLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
   }
 
@@ -1368,6 +1372,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Map<SegmentIdWithShardSpec, SegmentCreateRequest> segmentIdToRequest = new HashMap<>();
     createdSegments.forEach((request, segmentId) -> segmentIdToRequest.put(segmentId, request));
 
+    final String now = DateTimes.nowUtc().toString();
     for (Map.Entry<SegmentIdWithShardSpec, SegmentCreateRequest> entry : segmentIdToRequest.entrySet()) {
       final SegmentCreateRequest request = entry.getValue();
       final SegmentIdWithShardSpec segmentId = entry.getKey();
@@ -1376,7 +1381,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       insertBatch.add()
                  .bind("id", segmentId.toString())
                  .bind("dataSource", dataSource)
-                 .bind("created_date", DateTimes.nowUtc().toString())
+                 .bind("created_date", now)
                  .bind("start", interval.getStart().toString())
                  .bind("end", interval.getEnd().toString())
                  .bind("sequence_name", request.getSequenceName())
@@ -1973,10 +1978,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
       );
 
+      final String now = DateTimes.nowUtc().toString();
       PreparedBatch preparedBatch = handle.prepareBatch(buildSqlToInsertSegments());
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
-          final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
               .bind("id", segment.getId().toString())
               .bind("dataSource", segment.getDataSource())
@@ -2146,10 +2151,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
     );
 
+    final String now = DateTimes.nowUtc().toString();
     final PreparedBatch batch = handle.prepareBatch(buildSqlToInsertSegments());
     for (List<DataSegment> partition : partitionedSegments) {
       for (DataSegment segment : partition) {
-        final String now = DateTimes.nowUtc().toString();
         batch.add()
              .bind("id", segment.getId().toString())
              .bind("dataSource", segment.getDataSource())

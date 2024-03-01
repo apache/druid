@@ -70,7 +70,6 @@ import org.junit.runners.model.Statement;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -4362,7 +4361,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @DrillTest("nestedAggs/multiWin_5")
   @Test
   public void test_nestedAggs_multiWin_5()
@@ -5593,8 +5591,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   public void test_lag_func_lag_Fn_67()
   {
     windowQueryTest();
-  }
 
+  }
   @NotYetSupported(Modes.UNSUPPORTED_NULL_ORDERING)
   @DrillTest("lag_func/lag_Fn_68")
   @Test

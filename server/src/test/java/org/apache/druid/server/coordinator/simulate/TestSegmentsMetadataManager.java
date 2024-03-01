@@ -23,8 +23,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -33,30 +35,41 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 {
-  private final ConcurrentMap<String, DataSegment> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegment> allSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegmentPlus> unusedSegments = new ConcurrentHashMap<>();
 
   private volatile DataSourcesSnapshot snapshot;
 
   public void addSegment(DataSegment segment)
   {
-    segments.put(segment.getId().toString(), segment);
+    allSegments.put(segment.getId().toString(), segment);
     usedSegments.put(segment.getId().toString(), segment);
     snapshot = null;
   }
 
   public void removeSegment(DataSegment segment)
   {
-    segments.remove(segment.getId().toString());
+    allSegments.remove(segment.getId().toString());
     usedSegments.remove(segment.getId().toString());
+    snapshot = null;
+  }
+
+  public void addUnusedSegment(DataSegmentPlus segment)
+  {
+    unusedSegments.put(segment.getDataSegment().getId().toString(), segment);
+    allSegments.put(segment.getDataSegment().getId().toString(), segment.getDataSegment());
     snapshot = null;
   }
 
@@ -99,11 +112,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
-    if (!segments.containsKey(segmentId)) {
+    if (!allSegments.containsKey(segmentId)) {
       return false;
     }
 
-    usedSegments.put(segmentId, segments.get(segmentId));
+    usedSegments.put(segmentId, allSegments.get(segmentId));
     return true;
   }
 
@@ -123,8 +136,13 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public int markSegmentsAsUnused(Set<SegmentId> segmentIds)
   {
     int numModifiedSegments = 0;
+    final DateTime now = DateTimes.nowUtc();
+
     for (SegmentId segmentId : segmentIds) {
-      if (usedSegments.remove(segmentId.toString()) != null) {
+      if (allSegments.containsKey(segmentId.toString())) {
+        DataSegment dataSegment = allSegments.get(segmentId.toString());
+        unusedSegments.put(segmentId.toString(), new DataSegmentPlus(dataSegment, now, now));
+        usedSegments.remove(segmentId.toString());
         ++numModifiedSegments;
       }
     }
@@ -194,7 +212,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,
@@ -208,7 +226,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public Set<String> retrieveAllDataSourceNames()
   {
-    return null;
+    return allSegments.values().stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
   }
 
   @Override
@@ -217,10 +235,31 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      final DateTime maxUsedFlagLastUpdatedTime
+      final DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    return null;
+    final List<DataSegmentPlus> sortedUnusedSegmentPluses = new ArrayList<>(unusedSegments.values());
+    sortedUnusedSegmentPluses.sort(
+        Comparator.comparingLong(
+            dataSegmentPlus -> dataSegmentPlus.getDataSegment().getInterval().getStartMillis()
+        )
+    );
+
+    final List<Interval> unusedSegmentIntervals = new ArrayList<>();
+
+    for (final DataSegmentPlus unusedSegmentPlus : sortedUnusedSegmentPluses) {
+      final DataSegment unusedSegment = unusedSegmentPlus.getDataSegment();
+      if (dataSource.equals(unusedSegment.getDataSource())) {
+        final Interval interval = unusedSegment.getInterval();
+
+        if ((minStartTime == null || interval.getStart().isAfter(minStartTime)) &&
+            interval.getEnd().isBefore(maxEndTime) &&
+            unusedSegmentPlus.getUsedStatusLastUpdatedDate().isBefore(maxUsedStatusLastUpdatedTime)) {
+          unusedSegmentIntervals.add(interval);
+        }
+      }
+    }
+    return unusedSegmentIntervals.stream().limit(limit).collect(Collectors.toList());
   }
 
   @Override

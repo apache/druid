@@ -227,7 +227,7 @@ PARTITIONED BY ALL
 
 You can ingest nested data into Druid using the [streaming method](../ingestion/index.md#streaming)&mdash;for example, from a Kafka topic.
 
-When you [define your supervisor spec](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec), include a dimension with type `json` for each nested column. For example, the following supervisor spec from the [Kafka ingestion tutorial](../tutorials/tutorial-kafka.md) contains dimensions for the nested columns `event`, `agent`, and `geo_ip` in datasource `kttm-kafka`.
+When you [define your supervisor spec](../ingestion/supervisor.md#start-a-supervisor), include a dimension with type `json` for each nested column. For example, the following supervisor spec from the [Kafka ingestion tutorial](../tutorials/tutorial-kafka.md) contains dimensions for the nested columns `event`, `agent`, and `geo_ip` in datasource `kttm-kafka`.
 
 ```json
 {

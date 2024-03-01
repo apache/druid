@@ -19,11 +19,17 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.DimensionDictionary;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -45,12 +51,49 @@ public class DictionaryBuilding
   /**
    * Creates a reverse dictionary (value -> dictionary ID). If a value is not present in the reverse dictionary,
    * {@link Object2IntMap#getInt} will return {@link DimensionDictionary#ABSENT_VALUE_ID}.
+   *
+   * WARNING: This assumes that the .hashCode and the .equals of the method are implemented correctly. This does not
+   * apply for primitive array types, which donot consider new Object[]{1L, 2L} = new Object[]{1, 2}. For such objects,
+   * (especially arrays), a custom hash strategy must be passed.
    */
   public static <T> Object2IntMap<T> createReverseDictionary()
   {
     final Object2IntOpenHashMap<T> m = new Object2IntOpenHashMap<>();
     m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
     return m;
+  }
+
+  private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
+  {
+    final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
+    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
+    return m;
+  }
+
+  /**
+   * Creates a reverse dictionary for arrays of primitive types.
+   */
+  public static Object2IntMap<Object[]> createReverseDictionaryForPrimitiveArray(TypeSignature<ValueType> arrayType)
+  {
+    if (!arrayType.isPrimitiveArray()) {
+      throw DruidException.defensive("Dictionary building function expected an array of a primitive type");
+    }
+    return createReverseDictionary(new Hash.Strategy<Object[]>()
+    {
+      @Override
+      public int hashCode(Object[] o)
+      {
+        // We don't do a deep comparison, because the array type is primitive, therefore we don't need to incur the extra
+        // overhead of checking the nestings
+        return Arrays.hashCode(o);
+      }
+
+      @Override
+      public boolean equals(Object[] a, Object[] b)
+      {
+        return arrayType.getNullableStrategy().compare(a, b) == 0;
+      }
+    });
   }
 
   /**
