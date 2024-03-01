@@ -70,7 +70,8 @@ jobs:
         if: ${{ matrix.java == '17' }}
         # errorprone requires JDK 11+
         # Strict compilation requires more than 2 GB
-        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+        # Must install so that libraries are created as input to the next compile step
+        run: ${MVN} clean -DstrictCompile install --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: maven install
         if: ${{ matrix.java == '8' }}

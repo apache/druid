@@ -80,7 +80,6 @@ public class BasicAuthorizerRole
       return false;
     }
     return getPermissions() != null ? getPermissions().equals(role.getPermissions()) : role.getPermissions() == null;
-
   }
 
   @Override
@@ -90,7 +89,6 @@ public class BasicAuthorizerRole
     result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
     return result;
   }
-
 
   static class PermissionsDeserializer extends JsonDeserializer<List<BasicAuthorizerPermission>>
   {

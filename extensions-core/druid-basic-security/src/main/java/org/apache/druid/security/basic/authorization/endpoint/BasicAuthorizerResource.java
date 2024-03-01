@@ -101,7 +101,6 @@ public class BasicAuthorizerResource
     return resourceHandler.refreshAll();
   }
 
-
   /**
    * @param req HTTP request
    *
@@ -609,7 +608,6 @@ public class BasicAuthorizerResource
     authValidator.validateAuthorizerName(authorizerName);
     return resourceHandler.getCachedGroupMappingMaps(authorizerName);
   }
-
 
   /**
    * Listen for update notifications for the user auth storage

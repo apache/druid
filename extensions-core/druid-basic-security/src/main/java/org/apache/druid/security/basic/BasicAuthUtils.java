@@ -41,7 +41,11 @@ import java.util.Map;
 
 public class BasicAuthUtils
 {
+<<<<<<< HEAD
+  private static final Logger log = new Logger(BasicAuthUtils.class);
+=======
 
+>>>>>>> upstream/master
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   public static final String ADMIN_NAME = "admin";
   public static final String ADMIN_GROUP_MAPPING_NAME = "adminGroupMapping";

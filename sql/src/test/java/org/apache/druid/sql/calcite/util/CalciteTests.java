@@ -551,7 +551,6 @@ public class CalciteTests
     @Override
     public void registerListener(Listener listener)
     {
-
     }
   }
 

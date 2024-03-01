@@ -24,7 +24,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorU
 import java.util.Map;
 
 /**
- * This class is reponsible for maintaining a cache of the authenticator database state. The BasicHTTPAuthenticator
+ * Responsible for maintaining a cache of the authenticator database state. The BasicHTTPAuthenticator
  * uses an injected BasicAuthenticatorCacheManager to make its authentication decisions.
  */
 public interface BasicAuthenticatorCacheManager
