@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.druid.k8s.overlord.common.TaskLaneConfig;
+import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;

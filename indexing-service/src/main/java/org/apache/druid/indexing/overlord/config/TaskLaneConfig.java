@@ -17,10 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Represents the configuration for a task lane within Druid's task management system.
@@ -89,6 +93,19 @@ public class TaskLaneConfig
   public String getPolicy()
   {
     return policy;
+  }
+
+  public Set<String> getLabelSet()
+  {
+    return Arrays.stream(getLabels().split(",\\s*"))
+                 .map(String::trim)
+                 .filter(label -> !label.isEmpty())
+                 .collect(Collectors.toSet());
+  }
+
+  public TaskLaneCapacityPolicy getTaskLaneCapacityPolicy()
+  {
+    return TaskLaneCapacityPolicy.valueOf(getPolicy().toUpperCase());
   }
 
   @Override

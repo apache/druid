@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.indexing.overlord.config;
 
 /**
  * Enumerates the policies for managing task lane capacities in a task scheduling environment.
