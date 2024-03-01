@@ -93,8 +93,7 @@ An example output is shown below:
 }
 ```
 
-For compaction tasks alone, there could be multiple `index`, `index_parallel` tasks run based on the split of input
-interval, and they all have a seperate reports. So, the key field for the report also includes the index of the split.
+Compaction tasks can generate multiple sets of segment output reports based on how the input interval is split. So the overall report contains mappings from each split to each report.
 Example report could be:
 
 ```json
