@@ -103,6 +103,7 @@ public class BroadcastTablesTooLargeFault extends BaseMSQFault
       return StringUtils.format(
           "Size of broadcast tables in JOIN exceeds reserved memory limit "
           + "(memory reserved for broadcast tables = [%,d] bytes). "
+          + "Try increasing available memory. "
           + "This query is using broadcast JOIN even though [%s: %s] is set in query context, because the configured "
           + "join algorithm does not support the join condition.",
           maxBroadcastTablesSize,
