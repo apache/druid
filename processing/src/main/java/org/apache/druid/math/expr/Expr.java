@@ -764,24 +764,35 @@ public interface Expr extends Cacheable
     }
   }
 
-  /**
-   * Returns a possibly less safe version of this expression.
-   *
-   * For top level expressions use {@link Expr#makeSingleThreaded(Expr)} to
-   * obtain the single-threaded version of the expression tree.
-   */
-  default Expr singleThreaded()
+  public interface SingleThreaded
   {
-    return this;
+    /**
+     * Returns a possibly less safe version of this expression.
+     *
+     * For top level expressions use {@link Expr#make(Expr)} to
+     * obtain the single-threaded version of the expression tree.
+     */
+    Expr toSingleThreaded();
+
+    /**
+     * Returns the single-threaded version of the given expression tree.
+     *
+     * Nested expressions in the subtree are also optimized.
+     */
+    static Expr make(Expr expr)
+    {
+      return expr.visit(
+          node -> {
+            if (node instanceof SingleThreaded) {
+              SingleThreaded canBeSingleThreaded = (SingleThreaded) node;
+              return canBeSingleThreaded.toSingleThreaded();
+            } else {
+              return node;
+            }
+          }
+      );
+    }
   }
 
-  /**
-   * Returns the single-threaded version of the given expression tree.
-   *
-   * Nested expressions in the subtree are also optimized.
-   */
-  static Expr makeSingleThreaded(Expr expr)
-  {
-    return expr.visit(Expr::singleThreaded);
-  }
+
 }

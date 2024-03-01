@@ -43,7 +43,7 @@ import java.util.Objects;
  * {@link Expr}.
  */
 @Immutable
-abstract class ConstantExpr<T> implements Expr
+abstract class ConstantExpr<T> implements Expr, Expr.SingleThreaded
 {
   final ExpressionType outputType;
 
@@ -115,8 +115,9 @@ abstract class ConstantExpr<T> implements Expr
 
   protected abstract ExprEval<T> realEval();
 
+
   @Override
-  public final Expr singleThreaded()
+  public Expr toSingleThreaded()
   {
     return new ExprEvalBasedConstantExpr<T>(realEval());
   }

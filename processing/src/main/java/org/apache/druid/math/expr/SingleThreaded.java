@@ -19,22 +19,28 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Test;
-
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-
-public class ConstantExprTest extends InitializedNullHandlingTest
+public interface SingleThreaded
 {
-  @Test
-  public void asd()
-  {
-    // FIXME decide to keep or not
-    LongExpr le = new LongExpr(11L);
-    assertNotSame(le.eval(null), le.eval(null));
-    Expr s = Expr.SingleThreaded.make(le);
-    assertSame(s.eval(null), s.eval(null));
 
+  Expr toSingleThreaded();
+
+  /**
+   * Returns the single-threaded version of the given expression tree.
+   *
+   * Nested expressions in the subtree are also optimized.
+   */
+  static Expr make(Expr expr)
+  {
+    return expr.visit(SingleThreaded::makeSingleThreaded2);
+  }
+
+  static Expr makeSingleThreaded2(Expr expr)
+  {
+    if (expr instanceof SingleThreaded) {
+      SingleThreaded canBeSingleThreaded = (SingleThreaded) expr;
+      return canBeSingleThreaded.toSingleThreaded();
+    } else {
+      return expr;
+    }
   }
 }
