@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ITRetryUtil
 {
+
   private static final Logger LOG = new Logger(ITRetryUtil.class);
 
   public static final int DEFAULT_RETRY_COUNT = 240; // 20 minutes
