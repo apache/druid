@@ -648,7 +648,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                 getTaskCompletionRowStats(),
                 errorMsg,
                 false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap()
             )
         )
     );

@@ -40,8 +40,8 @@ import java.util.function.Function;
 public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregatesProcessor<DimensionSelector>
 {
   private final ColumnCapabilities capabilities;
-  private final Function<Object, Comparable<?>> dimensionValueConverter;
-  private HashMap<Comparable<?>, Aggregator[]> aggregatesStore;
+  private final Function<Object, Object> dimensionValueConverter;
+  private HashMap<Object, Aggregator[]> aggregatesStore;
 
   public StringTopNColumnAggregatesProcessor(final ColumnCapabilities capabilities, final ColumnType dimensionType)
   {
@@ -91,7 +91,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
           vals[i] = aggs[i].get();
         }
 
-        final Comparable<?> key = dimensionValueConverter.apply(entry.getKey());
+        final Object key = dimensionValueConverter.apply(entry.getKey());
         resultBuilder.addEntry(key, key, vals);
       }
     }
@@ -152,7 +152,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
         final int dimIndex = dimValues.get(i);
         Aggregator[] aggs = rowSelector[dimIndex];
         if (aggs == null) {
-          final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+          final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
           aggs = aggregatesStore.computeIfAbsent(
               key,
               k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
@@ -189,7 +189,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
-        final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+        final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
         Aggregator[] aggs = aggregatesStore.computeIfAbsent(
             key,
             k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())

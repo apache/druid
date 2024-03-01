@@ -1310,7 +1310,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      DateTime maxUsedStatusLastUpdatedTime
+      final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column

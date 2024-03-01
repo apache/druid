@@ -55,7 +55,6 @@ import java.util.stream.Collectors;
 public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__union__");
-
   private final Union unionRel;
   private final List<String> unionColumnNames;
   private final PartialDruidQuery partialQuery;
@@ -143,7 +142,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
       }
 
       if (signature.getColumnNames().equals(query.getOutputRowSignature().getColumnNames())) {
-        dataSources.add((TableDataSource) dataSource);
+        dataSources.add(dataSource);
       } else {
         getPlannerContext().setPlanningError("There is a mismatch between the output row signature of input tables and the row signature of union output.");
         throw new CannotBuildQueryException(druidRel);

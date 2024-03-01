@@ -30,7 +30,7 @@ SqlNode DruidSqlReplaceEof() :
     SqlNodeList clusteredBy = null;
     final Pair<SqlNodeList, SqlNodeList> p;
     SqlNode replaceTimeQuery = null;
-    String exportFileFormat = null;
+    SqlIdentifier exportFileFormat = null;
 }
 {
     <REPLACE> { s = span(); }
@@ -68,7 +68,7 @@ SqlNode DruidSqlReplaceEof() :
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
-    // DruidSqlInsert constructor so that we can return a custom error message.
+    // IngestHandler#validate() so that we can return a custom error message.
     [
       <PARTITIONED> <BY>
       partitionedBy = PartitionGranularity()
@@ -90,7 +90,7 @@ SqlNode DruidSqlReplaceEof() :
     <EOF>
     {
       sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, destination, source, columnList);
-      return DruidSqlReplace.create(sqlInsert, partitionedBy, clusteredBy, replaceTimeQuery, exportFileFormat);
+      return DruidSqlReplace.create(sqlInsert, partitionedBy, clusteredBy, exportFileFormat, replaceTimeQuery);
     }
 }
 

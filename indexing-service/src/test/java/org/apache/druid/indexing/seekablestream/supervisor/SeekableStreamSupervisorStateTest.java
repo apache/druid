@@ -1101,6 +1101,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     workItems.add(new TestTaskRunnerWorkItem(id3, null, location3));
 
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(id1.getId())).andReturn(location1).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(id2.getId())).andReturn(location2).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(id3.getId())).andReturn(location3).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
             .andReturn(ImmutableList.of(id1, id2, id3))
             .anyTimes();
