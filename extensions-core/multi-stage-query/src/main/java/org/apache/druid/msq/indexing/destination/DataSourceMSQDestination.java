@@ -41,6 +41,7 @@ import java.util.Optional;
 public class DataSourceMSQDestination implements MSQDestination
 {
   public static final String TYPE = "dataSource";
+  private static final String LABEL = "index_batch";
 
   private final String dataSource;
   private final Granularity segmentGranularity;
@@ -176,5 +177,14 @@ public class DataSourceMSQDestination implements MSQDestination
   public Optional<Resource> getDestinationResource()
   {
     return Optional.of(new Resource(getDataSource(), ResourceType.DATASOURCE));
+  }
+
+  @Override
+  public String getDestinationLabel()
+  {
+    if (isReplaceTimeChunks()) {
+      return String.format("%s_%s", LABEL, "replace");
+    }
+    return LABEL;
   }
 }
