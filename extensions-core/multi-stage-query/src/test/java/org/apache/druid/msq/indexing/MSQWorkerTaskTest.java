@@ -40,8 +40,7 @@ public class MSQWorkerTaskTest
       dataSource,
       workerNumber,
       context,
-      retryCount,
-      ""
+      retryCount
   );
 
 
@@ -52,11 +51,11 @@ public class MSQWorkerTaskTest
     Assert.assertEquals(msqWorkerTask, msqWorkerTask);
     Assert.assertEquals(
         msqWorkerTask,
-        new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount, "")
+        new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount)
     );
     Assert.assertEquals(
         msqWorkerTask.getRetryTask(),
-        new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount + 1, "")
+        new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount + 1)
     );
     Assert.assertNotEquals(msqWorkerTask, msqWorkerTask.getRetryTask());
   }
@@ -67,19 +66,19 @@ public class MSQWorkerTaskTest
     Set<MSQWorkerTask> msqWorkerTaskSet = new HashSet<>();
 
     msqWorkerTaskSet.add(msqWorkerTask);
-    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount, ""));
+    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount));
     Assert.assertTrue(msqWorkerTaskSet.size() == 1);
 
     msqWorkerTaskSet.add(msqWorkerTask.getRetryTask());
     Assert.assertTrue(msqWorkerTaskSet.size() == 2);
 
-    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId + 1, dataSource, workerNumber, context, retryCount, ""));
+    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId + 1, dataSource, workerNumber, context, retryCount));
     Assert.assertTrue(msqWorkerTaskSet.size() == 3);
 
-    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource + 1, workerNumber, context, retryCount, ""));
+    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource + 1, workerNumber, context, retryCount));
     Assert.assertTrue(msqWorkerTaskSet.size() == 4);
 
-    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber + 1, context, retryCount, ""));
+    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber + 1, context, retryCount));
     Assert.assertTrue(msqWorkerTaskSet.size() == 5);
 
     msqWorkerTaskSet.add(new MSQWorkerTask(
@@ -87,12 +86,11 @@ public class MSQWorkerTaskTest
         dataSource,
         workerNumber,
         ImmutableMap.of("key1", "v1"),
-        retryCount,
-        ""
+        retryCount
     ));
     Assert.assertTrue(msqWorkerTaskSet.size() == 6);
 
-    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount + 1, ""));
+    msqWorkerTaskSet.add(new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount + 1));
     Assert.assertTrue(msqWorkerTaskSet.size() == 6);
   }
 
@@ -108,7 +106,7 @@ public class MSQWorkerTaskTest
   @Test
   public void testGetInputSourceResources()
   {
-    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount, "");
+    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
   }
 

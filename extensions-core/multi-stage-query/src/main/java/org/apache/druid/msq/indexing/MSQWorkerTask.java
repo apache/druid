@@ -68,8 +68,7 @@ public class MSQWorkerTask extends AbstractTask
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("workerNumber") final int workerNumber,
       @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty(value = "retry", defaultValue = "0") final int retryCount,
-      @JsonProperty("label") final String label
+      @JsonProperty(value = "retry", defaultValue = "0") final int retryCount
   )
   {
     super(
@@ -83,7 +82,7 @@ public class MSQWorkerTask extends AbstractTask
     this.controllerTaskId = controllerTaskId;
     this.workerNumber = workerNumber;
     this.retryCount = retryCount;
-    this.label = label;
+    this.label = (String) context.getOrDefault("label", "");
   }
 
   @JsonProperty
@@ -110,7 +109,7 @@ public class MSQWorkerTask extends AbstractTask
    */
   public MSQWorkerTask getRetryTask()
   {
-    return new MSQWorkerTask(controllerTaskId, getDataSource(), workerNumber, getContext(), retryCount + 1, label);
+    return new MSQWorkerTask(controllerTaskId, getDataSource(), workerNumber, getContext(), retryCount + 1);
   }
 
   @Override

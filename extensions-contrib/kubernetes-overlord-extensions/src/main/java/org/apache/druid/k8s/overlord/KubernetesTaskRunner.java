@@ -529,7 +529,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private boolean isTaskEligibleToRun(Task task)
   {
     TaskLane taskLane = taskLaneRegistry.getTaskLane(task.getLabel());
-    if (taskLane == null || (taskLane != null && taskLane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)) {
+    if (taskLane == null || taskLane.getPolicy() == TaskLaneCapacityPolicy.RESERVE) {
       return true;
     }
 

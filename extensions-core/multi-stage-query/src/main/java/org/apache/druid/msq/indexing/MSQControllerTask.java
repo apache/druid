@@ -50,9 +50,7 @@ import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
-import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
-import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -150,21 +148,9 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   }
 
   @Override
-  public String getLabel() {
-    if (isIngestion(querySpec)) {
-      if (((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
-        return "msq_index_batch_replace";
-      }
-      return "msq_index_batch";
-    } else if (writeResultsToDurableStorage(querySpec)) {
-      return "msq_export_durable_storage";
-    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
-      return "msq_export";
-    } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
-      return "msq_task_report";
-    }
-
-    return "";
+  public String getLabel()
+  {
+    return "msq_" + querySpec.getDestination().getDestinationLabel();
   }
 
   @Nonnull

@@ -499,6 +499,7 @@ public class MSQWorkerTaskLauncher
   private void runNewTasks()
   {
     final Map<String, Object> taskContext = new HashMap<>();
+    taskContext.put("label", taskLabel);
 
     for (Map.Entry<String, Object> taskContextOverride : taskContextOverrides.entrySet()) {
       if (taskContextOverride.getKey() == null || taskContextOverride.getValue() == null) {
@@ -522,8 +523,7 @@ public class MSQWorkerTaskLauncher
           dataSource,
           i,
           taskContext,
-          0,
-          taskLabel
+          0
       );
 
       taskTrackers.put(task.getId(), new TaskTracker(i, task));
