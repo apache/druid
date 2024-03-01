@@ -85,11 +85,7 @@ function tail_logs
   ls *.log | while read log;
   do
     echo "----- $CATEGORY/$log -----"
-<<<<<<< HEAD
-    tail -20 $log
-=======
     tail -100 $log
->>>>>>> upstream/master
   done
   popd > /dev/null
 }
@@ -236,17 +232,10 @@ case $CMD in
     mvn -q clean install dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
-<<<<<<< HEAD
-    mvn clean install -P dist $MAVEN_IGNORE -T1.0C $*
-    ;;
-  "dist" )
-    mvn install -P dist $MAVEN_IGNORE -pl :distribution
-=======
     mvn -B clean install -P dist $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
     mvn -B install -P dist $MAVEN_IGNORE -pl :distribution
->>>>>>> upstream/master
     ;;
   "tools" )
     mvn -B install -pl :druid-it-tools
@@ -275,11 +264,7 @@ case $CMD in
   "run" )
     require_category
     reuse_override
-<<<<<<< HEAD
-    mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
-=======
     mvn -B $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
->>>>>>> upstream/master
     ;;
   "test" )
     require_category
@@ -290,11 +275,7 @@ case $CMD in
     # Run the test. On failure, still shut down the cluster.
     # Return Maven's return code as the script's return code.
     set +e
-<<<<<<< HEAD
-    mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
-=======
     mvn -B $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
->>>>>>> upstream/master
     RESULT=$?
     set -e
     $IT_CASES_DIR/cluster.sh down $CATEGORY
