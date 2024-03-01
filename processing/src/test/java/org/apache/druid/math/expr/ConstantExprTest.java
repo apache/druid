@@ -28,13 +28,11 @@ import static org.junit.Assert.assertSame;
 public class ConstantExprTest extends InitializedNullHandlingTest
 {
   @Test
-  public void asd()
+  public void testLongSingleThreadedExpr()
   {
-    // FIXME decide to keep or not
-    LongExpr le = new LongExpr(11L);
-    assertNotSame(le.eval(null), le.eval(null));
-    Expr s = Expr.SingleThreaded.make(le);
-    assertSame(s.eval(null), s.eval(null));
-
+    LongExpr expr = new LongExpr(11L);
+    assertNotSame(expr.eval(null), expr.eval(null));
+    Expr singleExpr = Expr.SingleThreaded.make(expr);
+    assertSame(singleExpr.eval(null), singleExpr.eval(null));
   }
 }
