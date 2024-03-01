@@ -165,6 +165,7 @@ public class AzureAccountConfig
 
   public String getBlobStorageEndpoint()
   {
+    // this is here to support the legacy runtime property.
     if (endpointSuffix != null) {
       return AzureUtils.BLOB + "." + endpointSuffix;
     }
