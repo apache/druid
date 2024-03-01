@@ -185,7 +185,9 @@ public class OverlordResourceTestClient
           HttpMethod.GET,
           StringUtils.format("%s%s", getIndexerURL(), identifier)
       );
-      LOG.debug("Tasks %s response %s", identifier, response.getContent());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Tasks %s response %s", identifier, response.getContent());
+      }
       return jsonMapper.readValue(
           response.getContent(), new TypeReference<List<TaskResponseObject>>()
           {
@@ -204,7 +206,9 @@ public class OverlordResourceTestClient
           HttpMethod.GET,
           StringUtils.format("%stask/%s", getIndexerURL(), StringUtils.urlEncode(taskId))
       );
-      LOG.debug("Task %s response %s", taskId, response.getContent());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Task %s response %s", taskId, response.getContent());
+      }
       return jsonMapper.readValue(
           response.getContent(), new TypeReference<TaskPayloadResponse>()
           {

@@ -595,7 +595,6 @@ public class FrameProcessorExecutor
 
       sb.append("; cancel=").append(finishedFuture.isCancelled() ? "y" : "n");
       sb.append("; done=").append(finishedFuture.isDone() ? "y" : "n");
-
       log.debug(StringUtils.encodeForFormat(sb.toString()));
     }
   }

@@ -31,8 +31,6 @@ import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
@@ -505,14 +503,6 @@ public abstract class ExprEval<T>
       final List<?> theList = val instanceof List ? ((List<?>) val) : Arrays.asList((Object[]) val);
       return bestEffortArray(theList);
     }
-    // handle leaky group by array types
-    if (val instanceof ComparableStringArray) {
-      return new ArrayExprEval(ExpressionType.STRING_ARRAY, ((ComparableStringArray) val).getDelegate());
-    }
-    if (val instanceof ComparableList) {
-      return bestEffortArray(((ComparableList) val).getDelegate());
-    }
-
     // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type
     // knowledge, so lets turn it into a base64 encoded string so at least something downstream can use it by decoding
     // back into bytes

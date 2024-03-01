@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -59,34 +58,17 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
   @Nullable
   private final ImmutableRTree indexedTree;
 
-  private final ColumnConfig columnConfig;
-  private final int numRows;
-
-  public StringUtf8ColumnIndexSupplier(
-      BitmapFactory bitmapFactory,
-      Supplier<TIndexed> utf8Dictionary,
-      @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
-      @Nullable ImmutableRTree indexedTree
-  )
-  {
-    this(bitmapFactory, utf8Dictionary, bitmaps, indexedTree, ColumnConfig.ALWAYS_USE_INDEXES, Integer.MAX_VALUE);
-  }
-
   public StringUtf8ColumnIndexSupplier(
           BitmapFactory bitmapFactory,
           Supplier<TIndexed> utf8Dictionary,
           @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
-          @Nullable ImmutableRTree indexedTree,
-          @Nullable ColumnConfig columnConfig,
-          int numRows
+          @Nullable ImmutableRTree indexedTree
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
     this.utf8Dictionary = utf8Dictionary;
     this.indexedTree = indexedTree;
-    this.columnConfig = columnConfig;
-    this.numRows = numRows;
   }
 
   @Nullable
@@ -129,18 +111,14 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
         return (T) new IndexedStringDruidPredicateIndexes<>(
             bitmapFactory,
             new StringEncodingStrategies.Utf8ToStringIndexed(dict),
-            singleThreadedBitmaps,
-            columnConfig,
-            numRows
+            singleThreadedBitmaps
         );
       } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
         return (T) new IndexedUtf8LexicographicalRangeIndexes<>(
             bitmapFactory,
             dict,
             singleThreadedBitmaps,
-            dict.get(0) == null,
-            columnConfig,
-            numRows
+            dict.get(0) == null
         );
       } else if (
           clazz.equals(DictionaryEncodedStringValueIndex.class) ||

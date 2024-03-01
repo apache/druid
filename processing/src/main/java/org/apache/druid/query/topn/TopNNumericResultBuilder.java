@@ -48,27 +48,6 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
   private final String[] aggFactoryNames;
-  private static final Comparator<Comparable> DIM_VALUE_COMPARATOR = new Comparator<Comparable>()
-  {
-    @Override
-    public int compare(Comparable o1, Comparable o2)
-    {
-      int retval;
-      if (null == o1) {
-        if (null == o2) {
-          retval = 0;
-        } else {
-          retval = -1;
-        }
-      } else if (null == o2) {
-        retval = 1;
-      } else {
-        //noinspection unchecked
-        retval = o1.compareTo(o2);
-      }
-      return retval;
-    }
-  };
   private final int threshold;
   private final Comparator metricComparator;
 
@@ -96,7 +75,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
       if (retVal == 0) {
-        retVal = DIM_VALUE_COMPARATOR.compare(d1.getDimValue(), d2.getDimValue());
+        retVal = d1.getDimType().getNullableStrategy().compare(d1.getDimValue(), d2.getDimValue());
       }
 
       return retVal;
@@ -110,7 +89,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNNumericResultBuilder addEntry(
-      Comparable dimValueObj,
+      Object dimValueObj,
       Object dimValIndex,
       Object[] metricVals
   )
@@ -233,7 +212,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
           if (retVal == 0) {
-            retVal = DIM_VALUE_COMPARATOR.compare(d1.getDimValue(), d2.getDimValue());
+            retVal = d1.getDimType().getNullableStrategy().compare(d1.getDimValue(), d2.getDimValue());
           }
 
           return retVal;
