@@ -787,16 +787,14 @@ public interface Expr extends Cacheable
     );
   }
 
-  public interface SingleThreaded
+  /**
+   * Implementing this interface allows to provide a non-threadsafe {@link Expr} implementation.
+   */
+  interface SingleThreaded
   {
     /**
-     * Returns a possibly less safe version of this expression.
-     *
-     * For top level expressions use {@link Expr#make(Expr)} to
-     * obtain the single-threaded version of the expression tree.
+     * Non-threadsafe of this expression.
      */
     Expr toSingleThreaded();
   }
-
-
 }
