@@ -1229,7 +1229,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
         && sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
-      return sequentialIndexTask.run(toolbox);
+      TaskStatus status = sequentialIndexTask.run(toolbox);
+      completionReports = sequentialIndexTask.getCompletionReports();
+      return status;
     } else {
       String msg = "Task was asked to stop. Finish as failed";
       LOG.info(msg);
