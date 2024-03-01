@@ -90,6 +90,7 @@ public class AnonymousAuthenticator implements Authenticator
       @Override
       public void init(FilterConfig filterConfig)
       {
+
       }
 
       @Override
@@ -103,6 +104,7 @@ public class AnonymousAuthenticator implements Authenticator
       @Override
       public void destroy()
       {
+
       }
     };
   }

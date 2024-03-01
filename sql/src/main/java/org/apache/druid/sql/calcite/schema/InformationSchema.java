@@ -34,6 +34,7 @@ import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Statistic;
@@ -59,11 +60,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-<<<<<<< HEAD
-
-=======
 import java.util.ArrayList;
->>>>>>> upstream/master
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -141,8 +138,6 @@ public class InformationSchema extends AbstractSchema
       .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
       .add("JDBC_TYPE", SqlTypeName.BIGINT)
       .build();
-<<<<<<< HEAD
-=======
   private static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
       .add("ROUTINE_CATALOG", SqlTypeName.VARCHAR)
       .add("ROUTINE_SCHEMA", SqlTypeName.VARCHAR)
@@ -152,7 +147,6 @@ public class InformationSchema extends AbstractSchema
       .add("SIGNATURES", SqlTypeName.VARCHAR, true)
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
->>>>>>> upstream/master
 
   private static final String INFO_TRUE = "YES";
   private static final String INFO_FALSE = "NO";

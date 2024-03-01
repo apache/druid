@@ -31,7 +31,7 @@ public class NullValueHandlingConfig
   public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
 
   //added to preserve backward compatibility
-  //and not count nulls during cardinality aggregation over strings
+  //and not count nulls during cardinality aggrgation over strings
 
   public static final String NULL_HANDLING_DURING_STRING_CARDINALITY = "druid.generic.ignoreNullsForStringCardinality";
 
