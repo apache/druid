@@ -74,7 +74,7 @@ public interface WorkerContext
   DruidNode selfNode();
 
   Bouncer processorBouncer();
-  LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory();
+  DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 
   default File tempDir(int stageNumber, String id)
   {
