@@ -68,7 +68,7 @@ SqlNode DruidSqlReplaceEof() :
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
-    // DruidSqlInsert constructor so that we can return a custom error message.
+    // IngestHandler#validate() so that we can return a custom error message.
     [
       <PARTITIONED> <BY>
       partitionedBy = PartitionGranularity()

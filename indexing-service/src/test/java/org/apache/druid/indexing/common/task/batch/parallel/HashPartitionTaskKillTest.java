@@ -314,7 +314,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         int succedsBeforeFailing
     )
     {
-      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
+      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context, false);
       this.succeedsBeforeFailing = succedsBeforeFailing;
     }
 
