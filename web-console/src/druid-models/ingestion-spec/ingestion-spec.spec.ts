@@ -720,6 +720,7 @@ describe('spec utils', () => {
       expect(guessColumnTypeFromInput([null, 1, 2.1, 3], true)).toEqual('double');
       expect(guessColumnTypeFromInput([null, '1', '2.1', '3'], false)).toEqual('string');
       expect(guessColumnTypeFromInput([null, '1', '2.1', '3'], true)).toEqual('double');
+      expect(guessColumnTypeFromInput([null, '1.0', '2.0', '3.0'], true)).toEqual('double');
     });
 
     it('works for ARRAY<string>', () => {

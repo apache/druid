@@ -230,12 +230,12 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
         final String path = ZKPaths.makePath(basePath, segmentHolder.getSegmentIdentifier());
         final byte[] payload = jsonMapper.writeValueAsBytes(segmentHolder.getChangeRequest());
         curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-        log.debug(
-            "ZKNode created for server to [%s] %s [%s]",
-            basePath,
-            segmentHolder.getAction(),
-            segmentHolder.getSegmentIdentifier()
-        );
+        if (log.isDebugEnabled()) {
+          log.debug(
+              "ZKNode created for server to [%s] %s [%s]",
+              basePath, segmentHolder.getAction(), segmentHolder.getSegmentIdentifier()
+          );
+        }
         final ScheduledFuture<?> nodeDeletedCheck = scheduleNodeDeletedCheck(path);
         final Stat stat = curator.checkExists().usingWatcher(
             (CuratorWatcher) watchedEvent -> {

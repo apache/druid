@@ -63,7 +63,7 @@ SqlGranularityLiteral PartitionGranularity() :
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      granularity = DruidSqlParserUtils.convertSqlNodeToGranularity(e);
       unparseString = e.toString();
     }
   )
@@ -107,14 +107,14 @@ SqlTypeNameSpec DruidType() :
 }
 
 // Parses the supported file formats for export.
-String FileFormat() :
+SqlIdentifier FileFormat() :
 {
   SqlNode format;
 }
 {
   format = SimpleIdentifier()
   {
-    return format.toString();
+    return (SqlIdentifier) format;
   }
 }
 

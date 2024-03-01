@@ -34,18 +34,19 @@
   }
 
   .schema-selector {
-    position: absolute;
-    top: 0;
-
     select {
       border-bottom-right-radius: 0;
       border-bottom-left-radius: 0;
     }
   }
 
+  .search-box {
+    margin: 2px 8px;
+  }
+
   .tree-container {
     position: absolute;
-    top: 40px;
+    top: 78px;
     bottom: 0;
     width: 100%;
     overflow: auto;
@@ -57,11 +58,20 @@
     .highlight {
       animation: druid-glow 1s infinite alternate;
     }
-  }
 
-  .#{$bp-ns}-popover2-target {
-    width: 188px;
-    display: inline-block;
-    cursor: pointer;
+    .#{$bp-ns}-popover2-target {
+      width: 188px;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .message-box {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      text-align: center;
+    }
   }
 }

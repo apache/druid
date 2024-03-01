@@ -17,13 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
+package org.apache.druid.indexing.rabbitstream;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
-/**
- */
-public interface RowOffsetMatcherFactory
+import javax.validation.constraints.NotNull;
+
+// OrderedSequenceNumber.equals() should be used instead.
+@SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
+public class RabbitSequenceNumber extends OrderedSequenceNumber<Long>
 {
-  ValueMatcher makeRowOffsetMatcher(ImmutableBitmap bitmap);
+  private RabbitSequenceNumber(Long sequenceNumber)
+  {
+    super(sequenceNumber, false);
+  }
+
+  public static RabbitSequenceNumber of(Long sequenceNumber)
+  {
+    return new RabbitSequenceNumber(sequenceNumber);
+  }
+
+  @Override
+  public int compareTo(
+      @NotNull OrderedSequenceNumber<Long> o)
+  {
+    return this.get().compareTo(o.get());
+  }
+
 }

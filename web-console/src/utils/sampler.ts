@@ -36,6 +36,7 @@ import {
   DETECTION_TIMESTAMP_SPEC,
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
+  getFlattenSpec,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
@@ -133,7 +134,7 @@ export interface SampleEntry {
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
   return filterMap(sampleResponse.data, d => ({
     ...d.input,
-    ...allowKeys<any>(d.parsed, ALL_POSSIBLE_SYSTEM_FIELDS),
+    ...allowKeys<any>(d.parsed || {}, ALL_POSSIBLE_SYSTEM_FIELDS),
   })).slice(0, 20);
 }
 
@@ -157,7 +158,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
     data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
-  const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
+  const flattenSpec = getFlattenSpec(sampleSpec);
   let inputFormat: InputFormat = { type: 'json', keepNullColumns: true };
   if (flattenSpec) {
     inputFormat = deepSet(inputFormat, 'flattenSpec', flattenSpec);
