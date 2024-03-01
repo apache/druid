@@ -90,7 +90,7 @@ documentation.
 ## PIVOT
 
 :::info
-The PIVOT operator is an [experimental feature](../development/experimental-features.md).
+The PIVOT operator is an [experimental feature](../development/experimental.md).
 :::
 
 The PIVOT operator carries out an aggregation and transforms rows into columns in the output.
@@ -147,7 +147,7 @@ LIMIT 15
 ## UNPIVOT
 
 :::info
-The UNPIVOT operator is an [experimental feature](../development/experimental-features.md).
+The UNPIVOT operator is an [experimental feature](../development/experimental.md).
 :::
 
 The UNPIVOT operator transforms existing column values into rows.
@@ -358,6 +358,12 @@ GROUP BY col1
 ```
 
 With table-level UNION ALL, the rows from the unioned tables are not guaranteed to process in any particular order. They may process in an interleaved fashion. If you need a particular result ordering, use [ORDER BY](#order-by) on the outer query.
+
+To reference such unions a [TABLE(APPEND())](datasource.md#dynamic-table-append) datasource could also be used:
+```sql
+SELECT col1, COUNT(*) from TABLE(APPEND('tbl1', 'tbl2'))
+```
+
 
 ## EXPLAIN PLAN
 

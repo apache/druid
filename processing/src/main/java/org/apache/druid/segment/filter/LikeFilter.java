@@ -24,6 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -201,5 +202,16 @@ public class LikeFilter implements Filter
   public int hashCode()
   {
     return Objects.hash(dimension, extractionFn, likeMatcher, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return new DimFilter.DimFilterToStringBuilder().appendDimension(dimension, extractionFn)
+                                                   .append(" LIKE '")
+                                                   .append(likeMatcher)
+                                                   .append("'")
+                                                   .appendFilterTuning(filterTuning)
+                                                   .build();
   }
 }

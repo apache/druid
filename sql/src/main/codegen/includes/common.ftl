@@ -17,8 +17,7 @@
  * under the License.
  */
 
-// Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
-org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
+SqlGranularityLiteral PartitionGranularity() :
 {
   SqlNode e;
   Granularity granularity;
@@ -52,24 +51,24 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
   |
     <ALL>
     {
-      granularity = Granularities.ALL;
-      unparseString = "ALL";
+          granularity = Granularities.ALL;
+          unparseString = "ALL";
     }
     [
-      <TIME>
-      {
-        unparseString += " TIME";
-      }
+       <TIME>
+       {
+            unparseString += " TIME";
+       }
     ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      granularity = DruidSqlParserUtils.convertSqlNodeToGranularity(e);
       unparseString = e.toString();
     }
   )
   {
-    return new org.apache.druid.java.util.common.Pair(granularity, unparseString);
+    return new SqlGranularityLiteral(granularity, unparseString, getPos());
   }
 }
 
@@ -108,14 +107,14 @@ SqlTypeNameSpec DruidType() :
 }
 
 // Parses the supported file formats for export.
-String FileFormat() :
+SqlIdentifier FileFormat() :
 {
   SqlNode format;
 }
 {
   format = SimpleIdentifier()
   {
-    return format.toString();
+    return (SqlIdentifier) format;
   }
 }
 
