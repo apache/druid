@@ -308,7 +308,7 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlInsert.OPERATOR.getName(),
-          targetDatasource.getType(),
+          targetDatasource.getDestinationName(),
           ingestionGranularity,
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), rootQueryRel.fields),
           null
@@ -405,7 +405,7 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlReplace.OPERATOR.getName(),
-          targetDatasource.getType(),
+          targetDatasource.getDestinationName(),
           ingestionGranularity,
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), rootQueryRel.fields),
           replaceIntervals
