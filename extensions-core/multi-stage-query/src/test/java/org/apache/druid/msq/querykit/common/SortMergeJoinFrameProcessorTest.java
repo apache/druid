@@ -401,7 +401,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         makeFrameWriterFactory(joinSignature),
         "j0.",
         ImmutableList.of(Collections.emptyList(), Collections.emptyList()),
-        new int[]{0},
+        new int[0],
         JoinType.INNER,
         MAX_BUFFERED_BYTES
     );

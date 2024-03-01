@@ -34,6 +34,12 @@ public class SortMergeJoinFrameProcessorFactoryTest
   {
     Assert.assertNotNull(
         SortMergeJoinFrameProcessorFactory.validateCondition(
+            JoinConditionAnalysis.forExpression("1", "j.", ExprMacroTable.nil())
+        )
+    );
+
+    Assert.assertNotNull(
+        SortMergeJoinFrameProcessorFactory.validateCondition(
             JoinConditionAnalysis.forExpression("x == \"j.y\"", "j.", ExprMacroTable.nil())
         )
     );
@@ -86,6 +92,20 @@ public class SortMergeJoinFrameProcessorFactoryTest
         SortMergeJoinFrameProcessorFactory.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\"",
+                "j.",
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableList.of(),
+            ImmutableList.of()
+        ),
+        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+            JoinConditionAnalysis.forExpression(
+                "1",
                 "j.",
                 ExprMacroTable.nil()
             )
@@ -152,6 +172,17 @@ public class SortMergeJoinFrameProcessorFactoryTest
   @Test
   public void test_toRequiredNonNullKeyParts()
   {
+    Assert.assertArrayEquals(
+        new int[0],
+        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+            JoinConditionAnalysis.forExpression(
+                "1",
+                "j.",
+                ExprMacroTable.nil()
+            )
+        )
+    );
+
     Assert.assertArrayEquals(
         new int[]{0},
         SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
