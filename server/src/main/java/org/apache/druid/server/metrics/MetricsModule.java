@@ -210,4 +210,11 @@ public class MetricsModule implements Module
       return new OshiSysMonitor(dimensions);
     }
   }
+
+  @Provides
+  @ManageLifecycle
+  public ServiceStatusMonitor getServiceStatusMonitor()
+  {
+    return new ServiceStatusMonitor();
+  }
 }
