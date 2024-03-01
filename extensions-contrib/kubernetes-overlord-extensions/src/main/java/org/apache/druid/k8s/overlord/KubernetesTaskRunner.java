@@ -52,8 +52,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.k8s.overlord.common.TaskLane;
-import org.apache.druid.k8s.overlord.common.TaskLaneCapacityPolicy;
+import org.apache.druid.indexing.overlord.config.TaskLane;
+import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
 import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -533,7 +533,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       return true;
     }
 
-    long usedSlots = tasks.values()
+    long usedTaskSlots = tasks.values()
                           .stream()
                           .filter(
                               wi -> taskLane.getTaskLabels().contains(wi.getTask().getLabel()))
@@ -541,7 +541,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                           .filter(wi -> !wi.getTask().getId().equals(task.getId()))
                           .count() - taskLaneQueues.get(task.getLabel()).size();
 
-    if (usedSlots >= taskLaneRegistry.getAllowedTaskSlotsCount(task.getLabel())) {
+    if (usedTaskSlots >= taskLaneRegistry.getAllowedTaskSlotsCount(task.getLabel())) {
       return false;
     } else {
       int totalReservedTaskSlots = taskLaneRegistry.getTotalReservedTaskSlots();
@@ -550,14 +550,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         return true;
       }
 
-      long totalUsedReservedUsedTaskSlots =
+      long totalUsedReservedTaskSlots =
           tasks.values()
                .stream()
                .filter(
                    wi -> taskLaneRegistry.getReservedTaskLabels().contains(wi.getTask().getLabel())
                          && !wi.getResult().isDone())
                .count();
-      int toBeReservedTaskSlots = (int) Math.max(0, totalReservedTaskSlots - totalUsedReservedUsedTaskSlots);
+      int toBeReservedTaskSlots = (int) Math.max(0, totalReservedTaskSlots - totalUsedReservedTaskSlots);
       if ((config.getCapacity() - tasks.size()) <= toBeReservedTaskSlots) {
         return false;
       }

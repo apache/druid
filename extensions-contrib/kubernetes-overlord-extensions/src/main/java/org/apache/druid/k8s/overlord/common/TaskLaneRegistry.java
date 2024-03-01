@@ -19,6 +19,9 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import org.apache.druid.indexing.overlord.config.TaskLane;
+import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
