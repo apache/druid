@@ -670,9 +670,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!isCompactionTask) {
-      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
-    }
+    writeCompletionReports(toolbox);
     return taskStatus;
   }
 
@@ -840,9 +838,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!isCompactionTask) {
-      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
-    }
+    writeCompletionReports(toolbox);
     return taskStatus;
   }
 
@@ -940,9 +936,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    if (!isCompactionTask) {
-      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
-    }
+    writeCompletionReports(toolbox);
     return taskStatus;
   }
 
@@ -1265,6 +1259,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             )
         )
     );
+  }
+
+  private void writeCompletionReports(TaskToolbox toolbox)
+  {
+    if (!isCompactionTask) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    }
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
