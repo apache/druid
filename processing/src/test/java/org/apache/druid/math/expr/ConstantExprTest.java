@@ -19,47 +19,21 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import java.util.List;
+import org.junit.Test;
 
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assume.assumeTrue;
 
-@RunWith(Parameterized.class)
 public class ConstantExprTest extends InitializedNullHandlingTest
 {
-
-  private Expr expr;
-
-  @Parameters
-  public static List<Object[]> getParamteres()
-  {
-
-    return ImmutableList.of(
-        new Object[] {new LongExpr(13L)},
-        new Object[] {new DoubleExpr(1.3)}
-    );
-
-  }
-
-  public ConstantExprTest(Expr expr)
-  {
-    this.expr = expr;
-  }
-
   @Test
-  public void testSingleThreaded()
+  public void asd()
   {
-    assumeTrue(expr instanceof Expr.SingleThreaded);
-    assertNotSame(expr.eval(null), expr.eval(null));
-    Expr s = Expr.SingleThreaded.make(expr);
+    // FIXME decide to keep or not
+    LongExpr le = new LongExpr(11L);
+    assertNotSame(le.eval(null), le.eval(null));
+    Expr s = Expr.SingleThreaded.make(le);
     assertSame(s.eval(null), s.eval(null));
 
   }
