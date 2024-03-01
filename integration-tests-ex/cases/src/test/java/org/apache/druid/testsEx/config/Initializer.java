@@ -181,18 +181,13 @@ public class Initializer
 
     @Provides
     @TestClient
-    @LazySingleton
     public HttpClient getHttpClient(
         IntegrationTestingConfig config,
         Lifecycle lifecycle,
         @Client HttpClient delegate
     )
     {
-      if (config.getUsername() != null) {
-        return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);
-      } else {
-        return new CredentialedHttpClient(new BasicCredentials("admin", "priest"), delegate);
-      }
+      return delegate;
     }
 
     @Provides

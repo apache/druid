@@ -19,13 +19,16 @@
 
 package org.apache.druid.grpc.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.GeneratedMessageV3;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.grpc.proto.QueryOuterClass;
 import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
 import org.apache.druid.grpc.proto.QueryOuterClass.DruidType;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryParameter;
@@ -36,8 +39,15 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.QueryLifecycle;
+import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
@@ -49,6 +59,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -56,6 +67,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 
 /**
@@ -66,12 +78,16 @@ import java.util.Optional;
  */
 public class QueryDriver
 {
+  private static final Logger log = new Logger(QueryDriver.class);
+
+  private static final String TIME_FIELD_KEY = "timeFieldKey";
+
   /**
    * Internal runtime exception to report request errors.
    */
   protected static class RequestError extends RE
   {
-    public RequestError(String msg, Object...args)
+    public RequestError(String msg, Object... args)
     {
       super(msg, args);
     }
@@ -79,14 +95,17 @@ public class QueryDriver
 
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
+  private final QueryLifecycleFactory queryLifecycleFactory;
 
   public QueryDriver(
       final ObjectMapper jsonMapper,
-      final SqlStatementFactory sqlStatementFactory
+      final SqlStatementFactory sqlStatementFactory,
+      final QueryLifecycleFactory queryLifecycleFactory
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
+    this.queryLifecycleFactory = queryLifecycleFactory;
   }
 
   /**
@@ -97,16 +116,81 @@ public class QueryDriver
    */
   public QueryResponse submitQuery(QueryRequest request, AuthenticationResult authResult)
   {
+    if (request.getQueryType() == QueryOuterClass.QueryType.NATIVE) {
+      return runNativeQuery(request, authResult);
+    } else {
+      return runSqlQuery(request, authResult);
+    }
+  }
+
+  private QueryResponse runNativeQuery(QueryRequest request, AuthenticationResult authResult)
+  {
+    Query<?> query;
+    try {
+      query = jsonMapper.readValue(request.getQuery(), Query.class);
+    }
+    catch (JsonProcessingException e) {
+      return QueryResponse.newBuilder()
+                          .setQueryId("")
+                          .setStatus(QueryStatus.REQUEST_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
+    }
+    if (Strings.isNullOrEmpty(query.getId())) {
+      query = query.withId(UUID.randomUUID().toString());
+    }
+
+    final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
+
+    final org.apache.druid.server.QueryResponse queryResponse;
+    final String currThreadName = Thread.currentThread().getName();
+    try {
+      queryLifecycle.initialize(query);
+      Access authorizationResult = queryLifecycle.authorize(authResult);
+      if (!authorizationResult.isAllowed()) {
+        throw new ForbiddenException(Access.DEFAULT_ERROR_MESSAGE);
+      }
+      queryResponse = queryLifecycle.execute();
+
+      QueryToolChest queryToolChest = queryLifecycle.getToolChest();
+
+      Sequence<Object[]> sequence = queryToolChest.resultsAsArrays(query, queryResponse.getResults());
+      RowSignature rowSignature = queryToolChest.resultArraySignature(query);
+
+      Thread.currentThread().setName(StringUtils.format("grpc-native[%s]", query.getId()));
+      final ByteString results = encodeNativeResults(request, sequence, rowSignature);
+      return QueryResponse.newBuilder()
+                          .setQueryId(query.getId())
+                          .setStatus(QueryStatus.OK)
+                          .setData(results)
+                          .clearErrorMessage()
+                          .addAllColumns(encodeNativeColumns(rowSignature, request.getSkipColumnsList()))
+                          .build();
+    }
+    catch (IOException | RuntimeException e) {
+      return QueryResponse.newBuilder()
+                          .setQueryId(query.getId())
+                          .setStatus(QueryStatus.RUNTIME_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
+    }
+    finally {
+      Thread.currentThread().setName(currThreadName);
+    }
+  }
+
+  private QueryResponse runSqlQuery(QueryRequest request, AuthenticationResult authResult)
+  {
     final SqlQueryPlus queryPlus;
     try {
       queryPlus = translateQuery(request, authResult);
     }
     catch (RuntimeException e) {
       return QueryResponse.newBuilder()
-          .setQueryId("")
-          .setStatus(QueryStatus.REQUEST_ERROR)
-          .setErrorMessage(e.getMessage())
-          .build();
+                          .setQueryId("")
+                          .setStatus(QueryStatus.REQUEST_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
     }
     final DirectStatement stmt = sqlStatementFactory.directStatement(queryPlus);
     final String currThreadName = Thread.currentThread().getName();
@@ -114,16 +198,16 @@ public class QueryDriver
       Thread.currentThread().setName(StringUtils.format("grpc-sql[%s]", stmt.sqlQueryId()));
       final ResultSet thePlan = stmt.plan();
       final SqlRowTransformer rowTransformer = thePlan.createRowTransformer();
-      final ByteString results = encodeResults(request, thePlan, rowTransformer);
-      stmt.reporter().succeeded(0); // TODO: real byte count (of payload)
+      final ByteString results = encodeSqlResults(request, thePlan.run().getResults(), rowTransformer);
+      stmt.reporter().succeeded(results.size());
       stmt.close();
       return QueryResponse.newBuilder()
-          .setQueryId(stmt.sqlQueryId())
-          .setStatus(QueryStatus.OK)
-          .setData(results)
-          .clearErrorMessage()
-          .addAllColumns(encodeColumns(rowTransformer))
-          .build();
+                          .setQueryId(stmt.sqlQueryId())
+                          .setStatus(QueryStatus.OK)
+                          .setData(results)
+                          .clearErrorMessage()
+                          .addAllColumns(encodeSqlColumns(rowTransformer))
+                          .build();
     }
     catch (ForbiddenException e) {
       stmt.reporter().failed(e);
@@ -134,28 +218,28 @@ public class QueryDriver
       stmt.reporter().failed(e);
       stmt.close();
       return QueryResponse.newBuilder()
-          .setQueryId(stmt.sqlQueryId())
-          .setStatus(QueryStatus.REQUEST_ERROR)
-          .setErrorMessage(e.getMessage())
-          .build();
+                          .setQueryId(stmt.sqlQueryId())
+                          .setStatus(QueryStatus.REQUEST_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
     }
     catch (SqlPlanningException e) {
       stmt.reporter().failed(e);
       stmt.close();
       return QueryResponse.newBuilder()
-          .setQueryId(stmt.sqlQueryId())
-          .setStatus(QueryStatus.INVALID_SQL)
-          .setErrorMessage(e.getMessage())
-          .build();
+                          .setQueryId(stmt.sqlQueryId())
+                          .setStatus(QueryStatus.INVALID_SQL)
+                          .setErrorMessage(e.getMessage())
+                          .build();
     }
     catch (IOException | RuntimeException e) {
       stmt.reporter().failed(e);
       stmt.close();
       return QueryResponse.newBuilder()
-          .setQueryId(stmt.sqlQueryId())
-          .setStatus(QueryStatus.RUNTIME_ERROR)
-          .setErrorMessage(e.getMessage())
-          .build();
+                          .setQueryId(stmt.sqlQueryId())
+                          .setStatus(QueryStatus.RUNTIME_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
     }
     // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
     // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
@@ -165,10 +249,10 @@ public class QueryDriver
       stmt.reporter().failed(e);
       stmt.close();
       return QueryResponse.newBuilder()
-          .setQueryId(stmt.sqlQueryId())
-          .setStatus(QueryStatus.RUNTIME_ERROR)
-          .setErrorMessage(e.getMessage())
-          .build();
+                          .setQueryId(stmt.sqlQueryId())
+                          .setStatus(QueryStatus.RUNTIME_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
     }
     finally {
       Thread.currentThread().setName(currThreadName);
@@ -181,11 +265,11 @@ public class QueryDriver
   private SqlQueryPlus translateQuery(QueryRequest request, AuthenticationResult authResult)
   {
     return SqlQueryPlus.builder()
-        .sql(request.getQuery())
-        .context(translateContext(request))
-        .sqlParameters(translateParameters(request))
-        .auth(authResult)
-        .build();
+                       .sql(request.getQuery())
+                       .context(translateContext(request))
+                       .sqlParameters(translateParameters(request))
+                       .auth(authResult)
+                       .build();
   }
 
   /**
@@ -226,9 +310,6 @@ public class QueryDriver
   private SqlParameter translateParameter(QueryParameter value)
   {
     switch (value.getValueCase()) {
-      case ARRAYVALUE:
-        // Not yet supported: waiting for an open PR
-        return null;
       case DOUBLEVALUE:
         return new SqlParameter(SqlType.DOUBLE, value.getDoubleValue());
       case LONGVALUE:
@@ -238,6 +319,7 @@ public class QueryDriver
       case NULLVALUE:
       case VALUE_NOT_SET:
         return null;
+      case ARRAYVALUE:
       default:
         throw new RequestError("Invalid parameter type: " + value.getValueCase().name());
     }
@@ -249,17 +331,33 @@ public class QueryDriver
    * schema, none of the data formats include a header. This makes the data format
    * simpler and cleaner.
    */
-  private Iterable<? extends ColumnSchema> encodeColumns(SqlRowTransformer rowTransformer)
+  private Iterable<? extends ColumnSchema> encodeSqlColumns(SqlRowTransformer rowTransformer)
   {
     RelDataType rowType = rowTransformer.getRowType();
     final RowSignature signature = RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType);
     List<ColumnSchema> cols = new ArrayList<>();
     for (int i = 0; i < rowType.getFieldCount(); i++) {
       ColumnSchema col = ColumnSchema.newBuilder()
-          .setName(signature.getColumnName(i))
-          .setSqlType(rowType.getFieldList().get(i).getType().getSqlTypeName().getName())
-          .setDruidType(convertDruidType(signature.getColumnType(i)))
-          .build();
+                                     .setName(signature.getColumnName(i))
+                                     .setSqlType(rowType.getFieldList().get(i).getType().getSqlTypeName().getName())
+                                     .setDruidType(convertDruidType(signature.getColumnType(i)))
+                                     .build();
+      cols.add(col);
+    }
+    return cols;
+  }
+
+  private Iterable<? extends ColumnSchema> encodeNativeColumns(RowSignature rowSignature, List<String> skipColumns)
+  {
+    List<ColumnSchema> cols = new ArrayList<>();
+    for (int i = 0; i < rowSignature.getColumnNames().size(); i++) {
+      if (skipColumns.contains(rowSignature.getColumnName(i))) {
+        continue;
+      }
+      ColumnSchema col = ColumnSchema.newBuilder()
+                                     .setName(rowSignature.getColumnName(i))
+                                     .setDruidType(convertDruidType(rowSignature.getColumnType(i)))
+                                     .build();
       cols.add(col);
     }
     return cols;
@@ -310,7 +408,9 @@ public class QueryDriver
   public interface GrpcResultWriter
   {
     void start() throws IOException;
+
     void writeRow(Object[] row) throws IOException;
+
     void close() throws IOException;
   }
 
@@ -319,12 +419,12 @@ public class QueryDriver
    * Note: gRPC does not use the headers: schema information is available in the
    * rRPC response.
    */
-  public static class GrpcResultFormatWriter implements GrpcResultWriter
+  public static class GrpcSqlResultFormatWriter implements GrpcResultWriter
   {
     protected final ResultFormat.Writer formatWriter;
     protected final SqlRowTransformer rowTransformer;
 
-    public GrpcResultFormatWriter(
+    public GrpcSqlResultFormatWriter(
         final ResultFormat.Writer formatWriter,
         final SqlRowTransformer rowTransformer
     )
@@ -363,6 +463,81 @@ public class QueryDriver
     }
   }
 
+  public static class GrpcNativeResultFormatWriter implements GrpcResultWriter
+  {
+    protected final ResultFormat.Writer formatWriter;
+    protected final RowSignature rowSignature;
+    private final String timeFieldName;
+    private final List<String> timeColumns;
+    private final List<String> skipColumns;
+
+    public GrpcNativeResultFormatWriter(
+        final ResultFormat.Writer formatWriter,
+        final RowSignature rowSignature,
+        final String timeFieldName,
+        final List<String> timeColumns,
+        final List<String> skipColumns
+    )
+    {
+      this.formatWriter = formatWriter;
+      this.rowSignature = rowSignature;
+      this.timeFieldName = timeFieldName;
+      this.timeColumns = timeColumns;
+      this.skipColumns = skipColumns;
+    }
+
+    @Override
+    public void start() throws IOException
+    {
+      formatWriter.writeResponseStart();
+    }
+
+    @Override
+    public void writeRow(Object[] row) throws IOException
+    {
+      formatWriter.writeRowStart();
+
+      for (int i = 0; i < rowSignature.getColumnNames().size(); i++) {
+
+        final String columnName = rowSignature.getColumnName(i);
+        if (skipColumns.contains(columnName)) {
+          log.debug("Skipping column [%s] from the result.", columnName);
+          continue;
+        }
+
+        boolean isDruidTimeColumn = columnName.equals(ColumnHolder.TIME_COLUMN_NAME);
+        boolean convertTime = timeColumns.contains(rowSignature.getColumnName(i));
+
+        final Object value;
+        if (formatWriter instanceof ProtobufWriter) {
+          value = ProtobufTransformer.transform(rowSignature, row, i, convertTime);
+        } else {
+          if (convertTime) {
+            value = ISODateTimeFormat.dateTime().print(((long) row[i]));
+          } else {
+            value = row[i];
+          }
+        }
+        final String outputColumnName;
+        if (isDruidTimeColumn) {
+          outputColumnName = timeFieldName;
+        } else {
+          outputColumnName = rowSignature.getColumnName(i);
+        }
+        formatWriter.writeRowField(outputColumnName, value);
+      }
+      formatWriter.writeRowEnd();
+    }
+
+
+    @Override
+    public void close() throws IOException
+    {
+      formatWriter.writeResponseEnd();
+      formatWriter.close();
+    }
+  }
+
   /**
    * Internal runtime exception to pass {@link IOException}s though the
    * {@link Sequence} {@link Accumulator} protocol.
@@ -390,9 +565,8 @@ public class QueryDriver
       this.writer = writer;
     }
 
-    public void push(org.apache.druid.server.QueryResponse<Object[]> queryResponse) throws IOException
+    public void push(Sequence<Object[]> results) throws IOException
     {
-      final Sequence<Object[]> results = queryResponse.getResults();
       writer.start();
       try {
         results.accumulate(null, this);
@@ -422,9 +596,9 @@ public class QueryDriver
    * This version is pretty basic: the results are materialized as a byte array. That's
    * fine for small result sets, but should be rethought for larger result sets.
    */
-  private ByteString encodeResults(
+  private ByteString encodeSqlResults(
       final QueryRequest request,
-      final ResultSet thePlan,
+      final Sequence<Object[]> result,
       final SqlRowTransformer rowTransformer
   ) throws IOException
   {
@@ -435,44 +609,92 @@ public class QueryDriver
     // For the SQL-supported formats, use the SQL-provided writers.
     switch (request.getResultFormat()) {
       case CSV:
-        writer = new GrpcResultFormatWriter(
+        writer = new GrpcSqlResultFormatWriter(
             ResultFormat.CSV.createFormatter(out, jsonMapper),
             rowTransformer
         );
         break;
       case JSON_ARRAY:
-        writer = new GrpcResultFormatWriter(
+        writer = new GrpcSqlResultFormatWriter(
             ResultFormat.ARRAY.createFormatter(out, jsonMapper),
             rowTransformer
         );
         break;
       case JSON_ARRAY_LINES:
-        writer = new GrpcResultFormatWriter(
+        writer = new GrpcSqlResultFormatWriter(
             ResultFormat.ARRAYLINES.createFormatter(out, jsonMapper),
             rowTransformer
         );
         break;
-
-      // TODO: Provide additional writers for the other formats which we
-      // want in gRPC.
-      //case JSON_OBJECT:
-      //  throw new UnsupportedOperationException(); // TODO
-      //case JSON_OBJECT_LINES:
-      //  throw new UnsupportedOperationException(); // TODO
       case PROTOBUF_INLINE:
-        writer = new GrpcResultFormatWriter(
+        writer = new GrpcSqlResultFormatWriter(
             new ProtobufWriter(out, getProtobufClass(request)),
             rowTransformer
         );
         break;
-      // This is the hard one: encode the results as a Protobuf array.
-      case PROTOBUF_RESPONSE:
-        throw new UnsupportedOperationException(); // TODO
       default:
-        throw new RequestError("Unsupported query result format");
+        throw new RequestError("Unsupported query result format: " + request.getResultFormat().name());
     }
     GrpcResultsAccumulator accumulator = new GrpcResultsAccumulator(writer);
-    accumulator.push(thePlan.run());
+    accumulator.push(result);
+    return ByteString.copyFrom(out.toByteArray());
+  }
+
+  private ByteString encodeNativeResults(
+      final QueryRequest request,
+      final Sequence<Object[]> result,
+      final RowSignature rowSignature
+  ) throws IOException
+  {
+    // Accumulate the results as a byte array.
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    GrpcResultWriter writer;
+    final String timeFieldName = request.getContextMap().getOrDefault(TIME_FIELD_KEY, "time");
+    final List<String> skipColumns = request.getSkipColumnsList();
+    final List<String> timeColumns = request.getTimeColumnsList();
+
+    switch (request.getResultFormat()) {
+      case CSV:
+        writer = new GrpcNativeResultFormatWriter(
+            ResultFormat.CSV.createFormatter(out, jsonMapper),
+            rowSignature,
+            timeFieldName,
+            timeColumns,
+            skipColumns
+        );
+        break;
+      case JSON_ARRAY:
+        writer = new GrpcNativeResultFormatWriter(
+            ResultFormat.ARRAY.createFormatter(out, jsonMapper),
+            rowSignature,
+            timeFieldName,
+            timeColumns,
+            skipColumns
+        );
+        break;
+      case JSON_ARRAY_LINES:
+        writer = new GrpcNativeResultFormatWriter(
+            ResultFormat.ARRAYLINES.createFormatter(out, jsonMapper),
+            rowSignature,
+            timeFieldName,
+            timeColumns,
+            skipColumns
+        );
+        break;
+      case PROTOBUF_INLINE:
+        writer = new GrpcNativeResultFormatWriter(
+            new ProtobufWriter(out, getProtobufClass(request)),
+            rowSignature,
+            timeFieldName,
+            timeColumns,
+            skipColumns
+        );
+        break;
+      default:
+        throw new RequestError("Unsupported query result format: " + request.getResultFormat());
+    }
+    GrpcResultsAccumulator accumulator = new GrpcResultsAccumulator(writer);
+    accumulator.push(result);
     return ByteString.copyFrom(out.toByteArray());
   }
 

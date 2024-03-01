@@ -65,8 +65,8 @@ public class GrpcResponseHandlerTest
         queryResult.writeDelimitedTo(out);
       }
       return QueryResponse.newBuilder()
-              .setData(ByteString.copyFrom(out.toByteArray()))
-              .build();
+                          .setData(ByteString.copyFrom(out.toByteArray()))
+                          .build();
     }
     catch (IOException e) {
       throw new RuntimeException(e);

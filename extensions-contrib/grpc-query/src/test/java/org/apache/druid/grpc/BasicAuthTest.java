@@ -22,6 +22,7 @@ package org.apache.druid.grpc;
 import com.google.common.collect.ImmutableMap;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import org.apache.druid.grpc.proto.QueryOuterClass;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
@@ -65,13 +66,14 @@ public class BasicAuthTest
     frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
     QueryDriver driver = new QueryDriver(
         frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory()
+        frameworkFixture.statementFactory(),
+        frameworkFixture.getQueryLifecycleFactory()
     );
     CredentialsValidator validator = new CredentialsValidator()
     {
       @Override
       public AuthenticationResult validateCredentials(String authenticatorName, String authorizerName,
-          String username, char[] password)
+                                                      String username, char[] password)
       {
         if (CalciteTests.TEST_SUPERUSER_NAME.equals(username)) {
           if (!"secret".equals(new String(password))) {
@@ -131,75 +133,80 @@ public class BasicAuthTest
   }
 
   @Test
-  public void testMissingAuth() throws InterruptedException
+  public void testMissingAuth()
   {
     QueryRequest request = QueryRequest.newBuilder()
-        .setQuery("SELECT * FROM foo")
-        .setResultFormat(QueryResultFormat.CSV)
-        .build();
+                                       .setQuery("SELECT * FROM foo")
+                                       .setResultFormat(QueryResultFormat.CSV)
+                                       .setQueryType(QueryOuterClass.QueryType.SQL)
+                                       .build();
 
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST)) {
-      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
+      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.getQueryClient().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
   }
 
   @Test
-  public void testInvalidUser() throws InterruptedException
+  public void testInvalidUser()
   {
     QueryRequest request = QueryRequest.newBuilder()
-        .setQuery("SELECT * FROM foo")
-        .setResultFormat(QueryResultFormat.CSV)
-        .build();
+                                       .setQuery("SELECT * FROM foo")
+                                       .setResultFormat(QueryResultFormat.CSV)
+                                       .setQueryType(QueryOuterClass.QueryType.SQL)
+                                       .build();
 
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "invalid", "pwd")) {
-      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
+      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.getQueryClient().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
   }
 
   @Test
-  public void testInvalidPassword() throws InterruptedException
+  public void testInvalidPassword()
   {
     QueryRequest request = QueryRequest.newBuilder()
-        .setQuery("SELECT * FROM foo")
-        .setResultFormat(QueryResultFormat.CSV)
-        .build();
+                                       .setQuery("SELECT * FROM foo")
+                                       .setResultFormat(QueryResultFormat.CSV)
+                                       .setQueryType(QueryOuterClass.QueryType.SQL)
+                                       .build();
 
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "invalid")) {
-      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
+      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.getQueryClient().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
   }
 
   @Test
-  public void testValidUser() throws InterruptedException
+  public void testValidUser()
   {
     QueryRequest request = QueryRequest.newBuilder()
-        .setQuery("SELECT * FROM foo")
-        .setResultFormat(QueryResultFormat.CSV)
-        .build();
+                                       .setQuery("SELECT * FROM foo")
+                                       .setResultFormat(QueryResultFormat.CSV)
+                                       .setQueryType(QueryOuterClass.QueryType.SQL)
+                                       .build();
 
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "secret")) {
-      QueryResponse response = client.client().submitQuery(request);
+      QueryResponse response = client.getQueryClient().submitQuery(request);
       assertEquals(QueryStatus.OK, response.getStatus());
     }
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
-      QueryResponse response = client.client().submitQuery(request);
+      QueryResponse response = client.getQueryClient().submitQuery(request);
       assertEquals(QueryStatus.OK, response.getStatus());
     }
   }
 
   @Test
-  public void testUnauthorized() throws InterruptedException
+  public void testUnauthorized()
   {
     QueryRequest request = QueryRequest.newBuilder()
-        .setQuery("SELECT * FROM forbiddenDatasource")
-        .setResultFormat(QueryResultFormat.CSV)
-        .build();
+                                       .setQuery("SELECT * FROM forbiddenDatasource")
+                                       .setResultFormat(QueryResultFormat.CSV)
+                                       .setQueryType(QueryOuterClass.QueryType.SQL)
+                                       .build();
 
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
-      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
+      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.getQueryClient().submitQuery(request));
       assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
   }

@@ -17,10 +17,17 @@ syntax = "proto3";
 
 option java_package = "org.apache.druid.grpc.proto";
 
+import "google/protobuf/timestamp.proto";
+
 package druidGrpc;
 
 service Query {
   rpc SubmitQuery (QueryRequest) returns (QueryResponse) {}
+}
+
+enum QueryType {
+  NATIVE = 0;
+  SQL = 1;
 }
 
 // Defines the format of the query results. Must be one of the
@@ -61,16 +68,26 @@ message StringArray {
 }
 
 message QueryRequest {
-  string query = 1;
-  QueryResultFormat resultFormat = 2;
-  map<string, string> context = 3;
+  QueryType queryType = 1;
+  string query = 2;
+  QueryResultFormat resultFormat = 3;
+  map<string, string> context = 4;
   // Query parameters. If your query is SELECT * FROM foo WHERE x = ? AND y > ?
   // Then you would include two parameters in the order in which the question
   // marks lexically appear in the query.
-  repeated QueryParameter parameters = 4;
+  repeated QueryParameter parameters = 5;
   // The name of the Protobuf message to encode the response if the
   // resultFormat is one of the PROTOBUF formats.
-  optional string protobufMessageName = 5;
+  optional string protobufMessageName = 6;
+
+  // used only for native query
+  // columns to skip writing in the result, for example, it can used to skip writing
+  // time field in the result for timeseries query
+  repeated string skipColumns = 7;
+
+  // used only for native query
+  // columns which should be converted to Timestamp
+  repeated string timeColumns = 8;
 }
 
 // Unauthorized errors return as a StatusRuntimeException with

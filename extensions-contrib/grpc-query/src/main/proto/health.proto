@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option java_package = "org.apache.druid.grpc.proto";
+
+package druidGrpc;
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;  // Used only by the Watch method.
+  }
+  ServingStatus status = 1;
+}
+
+service Health {
+  // returns health of the server
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+
+  // streaming health check api. The server will immediately send back a message indicating
+  // the current serving status. It will then subsequently send a new message whenever the
+  // service's serving status changes.
+  rpc Watch(HealthCheckRequest) returns (stream HealthCheckResponse);
+}

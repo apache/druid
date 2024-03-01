@@ -30,3 +30,29 @@ message QueryResult {
   bytes unique_dim1 = 7;
   google.protobuf.Timestamp date = 8;
 }
+
+message NativeQueryResultTimeSeries {
+  int64 timeseries = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
+message NativeQueryResultTimeSeriesSkipTime {
+  int64 timeseries = 1;
+}
+
+message NativeQueryResultGroupby {
+  int64 aggregate = 1;
+  string countryName = 2;
+  google.protobuf.Timestamp date = 3;
+}
+
+message NativeQueryResultGroupbyTimeRenamed {
+  int64 aggregate = 1;
+  string countryName = 2;
+  google.protobuf.Timestamp timeCol = 3;
+}
+
+message NativeQueryResultGroupbyWithoutTime {
+  int64 aggregate = 1;
+  string countryName = 2;
+}

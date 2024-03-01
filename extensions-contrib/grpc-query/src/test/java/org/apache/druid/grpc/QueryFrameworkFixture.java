@@ -21,9 +21,11 @@ package org.apache.druid.grpc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
@@ -45,6 +47,7 @@ import java.io.File;
  */
 public class QueryFrameworkFixture
 {
+
   private final SqlTestFramework queryFramework;
   private final PlannerFixture plannerFixture;
 
@@ -55,7 +58,8 @@ public class QueryFrameworkFixture
     );
     SqlTestFramework.Builder builder = new SqlTestFramework.Builder(componentSupplier)
         .minTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
-        .mergeBufferCount(0);
+        .mergeBufferCount(0)
+        .withOverrideModule(CacheTestHelperModule.ResultCacheMode.DISABLED.makeModule());
     queryFramework = builder.build();
     PlannerComponentSupplier plannerComponentSupplier = new StandardPlannerComponentSupplier();
     AuthConfig authConfig = new AuthConfig();
@@ -74,5 +78,10 @@ public class QueryFrameworkFixture
   public ObjectMapper jsonMapper()
   {
     return queryFramework.queryJsonMapper();
+  }
+
+  public QueryLifecycleFactory getQueryLifecycleFactory()
+  {
+    return queryFramework.queryLifecycleFactory();
   }
 }

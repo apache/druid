@@ -39,8 +39,7 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   @Inject
   public IntegrationTestingConfigEx(
       final ResolvedConfig config,
-      final Properties properties
-  )
+      final Properties properties)
   {
     this.config = config;
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
@@ -320,13 +319,13 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   @Override
   public String getUsername()
   {
-    return (String) config.properties().get("username");
+    return getProperty("username");
   }
 
   @Override
   public String getPassword()
   {
-    return (String) config.properties().get("password");
+    return getProperty("password");
   }
 
   @Override

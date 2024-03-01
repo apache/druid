@@ -25,6 +25,7 @@ import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import org.apache.druid.grpc.proto.HealthOuterClass.HealthCheckResponse.ServingStatus;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -56,6 +57,8 @@ public class QueryServer
   private final QueryDriver driver;
   private Server server;
 
+  private final HealthService healthService;
+
   public QueryServer(
       GrpcQueryConfig config,
       QueryDriver driver,
@@ -65,16 +68,23 @@ public class QueryServer
     this.port = config.getPort();
     this.driver = driver;
     this.authMapper = authMapper;
+    this.healthService = new HealthService();
   }
 
   public void start() throws IOException
   {
     server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
-            .addService(ServerInterceptors.intercept(new QueryService(driver), makeSecurityInterceptor()))
-            .build()
-            .start();
-    log.info("Server started, listening on " + port);
+                 .addService(ServerInterceptors.intercept(new QueryService(driver), makeSecurityInterceptor()))
+                 .addService(healthService)
+                 .build()
+                 .start();
+
+    healthService.registerService(QueryService.class.getSimpleName(), ServingStatus.SERVING);
+    healthService.registerService("", ServingStatus.SERVING);
+
+    log.info("Grpc Server started, listening on " + port);
   }
+
 
   /**
    * Map from a Druid authenticator to a gRPC server interceptor. This is a bit of a hack.
@@ -112,6 +122,8 @@ public class QueryServer
   {
     if (server != null) {
       log.info("Server stopping");
+      healthService.unregisterService(QueryService.class.getSimpleName());
+      healthService.unregisterService("");
       server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
     }
   }
@@ -122,7 +134,9 @@ public class QueryServer
   public void blockUntilShutdown() throws InterruptedException
   {
     if (server != null) {
-      log.info("Server stopping");
+      log.info("Grpc Server stopping");
+      healthService.unregisterService(QueryService.class.getSimpleName());
+      healthService.unregisterService("");
       server.awaitTermination();
     }
   }

@@ -54,6 +54,7 @@ public class TestServer
         config,
         frameworkFixture.jsonMapper(),
         frameworkFixture.statementFactory(),
+        null,
         authMapper
     );
     serverInit.start();

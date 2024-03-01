@@ -23,7 +23,7 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Message;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.grpc.server.QueryDriver.RequestError;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.ResultFormat;
 
 import javax.annotation.Nullable;
@@ -35,12 +35,15 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Implementation of {@code ResultFormat.Writer} for protobuf message.
+ */
 public class ProtobufWriter implements ResultFormat.Writer
 {
   private final OutputStream outputStream;
   private final GeneratedMessageV3 message;
   private Message.Builder rowBuilder;
-  private Map<String, Method> methods = new HashMap<>();
+  private final Map<String, Method> methods = new HashMap<>();
 
 
   public ProtobufWriter(OutputStream outputStream, Class<GeneratedMessageV3> clazz)
@@ -71,6 +74,12 @@ public class ProtobufWriter implements ResultFormat.Writer
   }
 
   @Override
+  public void writeHeaderFromRowSignature(RowSignature rowSignature, boolean b) throws IOException
+  {
+
+  }
+
+  @Override
   public void writeRowStart()
   {
     rowBuilder = message.getDefaultInstanceForType().newBuilderForType();
@@ -83,11 +92,11 @@ public class ProtobufWriter implements ResultFormat.Writer
       return;
     }
     final Descriptors.FieldDescriptor fieldDescriptor =
-              message.getDescriptorForType().findFieldByName(name);
-      // we should throw an exception if fieldDescriptor is null
-      // this means the .proto fields don't match returned column names
+        message.getDescriptorForType().findFieldByName(name);
+    // we should throw an exception if fieldDescriptor is null
+    // this means the .proto fields don't match returned column names
     if (fieldDescriptor == null) {
-      throw new RequestError(
+      throw new QueryDriver.RequestError(
           "Field [%s] not found in Protobuf [%s]",
           name,
           message.getClass()
@@ -96,9 +105,9 @@ public class ProtobufWriter implements ResultFormat.Writer
     final Method method = methods.computeIfAbsent("setField", k -> {
       try {
         return rowBuilder
-                .getClass()
-                .getMethod(
-                        "setField", new Class<?>[]{Descriptors.FieldDescriptor.class, Object.class});
+            .getClass()
+            .getMethod(
+                "setField", new Class<?>[]{Descriptors.FieldDescriptor.class, Object.class});
       }
       catch (NoSuchMethodException e) {
         throw new RuntimeException(e);
@@ -108,7 +117,7 @@ public class ProtobufWriter implements ResultFormat.Writer
       method.invoke(rowBuilder, fieldDescriptor, value);
     }
     catch (IllegalAccessException | InvocationTargetException e) {
-      throw new RequestError(
+      throw new QueryDriver.RequestError(
           "Could not write value [%s] to field [%s]",
           value,
           name

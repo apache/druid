@@ -52,11 +52,7 @@ of which are optional:
 * `docker-compose.py` - Docker compose "template" if generated. The Python template
   format is preferred. (One of the `docker-compose.*` files is required)
 * `verify.sh` - Verify the environment for the cluster. Cloud tests require that a
-<<<<<<< HEAD
-  number of evironment variables be set to pass keys and other setup to tests.
-=======
   number of environment variables be set to pass keys and other setup to tests.
->>>>>>> upstream/master
   (Optional)
 * `setup.sh` - Additional cluster setup, such as populating the "shared" directory
   with test-specific items. (Optional)
@@ -68,11 +64,7 @@ scripts and can thus make use of environment variables already set:
   of scripts and cluster definitions reside.
 * `MODULE_DIR` points to the Maven module folder that contains the test.
 * `CATEGORY` gives the name of the test category.
-<<<<<<< HEAD
-* `DRUID_INTEGRATION_TEST_GROUP` the cluster name. Often the same as `CATEGORY`,
-=======
 * `DRUID_INTEGRATION_TEST_GROUP` is the cluster name. Often the same as `CATEGORY`,
->>>>>>> upstream/master
   but not always.
 
 The `set -e` option is in effect so that an any errors fail the test.

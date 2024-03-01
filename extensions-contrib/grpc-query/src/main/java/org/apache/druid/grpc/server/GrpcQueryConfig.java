@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.Max;
 
+/**
+ * Grpc configs for the extension.
+ */
 public class GrpcQueryConfig
 {
   public static final String CONFIG_BASE = "druid.grpcQuery";

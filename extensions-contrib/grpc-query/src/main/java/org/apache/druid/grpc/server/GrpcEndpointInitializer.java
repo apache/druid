@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 
@@ -62,13 +63,13 @@ public class GrpcEndpointInitializer
       GrpcQueryConfig config,
       final @Json ObjectMapper jsonMapper,
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final AuthenticatorMapper authMapper
-
   )
   {
     this.config = config;
     this.authMapper = authMapper;
-    this.driver = new QueryDriver(jsonMapper, sqlStatementFactory);
+    this.driver = new QueryDriver(jsonMapper, sqlStatementFactory, queryLifecycleFactory);
   }
 
   @LifecycleStart

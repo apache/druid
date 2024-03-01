@@ -23,6 +23,7 @@ import io.grpc.CallCredentials;
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
+import org.apache.druid.grpc.proto.HealthGrpc;
 import org.apache.druid.grpc.proto.QueryGrpc;
 import org.apache.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
 
@@ -36,8 +37,9 @@ import java.util.concurrent.TimeUnit;
 public class TestClient implements AutoCloseable
 {
   public static final String DEFAULT_HOST = "localhost:50051";
-  private ManagedChannel channel;
-  private QueryBlockingStub client;
+  private final ManagedChannel channel;
+  private QueryBlockingStub queryClient;
+  private HealthGrpc.HealthBlockingStub healthCheckClient;
 
   public TestClient(String target)
   {
@@ -59,16 +61,22 @@ public class TestClient implements AutoCloseable
     // For the example we use plaintext insecure credentials to avoid needing TLS certificates. To
     // use TLS, use TlsChannelCredentials instead.
     channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
-        .build();
-    client = QueryGrpc.newBlockingStub(channel);
+                  .build();
+    queryClient = QueryGrpc.newBlockingStub(channel);
+    healthCheckClient = HealthGrpc.newBlockingStub(channel);
     if (callCreds != null) {
-      client = client.withCallCredentials(callCreds);
+      queryClient = queryClient.withCallCredentials(callCreds);
     }
   }
 
-  public QueryBlockingStub client()
+  public QueryBlockingStub getQueryClient()
   {
-    return client;
+    return queryClient;
+  }
+
+  public HealthGrpc.HealthBlockingStub getHealthCheckClient()
+  {
+    return healthCheckClient;
   }
 
   @Override

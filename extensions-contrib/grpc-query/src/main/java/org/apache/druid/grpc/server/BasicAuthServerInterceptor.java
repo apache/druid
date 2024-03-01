@@ -43,7 +43,7 @@ import javax.inject.Inject;
  * Implements the gRPC {@link ServerInterceptor} to wrap the actual RPC
  * call with a step which pulls the "Authorization" header from the request,
  * decodes the user name and password, looks up the user using the
- * @{link {@link BasicHTTPAuthenticator#authenticateJDBCContext(java.util.Map)}
+ * BasicHTTPAuthenticator#authenticateJDBCContext(java.util.Map)
  * method, and attaches the resulting {@link AuthenticationResult} to the call
  * {@link Context}. The gRPC service will later retrieve the auth result to pass
  * into the Driver for use in validating query resources.
@@ -116,7 +116,7 @@ public class BasicAuthServerInterceptor implements ServerInterceptor
       decodedUserSecret = StringUtils.fromUtf8(StringUtils.decodeBase64String(encodedUserSecret));
     }
     catch (IllegalArgumentException iae) {
-      LOG.warn(iae, "Malformed user secret: [%s]", encodedUserSecret);
+      LOG.info("Malformed user secret.");
       throw new StatusRuntimeException(Status.PERMISSION_DENIED);
     }
 
