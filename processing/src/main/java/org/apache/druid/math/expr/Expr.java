@@ -769,9 +769,7 @@ public interface Expr extends Cacheable
    * Returns the single-threaded version of the given expression tree.
    *
    * Nested expressions in the subtree are also optimized.
-   *
-   * {@link Expr}-s which could have a singleThreaded implementation should implement {@link SingleThreaded}.
-   *
+   * Individual {@link Expr}-s which have a singleThreaded implementation via {@link SingleThreaded} are substituted.
    */
   static Expr singleThreaded(Expr expr)
   {
