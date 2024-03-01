@@ -46,7 +46,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -924,7 +923,7 @@ public class StreamAppenderator implements Appenderator
           IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
       );
 
-      // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
+      // dataSegmentPusher retries internally when appropriate; no need for retries here.
       final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
       final long pushFinishTime = System.nanoTime();

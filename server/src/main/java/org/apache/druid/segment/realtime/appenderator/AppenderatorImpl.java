@@ -952,6 +952,8 @@ public class AppenderatorImpl implements Appenderator
       // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
       // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
       // semantics.
+      //
+      // dataSegmentPusher retries internally when appropriate; no need for retries here.
       final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
       if (!isOpenSegments()) {
