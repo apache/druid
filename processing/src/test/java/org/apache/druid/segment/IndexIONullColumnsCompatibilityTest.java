@@ -118,7 +118,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
   @Test
   public void testV9LoaderThatIgnoresmptyColumns() throws IOException
   {
-    QueryableIndex queryableIndex = new V9IndexLoaderExceptEmptyColumns(ColumnConfig.ALWAYS_USE_INDEXES).load(
+    QueryableIndex queryableIndex = new V9IndexLoaderExceptEmptyColumns(ColumnConfig.SELECTION_SIZE).load(
         segmentDir,
         TestHelper.makeJsonMapper(),
         false,

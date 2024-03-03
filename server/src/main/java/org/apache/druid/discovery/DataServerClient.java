@@ -91,7 +91,9 @@ public class DataServerClient
       requestBuilder = requestBuilder.jsonContent(objectMapper, query);
     }
 
-    log.debug("Sending request to servers for query[%s], request[%s]", query.getId(), requestBuilder.toString());
+    if (log.isDebugEnabled()) {
+      log.debug("Sending request to servers for query[%s], request[%s]", query.getId(), requestBuilder);
+    }
     ListenableFuture<InputStream> resultStreamFuture = serviceClient.asyncRequest(
         requestBuilder,
         new DataServerResponseHandler(query, responseContext, objectMapper)

@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.input.table;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
@@ -29,8 +28,6 @@ public class SegmentWithDescriptorTest
   public void testEquals()
   {
     EqualsVerifier.forClass(SegmentWithDescriptor.class)
-                  .withPrefabValues(ObjectMapper.class, new ObjectMapper(), new ObjectMapper())
-                  .withIgnoredFields("loadedSegmentDataProvider")
                   .usingGetClass()
                   .verify();
   }
