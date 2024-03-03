@@ -250,12 +250,12 @@ public abstract class AbstractAuthConfigurationTest
     httpClients = null;
   }
 
-  protected abstract void setupDatasourceOnlyUser() throws Exception;
-  protected abstract void setupDatasourceAndContextParamsUser() throws Exception;
-  protected abstract void setupDatasourceAndSysTableUser() throws Exception;
-  protected abstract void setupDatasourceAndSysAndStateUser() throws Exception;
-  protected abstract void setupSysTableAndStateOnlyUser() throws Exception;
-  protected abstract void setupTestSpecificHttpClients() throws Exception;
+  protected abstract void setupDatasourceOnlyUser();
+  protected abstract void setupDatasourceAndContextParamsUser();
+  protected abstract void setupDatasourceAndSysTableUser();
+  protected abstract void setupDatasourceAndSysAndStateUser();
+  protected abstract void setupSysTableAndStateOnlyUser();
+  protected abstract void setupTestSpecificHttpClients();
   protected abstract String getAuthenticatorName();
   protected abstract String getAuthorizerName();
   protected abstract String getExpectedAvaticaAuthError();

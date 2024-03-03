@@ -74,7 +74,7 @@ public class ProtobufWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeHeaderFromRowSignature(RowSignature rowSignature, boolean b) throws IOException
+  public void writeHeaderFromRowSignature(RowSignature rowSignature, boolean b)
   {
 
   }

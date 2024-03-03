@@ -19,14 +19,11 @@
 
 package org.apache.druid.grpc;
 
-import org.apache.druid.grpc.proto.HealthOuterClass.HealthCheckRequest;
-import org.apache.druid.grpc.proto.HealthOuterClass.HealthCheckResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.server.QueryServer;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -54,15 +51,6 @@ public class GrpcQueryTestClient
                                        .build();
     QueryResponse response = client.getQueryClient().submitQuery(request);
 
-    HealthCheckRequest healthCheckRequest = HealthCheckRequest.newBuilder()
-                                                              .setService(QueryServer.class.getName())
-                                                              .build();
-
-    HealthCheckResponse healthCheckResponse = client
-        .getHealthCheckClient()
-        .check(healthCheckRequest);
-
-    int x = 1;
 
     if (response.getStatus() != QueryStatus.OK) {
       System.err.println("Failed: " + response.getStatus().name());

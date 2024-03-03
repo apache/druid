@@ -151,7 +151,7 @@ public class BasicAuthHelper
       String password,
       String role,
       List<ResourceAction> permissions
-  ) throws Exception
+  )
   {
     createAuthenticationUser(user);
     createAuthorizationUser(user);
