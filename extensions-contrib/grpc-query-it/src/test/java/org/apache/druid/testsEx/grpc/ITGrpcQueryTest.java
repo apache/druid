@@ -21,6 +21,7 @@ package org.apache.druid.testsEx.grpc;
 
 import org.apache.druid.grpc.TestClient;
 import org.apache.druid.grpc.proto.AllTypes.AllTypesQueryResult;
+import org.apache.druid.grpc.proto.QueryOuterClass;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryParameter;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
@@ -68,6 +69,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(SQL)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.CSV)
         .putContext("sqlQueryId", "custom-query-id")
         .build();
@@ -77,18 +79,20 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
     String expected =
         "2023-02-28T12:34:45.000Z,1,12.5,34.5,TABLE_CATALOG\n" +
         "2023-02-28T12:34:45.000Z,2,12.5,34.5,TABLE_SCHEMA\n" +
-        "2023-02-28T12:34:45.000Z,3,12.5,34.5,TABLE_NAME\n";
+        "2023-02-28T12:34:45.000Z,3,12.5,34.5,TABLE_NAME\n\n";
     assertEquals(expected, response.getData().toString(StandardCharsets.UTF_8));
   }
+
   @Test
   public void testBadQuery()
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery("SELECT * FROM unknown")
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.CSV)
         .build();
     QueryResponse response = client.client().submitQuery(request);
-    assertEquals(QueryStatus.INVALID_SQL, response.getStatus());
+    assertEquals(QueryStatus.RUNTIME_ERROR, response.getStatus());
     assertTrue(response.hasErrorMessage());
     assertTrue(response.getQueryId().length() > 5);
     assertFalse(response.hasData());
@@ -99,6 +103,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(SQL)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.JSON_ARRAY_LINES)
         .build();
     QueryResponse response = client.client().submitQuery(request);
@@ -106,7 +111,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
     String expected =
         "[\"2023-02-28T12:34:45.000Z\",1,12.5,34.5,\"TABLE_CATALOG\"]\n" +
         "[\"2023-02-28T12:34:45.000Z\",2,12.5,34.5,\"TABLE_SCHEMA\"]\n" +
-        "[\"2023-02-28T12:34:45.000Z\",3,12.5,34.5,\"TABLE_NAME\"]";
+        "[\"2023-02-28T12:34:45.000Z\",3,12.5,34.5,\"TABLE_NAME\"]\n\n";
     assertEquals(expected, response.getData().toString(StandardCharsets.UTF_8));
   }
 
@@ -115,6 +120,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(SQL)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.JSON_ARRAY)
         .build();
     QueryResponse response = client.client().submitQuery(request);
@@ -143,6 +149,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
         .build();
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(sql)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.CSV)
         .addParameters(0, value)
         .build();
@@ -151,7 +158,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
     String expected =
         "2023-02-28T12:34:45.000Z,1,12.5,34.5,TABLE_CATALOG\n" +
         "2023-02-28T12:34:45.000Z,2,12.5,34.5,TABLE_SCHEMA\n" +
-        "2023-02-28T12:34:45.000Z,3,12.5,34.5,TABLE_NAME\n";
+        "2023-02-28T12:34:45.000Z,3,12.5,34.5,TABLE_NAME\n\n";
     assertEquals(expected, response.getData().toString(StandardCharsets.UTF_8));
   }
 
@@ -160,6 +167,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(SQL)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
         .setProtobufMessageName("com.unknown.BogusClass")
         .build();
@@ -177,6 +185,7 @@ public class ITGrpcQueryTest extends GrpcQueryTestBase
     String sql = StringUtils.replace(SQL, "string_value", "bogus_value");
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(sql)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
         .setProtobufMessageName(AllTypesQueryResult.class.getName())
         .build();

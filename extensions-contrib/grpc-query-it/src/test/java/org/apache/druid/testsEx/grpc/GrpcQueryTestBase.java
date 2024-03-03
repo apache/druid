@@ -23,6 +23,7 @@ import com.google.protobuf.Timestamp;
 import org.apache.druid.grpc.TestClient;
 import org.apache.druid.grpc.client.GrpcResponseHandler;
 import org.apache.druid.grpc.proto.AllTypes.AllTypesQueryResult;
+import org.apache.druid.grpc.proto.QueryOuterClass;
 import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
 import org.apache.druid.grpc.proto.QueryOuterClass.DruidType;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
@@ -62,6 +63,7 @@ public class GrpcQueryTestBase
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(SQL)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.CSV)
         .build();
     QueryResponse response = client.client().submitQuery(request);
@@ -107,6 +109,7 @@ public class GrpcQueryTestBase
   {
     QueryRequest request = QueryRequest.newBuilder()
         .setQuery(SQL)
+        .setQueryType(QueryOuterClass.QueryType.SQL)
         .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
         .setProtobufMessageName(AllTypesQueryResult.class.getName())
         .build();

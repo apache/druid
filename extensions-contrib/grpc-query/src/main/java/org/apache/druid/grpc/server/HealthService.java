@@ -19,6 +19,7 @@
 
 package org.apache.druid.grpc.server;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import io.grpc.Context;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -26,7 +27,6 @@ import org.apache.druid.grpc.proto.HealthGrpc;
 import org.apache.druid.grpc.proto.HealthOuterClass.HealthCheckRequest;
 import org.apache.druid.grpc.proto.HealthOuterClass.HealthCheckResponse;
 import org.apache.druid.grpc.proto.HealthOuterClass.HealthCheckResponse.ServingStatus;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

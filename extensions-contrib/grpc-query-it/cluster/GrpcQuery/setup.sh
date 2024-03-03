@@ -32,7 +32,7 @@
 #       - grpc-query-<version>-test-proto.jar
 
 #set -x
-
+echo "shared dir is $SHARED_DIR"
 EXTENSION_DIR=$SHARED_DIR/extensions
 mkdir -p $EXTENSION_DIR
 

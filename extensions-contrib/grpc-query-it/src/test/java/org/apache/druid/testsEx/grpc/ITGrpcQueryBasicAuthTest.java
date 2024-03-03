@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.apache.druid.grpc.TestClient;
+import org.apache.druid.grpc.proto.QueryOuterClass;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
@@ -160,6 +161,7 @@ public class ITGrpcQueryBasicAuthTest extends GrpcQueryTestBase
     try (TestClient client = new TestClient(GRPC_ENDPOINT, "bogus", "invalid")) {
       QueryRequest request = QueryRequest.newBuilder()
           .setQuery(SQL)
+          .setQueryType(QueryOuterClass.QueryType.SQL)
           .setResultFormat(QueryResultFormat.CSV)
           .build();
       StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
@@ -173,6 +175,7 @@ public class ITGrpcQueryBasicAuthTest extends GrpcQueryTestBase
     try (TestClient client = new TestClient(GRPC_ENDPOINT, ADMIN_USER, "invalid")) {
       QueryRequest request = QueryRequest.newBuilder()
           .setQuery(SQL)
+          .setQueryType(QueryOuterClass.QueryType.SQL)
           .setResultFormat(QueryResultFormat.CSV)
           .build();
       StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
@@ -188,6 +191,7 @@ public class ITGrpcQueryBasicAuthTest extends GrpcQueryTestBase
     try (TestClient client = new TestClient(GRPC_ENDPOINT, USER_BOB, BOB_PASSWORD)) {
       QueryRequest request = QueryRequest.newBuilder()
           .setQuery(SERVERS_SQL)
+          .setQueryType(QueryOuterClass.QueryType.SQL)
           .setResultFormat(QueryResultFormat.CSV)
           .build();
       StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.client().submitQuery(request));
@@ -201,6 +205,7 @@ public class ITGrpcQueryBasicAuthTest extends GrpcQueryTestBase
     try (TestClient client = new TestClient(GRPC_ENDPOINT, USER_ALICE, ALICE_PASSWORD)) {
       QueryRequest request = QueryRequest.newBuilder()
           .setQuery(SERVERS_SQL)
+          .setQueryType(QueryOuterClass.QueryType.SQL)
           .setResultFormat(QueryResultFormat.CSV)
           .build();
       QueryResponse response = client.client().submitQuery(request);

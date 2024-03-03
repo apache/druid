@@ -79,6 +79,11 @@ public class TestClient implements AutoCloseable
     return healthCheckClient;
   }
 
+  public QueryBlockingStub client()
+  {
+    return queryClient;
+  }
+
   @Override
   public void close()
   {
