@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -71,7 +71,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final Injector injector;
   private final IndexIO indexIO;
   private final TaskDataSegmentProvider dataSegmentProvider;
-  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
 
   @GuardedBy("this")
@@ -85,7 +85,7 @@ public class IndexerWorkerContext implements WorkerContext
       final Injector injector,
       final IndexIO indexIO,
       final TaskDataSegmentProvider dataSegmentProvider,
-      final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory,
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       final ServiceClientFactory clientFactory
   )
   {
@@ -93,7 +93,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.injector = injector;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
-    this.loadedSegmentDataProviderFactory = loadedSegmentDataProviderFactory;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.clientFactory = clientFactory;
   }
 
@@ -117,7 +117,7 @@ public class IndexerWorkerContext implements WorkerContext
             segmentCacheManager,
             indexIO
         ),
-        new LoadedSegmentDataProviderFactory(
+        new DataServerQueryHandlerFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
             smileMapper,
@@ -245,7 +245,7 @@ public class IndexerWorkerContext implements WorkerContext
         this,
         indexIO,
         dataSegmentProvider,
-        loadedSegmentDataProviderFactory,
+        dataServerQueryHandlerFactory,
         WorkerMemoryParameters.createProductionInstanceForWorker(injector, queryDef, stageNumber)
     );
   }
@@ -269,9 +269,9 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    return loadedSegmentDataProviderFactory;
+    return dataServerQueryHandlerFactory;
   }
 
   private synchronized OverlordClient makeOverlordClient()
