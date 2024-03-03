@@ -62,7 +62,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         {
           @Override
           public void configure(Binder binder)
-          {}
+          {
+          }
 
           @Override
           public List<? extends Module> getJacksonModules()
