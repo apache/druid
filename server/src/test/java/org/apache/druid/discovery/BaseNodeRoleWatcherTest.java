@@ -19,6 +19,7 @@
 
 package org.apache.druid.discovery;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -32,17 +33,17 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BaseNodeRoleWatcherTest
 {
+  private final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("BaseNodeRoleWatcher");
+
   @Test(timeout = 60_000L)
   public void testGeneralUseSimulation()
   {
-    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(
-        Execs.scheduledSingleThreaded("BaseNodeRoleWatcher"),
-        NodeRole.BROKER
-    );
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER);
 
     DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
     DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
@@ -119,14 +120,75 @@ public class BaseNodeRoleWatcherTest
   @Test(timeout = 60_000L)
   public void testTimeOutAfterInitialization() throws InterruptedException
   {
-    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(
-        Execs.scheduledSingleThreaded("BaseNodeRoleWatcher"),
-        NodeRole.BROKER
-    );
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 1);
     TestListener listener = new TestListener();
     nodeRoleWatcher.registerListener(listener);
-    Thread.sleep(32_000);
+    Thread.sleep(1200);
     Assert.assertTrue(listener.timedOut.get());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRegisterListenerBeforeTimeout() throws InterruptedException
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 3);
+
+    TestListener listener1 = new TestListener();
+    nodeRoleWatcher.registerListener(listener1);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+    DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
+    DiscoveryDruidNode broker3 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker3");
+
+    DiscoveryDruidNode notBroker = new DiscoveryDruidNode(
+        new DruidNode("s3", "h3", false, 8080, null, true, false),
+        NodeRole.COORDINATOR,
+        ImmutableMap.of()
+    );
+
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.childAdded(notBroker);
+    nodeRoleWatcher.childAdded(broker3);
+    nodeRoleWatcher.childRemoved(broker2);
+
+    assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
+
+    Thread.sleep(3100);
+    Assert.assertTrue(listener1.timedOut.get());
+
+    assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of(broker2));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testGetAllNodesBeforeTimeout() throws InterruptedException
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 3);
+
+    TestListener listener1 = new TestListener();
+    nodeRoleWatcher.registerListener(listener1);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+    DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
+    DiscoveryDruidNode broker3 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker3");
+
+    DiscoveryDruidNode notBroker = new DiscoveryDruidNode(
+        new DruidNode("s3", "h3", false, 8080, null, true, false),
+        NodeRole.COORDINATOR,
+        ImmutableMap.of()
+    );
+
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.childAdded(broker2);
+    nodeRoleWatcher.childAdded(notBroker);
+    nodeRoleWatcher.childAdded(broker3);
+    nodeRoleWatcher.childRemoved(broker2);
+
+    assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
+    Assert.assertFalse(listener1.timedOut.get());
+
+    Assert.assertEquals(2, nodeRoleWatcher.getAllNodes().size());
+
+    Assert.assertTrue(listener1.timedOut.get());
+    assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of(broker2));
   }
 
   private DiscoveryDruidNode buildDiscoveryDruidNode(NodeRole role, String host)
