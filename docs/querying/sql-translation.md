@@ -71,7 +71,7 @@ EXPLAIN PLAN statements return:
 - a `RESOURCES` column that describes the resources used in the query
 - an `ATTRIBUTES` column that describes the attributes of the query, including:
   - `statementType`: the SQL statement type
-  - `targetDataSource`: the target datasource in an INSERT or REPLACE statement
+  - `targetDataSource`: a JSON object representing the target datasource in an INSERT or REPLACE statement.
   - `partitionedBy`: the time-based partitioning granularity in an INSERT or REPLACE statement
   - `clusteredBy`: the clustering columns in an INSERT or REPLACE statement
   - `replaceTimeChunks`: the time chunks in a REPLACE statement

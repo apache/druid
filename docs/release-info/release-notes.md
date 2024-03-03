@@ -57,6 +57,12 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### Breaking change
+
+Druid 29 has a breaking change for EXPLAIN queries.
+In the attribute field returned as part of the result for an explain query, the value of the key `targetDataSource` from a string to a JSON object.
+This change is only present in Druid 29 and is not present in earlier or later versions.
+
 ### MSQ export statements (experimental)
 
 Druid 29.0.0 adds experimental support for export statements to the MSQ task engine. This allows query tasks to write data to an external destination through the [`EXTERN` function](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function).
