@@ -106,6 +106,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
+  protected final Map<String, Queue<Runnable>> taskLaneQueues = new ConcurrentHashMap<>();
 
   private final KubernetesPeonClient client;
   private final KubernetesTaskRunnerConfig config;
@@ -116,7 +117,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   // currently worker categories aren't supported, so it's hardcoded.
   protected static final String WORKER_CATEGORY = "_k8s_worker_category";
   private final TaskLaneRegistry taskLaneRegistry;
-  private final Map<String, Queue<Runnable>> taskLaneQueues = new ConcurrentHashMap<>();
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -139,9 +139,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     );
     this.emitter = emitter;
     this.taskLaneRegistry = taskLaneRegistry;
-    this.taskLaneRegistry.getLabelToTaskLanes()
-                         .keySet()
-                         .forEach(label -> taskLaneQueues.put(label, new ConcurrentLinkedQueue<>()));
+    this.taskLaneRegistry.getTaskLabelToLaneMap()
+                         .forEach((label, lane) -> {
+                           // only queue on non-RESERVE task lane
+                           if (lane.getPolicy() != TaskLaneCapacityPolicy.RESERVE) {
+                             taskLaneQueues.put(label, new ConcurrentLinkedQueue<>());
+                           }
+                         });
   }
 
   @Override
@@ -160,17 +164,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     return runTask(task, false);
   }
 
-  private void queueTask(Task task)
-  {
-    Queue<Runnable> queue = taskLaneQueues.get(task.getLabel());
-    queue.offer(() -> runTask(task, true));
-  }
-
   protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
     synchronized (tasks) {
       return tasks.computeIfAbsent(task.getId(), k -> {
-        ListenableFuture<TaskStatus> unused = exec.submit(() -> joinTask(task));
+        exec.submit(() -> joinTask(task));
         return new KubernetesWorkItem(task);
       }).getResult();
     }
@@ -180,6 +178,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     synchronized (tasks) {
       KubernetesWorkItem workItem = tasks.get(task.getId());
+      // Return existing task result if already submitted and not queued
       if (workItem != null && !isQueued) {
         return workItem.getResult();
       }
@@ -197,6 +196,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
       return workItem.getResult();
     }
+  }
+
+  private void queueTask(Task task)
+  {
+    Queue<Runnable> queue = taskLaneQueues.get(task.getLabel());
+    queue.offer(() -> runTask(task, true));
   }
 
   private TaskStatus joinTask(Task task)
@@ -243,7 +248,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       taskStatus = TaskStatus.failure(task.getId(), "Could not start task execution");
       throw new RuntimeException(e);
-    } finally {
+    }
+    finally {
       updateStatus(task, taskStatus);
       runTaskQueues();
     }
@@ -253,9 +259,9 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     taskLaneQueues.values().forEach(
         queue -> {
-          Runnable runnable = queue.poll();
-          if (runnable != null) {
-            runnable.run();
+          Runnable queuedTask = queue.poll();
+          if (queuedTask != null) {
+            queuedTask.run();
           }
         }
     );
@@ -529,40 +535,42 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private boolean isTaskEligibleToRun(Task task)
   {
     TaskLane taskLane = taskLaneRegistry.getTaskLane(task.getLabel());
+    // Tasks with a RESERVE policy or without a specific task lane always eligible to run
     if (taskLane == null || taskLane.getPolicy() == TaskLaneCapacityPolicy.RESERVE) {
       return true;
     }
 
-    long usedTaskSlots = tasks.values()
-                          .stream()
-                          .filter(
-                              wi -> taskLane.getTaskLabels().contains(wi.getTask().getLabel()))
-                          .filter(wi -> !wi.getResult().isDone())
-                          .filter(wi -> !wi.getTask().getId().equals(task.getId()))
-                          .count() - taskLaneQueues.get(task.getLabel()).size();
+    long currentUsedSlots =
+        tasks.values().stream()
+             .filter(wi -> taskLane.getTaskLabels().contains(wi.getTask().getLabel()))
+             .filter(wi -> !wi.getResult().isDone())
+             .filter(wi -> !wi.getTask().getId().equals(task.getId())) // excluding current task itself
+             .count() - taskLaneQueues.get(task.getLabel()).size();
 
-    if (usedTaskSlots >= taskLaneRegistry.getAllowedTaskSlotsCount(task.getLabel())) {
+    if (currentUsedSlots >= taskLaneRegistry.getAllowedTaskSlotsCount(task.getLabel())) {
       return false;
     } else {
-      int totalReservedTaskSlots = taskLaneRegistry.getTotalReservedTaskSlots();
-      if (totalReservedTaskSlots == 0) {
-        // bypass the following check if no reserve task slots needed
+      int totalSlotsForReservedTasks = taskLaneRegistry.getTotalReservedTaskSlots();
+      // Calculate the total slots reserved for tasks. If none are reserved, skip additional checks and accept the task.
+      if (totalSlotsForReservedTasks == 0) {
         return true;
       }
 
-      long totalUsedReservedTaskSlots =
-          tasks.values()
-               .stream()
-               .filter(
-                   wi -> taskLaneRegistry.getReservedTaskLabels().contains(wi.getTask().getLabel())
-                         && !wi.getResult().isDone())
-               .count();
-      int toBeReservedTaskSlots = (int) Math.max(0, totalReservedTaskSlots - totalUsedReservedTaskSlots);
-      if ((config.getCapacity() - tasks.size()) <= toBeReservedTaskSlots) {
-        return false;
-      }
+      return hasSufficientReservedCapacity(totalSlotsForReservedTasks);
     }
+  }
 
-    return true;
+  private boolean hasSufficientReservedCapacity(int totalSlotsForReservedTasks)
+  {
+    long usedSlotsForReservedTasks =
+        tasks.values().stream()
+             .filter(wi -> taskLaneRegistry.getReservedTaskLabels().contains(wi.getTask().getLabel())
+                           && !wi.getResult().isDone()).count();
+    int remainingSlotsForReservedTasks = (int) Math.max(0, totalSlotsForReservedTasks - usedSlotsForReservedTasks);
+    int totalQueuedTasks = taskLaneQueues.values().stream().mapToInt(Queue::size).sum();
+    int totalUnfinishedTasks = (int) tasks.values().stream().filter(wi -> !wi.getResult().isDone()).count();
+    int effectiveCapacity = config.getCapacity() + totalQueuedTasks - totalUnfinishedTasks;
+
+    return remainingSlotsForReservedTasks <= effectiveCapacity;
   }
 }

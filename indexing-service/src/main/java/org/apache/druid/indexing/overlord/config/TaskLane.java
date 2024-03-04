@@ -21,6 +21,15 @@ package org.apache.druid.indexing.overlord.config;
 
 import java.util.Set;
 
+/**
+ * The TaskLane class represents a task lane in a task scheduling environment.
+ * Task lanes are logical divisions of task execution resources, allowing for more granular control over
+ * how tasks are allocated and executed.
+ * Each TaskLane is associated with a set of task labels, a capacity ratio, and a capacity policy.
+ * The task labels define the type of tasks that can be executed in the lane.
+ * The capacity ratio specifies the proportion of the total capacity that this lane is allowed to utilize.
+ * The capacity policy determines how the lane's capacity is managed.
+ */
 public class TaskLane
 {
   private Set<String> taskLabels;

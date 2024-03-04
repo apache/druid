@@ -21,6 +21,8 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -28,9 +30,12 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.config.TaskLane;
+import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -76,7 +81,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private KubernetesPeonClient peonClient;
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
   @Mock private ServiceEmitter emitter;
-  @Mock private TaskLaneRegistry taskLaneRegistry;
+  private TaskLaneRegistry taskLaneRegistry;
 
   private KubernetesTaskRunnerConfig config;
   private KubernetesTaskRunner runner;
@@ -86,10 +91,11 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   public void setup()
   {
     config = KubernetesTaskRunnerConfig.builder()
-        .withCapacity(1)
-        .build();
+                                       .withCapacity(1)
+                                       .build();
 
     task = K8sTestUtils.createTask(ID, 0);
+    taskLaneRegistry = new TaskLaneRegistry(ImmutableMap.of(), config.getCapacity());
 
     runner = new KubernetesTaskRunner(
         taskAdapter,
@@ -251,7 +257,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_run_whenExceptionThrown_throwsRuntimeException() throws IOException
+  public void test_run_whenExceptionThrown_throwsRuntimeException()
+      throws IOException, ExecutionException, InterruptedException
   {
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -272,10 +279,148 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.run(task);
 
-    Exception e = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertTrue(e.getCause() instanceof RuntimeException);
+    TaskStatus taskStatus = future.get();
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertEquals("Could not start task execution", taskStatus.getErrorMsg());
 
     verifyAll();
+  }
+
+  @Test
+  public void test_run_updateStatus() throws ExecutionException, InterruptedException
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        taskLaneRegistry
+    );
+
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task);
+    runner.tasks.put(task.getId(), workItem);
+    TaskStatus completeTaskStatus = TaskStatus.success(task.getId());
+
+    replayAll();
+    runner.updateStatus(task, completeTaskStatus);
+    verifyAll();
+
+    assertTrue(workItem.getResult().isDone());
+    assertEquals(completeTaskStatus, workItem.getResult().get());
+  }
+
+  @Test
+  public void test_run_updateStatus_running()
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        taskLaneRegistry
+    );
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task);
+    runner.tasks.put(task.getId(), workItem);
+    TaskStatus runningTaskStatus = TaskStatus.running(task.getId());
+
+    replayAll();
+    runner.updateStatus(task, runningTaskStatus);
+    verifyAll();
+
+    assertFalse(workItem.getResult().isDone());
+  }
+
+  @Test
+  public void test_run_taskShouldBeQueued_withMaxPolicy()
+  {
+    String taskLabel = "noop";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().withCapacity(10).build();
+    TaskLane taskLane = new TaskLane(ImmutableSet.of(taskLabel), 0.1, TaskLaneCapacityPolicy.MAX);
+    TaskLaneRegistry taskLaneRegistry = new TaskLaneRegistry(
+        ImmutableMap.of(taskLabel, taskLane),
+        config.getCapacity()
+    );
+
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        taskLaneRegistry
+    );
+
+    runner.run(task);
+
+    Task newTask = K8sTestUtils.createTask("newId", 0);
+    runner.run(newTask);
+
+    assertTrue(runner.taskLaneQueues.size() == 1);
+    assertTrue(runner.taskLaneQueues.get(taskLabel).size() == 1);
+  }
+
+  @Test
+  public void test_run_taskShouldNotBeQueued_withReservePolicy()
+  {
+    String taskLabel = "noop";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().withCapacity(10).build();
+    TaskLane taskLane = new TaskLane(ImmutableSet.of(taskLabel), 0.1, TaskLaneCapacityPolicy.RESERVE);
+    TaskLaneRegistry taskLaneRegistry = new TaskLaneRegistry(
+        ImmutableMap.of(taskLabel, taskLane),
+        config.getCapacity()
+    );
+
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        taskLaneRegistry
+    );
+
+    runner.run(task);
+
+    Task newTask = K8sTestUtils.createTask("newId", 0);
+    runner.run(newTask);
+
+    assertTrue(runner.taskLaneQueues.isEmpty());
+  }
+
+  @Test
+  public void test_run_taskShouldBeQueued_withMaxPolicyAndAvailableSlotsReserved()
+  {
+    String taskLabel = "noop";
+    String reservedTaskLabel = "reservedTask";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().withCapacity(10).build();
+    TaskLane taskLane = new TaskLane(ImmutableSet.of(taskLabel), 0.2, TaskLaneCapacityPolicy.MAX);
+    TaskLane reservedTaskLane = new TaskLane(ImmutableSet.of(reservedTaskLabel), 1, TaskLaneCapacityPolicy.RESERVE);
+    TaskLaneRegistry taskLaneRegistry = new TaskLaneRegistry(
+        ImmutableMap.of(taskLabel, taskLane, reservedTaskLabel, reservedTaskLane),
+        config.getCapacity()
+    );
+
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        taskLaneRegistry
+    );
+
+    Task newTask = K8sTestUtils.createTask("newId", 0);
+    runner.run(newTask);
+
+    assertTrue(runner.taskLaneQueues.size() == 1);
+    assertTrue(runner.taskLaneQueues.get(taskLabel).size() == 1);
   }
 
   @Test
@@ -305,7 +450,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_join_whenExceptionThrown_throwsRuntimeException()
+  public void test_join_whenExceptionThrown_throwsRuntimeException() throws ExecutionException, InterruptedException
   {
     EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong())).andThrow(new IllegalStateException());
 
@@ -313,8 +458,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.joinAsync(task);
 
-    Exception e = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertTrue(e.getCause() instanceof RuntimeException);
+    TaskStatus taskStatus = future.get();
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
 
     verifyAll();
   }
