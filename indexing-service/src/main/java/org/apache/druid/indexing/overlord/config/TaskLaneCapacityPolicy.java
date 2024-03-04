@@ -19,6 +19,10 @@
 
 package org.apache.druid.indexing.overlord.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.StringUtils;
+
 /**
  * Enumerates the policies for managing task lane capacities in a task scheduling environment.
  * Task lanes are logical divisions of task execution resources, allowing for more granular control over how tasks are allocated and executed.
@@ -38,5 +42,15 @@ public enum TaskLaneCapacityPolicy
    * This ensures that, regardless of the system's overall load, a predetermined amount of resources is always available for these tasks.
    * It is particularly useful for critical tasks that must have guaranteed resources to prevent delays or failures due to resource contention.
    */
-  RESERVE
+  RESERVE;
+
+  @JsonCreator
+  public static TaskLaneCapacityPolicy fromString(String name)
+  {
+    Preconditions.checkState(
+        name != null,
+        "policy config can not be null"
+    );
+    return valueOf(StringUtils.toUpperCase(name));
+  }
 }

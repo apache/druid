@@ -119,7 +119,8 @@ public class MSQWorkerTask extends AbstractTask
   }
 
   @Override
-  public String getLabel() {
+  public String getLabel()
+  {
     return label;
   }
 

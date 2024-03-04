@@ -19,8 +19,8 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import org.apache.druid.indexing.overlord.config.TaskLane;
 import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
+import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 
 import java.util.Map;
 import java.util.Set;
@@ -28,36 +28,36 @@ import java.util.stream.Collectors;
 
 public class TaskLaneRegistry
 {
-  private final Map<String, TaskLane> taskLabelToLaneMap;
+  private final Map<String, TaskLaneConfig> taskLabelToLaneMap;
   private final int capacity;
   private int totalReservedTaskSlots;
   private final Set<String> reservedTaskLabels;
 
-  public TaskLaneRegistry(Map<String, TaskLane> taskLabelToLaneMap, int capacity)
+  public TaskLaneRegistry(Map<String, TaskLaneConfig> taskLabelToLaneMap, int capacity)
   {
     this.taskLabelToLaneMap = taskLabelToLaneMap;
     this.capacity = capacity;
     totalReservedTaskSlots =
         taskLabelToLaneMap.values().stream()
-                        .filter(lane -> lane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)
-                        .mapToInt(lane -> (int) (capacity * lane.getCapacityRatio()))
-                        .sum();
+                          .filter(lane -> lane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)
+                          .mapToInt(lane -> (int) (capacity * lane.getCapacityRatio()))
+                          .sum();
     reservedTaskLabels =
         taskLabelToLaneMap.values()
-                        .stream()
-                        .filter(lane -> lane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)
-                        .flatMap(lane -> lane.getTaskLabels().stream())
-                        .collect(Collectors.toSet());
+                          .stream()
+                          .filter(lane -> lane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)
+                          .flatMap(lane -> lane.getLabelSet().stream())
+                          .collect(Collectors.toSet());
   }
 
-  public TaskLane getTaskLane(String taskLabel)
+  public TaskLaneConfig getTaskLane(String taskLabel)
   {
     return getTaskLabelToLaneMap().get(taskLabel);
   }
 
   public int getAllowedTaskSlotsCount(String taskLabel)
   {
-    TaskLane taskLane = getTaskLane(taskLabel);
+    TaskLaneConfig taskLane = getTaskLane(taskLabel);
     if (taskLane == null) {
       // return max value when no config TaskLane
       return Integer.MAX_VALUE;
@@ -66,7 +66,7 @@ public class TaskLaneRegistry
     return (int) (taskLane.getCapacityRatio() * capacity);
   }
 
-  public Map<String, TaskLane> getTaskLabelToLaneMap()
+  public Map<String, TaskLaneConfig> getTaskLabelToLaneMap()
   {
     return taskLabelToLaneMap;
   }

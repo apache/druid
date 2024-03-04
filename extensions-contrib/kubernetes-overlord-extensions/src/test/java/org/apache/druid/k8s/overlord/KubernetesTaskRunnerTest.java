@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -34,8 +33,8 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.indexing.overlord.config.TaskLane;
 import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
+import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -339,7 +338,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   {
     String taskLabel = "noop";
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().withCapacity(10).build();
-    TaskLane taskLane = new TaskLane(ImmutableSet.of(taskLabel), 0.1, TaskLaneCapacityPolicy.MAX);
+    TaskLaneConfig taskLane = new TaskLaneConfig(taskLabel, 0.1, TaskLaneCapacityPolicy.MAX);
     TaskLaneRegistry taskLaneRegistry = new TaskLaneRegistry(
         ImmutableMap.of(taskLabel, taskLane),
         config.getCapacity()
@@ -369,7 +368,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   {
     String taskLabel = "noop";
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().withCapacity(10).build();
-    TaskLane taskLane = new TaskLane(ImmutableSet.of(taskLabel), 0.1, TaskLaneCapacityPolicy.RESERVE);
+    TaskLaneConfig taskLane = new TaskLaneConfig(taskLabel, 0.1, TaskLaneCapacityPolicy.RESERVE);
     TaskLaneRegistry taskLaneRegistry = new TaskLaneRegistry(
         ImmutableMap.of(taskLabel, taskLane),
         config.getCapacity()
@@ -399,8 +398,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     String taskLabel = "noop";
     String reservedTaskLabel = "reservedTask";
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().withCapacity(10).build();
-    TaskLane taskLane = new TaskLane(ImmutableSet.of(taskLabel), 0.2, TaskLaneCapacityPolicy.MAX);
-    TaskLane reservedTaskLane = new TaskLane(ImmutableSet.of(reservedTaskLabel), 1, TaskLaneCapacityPolicy.RESERVE);
+    TaskLaneConfig taskLane = new TaskLaneConfig(taskLabel, 0.2, TaskLaneCapacityPolicy.MAX);
+    TaskLaneConfig reservedTaskLane = new TaskLaneConfig(reservedTaskLabel, 1, TaskLaneCapacityPolicy.RESERVE);
     TaskLaneRegistry taskLaneRegistry = new TaskLaneRegistry(
         ImmutableMap.of(taskLabel, taskLane, reservedTaskLabel, reservedTaskLane),
         config.getCapacity()

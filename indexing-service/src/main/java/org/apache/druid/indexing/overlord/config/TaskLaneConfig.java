@@ -21,9 +21,9 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -62,15 +62,18 @@ import java.util.stream.Collectors;
  */
 public class TaskLaneConfig
 {
+  @JsonProperty
   private final String labels;
+  @JsonProperty
   private final double capacityRatio;
-  private final String policy;
+  @JsonProperty
+  private final TaskLaneCapacityPolicy policy;
 
   @JsonCreator
   public TaskLaneConfig(
       @JsonProperty("labels") String labels,
       @JsonProperty("capacityRatio") double capacityRatio,
-      @JsonProperty("policy") String policy
+      @JsonProperty("policy") TaskLaneCapacityPolicy policy
   )
   {
     this.labels = labels;
@@ -91,7 +94,7 @@ public class TaskLaneConfig
   }
 
   @JsonProperty
-  public String getPolicy()
+  public TaskLaneCapacityPolicy getPolicy()
   {
     return policy;
   }
@@ -104,11 +107,6 @@ public class TaskLaneConfig
                  .collect(Collectors.toSet());
   }
 
-  public TaskLaneCapacityPolicy getTaskLaneCapacityPolicy()
-  {
-    return TaskLaneCapacityPolicy.valueOf(StringUtils.toUpperCase(getPolicy()));
-  }
-
   @Override
   public String toString()
   {
@@ -117,5 +115,27 @@ public class TaskLaneConfig
            ", capacityRatio=" + capacityRatio +
            ", policy=" + policy +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskLaneConfig that = (TaskLaneConfig) o;
+    return Double.compare(capacityRatio, that.capacityRatio) == 0 && Objects.equals(
+        labels,
+        that.labels
+    ) && Objects.equals(policy, that.policy);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(labels, capacityRatio, policy);
   }
 }

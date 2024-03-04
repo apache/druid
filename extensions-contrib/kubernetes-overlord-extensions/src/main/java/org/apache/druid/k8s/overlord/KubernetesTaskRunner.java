@@ -39,6 +39,8 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
+import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -52,8 +54,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.indexing.overlord.config.TaskLane;
-import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
 import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -106,7 +106,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
-  protected final Map<String, Queue<Runnable>> taskLaneQueues = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<String, Queue<Runnable>> taskLaneQueues = new ConcurrentHashMap<>();
 
   private final KubernetesPeonClient client;
   private final KubernetesTaskRunnerConfig config;
@@ -168,7 +168,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     synchronized (tasks) {
       return tasks.computeIfAbsent(task.getId(), k -> {
-        exec.submit(() -> joinTask(task));
+        ListenableFuture<TaskStatus> unused = exec.submit(() -> joinTask(task));
         return new KubernetesWorkItem(task);
       }).getResult();
     }
@@ -189,7 +189,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       }
 
       if (isTaskEligibleToRun(task)) {
-        exec.submit(() -> doTask(task, true));
+        ListenableFuture<TaskStatus> unused = exec.submit(() -> doTask(task, true));
       } else {
         queueTask(task);
       }
@@ -534,7 +534,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   private boolean isTaskEligibleToRun(Task task)
   {
-    TaskLane taskLane = taskLaneRegistry.getTaskLane(task.getLabel());
+    TaskLaneConfig taskLane = taskLaneRegistry.getTaskLane(task.getLabel());
     // Tasks with a RESERVE policy or without a specific task lane always eligible to run
     if (taskLane == null || taskLane.getPolicy() == TaskLaneCapacityPolicy.RESERVE) {
       return true;
@@ -542,7 +542,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
     long currentUsedSlots =
         tasks.values().stream()
-             .filter(wi -> taskLane.getTaskLabels().contains(wi.getTask().getLabel()))
+             .filter(wi -> taskLane.getLabelSet().contains(wi.getTask().getLabel()))
              .filter(wi -> !wi.getResult().isDone())
              .filter(wi -> !wi.getTask().getId().equals(task.getId())) // excluding current task itself
              .count() - taskLaneQueues.get(task.getLabel()).size();
