@@ -54,7 +54,7 @@ jobs:
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}

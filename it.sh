@@ -267,6 +267,8 @@ case $CMD in
     mvn -B $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
     ;;
   "test" )
+    echo "running test profile param is $2"
+    echo "module dir is $MODULE_DIR"
     require_category
     build_override
     verify_env_vars
@@ -287,7 +289,8 @@ case $CMD in
     ;;
   "github" )
     set +e
-    $0 test $CATEGORY
+    echo "Maven project is $MAVEN_PROJECT"
+    $0 test $CATEGORY $MAVEN_PROJECT
     RESULT=$?
 
     # Include logs, but only for failures.
