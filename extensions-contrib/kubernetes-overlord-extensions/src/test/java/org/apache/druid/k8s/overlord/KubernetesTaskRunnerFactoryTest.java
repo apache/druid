@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -53,8 +54,8 @@ public class KubernetesTaskRunnerFactoryTest
   private Properties properties;
 
   private DruidKubernetesClient druidKubernetesClient;
+  private TaskLaneRegistry taskLaneRegistry;
   @Mock private ServiceEmitter emitter;
-  @Mock private TaskLaneRegistry taskLaneRegistry;
 
   @Before
   public void setup()
@@ -77,6 +78,7 @@ public class KubernetesTaskRunnerFactoryTest
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     properties = new Properties();
     druidKubernetesClient = new DruidKubernetesClient();
+    taskLaneRegistry = new TaskLaneRegistry(ImmutableMap.of(), kubernetesTaskRunnerConfig.getCapacity());
   }
 
   @Test

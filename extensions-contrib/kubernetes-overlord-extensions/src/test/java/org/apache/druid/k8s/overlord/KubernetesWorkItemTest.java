@@ -80,6 +80,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_shutdown_withKubernetesPeonLifecycle()
   {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task);
+
     kubernetesPeonLifecycle.shutdown();
     EasyMock.expectLastCall();
     kubernetesPeonLifecycle.startWatchingLogs();
