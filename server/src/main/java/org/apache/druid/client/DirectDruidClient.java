@@ -472,7 +472,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             Duration.millis(timeLeft)
         );
       }
-      catch (RuntimeException e) {
+      catch (Exception e) {
         openConnections.getAndDecrement();
         throw e;
       }
