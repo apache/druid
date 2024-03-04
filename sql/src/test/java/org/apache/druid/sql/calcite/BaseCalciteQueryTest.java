@@ -47,6 +47,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -135,6 +137,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
@@ -592,6 +595,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   )
   {
     return join(left, right, rightPrefix, condition, joinType, null);
+  }
+
+  public static UnionDataSource unionDataSource(String... datasources)
+  {
+    List<DataSource> sources = Stream.of(datasources).map(TableDataSource::new).collect(Collectors.toList());
+    return new UnionDataSource(sources);
   }
 
   public static String equalsCondition(DruidExpression left, DruidExpression right)

@@ -153,14 +153,13 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
-    SearchResult userResult;
-    LdapName userDn;
-    Map<String, Object> contextMap = new HashMap<>();
+    final SearchResult userResult;
+    final LdapName userDn;
+    final Map<String, Object> contextMap = new HashMap<>();
+    final LdapUserPrincipal principal = this.cache.getOrExpire(username);
 
-    LdapUserPrincipal principal = this.cache.getOrExpire(username);
-    if (principal != null && principal.hasSameCredentials(password)) {
+    if (principal != null && principal.hasSameCredentials(password, hashGenerator)) {
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, principal.getSearchResult());
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     } else {
       ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
       try {
@@ -208,8 +207,8 @@ public class LDAPCredentialsValidator implements CredentialsValidator
 
       this.cache.put(username, newPrincipal);
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userResult);
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     }
+    return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
   }
 
   /**

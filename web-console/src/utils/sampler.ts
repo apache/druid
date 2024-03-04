@@ -134,7 +134,7 @@ export interface SampleEntry {
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
   return filterMap(sampleResponse.data, d => ({
     ...d.input,
-    ...allowKeys<any>(d.parsed, ALL_POSSIBLE_SYSTEM_FIELDS),
+    ...allowKeys<any>(d.parsed || {}, ALL_POSSIBLE_SYSTEM_FIELDS),
   })).slice(0, 20);
 }
 

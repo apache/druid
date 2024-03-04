@@ -89,6 +89,38 @@ public class IsBooleanFilter implements Filter
               selector.getNumRows()
           );
         }
+
+        @Nullable
+        @Override
+        public <T> T computeBitmapResult(
+            BitmapResultFactory<T> bitmapResultFactory,
+            int selectionRowCount,
+            int totalRowCount,
+            boolean includeUnknown
+        )
+        {
+          if (isTrue) {
+            return baseIndex.computeBitmapResult(
+                bitmapResultFactory,
+                selectionRowCount,
+                totalRowCount,
+                false
+            );
+          }
+
+          final T result = baseIndex.computeBitmapResult(
+              bitmapResultFactory,
+              selectionRowCount,
+              totalRowCount,
+              useThreeValueLogic
+          );
+
+          if (result == null) {
+            return null;
+          }
+
+          return bitmapResultFactory.complement(result, selector.getNumRows());
+        }
       };
     }
     return null;

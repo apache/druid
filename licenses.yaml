@@ -507,7 +507,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.16.0
+version: 1.16.1
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -632,7 +632,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.24.0
+version: 1.26.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -1999,7 +1999,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.53.v20231009
+version: 9.4.54.v20240208
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation

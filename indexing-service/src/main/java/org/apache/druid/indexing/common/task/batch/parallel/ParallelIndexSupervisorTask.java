@@ -202,6 +202,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
+  private Map<String, TaskReport> completionReports;
+  private final Boolean isCompactionTask;
   private Long segmentsRead;
   private Long segmentsPublished;
 
@@ -215,7 +217,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(id, groupId, taskResource, ingestionSchema, null, context);
+    this(id, groupId, taskResource, ingestionSchema, null, context, false);
   }
 
   public ParallelIndexSupervisorTask(
@@ -224,7 +226,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       TaskResource taskResource,
       ParallelIndexIngestionSpec ingestionSchema,
       @Nullable String baseSubtaskSpecName,
-      Map<String, Object> context
+      Map<String, Object> context,
+      Boolean isCompactionTask
   )
   {
     super(
@@ -261,6 +264,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.isCompactionTask = isCompactionTask;
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -292,6 +296,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Map<String, TaskReport> getCompletionReports()
+  {
+    return completionReports;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public String getBaseSubtaskSpecName()
+  {
+    return baseSubtaskSpecName;
   }
 
   @JsonProperty("spec")
@@ -661,10 +679,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
+    writeCompletionReports(toolbox);
     return taskStatus;
   }
 
@@ -762,7 +778,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
 
         // This is for potential debugging in case we suspect bad estimation of cardinalities etc,
-        LOG.debug("intervalToNumShards: %s", intervalToNumShards.toString());
+        LOG.debug("intervalToNumShards: %s", intervalToNumShards);
 
       } else {
         intervalToNumShards = CollectionUtils.mapValues(
@@ -831,10 +847,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
+    writeCompletionReports(toolbox);
     return taskStatus;
   }
 
@@ -931,10 +945,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
+    writeCompletionReports(toolbox);
     return taskStatus;
   }
 
@@ -1223,7 +1235,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
         && sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
-      return sequentialIndexTask.run(toolbox);
+      TaskStatus status = sequentialIndexTask.run(toolbox);
+      completionReports = sequentialIndexTask.getCompletionReports();
+      return status;
     } else {
       String msg = "Task was asked to stop. Finish as failed";
       LOG.info(msg);
@@ -1259,6 +1273,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             )
         )
     );
+  }
+
+  private void writeCompletionReports(TaskToolbox toolbox)
+  {
+    if (!isCompactionTask) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    }
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)

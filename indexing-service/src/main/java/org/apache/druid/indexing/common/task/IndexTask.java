@@ -169,7 +169,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private IngestionState ingestionState;
 
-  private boolean shouldCleanup;
+  // used to specify if indextask.run() is run as a part of another task
+  // skips writing reports and cleanup if not a standalone task
+  private boolean isStandAloneTask;
 
   @MonotonicNonNull
   private ParseExceptionHandler determinePartitionsParseExceptionHandler;
@@ -188,6 +190,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @Nullable
   private String errorMsg;
+
+  private Map<String, TaskReport> completionReports;
 
   @JsonCreator
   public IndexTask(
@@ -222,7 +226,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       IndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       int maxAllowedLockCount,
-      boolean shouldCleanup
+      boolean isStandAloneTask
   )
   {
     super(
@@ -237,7 +241,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.shouldCleanup = shouldCleanup;
+    this.isStandAloneTask = isStandAloneTask;
   }
 
   @Override
@@ -312,6 +316,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
                .collect(Collectors.toSet()) :
            ImmutableSet.of();
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Map<String, TaskReport> getCompletionReports()
+  {
+    return completionReports;
   }
 
   @GET
@@ -556,7 +567,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+      completionReports = getTaskCompletionReports();
+      writeCompletionReports(toolbox);
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -565,6 +577,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     finally {
       toolbox.getChatHandlerProvider().unregister(getId());
+    }
+  }
+
+  private void writeCompletionReports(TaskToolbox toolbox)
+  {
+    if (isStandAloneTask) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
 
@@ -1026,7 +1045,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+        completionReports = getTaskCompletionReports();
+        writeCompletionReports(toolbox);
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -1049,7 +1069,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+        completionReports = getTaskCompletionReports();
+        writeCompletionReports(toolbox);
         return TaskStatus.success(getId());
       }
     }
@@ -1091,7 +1112,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
-    if (shouldCleanup) {
+    if (isStandAloneTask) {
       super.cleanUp(toolbox, taskStatus);
     }
   }

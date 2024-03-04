@@ -108,6 +108,7 @@ exports.SQL_EXPRESSION_PARTS = [
   'YEAR',
   'TIMESTAMP',
   'INTERVAL',
+  'CSV',
 ];
 
 exports.SQL_CONSTANTS = ['NULL', 'FALSE', 'TRUE'];
