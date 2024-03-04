@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -105,7 +106,7 @@ public class TaskLaneConfig
 
   public TaskLaneCapacityPolicy getTaskLaneCapacityPolicy()
   {
-    return TaskLaneCapacityPolicy.valueOf(getPolicy().toUpperCase());
+    return TaskLaneCapacityPolicy.valueOf(StringUtils.toUpperCase(getPolicy()));
   }
 
   @Override

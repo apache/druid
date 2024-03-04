@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
@@ -183,7 +184,7 @@ public class DataSourceMSQDestination implements MSQDestination
   public String getDestinationLabel()
   {
     if (isReplaceTimeChunks()) {
-      return String.format("%s_%s", LABEL, "replace");
+      return StringUtils.format("%s_%s", LABEL, "replace");
     }
     return LABEL;
   }
