@@ -140,7 +140,7 @@ abstract class ConstantExpr<T> implements Expr, Expr.SingleThreadSpecializable
     }
 
     @Override
-    public ExprEval<T> realEval()
+    protected ExprEval<T> realEval()
     {
       return eval;
     }
@@ -188,7 +188,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     // Eval succeeds if the BigInteger is in long range.
     // Callers that need to process out-of-long-range values, like UnaryMinusExpr, must use getLiteralValue().
@@ -236,7 +236,7 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.ofLong(value);
   }
@@ -275,7 +275,7 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.ofLong(null);
   }
@@ -319,7 +319,7 @@ class DoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.ofDouble(value);
   }
@@ -358,7 +358,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.ofDouble(null);
   }
@@ -402,7 +402,7 @@ class StringExpr extends ConstantExpr<String>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.of(value);
   }
@@ -449,7 +449,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.ofArray(outputType, value);
   }
@@ -537,7 +537,7 @@ class ComplexExpr extends ConstantExpr<Object>
   }
 
   @Override
-  public ExprEval realEval()
+  protected ExprEval realEval()
   {
     return ExprEval.ofComplex(outputType, value);
   }
