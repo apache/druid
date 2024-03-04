@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
@@ -119,6 +120,33 @@ public class KubernetesPeonClientTest
     );
   }
 
+  @Test
+  void test_launchPeonJobAndWaitForStart_withPendingPod_throwIllegalStateExceptionn()
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .build();
+
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(POD_NAME)
+        .addToLabels("job-name", KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP(null)
+        .endStatus()
+        .build();
+
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
+
+    Assertions.assertThrows(
+        KubernetesClientTimeoutException.class,
+        () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
+    );
+  }
+  
   @Test
   void test_waitForPeonJobCompletion_withSuccessfulJob_returnsJobResponseWithJobAndSucceededPeonPhase()
   {
