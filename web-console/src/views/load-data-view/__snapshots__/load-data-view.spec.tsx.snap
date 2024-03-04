@@ -181,8 +181,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
           >
             <img
-              alt="Ingestion tile for index_parallel:azure"
-              src="/some/base_url/assets/azure.png"
+              alt="Ingestion tile for index_parallel:azureStorage"
+              src="/some/base_url/assets/azurestorage.png"
             />
             <p>
               Azure Data Lake

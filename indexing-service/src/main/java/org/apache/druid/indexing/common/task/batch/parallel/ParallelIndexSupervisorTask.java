@@ -752,7 +752,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
 
         // This is for potential debugging in case we suspect bad estimation of cardinalities etc,
-        LOG.debug("intervalToNumShards: %s", intervalToNumShards.toString());
+        LOG.debug("intervalToNumShards: %s", intervalToNumShards);
 
       } else {
         intervalToNumShards = CollectionUtils.mapValues(
@@ -1240,7 +1240,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 rowStatsAndUnparseableEvents.lhs,
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap()
             )
         )
     );
@@ -1272,7 +1273,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions(),
         tuningConfig.getMaxColumnsToMerge(),
-        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+        tuningConfig.getNumPersistThreads()
     );
   }
 

@@ -47,6 +47,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -89,11 +91,13 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.ExpressionTestHelper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -121,7 +125,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -134,8 +137,10 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
@@ -592,6 +597,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return join(left, right, rightPrefix, condition, joinType, null);
   }
 
+  public static UnionDataSource unionDataSource(String... datasources)
+  {
+    List<DataSource> sources = Stream.of(datasources).map(TableDataSource::new).collect(Collectors.toList());
+    return new UnionDataSource(sources);
+  }
+
   public static String equalsCondition(DruidExpression left, DruidExpression right)
   {
     return StringUtils.format("(%s == %s)", left.getExpression(), right.getExpression());
@@ -736,6 +747,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void finalizePlanner(PlannerFixture plannerFixture)
   {
     basePlannerComponentSupplier.finalizePlanner(plannerFixture);
+  }
+
+  public void assumeFeatureAvailable(EngineFeature feature)
+  {
+    boolean featureAvailable = queryFramework().engine()
+        .featureAvailable(feature, ExpressionTestHelper.PLANNER_CONTEXT);
+    assumeTrue(StringUtils.format("test disabled; feature [%s] is not available!", feature), featureAvailable);
   }
 
   public void assertQueryIsUnplannable(final String sql, String expectedError)

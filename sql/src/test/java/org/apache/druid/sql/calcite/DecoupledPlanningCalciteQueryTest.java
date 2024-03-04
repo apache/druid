@@ -25,6 +25,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.Rule;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
@@ -35,22 +36,33 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.of(
       PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
-      QueryContexts.ENABLE_DEBUG, true);
+      QueryContexts.ENABLE_DEBUG, true
+  );
 
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    return new QueryTestBuilder(
-        new CalciteTestConfig(CONTEXT_OVERRIDES)
-        {
-          @Override
-          public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
-          {
-            plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
-            return queryFramework().plannerFixture(DecoupledPlanningCalciteQueryTest.this, plannerConfig, authConfig);
-          }
-        })
+    PlannerComponentSupplier componentSupplier = this;
+    CalciteTestConfig testConfig = new CalciteTestConfig(CONTEXT_OVERRIDES)
+    {
+      @Override
+      public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
+      {
+        plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
+        return queryFramework().plannerFixture(componentSupplier, plannerConfig, authConfig);
+      }
+    };
+
+    QueryTestBuilder builder = new QueryTestBuilder(testConfig)
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
+
+    DecoupledTestConfig decTestConfig = queryFrameworkRule.getDescription().getAnnotation(DecoupledTestConfig.class);
+
+    if (decTestConfig != null && decTestConfig.nativeQueryIgnore().isPresent()) {
+      builder.verifyNativeQueries(x -> false);
+    }
+
+    return builder;
   }
 }

@@ -50,11 +50,13 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
@@ -86,6 +88,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A {@link FrameProcessor} that reads one {@link Frame} at a time from a particular segment, writes them
@@ -106,6 +109,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
+  private SegmentsInputSlice handedOffSegments = null;
 
   public ScanQueryFrameProcessor(
       final ScanQuery query,
@@ -192,39 +196,45 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
-      final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
-          segment.fetchRowsFromDataServer(
+      final DataServerQueryResult<Object[]> dataServerQueryResult =
+          dataServerQueryHandler.fetchRowsFromDataServer(
               preparedQuery,
               ScanQueryFrameProcessor::mappingFunction,
               closer
           );
-      if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
-        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.",
-                 segment.getDescriptor());
-        return runWithSegment(segment);
+      handedOffSegments = dataServerQueryResult.getHandedOffSegments();
+      if (!handedOffSegments.getDescriptors().isEmpty()) {
+        log.info(
+            "Query to dataserver for segments found [%d] handed off segments",
+            handedOffSegments.getDescriptors().size()
+        );
       }
-
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
-      Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
-          statusSequencePair.rhs,
-          rowSignature
-      );
+      List<Cursor> cursors = dataServerQueryResult.getResultsYielders().stream().map(yielder -> {
+        Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
+            yielder,
+            rowSignature
+        );
+        closer.register(cursorFromIterable.rhs);
+        return cursorFromIterable.lhs;
+      }).collect(Collectors.toList());
 
-      closer.register(cursorFromIterable.rhs);
-      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable.lhs)));
+      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(cursors));
 
       if (cursorYielder.isDone()) {
         // No cursors!
         cursorYielder.close();
-        return ReturnOrAwait.returnObject(Unit.instance());
+        return ReturnOrAwait.returnObject(handedOffSegments);
       } else {
         final long rowsFlushed = setNextCursor(cursorYielder.get(), null);
-        assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
         closer.register(cursorYielder);
+        if (rowsFlushed > 0) {
+          return ReturnOrAwait.runAgain();
+        }
       }
     }
 
@@ -235,7 +245,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
 
     if (cursor.isDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();
     }

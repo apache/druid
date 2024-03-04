@@ -134,8 +134,9 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
    * @param segmentAvailabilityConfirmationPair   set lhs in the pair to true if you want to confirm that the task waited longer than 0ms for the task to complete.
    *                                              set rhs to true to verify that the segment is actually available.
    * @param inputSourceType     Input source type (eg : s3, gcs, azure)
+   * @return                    The datasource used to test.
    */
-  void doTest(
+  String doTest(
       Pair<String, List<?>> inputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
       String inputSourceType
@@ -200,6 +201,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
           true,
           segmentAvailabilityConfirmationPair
       );
+      return indexDatasource;
     }
   }
 

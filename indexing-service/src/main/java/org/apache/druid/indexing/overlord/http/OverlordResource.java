@@ -469,9 +469,15 @@ public class OverlordResource
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
     }
 
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
     for (String taskId : taskIds) {
-      Optional<TaskStatus> optional = taskStorageQueryAdapter.getStatus(taskId);
+      final Optional<TaskStatus> optional;
+      if (taskQueue.isPresent()) {
+        optional = taskQueue.get().getTaskStatus(taskId);
+      } else {
+        optional = taskStorageQueryAdapter.getStatus(taskId);
+      }
       if (optional.isPresent()) {
         result.put(taskId, optional.get());
       }
@@ -1115,9 +1121,9 @@ public class OverlordResource
   @VisibleForTesting
   Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws UOE
   {
-    final String dataSource = task.getDataSource();
     final Set<ResourceAction> resourceActions = new HashSet<>();
-    resourceActions.add(new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE));
+    java.util.Optional<Resource> destinationResource = task.getDestinationResource();
+    destinationResource.ifPresent(resource -> resourceActions.add(new ResourceAction(resource, Action.WRITE)));
     if (authConfig.isEnableInputSourceSecurity()) {
       resourceActions.addAll(task.getInputSourceResources());
     }

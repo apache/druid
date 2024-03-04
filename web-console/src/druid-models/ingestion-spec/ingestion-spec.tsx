@@ -50,6 +50,7 @@ import {
   getDimensionSpecName,
   getDimensionSpecs,
 } from '../dimension-spec/dimension-spec';
+import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 import type { IndexSpec } from '../index-spec/index-spec';
 import { summarizeIndexSpec } from '../index-spec/index-spec';
 import type { InputFormat } from '../input-format/input-format';
@@ -72,7 +73,7 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 export interface IngestionSpec {
   readonly type: IngestionType;
   readonly spec: IngestionSpecInner;
-  readonly context?: { taskLockType?: 'APPEND' | 'REPLACE' };
+  readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
 }
 
@@ -98,7 +99,7 @@ export type IngestionComboType =
   | 'index_parallel:druid'
   | 'index_parallel:inline'
   | 'index_parallel:s3'
-  | 'index_parallel:azure'
+  | 'index_parallel:azureStorage'
   | 'index_parallel:delta'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
@@ -142,7 +143,7 @@ export function getIngestionComboType(
         case 'druid':
         case 'inline':
         case 's3':
-        case 'azure':
+        case 'azureStorage':
         case 'google':
         case 'hdfs':
           return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
@@ -170,7 +171,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'Amazon S3';
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return 'Azure Data Lake';
 
     case 'index_parallel:delta':
@@ -231,7 +232,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return 'druid-azure-extensions';
 
     case 'index_parallel:delta':
@@ -375,6 +376,51 @@ export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
+export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
+  const inputSource = deepGet(spec, 'spec.ioConfig.inputSource');
+  if (!inputSource) return [];
+  return getPossibleSystemFieldsForInputSource(inputSource);
+}
+
+export function getFlattenSpec(spec: Partial<IngestionSpec>): FlattenSpec | undefined {
+  const inputFormat: InputFormat | undefined = deepGet(spec, 'spec.ioConfig.inputFormat');
+  if (!inputFormat) return;
+  return (
+    (inputFormat.type === 'kafka'
+      ? inputFormat.valueFormat?.flattenSpec
+      : inputFormat.flattenSpec) || undefined
+  );
+}
+
+export function changeFlattenSpec(
+  spec: Partial<IngestionSpec>,
+  flattenSpec: FlattenSpec | undefined,
+): Partial<IngestionSpec> {
+  if (deepGet(spec, 'spec.ioConfig.inputFormat.type') === 'kafka') {
+    return deepSet(spec, 'spec.ioConfig.inputFormat.valueFormat.flattenSpec', flattenSpec);
+  } else {
+    return deepSet(spec, 'spec.ioConfig.inputFormat.flattenSpec', flattenSpec);
+  }
+}
+
+export function getPossibleSystemFieldsForInputSource(inputSource: InputSource): string[] {
+  switch (inputSource.type) {
+    case 's3':
+    case 'google':
+    case 'azureStorage':
+      return ['__file_uri', '__file_bucket', '__file_path'];
+
+    case 'hdfs':
+    case 'local':
+      return ['__file_uri', '__file_path'];
+
+    default:
+      return [];
+  }
+}
+
+export const ALL_POSSIBLE_SYSTEM_FIELDS: string[] = ['__file_uri', '__file_bucket', '__file_path'];
+
 // ---------------------------------
 // Spec cleanup and normalization
 
@@ -413,13 +459,6 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   spec = deepSetIfUnset(spec, 'type', specType);
   spec = deepSetIfUnset(spec, 'spec.ioConfig.type', specType);
   spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
-
-  if (spec.context?.taskLockType !== undefined) {
-    spec.context.taskLockType =
-      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
-        ? 'APPEND'
-        : 'REPLACE';
-  }
 
   return spec as IngestionSpec;
 }
@@ -530,7 +569,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 'delta', 's3', 'azure', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 'delta', 's3', 'azureStorage', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -844,7 +883,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return [
         inputSourceType,
         {
@@ -852,7 +891,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Azure URIs',
           type: 'string-array',
           placeholder:
-            'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+            'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -870,7 +909,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.prefixes',
           label: 'Azure prefixes',
           type: 'string-array',
-          placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+          placeholder:
+            'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -885,7 +925,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.objects',
           label: 'Azure objects',
           type: 'json',
-          placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
+          placeholder: '{"bucket":"your-storage-account", "path":"your-container/some-file.ext"}',
           required: true,
           defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
           info: (
@@ -902,6 +942,21 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         inputSourceFilter,
+        {
+          name: 'inputSource.properties.sharedAccessStorageToken',
+          label: 'Shared Access Storage Token',
+          type: 'string',
+          placeholder: '(sas token)',
+          info: (
+            <>
+              <p>Shared Access Storage Token for this storage account.</p>
+              <p>
+                Note: Inlining the sas token into the ingestion spec can be dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
+            </>
+          ),
+        },
       ];
 
     case 'index_parallel:google':
@@ -1074,28 +1129,88 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           defaultValue: 'kinesis.us-east-1.amazonaws.com',
           suggestions: [
-            'kinesis.us-east-2.amazonaws.com',
-            'kinesis.us-east-1.amazonaws.com',
-            'kinesis.us-west-1.amazonaws.com',
-            'kinesis.us-west-2.amazonaws.com',
-            'kinesis.ap-east-1.amazonaws.com',
-            'kinesis.ap-south-1.amazonaws.com',
-            'kinesis.ap-northeast-3.amazonaws.com',
-            'kinesis.ap-northeast-2.amazonaws.com',
-            'kinesis.ap-southeast-1.amazonaws.com',
-            'kinesis.ap-southeast-2.amazonaws.com',
-            'kinesis.ap-northeast-1.amazonaws.com',
-            'kinesis.ca-central-1.amazonaws.com',
-            'kinesis.cn-north-1.amazonaws.com.com',
-            'kinesis.cn-northwest-1.amazonaws.com.com',
-            'kinesis.eu-central-1.amazonaws.com',
-            'kinesis.eu-west-1.amazonaws.com',
-            'kinesis.eu-west-2.amazonaws.com',
-            'kinesis.eu-west-3.amazonaws.com',
-            'kinesis.eu-north-1.amazonaws.com',
-            'kinesis.sa-east-1.amazonaws.com',
-            'kinesis.us-gov-east-1.amazonaws.com',
-            'kinesis.us-gov-west-1.amazonaws.com',
+            {
+              group: 'US East',
+              suggestions: [
+                'kinesis.us-east-1.amazonaws.com',
+                'kinesis-fips.us-east-1.amazonaws.com',
+                'kinesis.us-east-2.amazonaws.com',
+                'kinesis-fips.us-east-2.amazonaws.com',
+              ],
+            },
+            {
+              group: 'US Gameday Northeast',
+              suggestions: ['kinesis.us-northeast-1.amazonaws.com'],
+            },
+            {
+              group: 'US West',
+              suggestions: [
+                'kinesis.us-west-1.amazonaws.com',
+                'kinesis-fips.us-west-1.amazonaws.com',
+                'kinesis.us-west-2.amazonaws.com',
+                'kinesis-fips.us-west-2.amazonaws.com',
+              ],
+            },
+            { group: 'Africa', suggestions: ['kinesis.af-south-1.amazonaws.com'] },
+            {
+              group: 'Asia Pacific',
+              suggestions: [
+                'kinesis.ap-east-1.amazonaws.com',
+                'kinesis.ap-south-2.amazonaws.com',
+                'kinesis.ap-southeast-3.amazonaws.com',
+                'kinesis.ap-southeast-5.amazonaws.com',
+                'kinesis.ap-southeast-4.amazonaws.com',
+                'kinesis.ap-south-1.amazonaws.com',
+                'kinesis.ap-northeast-3.amazonaws.com',
+                'kinesis.ap-northeast-2.amazonaws.com',
+                'kinesis.ap-southeast-1.amazonaws.com',
+                'kinesis.ap-southeast-2.amazonaws.com',
+                'kinesis.ap-northeast-1.amazonaws.com',
+              ],
+            },
+            {
+              group: 'Canada',
+              suggestions: [
+                'kinesis.ca-central-1.amazonaws.com',
+                'kinesis.ca-west-1.amazonaws.com',
+              ],
+            },
+            {
+              group: 'China',
+              suggestions: [
+                'kinesis.cn-north-1.amazonaws.com.cn',
+                'kinesis.cn-northwest-1.amazonaws.com.cn',
+              ],
+            },
+            {
+              group: 'Europe',
+              suggestions: [
+                'kinesis.eu-central-1.amazonaws.com',
+                'kinesis.eu-west-1.amazonaws.com',
+                'kinesis.eu-west-2.amazonaws.com',
+                'kinesis.eu-south-1.amazonaws.com',
+                'kinesis.eu-west-3.amazonaws.com',
+                'kinesis.eu-south-2.amazonaws.com',
+                'kinesis.eu-north-1.amazonaws.com',
+                'kinesis.eu-central-2.amazonaws.com',
+              ],
+            },
+            { group: 'Israel', suggestions: ['kinesis.il-central-1.amazonaws.com'] },
+            {
+              group: 'Middle East',
+              suggestions: [
+                'kinesis.me-south-1.amazonaws.com',
+                'kinesis.me-central-1.amazonaws.com',
+              ],
+            },
+            { group: 'South America', suggestions: ['kinesis.sa-east-1.amazonaws.com'] },
+            {
+              group: 'AWS GovCloud',
+              suggestions: [
+                'kinesis.us-gov-east-1.amazonaws.com',
+                'kinesis.us-gov-west-1.amazonaws.com',
+              ],
+            },
           ],
           info: (
             <>
@@ -1163,7 +1278,7 @@ export function getIoConfigTuningFormFields(
   switch (ingestionComboType) {
     case 'index_parallel:http':
     case 'index_parallel:s3':
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
     case 'index_parallel:google':
     case 'index_parallel:delta':
     case 'index_parallel:hdfs':
@@ -1440,7 +1555,7 @@ export function guessDataSourceNameFromInputSource(inputSource: InputSource): st
       }
 
     case 's3':
-    case 'azure':
+    case 'azureStorage':
     case 'google': {
       const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
       const uriPath =
@@ -2473,7 +2588,9 @@ function isIntegerOrNull(x: any): boolean {
 
 function isIntegerOrNullAcceptString(x: any): boolean {
   return (
-    x == null || ((typeof x === 'number' || typeof x === 'string') && Number.isInteger(Number(x)))
+    x == null ||
+    (typeof x === 'number' && Number.isInteger(x)) ||
+    (typeof x === 'string' && !x.includes('.') && Number.isInteger(Number(x)))
   );
 }
 

@@ -36,7 +36,7 @@ If you want to append data to a datasource while compaction is running, you need
 
 ### Update the compaction settings with the UI
 
-In the **Compaction config** for a datasource, enable  **Allow concurrent compactions (experimental)**.
+In the **Compaction config** for a datasource, enable  **Use concurrent locks (experimental)**.
 
 For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](../data-management/automatic-compaction.md#web-console).
 
@@ -63,7 +63,7 @@ You can provide the context parameter like any other parameter for ingestion job
 
 ### Add a task lock using the Druid console
 
-As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, enable the following config on the **Publish** step: **Allow concurrent tasks (experimental)**.
+As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, enable the following config on the **Publish** step: **Use concurrent locks (experimental)**.
 
 ### Add the task lock through the API
 

@@ -46,9 +46,6 @@ public class ObjectWriter implements ResultFormat.Writer
     this.serializers = jsonMapper.getSerializerProviderInstance();
     this.jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream);
     this.outputStream = outputStream;
-
-    // Disable automatic JSON termination, so clients can detect truncated responses.
-    jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
   }
 
   @Override
@@ -75,6 +72,12 @@ public class ObjectWriter implements ResultFormat.Writer
   ) throws IOException
   {
     writeHeader(jsonGenerator, rowType, includeTypes, includeSqlTypes);
+  }
+
+  @Override
+  public void writeHeaderFromRowSignature(final RowSignature signature, final boolean includeTypes) throws IOException
+  {
+    writeHeader(jsonGenerator, signature, includeTypes);
   }
 
   @Override
@@ -134,6 +137,34 @@ public class ObjectWriter implements ResultFormat.Writer
               rowType.getFieldList().get(i).getType().getSqlTypeName().getName()
           );
         }
+
+        jsonGenerator.writeEndObject();
+      }
+    }
+
+    jsonGenerator.writeEndObject();
+  }
+
+  static void writeHeader(
+      final JsonGenerator jsonGenerator,
+      final RowSignature signature,
+      final boolean includeTypes
+  ) throws IOException
+  {
+    jsonGenerator.writeStartObject();
+
+    for (int i = 0; i < signature.size(); i++) {
+      jsonGenerator.writeFieldName(signature.getColumnName(i));
+
+      if (!includeTypes) {
+        jsonGenerator.writeNull();
+      } else {
+        jsonGenerator.writeStartObject();
+
+        jsonGenerator.writeStringField(
+            ObjectWriter.TYPE_HEADER_NAME,
+            signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null)
+        );
 
         jsonGenerator.writeEndObject();
       }

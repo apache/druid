@@ -397,7 +397,7 @@ name: JsonPath
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.3.0
+version: 2.9.0
 libraries:
   - com.jayway.jsonpath: json-path
 
@@ -507,7 +507,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.16.0
+version: 1.16.1
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -632,7 +632,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.24.0
+version: 1.26.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -1801,7 +1801,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.0
+version: 2.22.1
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -1999,7 +1999,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.53.v20231009
+version: 9.4.54.v20240208
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2812,6 +2812,16 @@ libraries:
 
 ---
 
+name: com.rabbitmq stream-client
+license_category: binary
+version: 0.9
+module: extensions-contrib/rabbit-stream-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.rabbitmq: stream-client
+
+---
+
 name: swagger-annotations
 version: 1.6.0
 license_category: binary
@@ -3461,7 +3471,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3473,7 +3483,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3485,7 +3495,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
