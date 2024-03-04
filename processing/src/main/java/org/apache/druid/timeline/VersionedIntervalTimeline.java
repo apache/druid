@@ -794,19 +794,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     private final Interval trueInterval;
     private final VersionType version;
     private final PartitionHolder<ObjectType> partitionHolder;
-    private short maxMinorVersion = 0;
-
 
     TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
     {
       this.trueInterval = Preconditions.checkNotNull(trueInterval);
       this.version = Preconditions.checkNotNull(version);
       this.partitionHolder = Preconditions.checkNotNull(partitionHolder);
-      partitionHolder.payloads().forEach(payload -> {
-        if (payload.getMinorVersion() > maxMinorVersion) {
-          maxMinorVersion = payload.getMinorVersion();
-        }
-      });
     }
 
     Interval getTrueInterval()
