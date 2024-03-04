@@ -41,6 +41,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -433,10 +434,10 @@ public class DirectDruidClientTest
   }
 
   @Test
-  public void testRuntimeException() throws JsonProcessingException
+  public void testConnectionCountAfterException() throws JsonProcessingException
   {
     ObjectMapper mockObjectMapper = EasyMock.createMock(ObjectMapper.class);
-    EasyMock.expect(mockObjectMapper.writeValueAsBytes(EasyMock.anyObject()))
+    EasyMock.expect(mockObjectMapper.writeValueAsBytes(Query.class))
             .andThrow(new JsonProcessingException("Error")
             {
             });
