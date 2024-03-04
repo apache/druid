@@ -577,7 +577,7 @@ class K8sTaskAdapterTest
   }
 
   @Test
-  void testEphemeralResourceIsEspected() throws IOException
+  void testCPUResourceIsEspected() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
@@ -610,7 +610,7 @@ class K8sTaskAdapterTest
             config.getCpuCoreInMicro()
         )
     );
-    Job expected = K8sTestUtils.fileToResource("expectedEphemeralOutputResource.yaml", Job.class);
+    Job expected = K8sTestUtils.fileToResource("expectedCPUResourceOutput.yaml", Job.class);
     // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
     // this would never happen in real life, but for the jdk 17 tests this is a problem
     // could be related to: https://bugs.openjdk.org/browse/JDK-8081450
