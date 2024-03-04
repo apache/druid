@@ -42,7 +42,6 @@ import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
-import org.apache.druid.indexing.overlord.config.TaskLane;
 import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
@@ -169,15 +168,10 @@ public class KubernetesOverlordModule implements DruidModule
   )
   {
     List<TaskLaneConfig> taskLanes = runnerConfig.getTaskLanes();
-    Map<String, TaskLane> taskLabelToLaneMap = new HashMap<>();
+    Map<String, TaskLaneConfig> taskLabelToLaneMap = new HashMap<>();
     for (TaskLaneConfig taskLaneConfig : taskLanes) {
       Set<String> labelSet = taskLaneConfig.getLabelSet();
-      TaskLane taskLane = new TaskLane(
-          labelSet,
-          taskLaneConfig.getCapacityRatio(),
-          taskLaneConfig.getTaskLaneCapacityPolicy()
-      );
-      labelSet.forEach(label -> taskLabelToLaneMap.put(label, taskLane));
+      labelSet.forEach(label -> taskLabelToLaneMap.put(label, taskLaneConfig));
     }
 
     return new TaskLaneRegistry(taskLabelToLaneMap, runnerConfig.getCapacity());
