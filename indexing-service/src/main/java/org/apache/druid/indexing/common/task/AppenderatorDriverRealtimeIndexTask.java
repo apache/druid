@@ -621,9 +621,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 errorMsg,
                 errorMsg == null,
                 0L,
-                Collections.emptyMap(),
-                null,
-                null
+                Collections.emptyMap()
             )
         )
     );

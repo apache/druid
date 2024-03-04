@@ -70,9 +70,7 @@ public class TaskReportSerdeTest
             "an error message",
             true,
             1000L,
-            ImmutableMap.of("PartitionA", 5000L),
-            5L,
-            10L
+            ImmutableMap.of("PartitionA", 5000L)
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
@@ -109,47 +107,6 @@ public class TaskReportSerdeTest
     Assert.assertEquals(
         "{\"report\":{\"type\":\"exceptional\"",
         Files.asCharSource(reportFile, StandardCharsets.UTF_8).read()
-    );
-  }
-
-  @Test
-  public void testNegativeEquals()
-  {
-    IngestionStatsAndErrorsTaskReport report = generateReport(ImmutableMap.of("PartitionA", 5000L), 5L, 10L);
-
-    // changed partition stats
-    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionB", 5000L), 5L, 10L), report);
-
-    // changed segements read
-    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionA", 5000L), 1L, 10L), report);
-
-    // changed segements published
-    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionA", 5000L), 5L, 5L), report);
-  }
-
-  private IngestionStatsAndErrorsTaskReport generateReport(
-      Map<String, Long> partitionStats,
-      Long segmentsRead,
-      Long segmentsPublished
-  )
-  {
-    return new IngestionStatsAndErrorsTaskReport(
-        "testID",
-        new IngestionStatsAndErrorsTaskReportData(
-            IngestionState.BUILD_SEGMENTS,
-            ImmutableMap.of(
-                "hello", "world"
-            ),
-            ImmutableMap.of(
-                "number", 1234
-            ),
-            "an error message",
-            true,
-            1000L,
-            partitionStats,
-            segmentsRead,
-            segmentsPublished
-        )
     );
   }
 
