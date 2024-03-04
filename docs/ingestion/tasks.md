@@ -158,10 +158,10 @@ For some task types, the indexing task can wait for the newly ingested segments 
 
 #### Compaction Task Fields
 
-| Field               | Description                                  |
-|---------------------|----------------------------------------------|
-| `segmentsRead`      | # of segments read by a compaction task      |
-| `segmentsPublished` | # of segments published by a compaction task |
+| Field               | Description                                           |
+|---------------------|-------------------------------------------------------|
+| `segmentsRead`      | # of segments read by a parallel compaction task      |
+| `segmentsPublished` | # of segments published by a parallel compaction task |
 
 ### Live report
 

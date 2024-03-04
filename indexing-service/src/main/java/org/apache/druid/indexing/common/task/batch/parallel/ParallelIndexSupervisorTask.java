@@ -42,6 +42,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.ParallelCompactionTaskReportData;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -1260,7 +1261,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
-            new IngestionStatsAndErrorsTaskReportData(
+            isCompactionTask ?
+            new ParallelCompactionTaskReportData(
                 IngestionState.COMPLETED,
                 rowStatsAndUnparseableEvents.rhs,
                 rowStatsAndUnparseableEvents.lhs,
@@ -1270,6 +1272,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 Collections.emptyMap(),
                 segmentsRead,
                 segmentsPublished
+            ) :
+            new IngestionStatsAndErrorsTaskReportData(
+                IngestionState.COMPLETED,
+                rowStatsAndUnparseableEvents.rhs,
+                rowStatsAndUnparseableEvents.lhs,
+                taskStatus.getErrorMsg(),
+                segmentAvailabilityConfirmed,
+                segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap()
             )
         )
     );
