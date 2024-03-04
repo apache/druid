@@ -74,7 +74,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   @Override
   public int numRows()
   {
-    return getRealRAC().numRows();
+    return storageAdapter.getNumRows();
   }
 
   @Override

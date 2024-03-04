@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -35,6 +36,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import static org.junit.Assume.assumeTrue;
 
 public class ClusteredGroupPartitionerTest extends SemanticTestBase
 {
@@ -132,6 +135,8 @@ public class ClusteredGroupPartitionerTest extends SemanticTestBase
   @Test
   public void testDefaultClusteredGroupPartitionerWithNulls()
   {
+    assumeTrue("testcase only enabled in sqlCompatible mode", NullHandling.sqlCompatible());
+
     RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
             "sorted", new ObjectArrayColumn(new Object[]{null, null, null, 1, 1, 2, 4, 4, 4}, ColumnType.LONG),
