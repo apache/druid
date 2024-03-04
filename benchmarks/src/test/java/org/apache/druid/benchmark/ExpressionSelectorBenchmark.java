@@ -541,7 +541,7 @@ public class ExpressionSelectorBenchmark
             ImmutableList.of(
                 new ExpressionVirtualColumn(
                     "v",
-                    "case_searched(s == 'asd' || isnull(s) || n == 1, 1, " + caseBranches.toString() + " 3)",
+                    "case_searched(s == 'asd' || isnull(s) || n == 1, 1, " + caseBranches + " 3)",
                     ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
