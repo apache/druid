@@ -21,7 +21,6 @@ on:
       - 'dev/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
-      - 'helm/**'
       - 'web-console/**'
       - 'website/**'
     branches:
@@ -34,7 +33,6 @@ on:
       - 'dev/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
-      - 'helm/**'
       - 'web-console/**'
       - 'website/**'
     branches:
