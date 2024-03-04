@@ -118,16 +118,6 @@ public class BaseNodeRoleWatcherTest
   }
 
   @Test(timeout = 60_000L)
-  public void testTimeOutAfterInitialization() throws InterruptedException
-  {
-    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 1);
-    TestListener listener = new TestListener();
-    nodeRoleWatcher.registerListener(listener);
-    Thread.sleep(1200);
-    Assert.assertTrue(listener.timedOut.get());
-  }
-
-  @Test(timeout = 60_000L)
   public void testRegisterListenerBeforeTimeout() throws InterruptedException
   {
     BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 3);
@@ -153,7 +143,7 @@ public class BaseNodeRoleWatcherTest
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
 
     Thread.sleep(3100);
-    Assert.assertTrue(listener1.timedOut.get());
+    assertListenerTimedOut(listener1);
 
     assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
@@ -187,7 +177,7 @@ public class BaseNodeRoleWatcherTest
 
     Assert.assertEquals(2, nodeRoleWatcher.getAllNodes().size());
 
-    Assert.assertTrue(listener1.timedOut.get());
+    assertListenerTimedOut(listener1);
     assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
 
@@ -200,11 +190,35 @@ public class BaseNodeRoleWatcherTest
     );
   }
 
-  private void assertListener(TestListener listener, boolean nodeViewInitialized, List<DiscoveryDruidNode> nodesAdded, List<DiscoveryDruidNode> nodesRemoved)
+  private void assertListenerTimedOut(TestListener listener)
   {
-    Assert.assertEquals(nodeViewInitialized, listener.nodeViewInitialized.get());
-    Assert.assertEquals(nodesAdded, listener.nodesAddedList);
-    Assert.assertEquals(nodesRemoved, listener.nodesRemovedList);
+    try {
+      exec.submit(() -> {
+        Assert.assertTrue(listener.timedOut.get());
+      }).get();
+    }
+    catch (Exception e) {
+      Assert.fail();
+    }
+  }
+
+  private void assertListener(
+      TestListener listener,
+      boolean nodeViewInitialized,
+      List<DiscoveryDruidNode> nodesAdded,
+      List<DiscoveryDruidNode> nodesRemoved
+  )
+  {
+    try {
+      exec.submit(() -> {
+        Assert.assertEquals(nodeViewInitialized, listener.nodeViewInitialized.get());
+        Assert.assertEquals(nodesAdded, listener.nodesAddedList);
+        Assert.assertEquals(nodesRemoved, listener.nodesRemovedList);
+      }).get();
+    }
+    catch (Exception e) {
+      Assert.fail();
+    }
   }
 
   public static class TestListener implements DruidNodeDiscovery.Listener
