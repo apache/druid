@@ -26,7 +26,6 @@ import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
@@ -94,7 +93,7 @@ public class KubernetesPeonClientTest
   }
 
   @Test
-  void test_launchPeonJobAndWaitForStart_withDisappearingPod_throwsKubernetesClientTimeoutException()
+  void test_launchPeonJobAndWaitForStart_withDisappearingPod_throwIllegalStateExceptionn()
   {
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -115,7 +114,7 @@ public class KubernetesPeonClientTest
         ).once();
 
     Assertions.assertThrows(
-        KubernetesClientTimeoutException.class,
+        IllegalStateException.class,
         () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
     );
   }

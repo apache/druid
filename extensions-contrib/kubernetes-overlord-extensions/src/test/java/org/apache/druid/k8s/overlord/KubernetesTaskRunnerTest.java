@@ -75,6 +75,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private KubernetesPeonClient peonClient;
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
   @Mock private ServiceEmitter emitter;
+  @Mock private ListenableFuture<TaskStatus> statusFuture;
 
   private KubernetesTaskRunnerConfig config;
   private KubernetesTaskRunner runner;
@@ -330,16 +331,35 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_shutdown_withExistingTask_removesTaskFromMap()
   {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null) {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, statusFuture) {
       @Override
       protected synchronized void shutdown()
       {
       }
     };
-
+    EasyMock.expect(statusFuture.isDone()).andReturn(true).anyTimes();
+    replayAll();
     runner.tasks.put(task.getId(), workItem);
     runner.shutdown(task.getId(), "");
     Assert.assertTrue(runner.tasks.isEmpty());
+    verifyAll();
+  }
+
+  @Test
+  public void test_shutdown_withExistingTask_futureIncomplete_removesTaskFromMap()
+  {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, statusFuture) {
+      @Override
+      protected synchronized void shutdown()
+      {
+      }
+    };
+    EasyMock.expect(statusFuture.isDone()).andReturn(false).anyTimes();
+    replayAll();
+    runner.tasks.put(task.getId(), workItem);
+    runner.shutdown(task.getId(), "");
+    Assert.assertEquals(1, runner.tasks.size());
+    verifyAll();
   }
 
   @Test
