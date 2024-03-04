@@ -230,7 +230,6 @@
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <module>extensions-contrib/grpc-query</module>
-        <module>extensions-contrib/grpc-shaded</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
@@ -241,7 +240,6 @@
         <module>integration-tests-ex/tools</module>
         <module>integration-tests-ex/image</module>
         <module>integration-tests-ex/cases</module>
-        <module>extensions-contrib/grpc-query-it</module>
     </modules>
 
     <repositories>

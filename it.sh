@@ -287,12 +287,7 @@ case $CMD in
     ;;
   "github" )
     set +e
-    if [ $MAVEN_PROJECT == ":druid-it-cases" ]; then
-      $0 test $CATEGORY
-    else
-      $0 test $CATEGORY $MAVEN_PROJECT
-    fi
-
+    $0 test $CATEGORY
     RESULT=$?
 
     # Include logs, but only for failures.

@@ -96,19 +96,6 @@ mvn package -Pdist,bundle-contrib-exts ...
 ```
 
 In production, follow the [Druid documentation](https://druid.apache.org/docs/latest/development/extensions.html).
-Do not use the `pull-deps` command to install the `org.apache.druid.extensions.contrib:grpc-query`
-extension. Instead, unpack the `.tar.gz` file created in the `grpc-query` project.
-
-This extension provides a simpler alternative: it products a bundle named
-`grpc-query-<version>.tar.gz` with the `grpc-query` jar and its required
-dependencies, which include only a shaded rRPC jar file. All other dependencies
-are provided by Druid itself. To install, simply unpack the `tar.gz` file into
-the `extensions` folder:
-
-```bash
-cd $DRUID_HOME/extensions
-tar -xzf /path/to/grpc-query-<version>.tar.gz
-```
 
 To enable the extension, add the following to the load list in
 `_commmon/common.runtime.properties`:
@@ -168,28 +155,11 @@ configure the credentials in the client.
 
 ## Implementation Notes
 
-The extension is made up of three projects. Druid uses a different version of Guava than
-does rRPC. To work around this, the `grpc-shade` project creates a shaded jar that includes
-both gRPC and Guava. Since the rRPC compiler generates references to Guava, it turns out we
-must generate Java from the `.proto` files _before_ shading, so the `.proto` files, and
-the generated Java code, also reside in the `grpc-shade` project. One unfortunate aspect
-of shading is that your IDE will not be able to find the source attachments for the rRPC
-classes. The result is very tedious debugging. A workaround is to manually attach the
-original gRPC source jars for each gRPC source file.
-
 This project contains several components:
 
 * Guice modules and associated server initialization code.
 * Netty-based gRPC server.
 * A "driver" that performs the actual query and generates the results.
-
-The `grpc-query-it` project provides integration tests for the extension. These tests
-run using the "new" IT framework as described in the `integration-tests-ex/doc/README.md`
-file.
-
-Take care when working with the shaded jar. The `grpc-query` project depends on the
-shaded jar, but we _must_ block transitive dependencies to avoid an IDE helpfully pulling
-in the very Guava version we want to avoid. See the various `pom.xml` files for details.
 
 ## Debugging
 
@@ -265,56 +235,8 @@ the way to debug the Broker in an IDE is the following:
 
   * Define `grpc-query` as a project dependency. (This is for Eclipse; IntelliJ may differ.)
   * Configure the class path to include the common and Broker properties files.
-  * Explicitly add the `extension/grpc-query/druid-shaded-grpc-<version>-SNAPSHOT.jar` in
-    the class path.
 * Launch the micro-quickstart cluster.
 * Launch the Broker in your IDE.
-
-### Debugging using Integration Tests
-
-Use integration tests to verify the full behavior of the extension, including resolution
-of Protobuf classes, and integration with Druid. To run the integration test:
-
-```bash
-./it.sh build
-./it.sh image
-./it.sh test GrpcQuery extensions-contrib/grpc-query-it
-```
-
-To debug an integration test:
-
-```bash
-./it.sh build
-./it.sh image
-./it.sh up GrpcQuery extensions-contrib/grpc-query-it
-```
-
-Then, run the `GrpcQueryTest` class in `grpc-query-it` in your IDE. When
-done debugging:
-
-```bash
-./it.sh build
-./it.sh image
-./it.sh up GrpcQuery extensions-contrib/grpc-query-it
-```
-
-Since `grpc-query` is an extension. To run tests after changes, you need only build
-that one module:
-
-```bash
-mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true \
-    -Dcyclonedx.skip=true -pl :grpc-query
-```
-
-Then, restart the cluster (`down`, then `up`). The `up` (or `test`) commands
-populate the cluster with your newly rebuilt `grpc-query` extension and test
-Protobuf classes.
-
-There are two integration tests:
-
-* `GrpcQuery` - Functional test using a "stock" Druid server.
-* `GrpcQueryBasicAuth` - Configures the server with Basic security, then runs
-  tests to verify basic security functionality.
 
 ### gRPC Logging
 

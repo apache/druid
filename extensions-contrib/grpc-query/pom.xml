@@ -45,6 +45,18 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-bom</artifactId>
+        <version>1.59.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
@@ -145,6 +157,31 @@
       <artifactId>jsr311-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-protobuf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-stub</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty</artifactId>
+    </dependency>
 
     <!-- Tests -->
     <dependency>
@@ -211,6 +248,8 @@
         <executions>
           <execution>
             <goals>
+              <goal>compile</goal>
+              <goal>compile-custom</goal>
               <goal>test-compile</goal>
             </goals>
           </execution>
@@ -224,14 +263,15 @@
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-source</id>
+            <id>add-test-source</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>add-test-source</goal>
+              <goal>add-source</goal>
             </goals>
             <configuration>
               <sources>
                 <source>target/generated-test-sources/protobuf/java</source>
+                <source>target/generated-sources/protobuf/grpc-java</source>
               </sources>
             </configuration>
           </execution>
@@ -290,102 +330,4 @@
       </plugin>
     </plugins>
   </build>
-    <!-- Profile to build the .tar.gz file for the extension. This file contains both
-         the grpc-query code and the shaded gRPC jar file.
-         This form is needed for the IT. It is also a more convenient way to distribute
-         the extension than the usual "bare jar + pull-deps". We are sure that we're
-         including the same code we will test in our distribution: we don't have to
-         worry about spurious mis-matches. Plus, the shaded jar isn't even available
-         in Maven central, so pull-deps would not work except on a development or
-         build machine. -->
-
-  <profiles>
-    <profile>
-      <id>shaded</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>tar</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <!-- Build the shaded jar using a separate Maven module.
-               Done inline here to avoid dependency conflicts in IDEs.
-               If the project is included in the top-level pom.xml, then the IDE will helpfully
-               bring in all that project's dependencies, including a newer version of Guava.
-               When we try to run tests, whichever version of Guava is on the command line first
-               wins, result in the very conflicts that the shaded jar is intended to avoid.
-               By building it here, manually, the top-level Maven file doesn't know about the
-               project and so neither does the IDE. The production build is identical either
-               way. -->
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>build-shaded-jar</id>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <phase>initialize</phase>
-                <configuration>
-                  <workingDirectory>${project.basedir}/../grpc-shaded</workingDirectory>
-                  <executable>mvn</executable>
-                  <arguments>
-                    <argument>install</argument>
-                    <argument>-P</argument>
-                    <argument>skip-static-checks,skip-tests</argument>
-                    <argument>-Dmaven.javadoc.skip=true</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <!-- Profile to build the .tar.gz file for the extension. This file contains both
-         the grpc-query code and the shaded gRPC jar file.
-         This form is needed for the IT. It is also a more convenient way to distribute
-         the extension than the usual "bare jar + pull-deps". We are sure that we're
-         including the same code we will test in our distribution: we don't have to
-         worry about spurious mis-matches. Plus, the shaded jar isn't even available
-         in Maven central, so pull-deps would not work except on a development or
-         build machine. -->
-    <profile>
-      <id>dist</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>tar</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>distro-assembly</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <tarLongFileMode>posix</tarLongFileMode>
-                  <formats>tar.gz</formats>
-                  <appendAssemblyId>false</appendAssemblyId>
-                  <descriptors>
-                    <descriptor>src/assembly/assembly.xml</descriptor>
-                  </descriptors>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
