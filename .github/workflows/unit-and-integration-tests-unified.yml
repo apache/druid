@@ -142,6 +142,6 @@ jobs:
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
-    needs: build
-    if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
