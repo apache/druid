@@ -43,7 +43,7 @@ import java.util.Objects;
  * {@link Expr}.
  */
 @Immutable
-abstract class ConstantExpr<T> implements Expr, Expr.SingleThreaded
+abstract class ConstantExpr<T> implements Expr, Expr.SingleThreadSpecializable
 {
   final ExpressionType outputType;
 

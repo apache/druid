@@ -769,14 +769,14 @@ public interface Expr extends Cacheable
    * Returns the single-threaded version of the given expression tree.
    *
    * Nested expressions in the subtree are also optimized.
-   * Individual {@link Expr}-s which have a singleThreaded implementation via {@link SingleThreaded} are substituted.
+   * Individual {@link Expr}-s which have a singleThreaded implementation via {@link SingleThreadSpecializable} are substituted.
    */
   static Expr singleThreaded(Expr expr)
   {
     return expr.visit(
         node -> {
-          if (node instanceof SingleThreaded) {
-            SingleThreaded canBeSingleThreaded = (SingleThreaded) node;
+          if (node instanceof SingleThreadSpecializable) {
+            SingleThreadSpecializable canBeSingleThreaded = (SingleThreadSpecializable) node;
             return canBeSingleThreaded.toSingleThreaded();
           } else {
             return node;
@@ -788,10 +788,10 @@ public interface Expr extends Cacheable
   /**
    * Implementing this interface allows to provide a non-threadsafe {@link Expr} implementation.
    */
-  interface SingleThreaded
+  interface SingleThreadSpecializable
   {
     /**
-     * Non-threadsafe of this expression.
+     * Non-threadsafe version of this expression.
      */
     Expr toSingleThreaded();
   }
