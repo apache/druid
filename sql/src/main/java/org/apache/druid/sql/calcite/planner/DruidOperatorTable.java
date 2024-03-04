@@ -126,6 +126,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.external.TableAppendMacro;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
 import javax.annotation.Nullable;
@@ -425,6 +426,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
                    .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
                    .addAll(NESTED_DATA_OPERATOR_CONVERSIONS)
+                   .add(TableAppendMacro.OPERATOR_CONVERSION)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.
