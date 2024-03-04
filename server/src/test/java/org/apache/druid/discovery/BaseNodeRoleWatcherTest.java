@@ -155,11 +155,11 @@ public class BaseNodeRoleWatcherTest
     Thread.sleep(3100);
     Assert.assertTrue(listener1.timedOut.get());
 
-    assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of(broker2));
+    assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
 
   @Test(timeout = 60_000L)
-  public void testGetAllNodesBeforeTimeout() throws InterruptedException
+  public void testGetAllNodesBeforeTimeout()
   {
     BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 3);
 
@@ -188,7 +188,7 @@ public class BaseNodeRoleWatcherTest
     Assert.assertEquals(2, nodeRoleWatcher.getAllNodes().size());
 
     Assert.assertTrue(listener1.timedOut.get());
-    assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of(broker2));
+    assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
 
   private DiscoveryDruidNode buildDiscoveryDruidNode(NodeRole role, String host)
@@ -239,6 +239,8 @@ public class BaseNodeRoleWatcherTest
     {
       if (!timedOut.compareAndSet(false, true)) {
         throw new RuntimeException("NodeViewInitializedTimedOut called again!");
+      } else if (!nodeViewInitialized.compareAndSet(false, true)) {
+        throw new RuntimeException("NodeViewInitialized was already called!");
       }
     }
   }
