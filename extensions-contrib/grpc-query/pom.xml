@@ -59,11 +59,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.druid.extensions.contrib</groupId>
-      <artifactId>grpc-shaded</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
