@@ -28,22 +28,22 @@ import java.util.stream.Collectors;
 
 public class TaskLaneRegistry
 {
-  private final Map<String, TaskLane> labelToTaskLanes;
+  private final Map<String, TaskLane> taskLabelToLaneMap;
   private final int capacity;
   private int totalReservedTaskSlots;
   private final Set<String> reservedTaskLabels;
 
-  public TaskLaneRegistry(Map<String, TaskLane> labelToTaskLanes, int capacity)
+  public TaskLaneRegistry(Map<String, TaskLane> taskLabelToLaneMap, int capacity)
   {
-    this.labelToTaskLanes = labelToTaskLanes;
+    this.taskLabelToLaneMap = taskLabelToLaneMap;
     this.capacity = capacity;
     totalReservedTaskSlots =
-        labelToTaskLanes.values().stream()
+        taskLabelToLaneMap.values().stream()
                         .filter(lane -> lane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)
                         .mapToInt(lane -> (int) (capacity * lane.getCapacityRatio()))
                         .sum();
     reservedTaskLabels =
-        labelToTaskLanes.values()
+        taskLabelToLaneMap.values()
                         .stream()
                         .filter(lane -> lane.getPolicy() == TaskLaneCapacityPolicy.RESERVE)
                         .flatMap(lane -> lane.getTaskLabels().stream())
@@ -52,22 +52,23 @@ public class TaskLaneRegistry
 
   public TaskLane getTaskLane(String taskLabel)
   {
-    return getLabelToTaskLanes().get(taskLabel);
+    return getTaskLabelToLaneMap().get(taskLabel);
   }
 
   public int getAllowedTaskSlotsCount(String taskLabel)
   {
     TaskLane taskLane = getTaskLane(taskLabel);
     if (taskLane == null) {
-      return 0;
+      // return max value when no config TaskLane
+      return Integer.MAX_VALUE;
     }
 
     return (int) (taskLane.getCapacityRatio() * capacity);
   }
 
-  public Map<String, TaskLane> getLabelToTaskLanes()
+  public Map<String, TaskLane> getTaskLabelToLaneMap()
   {
-    return labelToTaskLanes;
+    return taskLabelToLaneMap;
   }
 
   public int getTotalReservedTaskSlots()

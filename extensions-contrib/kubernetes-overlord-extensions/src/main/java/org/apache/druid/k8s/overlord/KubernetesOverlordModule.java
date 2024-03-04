@@ -169,7 +169,7 @@ public class KubernetesOverlordModule implements DruidModule
   )
   {
     List<TaskLaneConfig> taskLanes = runnerConfig.getTaskLanes();
-    Map<String, TaskLane> labelToTaskLanes = new HashMap<>();
+    Map<String, TaskLane> taskLabelToLaneMap = new HashMap<>();
     for (TaskLaneConfig taskLaneConfig : taskLanes) {
       Set<String> labelSet = taskLaneConfig.getLabelSet();
       TaskLane taskLane = new TaskLane(
@@ -177,10 +177,10 @@ public class KubernetesOverlordModule implements DruidModule
           taskLaneConfig.getCapacityRatio(),
           taskLaneConfig.getTaskLaneCapacityPolicy()
       );
-      labelSet.forEach(label -> labelToTaskLanes.put(label, taskLane));
+      labelSet.forEach(label -> taskLabelToLaneMap.put(label, taskLane));
     }
 
-    return new TaskLaneRegistry(labelToTaskLanes, runnerConfig.getCapacity());
+    return new TaskLaneRegistry(taskLabelToLaneMap, runnerConfig.getCapacity());
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>
