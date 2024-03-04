@@ -891,7 +891,7 @@ public abstract class AbstractAuthConfigurationTest
     Assert.assertFalse(responseContent.contains(maliciousUsername));
   }
 
-  protected void setupHttpClients() throws Exception
+  protected void setupHttpClients()
   {
     setupCommonHttpClients();
     setupTestSpecificHttpClients();

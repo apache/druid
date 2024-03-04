@@ -267,8 +267,6 @@ case $CMD in
     mvn -B $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
     ;;
   "test" )
-    echo "running test profile param is $2"
-    echo "module dir is $MODULE_DIR"
     require_category
     build_override
     verify_env_vars
@@ -289,8 +287,12 @@ case $CMD in
     ;;
   "github" )
     set +e
-    echo "Maven project is $MAVEN_PROJECT"
-    $0 test $CATEGORY $MAVEN_PROJECT
+    if [ $MAVEN_PROJECT == ":druid-it-cases" ]; then
+      $0 test $CATEGORY
+    else
+      $0 test $CATEGORY $MAVEN_PROJECT
+    fi
+
     RESULT=$?
 
     # Include logs, but only for failures.

@@ -141,7 +141,7 @@ public class ITGrpcQueryBasicAuthTest extends GrpcQueryTestBase
     }
   }
 
-  private void createUsers() throws Exception
+  private void createUsers()
   {
     authHelper.createUserAndRoleWithPermissions(USER_ALICE, ALICE_PASSWORD, "aliceRole", ALICE_PERMISSIONS);
     authHelper.createUserAndRoleWithPermissions(USER_BOB, BOB_PASSWORD, "bobRole", BOB_PERMISSIONS);
