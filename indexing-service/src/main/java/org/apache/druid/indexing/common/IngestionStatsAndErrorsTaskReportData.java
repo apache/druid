@@ -20,12 +20,19 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.IngestionState;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind", defaultImpl = IngestionStatsAndErrorsTaskReport.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "ingestion_stats", value = IngestionStatsAndErrorsTaskReport.class),
+    @JsonSubTypes.Type(name = "parallel_compaction_stats", value = ParallelCompactionTaskReportData.class)
+})
 public class IngestionStatsAndErrorsTaskReportData
 {
   @JsonProperty
