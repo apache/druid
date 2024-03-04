@@ -79,6 +79,31 @@ public class SegmentsInputSliceTest
   }
 
   @Test
+  public void testSerde2() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                          .registerModules(new MSQIndexingModule().getJacksonModules());
+
+    final SegmentsInputSlice slice = new SegmentsInputSlice(
+        "myds",
+        ImmutableList.of(
+            new RichSegmentDescriptor(
+                Intervals.of("2000/P1M"),
+                Intervals.of("2000/P1M"),
+                "1",
+                0
+            )
+        ),
+        null
+    );
+
+    Assert.assertEquals(
+        slice,
+        mapper.readValue(mapper.writeValueAsString(slice), InputSlice.class)
+    );
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(SegmentsInputSlice.class).usingGetClass().verify();

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.msq.input.InputSlice;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -50,7 +51,7 @@ public class SegmentsInputSlice implements InputSlice
   public SegmentsInputSlice(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<RichSegmentDescriptor> descriptors,
-      @JsonProperty("servedSegments") List<DataServerRequestDescriptor> servedSegments
+      @JsonProperty("servedSegments") @Nullable List<DataServerRequestDescriptor> servedSegments
   )
   {
     this.dataSource = dataSource;
@@ -71,6 +72,7 @@ public class SegmentsInputSlice implements InputSlice
   }
 
   @JsonProperty("servedSegments")
+  @Nullable
   public List<DataServerRequestDescriptor> getServedSegments()
   {
     return servedSegments;
