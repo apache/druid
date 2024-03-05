@@ -32,7 +32,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
@@ -57,7 +56,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final Properties properties;
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
-  private final TaskLaneRegistry taskLaneRegistry;
   private KubernetesTaskRunner runner;
 
   @Inject
@@ -71,8 +69,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskConfig taskConfig,
       Properties properties,
       DruidKubernetesClient druidKubernetesClient,
-      ServiceEmitter emitter,
-      TaskLaneRegistry taskLaneRegistry
+      ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -85,12 +82,12 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
-    this.taskLaneRegistry = taskLaneRegistry;
   }
 
   @Override
   public KubernetesTaskRunner build()
   {
+
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
@@ -104,8 +101,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         peonClient,
         httpClient,
         new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
-        emitter,
-        taskLaneRegistry
+        emitter
     );
     return runner;
   }
