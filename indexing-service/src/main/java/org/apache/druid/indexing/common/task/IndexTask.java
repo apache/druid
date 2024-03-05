@@ -174,8 +174,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   // There are cases where index task is not run as a standalone task and the
   // generated completion reports are written by parent. In such cases, this
   // flag would be helpful to specify that the child index task should not
-  // publish reports.
-  private boolean shouldSendReports;
+  // write reports.
+  private boolean shouldWriteReports;
 
   @MonotonicNonNull
   private ParseExceptionHandler determinePartitionsParseExceptionHandler;
@@ -232,7 +232,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       Map<String, Object> context,
       int maxAllowedLockCount,
       boolean shouldCleanup,
-      boolean shouldSendReports
+      boolean shouldWriteReports
   )
   {
     super(
@@ -248,7 +248,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
     this.shouldCleanup = shouldCleanup;
-    this.shouldSendReports = shouldSendReports;
+    this.shouldWriteReports = shouldWriteReports;
   }
 
   @Override
@@ -590,7 +590,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
     completionReports = getTaskCompletionReports();
-    if (shouldSendReports) {
+    if (shouldWriteReports) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
