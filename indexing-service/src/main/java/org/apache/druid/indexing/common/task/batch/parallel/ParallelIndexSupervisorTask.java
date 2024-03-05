@@ -203,7 +203,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private IngestionState ingestionState;
   private Map<String, TaskReport> completionReports;
-  private final Boolean isCompactionTask;
+  private final boolean isCompactionTask;
 
 
   @JsonCreator
@@ -301,13 +301,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public Map<String, TaskReport> getCompletionReports()
   {
     return completionReports;
-  }
-
-  @Nullable
-  @JsonIgnore
-  public String getBaseSubtaskSpecName()
-  {
-    return baseSubtaskSpecName;
   }
 
   @JsonProperty("spec")
@@ -669,8 +662,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    writeCompletionReports(toolbox);
+    updateAndWriteCompletionReports(toolbox, taskStatus, segmentAvailabilityConfirmationCompleted);
     return taskStatus;
   }
 
@@ -837,8 +829,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    writeCompletionReports(toolbox);
+    updateAndWriteCompletionReports(toolbox, taskStatus, segmentAvailabilityConfirmationCompleted);
     return taskStatus;
   }
 
@@ -935,8 +926,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    writeCompletionReports(toolbox);
+    updateAndWriteCompletionReports(toolbox, taskStatus, segmentAvailabilityConfirmationCompleted);
     return taskStatus;
   }
 
@@ -1218,7 +1208,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getContext(),
         getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
         // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
-        false
+        false,
+        !isCompactionTask
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
@@ -1261,8 +1252,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
   }
 
-  private void writeCompletionReports(TaskToolbox toolbox)
+  private void updateAndWriteCompletionReports(
+      TaskToolbox toolbox,
+      TaskStatus status,
+      boolean segmentAvailabilityConfirmationCompleted
+  )
   {
+    completionReports = getTaskCompletionReports(status, segmentAvailabilityConfirmationCompleted);
     if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
