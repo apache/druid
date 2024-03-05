@@ -113,6 +113,8 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -122,7 +124,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
@@ -136,11 +138,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -292,15 +295,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public final SqlEngine engine0;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
-  @Rule(order = 1)
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Rule(order = 2)
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
-  public boolean msqCompatible = true;
 
   public QueryLogHook queryLogHook;
 
@@ -964,8 +963,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final String sql,
       final AuthenticationResult authenticationResult,
       final List<Query<?>> expectedQueries,
-      final ResultsVerifier expectedResultsVerifier,
-      @Nullable final Consumer<ExpectedException> expectedExceptionInitializer
+      final ResultsVerifier expectedResultsVerifier
   )
   {
     testBuilder()
@@ -976,7 +974,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .authResult(authenticationResult)
         .expectedQueries(expectedQueries)
         .expectedResults(expectedResultsVerifier)
-        .expectedException(expectedExceptionInitializer)
         .run();
   }
 
@@ -984,8 +981,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize)
-        .msqCompatible(msqCompatible);
+        .skipVectorize(skipVectorize);
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
@@ -1018,12 +1014,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public QueryLogHook queryLogHook()
     {
       return queryLogHook;
-    }
-
-    @Override
-    public ExpectedException expectedException()
-    {
-      return expectedException;
     }
 
     @Override
@@ -1216,29 +1206,55 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     Assert.assertEquals(expectedResults.size(), results.size());
   }
 
-  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
+  public <T extends Throwable> void testQueryThrows(
+      final String sql,
+      final DruidExceptionMatcher exceptionMatcher)
+
   {
-    testBuilder()
-        .sql(sql)
-        .expectedException(expectedExceptionInitializer)
-        .build()
-        .run();
+    testQueryThrows(sql, null, null, DruidException.class, exceptionMatcher);
   }
 
-  public void testQueryThrows(
+  public <T extends Exception> void testQueryThrows(
+      final String sql,
+      final Class<T> exceptionType,
+      final String exceptionMessage)
+
+  {
+    testQueryThrows(
+        sql,
+        null,
+        null,
+        exceptionType,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(exceptionMessage))
+    );
+  }
+
+  public <T extends Exception> void testQueryThrows(
+      final String sql,
+      final Class<T> exceptionType,
+      final Matcher<Throwable> exceptionMatcher)
+
+  {
+    testQueryThrows(sql, null, null, exceptionType, exceptionMatcher);
+  }
+
+  public <T extends Exception> void testQueryThrows(
       final String sql,
       final Map<String, Object> queryContext,
       final List<Query<?>> expectedQueries,
-      final Consumer<ExpectedException> expectedExceptionInitializer
-  )
+      final Class<T> exceptionType,
+      final Matcher<Throwable> exceptionMatcher)
   {
-    testBuilder()
-        .sql(sql)
-        .queryContext(queryContext)
-        .expectedQueries(expectedQueries)
-        .expectedException(expectedExceptionInitializer)
-        .build()
-        .run();
+    T e = assertThrows(
+        exceptionType,
+        () -> testBuilder()
+            .sql(sql)
+            .queryContext(queryContext)
+            .expectedQueries(expectedQueries)
+            .build()
+            .run()
+    );
+    MatcherAssert.assertThat(e, exceptionMatcher);
   }
 
   public void analyzeResources(
@@ -1322,7 +1338,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   protected void msqIncompatible()
   {
-    msqCompatible = false;
+    assumeFalse("test case is not MSQ compatible", testBuilder().config.isRunningMSQ());
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)

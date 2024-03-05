@@ -74,7 +74,9 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -4575,13 +4577,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "JSON_VALUE(nester, '.array.[1]'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
-        (expected) -> {
-          expected.expect(
-              DruidExceptionMatcher
-                  .invalidInput()
-                  .expectMessageIs("JSONPath [.array.[1]] is invalid, it must start with '$'")
-          );
-        }
+        DruidExceptionMatcher
+            .invalidInput()
+            .expectMessageIs("JSONPath [.array.[1]] is invalid, it must start with '$'")
     );
   }
 
@@ -4994,12 +4992,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         "SELECT "
         + "SUM(JSON_VALUE(nest, '$.z' RETURNING BIGINT ERROR ON EMPTY ERROR ON ERROR)) "
         + "FROM druid.nested",
-        exception -> {
-          expectedException.expect(IllegalArgumentException.class);
-          expectedException.expectMessage(
-              "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
-          );
-        }
+        IllegalArgumentException.class,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
+            )
+        )
     );
   }
 
