@@ -102,6 +102,9 @@ public class BaseNodeRoleWatcher
     catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
     }
+    if (unmodifiableNodes.isEmpty()) {
+      LOGGER.warn("Watcher for node role [%s] returned an empty collection.", nodeRole.getJsonName());
+    }
     return unmodifiableNodes;
   }
 
@@ -231,7 +234,7 @@ public class BaseNodeRoleWatcher
       if (cacheInitialized.getCount() == 0) {
         if (cacheInitializationTimedOut) {
           LOGGER.warn(
-              "Cache initialization for node role[%s] has already timed out. Ignoring cacheInitialized event.",
+              "Cache initialization for node role[%s] has already timed out. Ignoring cache initialization event.",
               nodeRole.getJsonName()
           );
         } else {
@@ -264,8 +267,15 @@ public class BaseNodeRoleWatcher
   @GuardedBy("lock")
   private void cacheInitialized(boolean timedOut)
   {
+    // This method is called only once with either timedOut = true or false, but not both.
+
     if (timedOut) {
-      LOGGER.warn("Cache for node role [%s] could not be initialized before timeout.", nodeRole.getJsonName());
+      LOGGER.warn(
+          "Cache for node role [%s] could not be initialized before timeout. "
+          + "This service may not have full information about other nodes of type [%s].",
+          nodeRole.getJsonName(),
+          nodeRole.getJsonName()
+      );
       cacheInitializationTimedOut = true;
     }
 
