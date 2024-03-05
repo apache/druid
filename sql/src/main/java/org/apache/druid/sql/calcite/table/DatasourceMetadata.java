@@ -17,17 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.sql.destination;
+package org.apache.druid.sql.calcite.table;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.query.DataSource;
 
-/**
- * Represents the destination where the data is ingested.
- */
-@UnstableApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface IngestDestination
+public interface DatasourceMetadata
 {
-  String getDestinationName();
+
+  DataSource dataSource();
+
+  boolean isJoinable();
+
+  boolean isBroadcast();
+
 }

@@ -93,6 +93,58 @@ An example output is shown below:
 }
 ```
 
+Compaction tasks can generate multiple sets of segment output reports based on how the input interval is split. So the overall report contains mappings from each split to each report.
+Example report could be:
+
+```json
+{
+  "ingestionStatsAndErrors_0": {
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "ingestionState": "COMPLETED",
+      "unparseableEvents": {},
+      "rowStats": {
+        "buildSegments": {
+          "processed": 5390324,
+          "processedBytes": 5109573212,
+          "processedWithError": 0,
+          "thrownAway": 0,
+          "unparseable": 0
+        }
+      },
+      "segmentAvailabilityConfirmed": false,
+      "segmentAvailabilityWaitTimeMs": 0,
+      "recordsProcessed": null,
+      "errorMsg": null
+    },
+    "type": "ingestionStatsAndErrors"
+  },
+  "ingestionStatsAndErrors_1": {
+   "taskId": "compact_twitter_2018-09-25T18:24:23.920Z",
+   "payload": {
+    "ingestionState": "COMPLETED",
+    "unparseableEvents": {},
+    "rowStats": {
+     "buildSegments": {
+      "processed": 12345,
+      "processedBytes": 132456789,
+      "processedWithError": 0,
+      "thrownAway": 0,
+      "unparseable": 0
+     }
+    },
+    "segmentAvailabilityConfirmed": false,
+    "segmentAvailabilityWaitTimeMs": 0,
+    "recordsProcessed": null,
+    "errorMsg": null
+   },
+   "type": "ingestionStatsAndErrors"
+  }
+}
+```
+
+
+
 #### Segment Availability Fields
 
 For some task types, the indexing task can wait for the newly ingested segments to become available for queries after ingestion completes. The below fields inform the end user regarding the duration and result of the availability wait. For batch ingestion task types, refer to `tuningConfig` docs to see if the task supports an availability waiting period.
