@@ -25,7 +25,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.DruidNode;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -43,7 +45,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BaseNodeRoleWatcherTest
 {
-  private final ScheduledExecutorService exec = createScheduledSingleThreadedExecutor();
+  private static ScheduledExecutorService exec;
+
+  @BeforeClass
+  public static void setup()
+  {
+    exec = createScheduledSingleThreadedExecutor();
+  }
+
+  @AfterClass
+  public static void teardown()
+  {
+    exec.shutdown();
+  }
 
   @Test(timeout = 60_000L)
   public void testGeneralUseSimulation()
@@ -146,7 +160,6 @@ public class BaseNodeRoleWatcherTest
     nodeRoleWatcher.childRemoved(broker2);
 
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
-    Assert.assertFalse(listener1.nodeViewInitializationTimedOut.get());
 
     Assert.assertTrue(listener1.ready.await(1500, TimeUnit.MILLISECONDS));
     Assert.assertTrue(listener1.nodeViewInitializationTimedOut.get());
@@ -179,7 +192,6 @@ public class BaseNodeRoleWatcherTest
     nodeRoleWatcher.childRemoved(broker2);
 
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
-    Assert.assertFalse(listener1.nodeViewInitializationTimedOut.get());
 
     Assert.assertEquals(2, nodeRoleWatcher.getAllNodes().size());
 
@@ -198,17 +210,18 @@ public class BaseNodeRoleWatcherTest
 
   private void assertListener(
       TestListener listener,
-      boolean nodeViewInitialized,
+      boolean ready,
       List<DiscoveryDruidNode> nodesAdded,
       List<DiscoveryDruidNode> nodesRemoved
   )
   {
-    Assert.assertEquals(nodeViewInitialized, listener.nodeViewInitialized.get());
+    final int count = ready ? 0 : 1;
+    Assert.assertEquals(count, listener.ready.getCount());
     Assert.assertEquals(nodesAdded, listener.nodesAddedList);
     Assert.assertEquals(nodesRemoved, listener.nodesRemovedList);
   }
 
-  private ScheduledExecutorService createScheduledSingleThreadedExecutor()
+  private static ScheduledExecutorService createScheduledSingleThreadedExecutor()
   {
     return new ScheduledThreadPoolExecutor(
         1,
@@ -227,7 +240,6 @@ public class BaseNodeRoleWatcherTest
   public static class TestListener implements DruidNodeDiscovery.Listener
   {
     private final CountDownLatch ready = new CountDownLatch(1);
-    private final AtomicBoolean nodeViewInitialized = new AtomicBoolean(false);
     private final AtomicBoolean nodeViewInitializationTimedOut = new AtomicBoolean(false);
     private final List<DiscoveryDruidNode> nodesAddedList = new ArrayList<>();
     private final List<DiscoveryDruidNode> nodesRemovedList = new ArrayList<>();
@@ -247,7 +259,7 @@ public class BaseNodeRoleWatcherTest
     @Override
     public void nodeViewInitialized()
     {
-      if (!nodeViewInitialized.compareAndSet(false, true)) {
+      if (ready.getCount() == 0) {
         throw new RuntimeException("NodeViewInitialized called again!");
       }
       ready.countDown();
@@ -258,7 +270,7 @@ public class BaseNodeRoleWatcherTest
     {
       if (!nodeViewInitializationTimedOut.compareAndSet(false, true)) {
         throw new RuntimeException("NodeViewInitializedTimedOut called again!");
-      } else if (!nodeViewInitialized.compareAndSet(false, true)) {
+      } else if (ready.getCount() == 0) {
         throw new RuntimeException("NodeViewInitialized was already called!");
       }
       ready.countDown();

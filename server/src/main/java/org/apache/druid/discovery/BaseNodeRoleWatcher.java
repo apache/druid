@@ -264,11 +264,10 @@ public class BaseNodeRoleWatcher
     }
   }
 
+  // This method is called only once with either timedOut = true or false, but not both.
   @GuardedBy("lock")
   private void cacheInitialized(boolean timedOut)
   {
-    // This method is called only once with either timedOut = true or false, but not both.
-
     if (timedOut) {
       LOGGER.warn(
           "Cache for node role [%s] could not be initialized before timeout. "
