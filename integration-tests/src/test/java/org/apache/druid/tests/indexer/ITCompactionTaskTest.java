@@ -44,7 +44,6 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -271,9 +270,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
       Map<String, IngestionStatsAndErrorsTaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
-
-      System.out.println(reports.size());
-      System.out.println(Arrays.toString(reports.values().stream().map(r -> r.toString()).toArray()));
     }
   }
 

@@ -659,9 +659,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                               .stream()
                                               .mapToLong(report -> report.getOldSegments().size()).sum();
       segmentsPublished = parallelSinglePhaseRunner.getReports()
-                                              .values()
-                                              .stream()
-                                                   .mapToLong(report -> report.getNewSegments().size()).sum();
+                                                   .values()
+                                                   .stream()
+                                                   .mapToLong(report -> report.getNewSegments().size())
+                                                   .sum();
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }

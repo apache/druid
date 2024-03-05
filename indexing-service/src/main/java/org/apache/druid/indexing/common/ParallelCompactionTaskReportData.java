@@ -26,6 +26,10 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * This class has fields specific to the parallel compaction task and hence extends the generic
+ * task report data {@link org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData}
+ */
 public class ParallelCompactionTaskReportData extends IngestionStatsAndErrorsTaskReportData
 {
   @JsonProperty
