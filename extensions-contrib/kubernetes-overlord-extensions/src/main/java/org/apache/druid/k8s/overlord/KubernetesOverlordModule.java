@@ -42,7 +42,6 @@ import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
-import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.initialization.DruidModule;
@@ -50,18 +49,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
-import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
@@ -159,22 +153,6 @@ public class KubernetesOverlordModule implements DruidModule
     return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType)
            ? injector.getInstance(HttpRemoteTaskRunnerFactory.class)
            : injector.getInstance(RemoteTaskRunnerFactory.class);
-  }
-
-  @Provides
-  @LazySingleton
-  TaskLaneRegistry provideTaskLaneRegistry(
-      KubernetesTaskRunnerConfig runnerConfig
-  )
-  {
-    List<TaskLaneConfig> taskLanes = runnerConfig.getTaskLanes();
-    Map<String, TaskLaneConfig> taskLabelToLaneMap = new HashMap<>();
-    for (TaskLaneConfig taskLaneConfig : taskLanes) {
-      Set<String> labelSet = taskLaneConfig.getLabelSet();
-      labelSet.forEach(label -> taskLabelToLaneMap.put(label, taskLaneConfig));
-    }
-
-    return new TaskLaneRegistry(taskLabelToLaneMap, runnerConfig.getCapacity());
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>

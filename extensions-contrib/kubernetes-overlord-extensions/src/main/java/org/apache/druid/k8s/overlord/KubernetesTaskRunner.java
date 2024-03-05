@@ -39,8 +39,6 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
-import org.apache.druid.indexing.overlord.config.TaskLaneCapacityPolicy;
-import org.apache.druid.indexing.overlord.config.TaskLaneConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -54,7 +52,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -68,9 +65,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -106,7 +101,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
-  protected final ConcurrentHashMap<String, Queue<Runnable>> taskLaneQueues = new ConcurrentHashMap<>();
 
   private final KubernetesPeonClient client;
   private final KubernetesTaskRunnerConfig config;
@@ -116,7 +110,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ServiceEmitter emitter;
   // currently worker categories aren't supported, so it's hardcoded.
   protected static final String WORKER_CATEGORY = "_k8s_worker_category";
-  private final TaskLaneRegistry taskLaneRegistry;
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -124,8 +117,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       KubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,
-      ServiceEmitter emitter,
-      TaskLaneRegistry taskLaneRegistry
+      ServiceEmitter emitter
   )
   {
     this.adapter = adapter;
@@ -138,14 +130,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         Execs.multiThreaded(config.getCapacity(), "k8s-task-runner-%d")
     );
     this.emitter = emitter;
-    this.taskLaneRegistry = taskLaneRegistry;
-    this.taskLaneRegistry.getTaskLabelToLaneMap()
-                         .forEach((label, lane) -> {
-                           // only queue on non-RESERVE task lane
-                           if (lane.getPolicy() != TaskLaneCapacityPolicy.RESERVE) {
-                             taskLaneQueues.put(label, new ConcurrentLinkedQueue<>());
-                           }
-                         });
   }
 
   @Override
@@ -161,47 +145,23 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    return runTask(task, false);
+    synchronized (tasks) {
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))))
+                  .getResult();
+    }
   }
 
   protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> {
-        ListenableFuture<TaskStatus> unused = exec.submit(() -> joinTask(task));
-        return new KubernetesWorkItem(task);
-      }).getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))))
+                  .getResult();
     }
   }
 
-  private ListenableFuture<TaskStatus> runTask(Task task, boolean isQueued)
+  private TaskStatus runTask(Task task)
   {
-    synchronized (tasks) {
-      KubernetesWorkItem workItem = tasks.get(task.getId());
-      // Return existing task result if already submitted and not queued
-      if (workItem != null && !isQueued) {
-        return workItem.getResult();
-      }
-
-      if (workItem == null) {
-        workItem = new KubernetesWorkItem(task);
-        tasks.put(task.getId(), workItem);
-      }
-
-      if (isTaskEligibleToRun(task)) {
-        ListenableFuture<TaskStatus> unused = exec.submit(() -> doTask(task, true));
-      } else {
-        queueTask(task);
-      }
-
-      return workItem.getResult();
-    }
-  }
-
-  private void queueTask(Task task)
-  {
-    Queue<Runnable> queue = taskLaneQueues.get(task.getLabel());
-    queue.offer(() -> runTask(task, true));
+    return doTask(task, true);
   }
 
   private TaskStatus joinTask(Task task)
@@ -212,7 +172,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @VisibleForTesting
   protected TaskStatus doTask(Task task, boolean run)
   {
-    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "Task execution never started");
     try {
       KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
           task,
@@ -229,6 +188,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         workItem.setKubernetesPeonLifecycle(peonLifecycle);
       }
 
+      TaskStatus taskStatus;
       if (run) {
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
@@ -242,29 +202,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         );
       }
 
+      updateStatus(task, taskStatus);
+
       return taskStatus;
     }
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
-      taskStatus = TaskStatus.failure(task.getId(), "Could not start task execution");
       throw new RuntimeException(e);
     }
-    finally {
-      updateStatus(task, taskStatus);
-      runTaskQueues();
-    }
-  }
-
-  private void runTaskQueues()
-  {
-    taskLaneQueues.values().forEach(
-        queue -> {
-          Runnable queuedTask = queue.poll();
-          if (queuedTask != null) {
-            queuedTask.run();
-          }
-        }
-    );
   }
 
   @VisibleForTesting
@@ -297,11 +242,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
-    KubernetesWorkItem workItem = tasks.get(task.getId());
-    if (workItem != null && !workItem.getResult().isDone() && status.isComplete()) {
-      workItem.setResult(status);
-    }
-
     TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 
@@ -533,47 +473,5 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public int getUsedCapacity()
   {
     return tasks.size();
-  }
-
-  private boolean isTaskEligibleToRun(Task task)
-  {
-    TaskLaneConfig taskLane = taskLaneRegistry.getTaskLane(task.getLabel());
-    // Tasks with a RESERVE policy or without a specific task lane always eligible to run
-    if (taskLane == null || taskLane.getPolicy() == TaskLaneCapacityPolicy.RESERVE) {
-      return true;
-    }
-
-    long currentUsedSlots =
-        tasks.values().stream()
-             .filter(wi -> taskLane.getLabelSet().contains(wi.getTask().getLabel()))
-             .filter(wi -> !wi.getResult().isDone())
-             .filter(wi -> !wi.getTask().getId().equals(task.getId())) // excluding current task itself
-             .count() - taskLaneQueues.get(task.getLabel()).size();
-
-    if (currentUsedSlots >= taskLaneRegistry.getAllowedTaskSlotsCount(task.getLabel())) {
-      return false;
-    } else {
-      int totalSlotsForReservedTasks = taskLaneRegistry.getTotalReservedTaskSlots();
-      // Calculate the total slots reserved for tasks. If none are reserved, skip additional checks and accept the task.
-      if (totalSlotsForReservedTasks == 0) {
-        return true;
-      }
-
-      return hasSufficientReservedCapacity(totalSlotsForReservedTasks);
-    }
-  }
-
-  private boolean hasSufficientReservedCapacity(int totalSlotsForReservedTasks)
-  {
-    long usedSlotsForReservedTasks =
-        tasks.values().stream()
-             .filter(wi -> taskLaneRegistry.getReservedTaskLabels().contains(wi.getTask().getLabel())
-                           && !wi.getResult().isDone()).count();
-    int remainingSlotsForReservedTasks = (int) Math.max(0, totalSlotsForReservedTasks - usedSlotsForReservedTasks);
-    int totalQueuedTasks = taskLaneQueues.values().stream().mapToInt(Queue::size).sum();
-    int totalUnfinishedTasks = (int) tasks.values().stream().filter(wi -> !wi.getResult().isDone()).count();
-    int effectiveCapacity = config.getCapacity() + totalQueuedTasks - totalUnfinishedTasks;
-
-    return remainingSlotsForReservedTasks <= effectiveCapacity;
   }
 }

@@ -19,10 +19,9 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.SettableFuture;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -37,18 +36,9 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   private final Task task;
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
 
-  private final SettableFuture<TaskStatus> result;
-
-  public KubernetesWorkItem(Task task)
+  public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
   {
-    this(task, SettableFuture.create());
-  }
-
-  @VisibleForTesting
-  public KubernetesWorkItem(Task task, SettableFuture<TaskStatus> result)
-  {
-    super(task.getId(), result);
-    this.result = result;
+    super(task.getId(), statusFuture);
     this.task = task;
   }
 
@@ -61,7 +51,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   protected synchronized void shutdown()
   {
 
-    if (this.kubernetesPeonLifecycle != null && !result.isDone()) {
+    if (this.kubernetesPeonLifecycle != null) {
       this.kubernetesPeonLifecycle.startWatchingLogs();
       this.kubernetesPeonLifecycle.shutdown();
     }
@@ -128,10 +118,5 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   public Task getTask()
   {
     return task;
-  }
-
-  public void setResult(TaskStatus status)
-  {
-    result.set(status);
   }
 }
