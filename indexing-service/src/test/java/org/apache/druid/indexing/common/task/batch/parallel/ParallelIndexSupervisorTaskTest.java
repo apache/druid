@@ -450,13 +450,13 @@ public class ParallelIndexSupervisorTaskTest
           createRangePartitionStat(day2, 7),
           createRangePartitionStat(day1, 0),
           createRangePartitionStat(day2, 1)
-      ), null, 1L));
+      ), null));
       taskIdToReport.put(task2, new GeneratedPartitionsReport(task2, Arrays.asList(
           createRangePartitionStat(day1, 4),
           createRangePartitionStat(day1, 6),
           createRangePartitionStat(day2, 1),
           createRangePartitionStat(day1, 1)
-      ), null, 1L));
+      ), null));
 
       Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations
           = ParallelIndexSupervisorTask.getPartitionToLocations(taskIdToReport);

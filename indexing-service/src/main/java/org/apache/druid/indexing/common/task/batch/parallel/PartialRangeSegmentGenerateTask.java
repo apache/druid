@@ -195,13 +195,12 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(
       TaskToolbox toolbox,
       List<DataSegment> segments,
-      Map<String, TaskReport> taskReport,
-      Long segmentsRead
+      Map<String, TaskReport> taskReport
   )
   {
     List<PartitionStat> partitionStats = segments.stream()
                                                         .map(segment -> toolbox.getIntermediaryDataManager().generatePartitionStat(toolbox, segment))
                                                         .collect(Collectors.toList());
-    return new GeneratedPartitionsMetadataReport(getId(), partitionStats, taskReport, segmentsRead);
+    return new GeneratedPartitionsMetadataReport(getId(), partitionStats, taskReport);
   }
 }

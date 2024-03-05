@@ -42,7 +42,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import org.apache.druid.indexing.common.ParallelCompactionTaskReportData;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -654,10 +653,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       segmentsPublished = publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
-      segmentsRead = parallelSinglePhaseRunner.getReports()
-                                              .values()
-                                              .stream()
-                                              .mapToLong(report -> report.getOldSegments().size()).sum();
+      if (isCompactionTask) {
+        // segements are only read for compactiont tasks. For `index_parallel`
+        // tasks this would result to 0, but we want to rather have it as null
+        // because segmentsRead is not applicable for such tasks.
+        segmentsRead = parallelSinglePhaseRunner.getReports()
+                                                .values()
+                                                .stream()
+                                                .mapToLong(report -> report.getOldSegments().size()).sum();
+      }
+
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
@@ -1257,8 +1262,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
-            isCompactionTask ?
-            new ParallelCompactionTaskReportData(
+            new IngestionStatsAndErrorsTaskReportData(
                 IngestionState.COMPLETED,
                 rowStatsAndUnparseableEvents.rhs,
                 rowStatsAndUnparseableEvents.lhs,
@@ -1268,15 +1272,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 Collections.emptyMap(),
                 segmentsRead,
                 segmentsPublished
-            ) :
-            new IngestionStatsAndErrorsTaskReportData(
-                IngestionState.COMPLETED,
-                rowStatsAndUnparseableEvents.rhs,
-                rowStatsAndUnparseableEvents.lhs,
-                taskStatus.getErrorMsg(),
-                segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap()
             )
         )
     );
@@ -1665,8 +1660,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
-        if (generatedPartitionsReport.getSegmentsRead() != null) {
-          totalSegmentsRead += generatedPartitionsReport.getSegmentsRead();
+
+        Long segmentsRead = ((IngestionStatsAndErrorsTaskReport)
+            taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+        ).getPayload().getSegmentsRead();
+        if (segmentsRead != null) {
+          totalSegmentsRead += segmentsRead;
         }
       }
 

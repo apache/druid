@@ -126,13 +126,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox.getIndexingTmpDir()
     );
 
-    Map<String, TaskReport> taskReport = getTaskCompletionReports();
+    Map<String, TaskReport> taskReport = getTaskCompletionReports(getSegementsSize(inputSource));
 
     taskClient.report(createGeneratedPartitionsReport(
         toolbox,
         segments,
-        taskReport,
-        getSegementsSize(inputSource)
+        taskReport
     ));
 
     return TaskStatus.success(getId());
@@ -152,8 +151,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   abstract T createGeneratedPartitionsReport(
       TaskToolbox toolbox,
       List<DataSegment> segments,
-      Map<String, TaskReport> taskReport,
-      Long segmentsRead
+      Map<String, TaskReport> taskReport
   );
 
   private Long getSegementsSize(InputSource inputSource)
@@ -252,7 +250,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private Map<String, TaskReport> getTaskCompletionReports(Long segmentsRead)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -264,7 +262,9 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 "",
                 false, // not applicable for parallel subtask
                 segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                segmentsRead,
+                null
             )
         )
     );

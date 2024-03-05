@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.TaskReport;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,19 +37,15 @@ public class GeneratedPartitionsReport implements SubTaskReport
   private final List<PartitionStat> partitionStats;
   private final Map<String, TaskReport> taskReport;
 
-  private final Long segmentsRead;
-
   GeneratedPartitionsReport(
       String taskId,
       List<PartitionStat> partitionStats,
-      Map<String, TaskReport> taskReport,
-      Long segmentsRead
+      Map<String, TaskReport> taskReport
   )
   {
     this.taskId = taskId;
     this.partitionStats = partitionStats;
     this.taskReport = taskReport;
-    this.segmentsRead = segmentsRead;
   }
 
   @Override
@@ -72,13 +67,6 @@ public class GeneratedPartitionsReport implements SubTaskReport
     return partitionStats;
   }
 
-  @JsonProperty
-  @Nullable
-  public Long getSegmentsRead()
-  {
-    return segmentsRead;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -91,14 +79,13 @@ public class GeneratedPartitionsReport implements SubTaskReport
     GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
     return Objects.equals(taskId, that.taskId) &&
            Objects.equals(partitionStats, that.partitionStats) &&
-           Objects.equals(taskReport, that.taskReport) &&
-           Objects.equals(segmentsRead, that.segmentsRead);
+           Objects.equals(taskReport, that.taskReport);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, partitionStats, taskReport, segmentsRead);
+    return Objects.hash(taskId, partitionStats, taskReport);
   }
 
   @Override
@@ -108,7 +95,6 @@ public class GeneratedPartitionsReport implements SubTaskReport
         "taskId='" + taskId + '\'' +
         ", partitionStats=" + partitionStats +
         ", taskReport=" + taskReport +
-        ", segmentsRead=" + segmentsRead +
         '}';
   }
 }

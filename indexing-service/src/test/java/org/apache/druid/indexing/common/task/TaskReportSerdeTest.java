@@ -25,11 +25,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import org.apache.druid.indexing.common.ParallelCompactionTaskReportData;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TestUtils;
@@ -72,46 +70,6 @@ public class TaskReportSerdeTest
             "an error message",
             true,
             1000L,
-            ImmutableMap.of("PartitionA", 5000L)
-        )
-    );
-    String report1serialized = jsonMapper.writeValueAsString(report1);
-    IngestionStatsAndErrorsTaskReport report2 = (IngestionStatsAndErrorsTaskReport) jsonMapper.readValue(
-        report1serialized,
-        TaskReport.class
-    );
-    Assert.assertEquals(report1, report2);
-    Assert.assertEquals(report1.hashCode(), report2.hashCode());
-
-    final File reportFile = temporaryFolder.newFile();
-    final SingleFileTaskReportFileWriter writer = new SingleFileTaskReportFileWriter(reportFile);
-    writer.setObjectMapper(jsonMapper);
-    Map<String, TaskReport> reportMap1 = TaskReport.buildTaskReports(report1);
-    writer.write("testID", reportMap1);
-
-    Map<String, TaskReport> reportMap2 = jsonMapper.readValue(
-        reportFile,
-        new TypeReference<Map<String, TaskReport>>() {}
-    );
-    Assert.assertEquals(reportMap1, reportMap2);
-  }
-
-  @Test
-  public void testSerdeForParallelCompactionReport() throws Exception
-  {
-    IngestionStatsAndErrorsTaskReport report1 = new IngestionStatsAndErrorsTaskReport(
-        "testID",
-        new ParallelCompactionTaskReportData(
-            IngestionState.BUILD_SEGMENTS,
-            ImmutableMap.of(
-                "hello", "world"
-            ),
-            ImmutableMap.of(
-                "number", 1234
-            ),
-            "an error message",
-            true,
-            1000L,
             ImmutableMap.of("PartitionA", 5000L),
             5L,
             10L
@@ -133,19 +91,9 @@ public class TaskReportSerdeTest
 
     Map<String, TaskReport> reportMap2 = jsonMapper.readValue(
         reportFile,
-        new TypeReference<Map<String, TaskReport>>()
-        {
-        }
+        new TypeReference<Map<String, TaskReport>>() {}
     );
     Assert.assertEquals(reportMap1, reportMap2);
-  }
-
-  @Test
-  public void testEqualsForParallelCompactionReport()
-  {
-    EqualsVerifier.simple()
-                  .forClass(ParallelCompactionTaskReportData.class)
-                  .verify();
   }
 
   @Test
