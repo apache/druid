@@ -20,7 +20,9 @@
 package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -29,6 +31,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -64,7 +67,11 @@ public class ConvertSelectorsToIns extends BottomUpTransform
       children = new CollectSelectors(children, sourceRowSignature).collect();
 
       // Process "equality" filters, which are used when "sqlUseBoundAndSelectors" is false.
-      children = new CollectEqualities(children).collect();
+      if (NullHandling.sqlCompatible()) {
+        children = new CollectEqualities(children).collect();
+      } else {
+        children = new CollectEqualitiesDefaultValueMode(children).collect();
+      }
 
       if (!children.equals(((OrDimFilter) filter).getFields())) {
         return children.size() == 1 ? children.get(0) : new OrDimFilter(children);
@@ -199,7 +206,8 @@ public class ConvertSelectorsToIns extends BottomUpTransform
   /**
    * Helper for collecting {@link EqualityFilter} into {@link InDimFilter}.
    */
-  private static class CollectEqualities extends CollectComparisons<DimFilter, EqualityFilter, TypedInFilter, RangeRefKey, Object, List<Object>>
+  private static class CollectEqualities
+      extends CollectComparisons<DimFilter, EqualityFilter, TypedInFilter, RangeRefKey, Object, List<Object>>
   {
     public CollectEqualities(final List<DimFilter> orExprs)
     {
@@ -245,6 +253,71 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     {
       if (values.size() > 1) {
         return new TypedInFilter(rangeRefKey.getColumn(), rangeRefKey.getMatchValueType(), values, null, null);
+      }
+      return null;
+    }
+
+    @Override
+    protected DimFilter makeAnd(List<DimFilter> exprs)
+    {
+      return new AndDimFilter(exprs);
+    }
+  }
+
+  private static class CollectEqualitiesDefaultValueMode
+      extends CollectComparisons<DimFilter, EqualityFilter, InDimFilter, RangeRefKey, String, InDimFilter.ValuesSet>
+  {
+    public CollectEqualitiesDefaultValueMode(final List<DimFilter> orExprs)
+    {
+      super(orExprs);
+    }
+
+    @Nullable
+    @Override
+    protected Pair<EqualityFilter, List<DimFilter>> getCollectibleComparison(DimFilter filter)
+    {
+      return ConvertSelectorsToIns.splitAnd(
+          filter,
+          EqualityFilter.class,
+
+          // Prefer extracting nonnull vs null comparisons when ANDed, as nonnull comparisons are more likely to
+          // find companions in other ORs.
+          Comparator.comparing(equality -> equality.getMatchValue() == null ? 0 : 1)
+      );
+    }
+
+    @Override
+    protected InDimFilter.ValuesSet makeCollection()
+    {
+      return new InDimFilter.ValuesSet();
+    }
+
+    @Nullable
+    @Override
+    protected RangeRefKey getCollectionKey(EqualityFilter selector)
+    {
+      if (!selector.getMatchValueType().is(ValueType.STRING)) {
+        // skip non-string equality filters since InDimFilter uses a sorted string set, which is a different sort
+        // than numbers or other types might use
+        return null;
+      }
+      return RangeRefKey.from(selector);
+    }
+
+    @Override
+    protected Set<String> getMatchValues(EqualityFilter selector)
+    {
+      return Collections.singleton(Evals.asString(selector.getMatchValue()));
+    }
+
+    @Nullable
+    @Override
+    protected InDimFilter makeCollectedComparison(RangeRefKey rangeRefKey, InDimFilter.ValuesSet values)
+    {
+      if (values.size() > 1) {
+        // skip non-string equality filters since InDimFilter uses a sorted string set, which is a different sort
+        // than numbers or other types might use
+        return new InDimFilter(rangeRefKey.getColumn(), values, null, null);
       }
       return null;
     }

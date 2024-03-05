@@ -86,6 +86,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -3920,7 +3921,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimFilter(or(
                             in("dim2", ImmutableSet.of("a", "abc")),
-                            and(isNull("dim2"), in("dim1", ImmutableList.of("a", "abc")))
+                            and(NullFilter.forColumn("dim2"), in("dim1", ImmutableList.of("a", "abc")))
                         ))
                         .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
@@ -4582,7 +4583,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(in("cnt", ColumnType.DOUBLE, ImmutableList.of(1.0, 100000001.0)))
+                  .filters(
+                      NullHandling.sqlCompatible()
+                      ? in("cnt", ColumnType.DOUBLE, ImmutableList.of(1.0, 100000001.0))
+                      : in("cnt", ImmutableList.of("1.0", "100000001.0"), null)
+                  )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()

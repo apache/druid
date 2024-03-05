@@ -110,6 +110,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
+    if (NullHandling.replaceWithDefault()) {
+      throw InvalidInput.exception(
+          "Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter"
+      );
+    }
     this.column = column;
     if (column == null) {
       throw InvalidInput.exception("Invalid IN filter, column cannot be null");
@@ -128,7 +133,6 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     }
     if (sortedValues != null) {
       this.unsortedValues = null;
-      // jackson is a jerk and turns longs into ints sometimes...
       this.lazyMatchValues = () -> sortedValues;
     } else {
       this.unsortedValues = values;

@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -82,14 +83,16 @@ public class TypedInFilterTests
     @Test
     public void testSingleValueStringColumnWithNulls()
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
+
       assertFilterMatches(
           inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "")),
-          NullHandling.sqlCompatible() ? ImmutableList.of("a") : ImmutableList.of()
+          ImmutableList.of("a")
       );
 
       assertFilterMatches(
           inFilter("dim1", ColumnType.STRING, Collections.singletonList("")),
-          NullHandling.sqlCompatible() ? ImmutableList.of("a") : ImmutableList.of()
+          ImmutableList.of("a")
       );
 
       assertFilterMatches(
@@ -106,92 +109,46 @@ public class TypedInFilterTests
           ImmutableList.of()
       );
 
-      if (NullHandling.replaceWithDefault()) {
-        assertFilterMatches(
-            inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "10", "abc")),
-            ImmutableList.of("a", "b", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "10", "abc")),
-            ImmutableList.of("a", "b", "f")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim1", ColumnType.STRING, Arrays.asList("-1", "ab", "de"))),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("s0", ColumnType.STRING, Arrays.asList("a", "b"))),
-            ImmutableList.of("a", "c", "e")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("s0", ColumnType.STRING, Collections.singletonList("noexist"))),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-      } else {
-        assertFilterMatches(
-            inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "10", "abc")),
-            ImmutableList.of("b", "f")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim1", ColumnType.STRING, Arrays.asList("-1", "ab", "de"))),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("s0", ColumnType.STRING, Arrays.asList("a", "b"))),
-            ImmutableList.of("a", "e")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("s0", ColumnType.STRING, Collections.singletonList("noexist"))),
-            ImmutableList.of("a", "b", "d", "e", "f")
-        );
-      }
+      assertFilterMatches(
+          inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "10", "abc")),
+          ImmutableList.of("b", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("dim1", ColumnType.STRING, Arrays.asList("-1", "ab", "de"))),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("s0", ColumnType.STRING, Arrays.asList("a", "b"))),
+          ImmutableList.of("a", "e")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("s0", ColumnType.STRING, Collections.singletonList("noexist"))),
+          ImmutableList.of("a", "b", "d", "e", "f")
+      );
     }
 
     @Test
     public void testMultiValueStringColumn()
     {
-      if (isAutoSchema()) {
-        return;
-      }
-      if (NullHandling.replaceWithDefault()) {
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList("b", "d")),
-            ImmutableList.of("a")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Collections.singletonList(null)),
-            ImmutableList.of("b", "c", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "a")),
-            ImmutableList.of("a", "b", "c", "d", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "b")),
-            ImmutableList.of("a", "b", "c", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Collections.singletonList("")),
-            ImmutableList.of("b", "c", "f")
-        );
-      } else {
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Collections.singletonList(null)),
-            ImmutableList.of("b", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "a")),
-            ImmutableList.of("a", "b", "d", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "b")),
-            ImmutableList.of("a", "b", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Collections.singletonList("")),
-            ImmutableList.of("c")
-        );
-      }
+      Assume.assumeTrue(NullHandling.sqlCompatible());
+      Assume.assumeFalse(isAutoSchema());
+
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Collections.singletonList(null)),
+          ImmutableList.of("b", "f")
+      );
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "a")),
+          ImmutableList.of("a", "b", "d", "f")
+      );
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "b")),
+          ImmutableList.of("a", "b", "f")
+      );
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Collections.singletonList("")),
+          ImmutableList.of("c")
+      );
 
       assertFilterMatches(
           inFilter("dim2", ColumnType.STRING, Arrays.asList("", null)),
@@ -212,6 +169,7 @@ public class TypedInFilterTests
     @Test
     public void testMissingColumn()
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       assertFilterMatches(
           inFilter("dim3", ColumnType.STRING, Arrays.asList(null, null)),
           ImmutableList.of("a", "b", "c", "d", "e", "f")
@@ -221,21 +179,14 @@ public class TypedInFilterTests
           ImmutableList.of()
       );
 
-      if (NullHandling.replaceWithDefault()) {
-        assertFilterMatches(
-            inFilter("dim3", ColumnType.STRING, Collections.singletonList("")),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-      } else {
-        assertFilterMatches(
-            inFilter("dim3", ColumnType.STRING, Collections.singletonList("")),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList(""))),
-            ImmutableList.of()
-        );
-      }
+      assertFilterMatches(
+          inFilter("dim3", ColumnType.STRING, Collections.singletonList("")),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList(""))),
+          ImmutableList.of()
+      );
 
       assertFilterMatches(
           inFilter("dim3", ColumnType.STRING, Arrays.asList(null, "a")),
@@ -252,7 +203,7 @@ public class TypedInFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList("a"))),
-          NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("a", "b", "c", "d", "e", "f")
+          ImmutableList.of()
       );
 
       assertFilterMatches(
@@ -269,26 +220,27 @@ public class TypedInFilterTests
     @Test
     public void testNumeric()
     {
-      assertFilterMatches(inFilter("f0", ColumnType.FLOAT, Collections.singletonList(0f)), ImmutableList.of("a"));
-      assertFilterMatches(inFilter("d0", ColumnType.DOUBLE, Collections.singletonList(0.0)), ImmutableList.of("a"));
+      Assume.assumeTrue(NullHandling.sqlCompatible());
+      assertFilterMatches(
+          inFilter("f0", ColumnType.FLOAT, Collections.singletonList(0f)),
+          ImmutableList.of("a")
+      );
+      assertFilterMatches(
+          inFilter("d0", ColumnType.DOUBLE, Collections.singletonList(0.0)),
+          ImmutableList.of("a")
+      );
       assertFilterMatches(inFilter("l0", ColumnType.LONG, Collections.singletonList(0L)), ImmutableList.of("a"));
       assertFilterMatches(
           NotDimFilter.of(inFilter("f0", ColumnType.FLOAT, Collections.singletonList(0f))),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("b", "c", "d", "f")
-          : ImmutableList.of("b", "c", "d", "e", "f")
+          ImmutableList.of("b", "c", "d", "f")
       );
       assertFilterMatches(
           NotDimFilter.of(inFilter("d0", ColumnType.DOUBLE, Collections.singletonList(0.0))),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("b", "d", "e", "f")
-          : ImmutableList.of("b", "c", "d", "e", "f")
+          ImmutableList.of("b", "d", "e", "f")
       );
       assertFilterMatches(
           NotDimFilter.of(inFilter("l0", ColumnType.LONG, Collections.singletonList(0L))),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("b", "c", "e", "f")
-          : ImmutableList.of("b", "c", "d", "e", "f")
+          ImmutableList.of("b", "c", "e", "f")
       );
       assertFilterMatches(inFilter("f0", ColumnType.FLOAT, Collections.singletonList(null)), ImmutableList.of("e"));
       assertFilterMatches(inFilter("d0", ColumnType.DOUBLE, Collections.singletonList(null)), ImmutableList.of("c"));
@@ -336,6 +288,7 @@ public class TypedInFilterTests
     @Test
     public void testSerde() throws JsonProcessingException
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       ObjectMapper mapper = new DefaultObjectMapper();
       TypedInFilter filter = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "c"));
       String s = mapper.writeValueAsString(filter);
@@ -365,6 +318,7 @@ public class TypedInFilterTests
     @Test
     public void testGetCacheKey()
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       TypedInFilter filterUnsorted = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "b", null, "c"));
       TypedInFilter filterDifferent = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "b", "c"));
       TypedInFilter filterPresorted = new TypedInFilter(
@@ -429,6 +383,15 @@ public class TypedInFilterTests
     @Test
     public void testInvalidParameters()
     {
+      if (NullHandling.replaceWithDefault()) {
+        Throwable t = Assert.assertThrows(
+            DruidException.class,
+            () -> new TypedInFilter(null, ColumnType.STRING, null, null, null)
+        );
+        Assert.assertEquals("Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter", t.getMessage());
+      }
+
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       Throwable t = Assert.assertThrows(
           DruidException.class,
           () -> new TypedInFilter(null, ColumnType.STRING, null, null, null)
@@ -452,6 +415,7 @@ public class TypedInFilterTests
     @Test
     public void testGetDimensionRangeSet()
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       TypedInFilter filter = inFilter("x", ColumnType.STRING, Arrays.asList(null, "a", "b", "c"));
       TypedInFilter filter2 = inFilter("x", ColumnType.STRING, Arrays.asList("a", "b", null, "c"));
 
@@ -481,6 +445,7 @@ public class TypedInFilterTests
     @Test
     public void testRequiredColumnRewrite()
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       TypedInFilter filter = inFilter("dim0", ColumnType.STRING, Arrays.asList("a", "c"));
       TypedInFilter filter2 = inFilter("dim1", ColumnType.STRING, Arrays.asList("a", "c"));
 
@@ -503,6 +468,7 @@ public class TypedInFilterTests
     @Test
     public void test_equals()
     {
+      Assume.assumeTrue(NullHandling.sqlCompatible());
       EqualsVerifier.forClass(TypedInFilter.class).usingGetClass()
                     .withNonnullFields(
                         "column",

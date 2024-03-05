@@ -6388,7 +6388,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     "(\"dim2\" == \"j0.dim2\")",
                                     JoinType.INNER
                                 ),
-                                in("m1", ColumnType.FLOAT, ImmutableList.of(1.0, 4.0))
+                                NullHandling.sqlCompatible()
+                                ? in("m1", ColumnType.FLOAT, ImmutableList.of(1.0, 4.0))
+                                : in("m1", ImmutableList.of("1", "4"))
                             ),
                             expressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
                             equality("_j0.unnest", "a", ColumnType.STRING)

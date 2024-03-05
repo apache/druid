@@ -6948,7 +6948,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(
-                      in("m1", ColumnType.FLOAT, ImmutableList.of(1.0f, 2.0f))
+                      NullHandling.sqlCompatible()
+                      ? in("m1", ColumnType.FLOAT, ImmutableList.of(1.0f, 2.0f))
+                      : in("m1", ImmutableList.of("1", "2"))
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)

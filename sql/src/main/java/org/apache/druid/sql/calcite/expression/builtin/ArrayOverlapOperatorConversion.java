@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -150,7 +151,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
           );
         }
       } else {
-        if (plannerContext.isUseBoundsAndSelectors() || !simpleExtractionExpr.isDirectColumnAccess()) {
+        if (plannerContext.isUseBoundsAndSelectors() || NullHandling.replaceWithDefault() || !simpleExtractionExpr.isDirectColumnAccess()) {
           final InDimFilter.ValuesSet valuesSet = InDimFilter.ValuesSet.create();
           for (final Object arrayElement : arrayElements) {
             valuesSet.add(Evals.asString(arrayElement));

@@ -817,7 +817,11 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo121'), ARRAY['xabc', 'x6', 'nonexistent', NULL])"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(in("dim1", Arrays.asList(null, "abc"))),
+        buildFilterTestExpectedQuery(
+            NullHandling.sqlCompatible()
+            ? in("dim1", Arrays.asList(null, "abc"))
+            : equality("dim1", "abc", ColumnType.STRING)
+        ),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
   }
