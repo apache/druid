@@ -96,22 +96,13 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     try {
       final DBI dbi = connector.getDBI();
       List<Map<String, Object>> exists = dbi.withHandle(
-          new HandleCallback<List<Map<String, Object>>>()
-          {
-            @Override
-            public List<Map<String, Object>> withHandle(Handle handle)
-            {
-              return handle.createQuery(
-                  StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
-              )
-                           .bind("id", segmentId)
-                           .list();
-            }
-          }
+          handle -> handle.createQuery(
+              StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
+          ).bind("id", segmentId).list()
       );
 
       if (!exists.isEmpty()) {
-        log.info("Found [%s] in DB, not updating DB", segmentId);
+        log.info("Segment[%s] already exists in the metadata store.", segmentId);
         return;
       }
 
