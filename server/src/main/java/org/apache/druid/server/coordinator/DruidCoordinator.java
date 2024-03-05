@@ -52,6 +52,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
@@ -152,6 +153,8 @@ public class DruidCoordinator
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
   private final SegmentSchemaManager segmentSchemaManager;
+  @Nullable
+  private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   private volatile boolean started = false;
@@ -192,6 +195,7 @@ public class DruidCoordinator
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
       SegmentSchemaManager segmentSchemaManager,
+      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -213,9 +217,8 @@ public class DruidCoordinator
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
     this.loadQueueManager = loadQueueManager;
     this.segmentSchemaManager = segmentSchemaManager;
+    this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-
-    log.info("CentralizedDataSourceSchemaProp is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   public boolean isLeader()
@@ -407,6 +410,9 @@ public class DruidCoordinator
           config.getCoordinatorStartDelay()
       );
 
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.onLeaderStart();
+      }
       metadataManager.onLeaderStart();
       taskMaster.onLeaderStart();
       lookupCoordinatorManager.start();
@@ -490,6 +496,9 @@ public class DruidCoordinator
 
       log.info("I am no longer the leader...");
 
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.onLeaderStop();
+      }
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();

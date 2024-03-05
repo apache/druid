@@ -149,7 +149,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   @Override
-  public boolean additionalInitializationCondition()
+  public boolean additionalRefreshConditionMet()
   {
     return true;
   }

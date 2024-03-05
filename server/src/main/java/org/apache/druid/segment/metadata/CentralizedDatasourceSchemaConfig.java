@@ -31,7 +31,7 @@ public class CentralizedDatasourceSchemaConfig
   private boolean enabled = false;
 
   @JsonProperty
-  private boolean backFillEnabled = false;
+  private boolean backFillEnabled = true;
   @JsonProperty
   private long backFillPeriod = 60000;
 

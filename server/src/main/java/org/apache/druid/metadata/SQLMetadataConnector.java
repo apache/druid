@@ -603,8 +603,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       }
     }
 
+    List<String> alterCommands = new ArrayList<>();
     if (!columnsToAdd.isEmpty()) {
-      List<String> alterCommands = new ArrayList<>();
       for (String columnName : columnsToAdd) {
         alterCommands.add(
             StringUtils.format(
@@ -617,19 +617,19 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       }
 
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
-
-      alterCommands.add(
-          StringUtils.format(
-              "ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)",
-              tableName,
-              schemaTableName
-          ));
-
-      alterTable(
-          tableName,
-          alterCommands
-      );
     }
+
+    alterCommands.add(
+        StringUtils.format(
+            "ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)",
+            tableName,
+            schemaTableName
+        ));
+
+    alterTable(
+        tableName,
+        alterCommands
+    );
   }
 
   @Override

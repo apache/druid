@@ -160,6 +160,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
+    runningSchema.onLeaderStart();
     runningSchema.start();
     runningSchema.awaitInitialization();
     return runningSchema;
@@ -404,6 +405,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
+    schema.onLeaderStart();
     schema.start();
     schema.awaitInitialization();
 
@@ -1375,6 +1377,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
+    schema.onLeaderStart();
     schema.start();
     schema.awaitInitialization();
 
@@ -1459,6 +1462,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
+    schema.onLeaderStart();
     schema.start();
     schema.awaitInitialization();
     Assert.assertTrue(refresh1Latch.await(10, TimeUnit.SECONDS));
@@ -1635,6 +1639,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     serverView.addSegment(segment1, ServerType.HISTORICAL);
     serverView.addSegment(segment2, ServerType.HISTORICAL);
 
+    schema.onLeaderStart();
     schema.start();
     schema.awaitInitialization();
 

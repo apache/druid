@@ -211,6 +211,7 @@ public class CoordinatorSimulationBuilder
         env.leaderSelector,
         COMPACTION_SEGMENT_SEARCH_POLICY,
         null,
+        null,
         CentralizedDatasourceSchemaConfig.create()
     );
 

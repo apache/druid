@@ -522,6 +522,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
       periodicPollTaskFuture.cancel(false);
       latestDatabasePoll = null;
+      latestSegmentSchemaPoll = null;
+      segmentSchemaCache.uninitialize();
 
       // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadataManager
       // object is stopped.

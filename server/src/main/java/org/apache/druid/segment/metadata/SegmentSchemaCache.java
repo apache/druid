@@ -53,7 +53,7 @@ public class SegmentSchemaCache
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaCache.class);
 
   // Cache is marked initialized after first DB poll.
-  private final CountDownLatch initialized = new CountDownLatch(1);
+  private CountDownLatch initialized = new CountDownLatch(1);
 
   /**
    * Mapping from segmentId to segment level information which includes numRows and schemaId.
@@ -87,6 +87,13 @@ public class SegmentSchemaCache
   public void setInitialized()
   {
     initialized.countDown();
+    log.info("SegmentSchemaCache is initialized.");
+  }
+
+  public void uninitialize()
+  {
+    initialized = new CountDownLatch(1);
+    log.info("SegmentSchemaCache is uninitialized.");
   }
 
   public void awaitInitialization() throws InterruptedException

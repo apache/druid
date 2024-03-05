@@ -22,6 +22,7 @@ package org.apache.druid.segment.metadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.InternalQueryConfig;
@@ -58,11 +59,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Coordinator-side cache of segment metadata that combines segments to build
  * datasources. The cache provides metadata about a datasource, see {@link DataSourceInformation}.
  * <p>
- * This class differs from the other implementation {@code BrokerSegmentMetadataCache} in two aspects,
+ * Major differences from the other implementation {@code BrokerSegmentMetadataCache} are,
+ * <li>The refresh is executed only on the leader Coordinator node.</li>
  * <li>Realtime segment schema refresh. Schema update for realtime segment is pushed periodically.
  * The schema is merged with any existing schema for the segment and the cache is updated.
  * Corresponding datasource is marked for refresh.</li>
- * <li>The refresh mechanism is significantly different from the other representation,
+ * <li>The refresh mechanism is significantly different from the other implementation,
  * <ul><li>SMQ is executed only for those non-realtime segments for which the schema is not cached.</li>
  * <li>Datasources marked for refresh are then rebuilt.</li></ul>
  * </li>
@@ -75,6 +77,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
+
+  @GuardedBy("this")
+  private final AtomicBoolean isLeader = new AtomicBoolean(false);
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -146,11 +151,28 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     );
   }
 
-  @Override
-  public boolean additionalInitializationCondition() throws InterruptedException
+  public synchronized void onLeaderStart()
   {
-    segmentSchemaCache.awaitInitialization();
-    return true;
+    isLeader.set(true);
+  }
+
+  public synchronized void onLeaderStop()
+  {
+    isLeader.set(false);
+  }
+
+  /**
+   * This method ensures that the refresh goes through only when schemaCache is initialized
+   * and the current node is leader.
+   */
+  @Override
+  public synchronized boolean additionalRefreshConditionMet() throws InterruptedException
+  {
+    if (isLeader.get()) {
+      segmentSchemaCache.awaitInitialization();
+      return isLeader.get();
+    }
+    return false;
   }
 
   @Override
