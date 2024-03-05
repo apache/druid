@@ -30,6 +30,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
@@ -113,11 +114,11 @@ public class SqlSegmentsMetadataManagerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
-    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.seconds(1));
+    config.setPollDuration(Period.millis(1));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         JSON_MAPPER,
         Suppliers.ofInstance(config),
@@ -516,21 +517,23 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertNotNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA));
 
     Assert.assertTrue(sqlSegmentsMetadataManager.markSegmentAsUnused(koalaSegment.getId()));
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     awaitDataSourceDisappeared(DS.KOALA);
     Assert.assertNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA));
+    System.out.println("Total time:" + stopwatch.millisElapsed());
   }
 
   private void awaitDataSourceAppeared(String datasource) throws InterruptedException
   {
     while (sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(datasource) == null) {
-      Thread.sleep(1000);
+      Thread.sleep(5);
     }
   }
 
   private void awaitDataSourceDisappeared(String dataSource) throws InterruptedException
   {
     while (sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSource) != null) {
-      Thread.sleep(1000);
+      Thread.sleep(5);
     }
   }
 
@@ -581,7 +584,7 @@ public class SqlSegmentsMetadataManagerTest
     );
   }
 
-  @Test(expected = UnknownSegmentIdsException.class)
+  @Test
   public void testMarkAsUsedNonOvershadowedSegmentsInvalidDataSource() throws Exception
   {
     publishWikiSegments();
@@ -600,12 +603,15 @@ public class SqlSegmentsMetadataManagerTest
         ImmutableSet.of(wikiSegment1, wikiSegment2),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
-    // none of the segments are in data source
-    Assert.assertEquals(0, sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegments("wrongDataSource", segmentIds));
+
+    Assert.assertThrows(
+        UnknownSegmentIdsException.class,
+        () -> sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegments("wrongDataSource", segmentIds)
+    );
   }
 
-  @Test(expected = UnknownSegmentIdsException.class)
-  public void testMarkAsUsedNonOvershadowedSegmentsWithInvalidSegmentIds() throws UnknownSegmentIdsException
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithInvalidSegmentIds()
   {
     publishWikiSegments();
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
@@ -622,8 +628,11 @@ public class SqlSegmentsMetadataManagerTest
         ImmutableSet.of(wikiSegment1, wikiSegment2),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
-    // none of the segments are in data source
-    Assert.assertEquals(0, sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegments(DS.KOALA, segmentIds));
+
+    Assert.assertThrows(
+        UnknownSegmentIdsException.class,
+        () -> sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegments(DS.KOALA, segmentIds)
+    );
   }
 
   @Test
@@ -822,6 +831,18 @@ public class SqlSegmentsMetadataManagerTest
   {
     publishWikiSegments();
     final Interval theInterval = Intervals.of("2012-03-15T00:00:00.000/2012-03-20T00:00:00.000");
+
+    // Re-create SqlSegmentsMetadataManager with a higher poll duration
+    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
+    config.setPollDuration(Period.seconds(1));
+    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
+        JSON_MAPPER,
+        Suppliers.ofInstance(config),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        derbyConnectorRule.getConnector()
+    );
+    sqlSegmentsMetadataManager.start();
+
     Optional<Iterable<DataSegment>> segments = sqlSegmentsMetadataManager
         .iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DS.WIKI, theInterval, true);
     Assert.assertTrue(segments.isPresent());
@@ -864,8 +885,7 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-15T20:19:12.565Z"
     );
 
-    publisher.publishSegment(koalaSegment);
-    sqlSegmentsMetadataManager.markSegmentAsUnused(koalaSegment.getId());
+    publishUnusedSegments(koalaSegment);
     updateUsedStatusLastUpdatedToNull(koalaSegment);
 
     Assert.assertEquals(1, getCountOfRowsWithLastUsedNull());
