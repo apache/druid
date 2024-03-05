@@ -410,7 +410,7 @@ public class SqlNestedDataBenchmark
       );
     }
     catch (Throwable ex) {
-//      log.warn(ex, "failed to sanity check");
+      log.warn(ex, "failed to sanity check");
     }
 
     final String sql = QUERIES.get(Integer.parseInt(query));
@@ -443,7 +443,7 @@ public class SqlNestedDataBenchmark
       log.info("Total result row count:" + rowCounter);
     }
     catch (Throwable ex) {
-//      log.warn(ex, "failed to count rows");
+      log.warn(ex, "failed to count rows");
     }
   }
 

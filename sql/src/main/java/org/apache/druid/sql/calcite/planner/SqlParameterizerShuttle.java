@@ -135,8 +135,6 @@ public class SqlParameterizerShuttle extends SqlShuttle
       SqlNode node;
       if (element instanceof String) {
         node = SqlLiteral.createCharString((String) element, SqlParserPos.ZERO);
-      } else if (element instanceof Float || element instanceof Double) {
-        node = SqlLiteral.createApproxNumeric(element.toString(), SqlParserPos.ZERO);
       } else if (element instanceof Integer || element instanceof Long) {
         // No direct way to create a literal from an Integer or Long, have
         // to parse a string, sadly.
