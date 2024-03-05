@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.http.HttpResponseException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
@@ -87,15 +86,6 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
           1,
           5
       );
-    }
-    catch (HttpResponseException e) {
-      if (e.getStatusCode() != 404) {
-        throw e;
-      }
-      LOG.debug("Already deleted: [%s] [%s]", bucket, path);
-    }
-    catch (IOException ioe) {
-      throw ioe;
     }
     catch (Exception e) {
       throw new RE(e, "Failed to delete [%s] [%s]", bucket, path);
