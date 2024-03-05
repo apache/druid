@@ -520,10 +520,10 @@ public class CompactionTask extends AbstractBatchIndexTask
               log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
             }
 
-            String reportKeyPrefix = "_" + i;
+            String reportKeySuffix = "_" + i;
             Optional.ofNullable(eachSpec.getCompletionReports())
                     .ifPresent(reports -> completionReports.putAll(
-                        CollectionUtils.mapKeys(reports, key -> key + reportKeyPrefix)));
+                        CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)));
           } else {
             failCnt++;
             log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
