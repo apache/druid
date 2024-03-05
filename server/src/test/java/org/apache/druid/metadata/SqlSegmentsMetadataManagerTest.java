@@ -96,18 +96,19 @@ public class SqlSegmentsMetadataManagerTest
   private void publishUnusedSegments(DataSegment... segments) throws IOException
   {
     for (DataSegment segment : segments) {
-      publishUnusedSegment(segment, DateTimes.nowUtc());
+      publisher.publishSegment(segment);
+      sqlSegmentsMetadataManager.markSegmentAsUnused(segment.getId());
     }
   }
 
-  private void publishUnusedSegment(DataSegment segment, DateTime usedFlagLastUpdated) throws IOException
+  private void publishWikiSegments()
   {
-    publisher.publishSegment(segment);
-    sqlSegmentsMetadataManager.markSegmentAsUnused(segment.getId());
-    if (usedFlagLastUpdated == null) {
-      updateUsedStatusLastUpdatedToNull(segment);
-    } else {
-      updateUsedStatusLastUpdated(segment, usedFlagLastUpdated);
+    try {
+      publisher.publishSegment(wikiSegment1);
+      publisher.publishSegment(wikiSegment2);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -132,17 +133,6 @@ public class SqlSegmentsMetadataManagerTest
     );
 
     connector.createSegmentTable();
-  }
-
-  private void publishWikiSegments()
-  {
-    try {
-      publisher.publishSegment(wikiSegment1);
-      publisher.publishSegment(wikiSegment2);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @After
@@ -367,17 +357,14 @@ public class SqlSegmentsMetadataManagerTest
   @Test
   public void testPollWithCorruptedSegment() throws IOException
   {
+    publishWikiSegments();
+
     //create a corrupted segment entry in segments table, which tests
     //that overall loading of segments from database continues to work
     //even in one of the entries are corrupted.
-    publishWikiSegments();
-
     final DataSegment corruptSegment = DataSegment.builder(wikiSegment1).dataSource("corrupt-datasource").build();
     publisher.publishSegment(corruptSegment);
-
-    // Update the segment entry and corrupt the payload
-    int numUpdatedRows = updateSegmentPayload(corruptSegment, StringUtils.toUtf8("corrupt-payload"));
-    Assert.assertEquals(1, numUpdatedRows);
+    updateSegmentPayload(corruptSegment, StringUtils.toUtf8("corrupt-payload"));
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
@@ -403,26 +390,32 @@ public class SqlSegmentsMetadataManagerTest
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(DS.WIKI);
     Assert.assertEquals(2, numChangedSegments);
 
-    final DataSegment koalaSegment = createSegment(
+    // Publish an unused segment with used_status_last_updated 2 hours ago
+    final DataSegment koalaSegment1 = createSegment(
         DS.KOALA,
         "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
         "2017-10-15T20:19:12.565Z"
     );
-    publishUnusedSegment(koalaSegment, DateTimes.nowUtc().minus(Duration.parse("PT7200S").getMillis()));
+    publishUnusedSegments(koalaSegment1);
+    updateUsedStatusLastUpdated(koalaSegment1, DateTimes.nowUtc().minus(Duration.standardHours(2)));
 
+    // Publish an unused with used_status_last_updated 2 days ago
     final DataSegment koalaSegment2 = createSegment(
         DS.KOALA,
         "2017-10-16T00:00:00.000/2017-10-17T00:00:00.000",
         "2017-10-15T20:19:12.565Z"
     );
-    publishUnusedSegment(koalaSegment2, DateTimes.nowUtc().minus(Duration.parse("PT172800S").getMillis()));
+    publishUnusedSegments(koalaSegment2);
+    updateUsedStatusLastUpdated(koalaSegment2, DateTimes.nowUtc().minus(Duration.standardDays(2)));
 
+    // Publish an unused segment and set used_status_last_updated to null
     final DataSegment koalaSegment3 = createSegment(
         DS.KOALA,
         "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
         "2017-10-15T20:19:12.565Z"
     );
-    publishUnusedSegment(koalaSegment3, null);
+    publishUnusedSegments(koalaSegment3);
+    updateUsedStatusLastUpdatedToNull(koalaSegment3);
 
     Assert.assertEquals(
         ImmutableList.of(wikiSegment2.getInterval()),
@@ -456,8 +449,8 @@ public class SqlSegmentsMetadataManagerTest
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, DateTimes.COMPARE_DATE_AS_STRING_MIN, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
 
-    // One of the 3 segments in koala has a null used_status_last_updated which should mean getUnusedSegmentIntervals never returns it
-    // One of the 3 segments in koala has a used_status_last_updated older than 1 day which means it should also be returned
+    // koalaSegment3 has a null used_status_last_updated which should mean getUnusedSegmentIntervals never returns it
+    // koalaSegment2 has a used_status_last_updated older than 1 day which means it should also be returned
     // The last of the 3 segments in koala has a used_status_last_updated date less than one day and should not be returned
     Assert.assertEquals(
         ImmutableList.of(koalaSegment2.getInterval()),
@@ -870,20 +863,22 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
         "2017-10-15T20:19:12.565Z"
     );
-    publishUnusedSegment(koalaSegment, null);
-    Assert.assertTrue(getCountOfRowsWithLastUsedNull() > 0);
+
+    publisher.publishSegment(koalaSegment);
+    sqlSegmentsMetadataManager.markSegmentAsUnused(koalaSegment.getId());
+    updateUsedStatusLastUpdatedToNull(koalaSegment);
+
+    Assert.assertEquals(1, getCountOfRowsWithLastUsedNull());
     sqlSegmentsMetadataManager.populateUsedFlagLastUpdated();
     Assert.assertEquals(0, getCountOfRowsWithLastUsedNull());
   }
 
-  private int updateSegmentPayload(DataSegment segment, byte[] payload)
+  private void updateSegmentPayload(DataSegment segment, byte[] payload)
   {
-    return derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format("UPDATE %1$s SET PAYLOAD = ? WHERE ID = ?", getSegmentsTable()),
-            payload,
-            segment.getId().toString()
-        )
+    executeUpdate(
+        "UPDATE %1$s SET PAYLOAD = ? WHERE ID = ?",
+        payload,
+        segment.getId().toString()
     );
   }
 
@@ -901,28 +896,28 @@ public class SqlSegmentsMetadataManagerTest
 
   private void updateUsedStatusLastUpdated(DataSegment segment, DateTime newValue)
   {
-    derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format(
-                "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
-                getSegmentsTable()
-            ),
-            newValue.toString(),
-            segment.getId().toString()
-        )
+    executeUpdate(
+        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
+        newValue.toString(),
+        segment.getId().toString()
     );
   }
 
   private void updateUsedStatusLastUpdatedToNull(DataSegment segment)
   {
+    executeUpdate(
+        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = NULL WHERE ID = ?",
+        segment.getId().toString()
+    );
+  }
+
+  private void executeUpdate(String sqlFormat, Object... args)
+  {
     derbyConnectorRule.getConnector().retryWithHandle(
         handle -> handle.update(
-              StringUtils.format(
-                  "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = NULL WHERE ID = ?",
-                  getSegmentsTable()
-              ),
-              segment.getId().toString()
-          )
+            StringUtils.format(sqlFormat, getSegmentsTable()),
+            args
+        )
     );
   }
 
@@ -933,14 +928,7 @@ public class SqlSegmentsMetadataManagerTest
    */
   private void allowUsedFlagLastUpdatedToBeNullable()
   {
-    derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format(
-                "ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL",
-                getSegmentsTable()
-            )
-        )
-    );
+    executeUpdate("ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL");
   }
 
   private String getSegmentsTable()
