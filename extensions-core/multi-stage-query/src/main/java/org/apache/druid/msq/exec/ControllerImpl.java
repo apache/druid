@@ -1731,24 +1731,25 @@ public class ControllerImpl implements Controller
       //noinspection unchecked
       @SuppressWarnings("unchecked")
       final Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
-      DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
-                                                                                  .getProcessorFactory()).getDataSchema();
 
       Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = Function.identity();
 
+      Boolean storeCompactionState = (Boolean) task.getQuerySpec()
+                                                   .getQuery()
+                                                   .getContext()
+                                                   .get(Tasks.STORE_COMPACTION_STATE_KEY);
 
-      Object storeCompactionStateValue = task.getQuerySpec()
-                                             .getQuery()
-                                             .getContext()
-                                             .get(Tasks.STORE_COMPACTION_STATE_KEY);
+      if (storeCompactionState == null) {
+        storeCompactionState = Tasks.DEFAULT_STORE_COMPACTION_STATE;
 
-      final boolean storeCompactionState = storeCompactionStateValue != null
-                                           ? (Boolean) storeCompactionStateValue
-                                           : Tasks.DEFAULT_STORE_COMPACTION_STATE;
+      }
 
-      if (storeCompactionState) {
+      if (!segments.isEmpty() && storeCompactionState) {
+        DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
+                                                                                    .getProcessorFactory()).getDataSchema();
 
-        ShardSpec shardSpec = segments.isEmpty() ? null : segments.stream().findFirst().get().getShardSpec();
+
+        ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
 
         compactionStateAnnotateFunction = compactionStateAnnotateFunction(
             task(),
@@ -1757,6 +1758,7 @@ public class ControllerImpl implements Controller
             shardSpec,
             queryDef.getQueryId()
         );
+
       }
 
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
@@ -1771,7 +1773,7 @@ public class ControllerImpl implements Controller
     DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
     if (!destination.isReplaceTimeChunks()) {
       // Only do this for replace queries, whether originating directly or via compaction
-      log.error("Query [%s] skipping storing compaction state in segments as query not of type REPLACE", queryId);
+      log.error("Query [%s] skipping storing compaction state in segments as query not of type REPLACE.", queryId);
       return Function.identity();
     }
 
@@ -1779,7 +1781,7 @@ public class ControllerImpl implements Controller
 
     if (task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) == null) {
       // This is a defensive check. Should never enter here.
-      log.error("Query [%s] skipping storing compaction state in segments as segment granularity not set", queryId);
+      log.error("Query [%s] skipping storing compaction state in segments as segment granularity not set.", queryId);
       return Function.identity();
     }
 
@@ -1815,8 +1817,8 @@ public class ControllerImpl implements Controller
 
     PartitionsSpec partitionSpec;
 
-    if (shardSpec != null && (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
-                              || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
+    if ((Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
+         || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
       List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
       partitionSpec = new DimensionRangePartitionsSpec(
           task.getQuerySpec().getTuningConfig().getRowsPerSegment(),
@@ -1825,12 +1827,12 @@ public class ControllerImpl implements Controller
           false
       );
 
-    } else if (shardSpec != null && Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
+    } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
       partitionSpec = new DynamicPartitionsSpec(task.getQuerySpec().getTuningConfig().getRowsPerSegment(), null);
     } else {
       log.error(
-          "Query [%s] skipping storing compaction state in segments as shard spec of unsupported type",
-          queryId
+          "Query [%s] skipping storing compaction state in segments as shard spec of unsupported type [%s].",
+          queryId, shardSpec.getType()
       );
       return Function.identity();
     }
@@ -1846,7 +1848,7 @@ public class ControllerImpl implements Controller
         granularitySpec.asMap(jsonMapper)
     );
 
-    log.info("Query [%s] storing compaction state in segments", queryId);
+    log.info("Query [%s] storing compaction state in segments.", queryId);
 
     return segments -> segments
         .stream()

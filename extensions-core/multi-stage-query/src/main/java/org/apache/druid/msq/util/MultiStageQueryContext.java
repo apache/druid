@@ -126,7 +126,7 @@ public class MultiStageQueryContext
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
 
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
-  static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
+  public static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
   public static final String CTX_ROWS_PER_PAGE = "rowsPerPage";
   static final int DEFAULT_ROWS_PER_PAGE = 100000;

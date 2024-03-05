@@ -23,18 +23,34 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -62,13 +78,17 @@ import java.util.TreeSet;
 public class MSQReplaceTest extends MSQTestBase
 {
 
-  private static final String WITH_REPLACE_LOCK = "WITH_REPLACE_LOCK";
-  private static final Map<String, Object> QUERY_CONTEXT_WITH_REPLACE_LOCK =
+  private static final String WITH_REPLACE_LOCK_AND_COMPACTION_STATE = "WITH_REPLACE_LOCK_AND_COMPACTION_STATE";
+  private static final Map<String, Object> QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       Tasks.TASK_LOCK_TYPE,
                       StringUtils.toLowerCase(TaskLockType.REPLACE.name())
+                  )
+                  .put(
+                      Tasks.STORE_COMPACTION_STATE_KEY,
+                      true
                   )
                   .build();
 
@@ -80,8 +100,8 @@ public class MSQReplaceTest extends MSQTestBase
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
-        {WITH_REPLACE_LOCK, QUERY_CONTEXT_WITH_REPLACE_LOCK}
-    };
+        {WITH_REPLACE_LOCK_AND_COMPACTION_STATE, QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE},
+        };
     return Arrays.asList(data);
   }
 
@@ -169,6 +189,13 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().segmentRowsProcessed(6),
                          1, 0
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.DAY
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -217,6 +244,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(1),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.DAY
+                         )
                      )
                      .verifyResults();
   }
@@ -293,6 +327,13 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(1, 1, 1).frames(1, 1, 1),
                          1, 0, "shuffle"
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new LongDimensionSchema("cnt")),
+                             GranularityType.HOUR
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -358,6 +399,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(4),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new StringDimensionSchema("user")),
+                             GranularityType.HOUR
+                         )
                      )
                      .verifyResults();
   }
@@ -429,6 +477,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(6),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.ALL
+                         )
                      )
                      .verifyResults();
   }
@@ -513,6 +568,13 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().segmentRowsProcessed(6),
                          1, 0
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.MONTH
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -585,6 +647,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(2),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.MONTH
+                         )
                      )
                      .verifyResults();
   }
@@ -662,6 +731,13 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().segmentRowsProcessed(2),
                          1, 0
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.MONTH
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -712,6 +788,8 @@ public class MSQReplaceTest extends MSQTestBase
                                                        .version(MSQTestTaskActionClient.VERSION)
                                                        .size(1)
                                                        .build();
+
+
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
            .submit(new RetrieveUsedSegmentsAction(
@@ -726,7 +804,6 @@ public class MSQReplaceTest extends MSQTestBase
                              + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
                              + "PARTITIONED BY MONTH")
                      .setExpectedDataSource("foo")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
@@ -740,6 +817,12 @@ public class MSQReplaceTest extends MSQTestBase
                          ImmutableList.of(
                              new Object[]{946684800000L, 1.0f},
                              new Object[]{946771200000L, 2.0f}
+                         ))
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.MONTH
                          )
                      )
                      .verifyResults();
@@ -797,6 +880,13 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.MONTH
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -815,6 +905,8 @@ public class MSQReplaceTest extends MSQTestBase
                                                  .version(MSQTestTaskActionClient.VERSION)
                                                  .dataSource("foo")
                                                  .build();
+
+    PartitionsSpec partitionsSpec = new DynamicPartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null);
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
@@ -849,6 +941,14 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema(
+                                 "m1")),
+                             GranularityType.MONTH
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -871,6 +971,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.singletonList("dim1"),
+                             Arrays.asList(
+                                 new StringDimensionSchema("dim1"),
+                                 new LongDimensionSchema("cnt")
+                             ),
+                             GranularityType.DAY
+                         )
+                     )
                      .verifyResults();
 
   }
@@ -903,6 +1013,67 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.ALL
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testReplaceSegmentsWithQuarterSegmentGranularity()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("m2", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foobar "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, m1, m2 "
+                             + "FROM foo "
+                             + "PARTITIONED by TIME_FLOOR(__time, 'P3M') ")
+                     .setExpectedDataSource("foobar")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                                                             "foobar",
+                                                             Intervals.of(
+                                                                 "2000-01-01T00:00:00.000Z/2000-04-01T00:00:00.000Z"),
+                                                             "test",
+                                                             0
+                                                         ),
+                                                         SegmentId.of(
+                                                             "foobar",
+                                                             Intervals.of(
+                                                                 "2001-01-01T00:00:00.000Z/2001-04-01T00:00:00.000Z"),
+                                                             "test",
+                                                             0
+                                                         )
+                                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 1.0},
+                             new Object[]{946771200000L, 2.0f, 2.0},
+                             new Object[]{946857600000L, 3.0f, 3.0},
+                             new Object[]{978307200000L, 4.0f, 4.0},
+                             new Object[]{978393600000L, 5.0f, 5.0},
+                             new Object[]{978480000000L, 6.0f, 6.0}
+                         )
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Arrays.asList(new FloatDimensionSchema("m1"), new DoubleDimensionSchema("m2")),
+                             GranularityType.QUARTER
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -916,7 +1087,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "FROM foo "
                              + "PARTITIONED BY ALL TIME "
                              + "CLUSTERED BY m2, m1 DESC"
-                             )
+                     )
                      .setExpectedValidationErrorMatcher(
                          invalidSqlIs("Invalid CLUSTERED BY clause [`m1` DESC]: cannot sort in descending order.")
                      )
@@ -978,6 +1149,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(8),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new StringDimensionSchema("d")),
+                             GranularityType.ALL
+                         )
                      )
                      .verifyResults();
   }
@@ -1041,6 +1219,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(12),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("d")),
+                             GranularityType.ALL
+                         )
                      )
                      .verifyResults();
   }
@@ -1115,6 +1300,13 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(8),
                          1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             Collections.singletonList("d"),
+                             Collections.singletonList(new StringDimensionSchema("d")),
+                             GranularityType.DAY
+                         )
                      )
                      .verifyResults();
   }
@@ -1578,5 +1770,45 @@ public class MSQReplaceTest extends MSQTestBase
         new Object[]{978480000000L, "abc", 1L}
     ));
     return expectedRows;
+  }
+  private CompactionState expectedCompactionState(List<String> partitionDimensions, List<DimensionSchema> dimensions,
+                                                  GranularityType segmentGranularity
+  ){
+    if (!context.containsKey(Tasks.STORE_COMPACTION_STATE_KEY) || !((Boolean) context.get(Tasks.STORE_COMPACTION_STATE_KEY))){
+      return null;
+    }
+    PartitionsSpec partitionsSpec;
+    if (partitionDimensions.isEmpty()) {
+      partitionsSpec = new DynamicPartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null);
+
+    } else {
+      partitionsSpec = new DimensionRangePartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null,
+                                                       partitionDimensions, false
+      );
+    }
+    DimensionsSpec dimensionsSpec = new DimensionsSpec.Builder().
+        setDimensions(dimensions)
+        .setDimensionExclusions(Collections.singletonList(
+            "__time"))
+        .build();
+
+    IndexSpec indexSpec = new IndexSpec(null, null, null, null, null, null, null);
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
+        segmentGranularity.getDefaultGranularity(),
+        GranularityType.NONE.getDefaultGranularity(),
+        false,
+        Intervals.ONLY_ETERNITY
+    );
+    List<Object> metricsSpec = Collections.emptyList();
+
+    return new CompactionState(
+        partitionsSpec,
+        dimensionsSpec,
+        metricsSpec,
+        null,
+        indexSpec.asMap(objectMapper),
+        granularitySpec.asMap(objectMapper)
+    );
+
   }
 }
