@@ -662,7 +662,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    updateAndWriteCompletionReports(toolbox, taskStatus);
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -829,7 +829,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    updateAndWriteCompletionReports(toolbox, taskStatus);
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -926,7 +926,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    updateAndWriteCompletionReports(toolbox, taskStatus);
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -1252,10 +1252,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
   }
 
-  private void updateAndWriteCompletionReports(
-      TaskToolbox toolbox,
-      TaskStatus status
-  )
+  private void updateAndWriteCompletionReports(TaskStatus status)
   {
     completionReports = getTaskCompletionReports(status, segmentAvailabilityConfirmationCompleted);
     writeCompletionReports();
