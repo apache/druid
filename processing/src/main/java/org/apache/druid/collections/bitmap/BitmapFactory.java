@@ -65,7 +65,7 @@ public interface BitmapFactory
 
   /**
    * Compute the intersection (bitwise-AND) of a set of bitmaps. They are assumed to be
-   * instances of of the proper WrappedConciseBitmap otherwise a ClassCastException
+   * instances of the proper WrappedConciseBitmap otherwise a ClassCastException
    * is thrown.
    *
    * @param b input ImmutableGenericBitmap objects

@@ -285,7 +285,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     Properties properties = initializePropertes();
     AzureAccountConfig config = makeInjectorWithProperties(properties).getInstance(AzureAccountConfig.class);
-    Assert.assertEquals(config.getEndpointSuffix(), AzureUtils.DEFAULT_AZURE_ENDPOINT_SUFFIX);
+    Assert.assertNull(config.getEndpointSuffix());
+    Assert.assertEquals(config.getStorageAccountEndpointSuffix(), AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     Assert.assertEquals(config.getBlobStorageEndpoint(), AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
   }
 
