@@ -141,7 +141,7 @@ public class TaskReportSerdeTest
   }
 
   @Test
-  public void testEqualsForParallelCompactionReport() throws Exception
+  public void testEqualsForParallelCompactionReport()
   {
     EqualsVerifier.simple().
                   forClass(ParallelCompactionTaskReportData.class)
