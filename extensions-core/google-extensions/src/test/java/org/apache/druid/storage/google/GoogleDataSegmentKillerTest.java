@@ -19,9 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
-import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
@@ -82,7 +79,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void killTest() throws SegmentLoadingException, IOException
+  public void killTest() throws SegmentLoadingException
   {
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
     EasyMock.expectLastCall();
@@ -101,11 +98,6 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test(expected = RE.class)
   public void killWithErrorTest() throws SegmentLoadingException, IOException
   {
-    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
-        JacksonFactory.getDefaultInstance(),
-        300,
-        "test"
-    );
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
     EasyMock.expectLastCall().andThrow(RUNTIME_EXCEPTION);
 
@@ -121,11 +113,6 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test(expected = RE.class)
   public void killRetryWithErrorTest() throws SegmentLoadingException, IOException
   {
-    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
-        JacksonFactory.getDefaultInstance(),
-        500,
-        "test"
-    );
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
     EasyMock.expectLastCall().andThrow(RUNTIME_EXCEPTION).once().andVoid().once();
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(DESCRIPTOR_PATH));

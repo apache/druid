@@ -111,13 +111,13 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   }
 
   @Override
-  public void deleteFiles(Iterable<String> paths) throws IOException
+  public void deleteFiles(Iterable<String> paths)
   {
     storage.batchDelete(config.getBucket(), Iterables.transform(paths, this::objectPath));
   }
 
   @Override
-  public void deleteRecursively(String path) throws IOException
+  public void deleteRecursively(String path)
   {
     final String fullPath = objectPath(path);
     Iterator<GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
