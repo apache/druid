@@ -59,9 +59,32 @@ This section contains important information about new and existing features.
 
 ### Breaking change
 
-Druid 29 has a breaking change for EXPLAIN queries.
+Druid 29 has a breaking change for EXPLAIN for INSERT/REPLACE MSQ queries.
 In the attribute field returned as part of the result for an explain query, the value of the key `targetDataSource` from a string to a JSON object.
 This change is only present in Druid 29 and is not present in earlier or later versions.
+
+The JSON object returned plan will have the structure if the target is a datasource:
+```json
+    ...,
+    "targetDataSource": {
+      "type":"table",
+      "tableName":"wikipedia"
+    },
+    ...
+```
+
+The JSON object returned plan will have the structure if the target is an external export location using :
+```json
+    ...,
+    "targetDataSource": {
+      "type":"external",
+      "storageConnectorProvider": {
+        "type":"<export-type>",
+        "exportPath":"<export-path>"
+      }
+    },
+    ...
+```
 
 ### MSQ export statements (experimental)
 
