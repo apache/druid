@@ -28,7 +28,7 @@ import java.util.Objects;
 
 /**
  * This class has fields specific to the parallel compaction task and hence extends the generic
- * task report data {@link org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData}
+ * task report data {@link IngestionStatsAndErrorsTaskReportData}
  */
 public class ParallelCompactionTaskReportData extends IngestionStatsAndErrorsTaskReportData
 {
