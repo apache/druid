@@ -143,8 +143,8 @@ public class TaskReportSerdeTest
   @Test
   public void testEqualsForParallelCompactionReport()
   {
-    EqualsVerifier.simple().
-                  forClass(ParallelCompactionTaskReportData.class)
+    EqualsVerifier.simple()
+                  .forClass(ParallelCompactionTaskReportData.class)
                   .verify();
   }
 
