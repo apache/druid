@@ -108,9 +108,12 @@ class MultiContainerTaskAdapterTest
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,
-        new PeonCommandContext(Collections.singletonList("/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
-                               new ArrayList<>(),
-                               new File("/tmp")
+        new PeonCommandContext(
+            Collections.singletonList(
+                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+            new ArrayList<>(),
+            new File("/tmp"),
+            config.getCpuCoreInMicro()
         )
     );
     Job expected = K8sTestUtils.fileToResource("expectedMultiContainerOutput.yaml", Job.class);
@@ -159,9 +162,12 @@ class MultiContainerTaskAdapterTest
     Job actual = adapter.createJobFromPodSpec(
         spec,
         task,
-        new PeonCommandContext(Collections.singletonList("/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
-                               new ArrayList<>(),
-                               new File("/tmp")
+        new PeonCommandContext(
+            Collections.singletonList(
+                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+            new ArrayList<>(),
+            new File("/tmp"),
+            config.getCpuCoreInMicro()
         )
     );
     Job expected = K8sTestUtils.fileToResource("expectedMultiContainerOutputOrder.yaml", Job.class);
@@ -212,9 +218,12 @@ class MultiContainerTaskAdapterTest
     Job actual = adapter.createJobFromPodSpec(
         spec,
         task,
-        new PeonCommandContext(Collections.singletonList("/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
-                               new ArrayList<>(),
-                               new File("/tmp")
+        new PeonCommandContext(
+            Collections.singletonList(
+                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+            new ArrayList<>(),
+            new File("/tmp"),
+            config.getCpuCoreInMicro()
         )
     );
     Job expected = K8sTestUtils.fileToResource("expectedPodSpec.yaml", Job.class);

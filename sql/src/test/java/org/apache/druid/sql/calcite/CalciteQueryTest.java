@@ -8371,7 +8371,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testFilterOnCurrentTimestampWithIntervalArithmetic()
   {
@@ -8419,7 +8418,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testFilterOnCurrentTimestampOnView()
   {
@@ -12358,6 +12356,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+<<<<<<< HEAD
+=======
+  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION2)
+>>>>>>> apache/master
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {

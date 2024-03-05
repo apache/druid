@@ -46,7 +46,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -950,19 +949,12 @@ public class AppenderatorImpl implements Appenderator
           IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
       );
 
-      // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
-      final DataSegment segment = RetryUtils.retry(
-          // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
-          // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
-          // semantics.
-          () -> dataSegmentPusher.push(
-              mergedFile,
-              segmentToPush,
-              useUniquePath
-          ),
-          exception -> exception instanceof Exception,
-          5
-      );
+      // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
+      // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
+      // semantics.
+      //
+      // dataSegmentPusher retries internally when appropriate; no need for retries here.
+      final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
       if (!isOpenSegments()) {
         // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
