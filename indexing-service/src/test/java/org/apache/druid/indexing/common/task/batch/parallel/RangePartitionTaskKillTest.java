@@ -243,7 +243,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         int succedsBeforeFailing
     )
     {
-      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
+      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context, false);
       this.failInPhase = succedsBeforeFailing;
     }
 

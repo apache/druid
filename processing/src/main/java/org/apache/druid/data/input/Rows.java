@@ -24,12 +24,12 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -123,10 +123,12 @@ public final class Rows
       throw new IAE("Output type[%s] must be numeric", outputType);
     }
 
+    final Number asNumber;
+
     if (inputValue == null) {
-      return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
+      asNumber = (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
     } else if (inputValue instanceof Number) {
-      return (Number) inputValue;
+      asNumber = (Number) inputValue;
     } else if (inputValue instanceof String) {
       try {
         String metricValueString = StringUtils.removeChar(((String) inputValue).trim(), ',');
@@ -141,25 +143,11 @@ public final class Rows
           v = Longs.tryParse(metricValueString);
         }
 
-        if (v == null && outputType != ValueType.LONG) {
+        if (v == null) {
           v = Double.valueOf(metricValueString);
         }
 
-        if (v == null) {
-          if (throwParseExceptions) {
-            throw new ParseException(
-                String.valueOf(inputValue),
-                "Unable to parse value[%s] for field[%s] as type[%s]",
-                inputValue.getClass(),
-                name,
-                outputType
-            );
-          } else {
-            return (Number) NullHandling.defaultValueForType(outputType);
-          }
-        } else {
-          return outputType == ValueType.FLOAT ? Float.valueOf(v.floatValue()) : v;
-        }
+        asNumber = v;
       }
       catch (Exception e) {
         if (throwParseExceptions) {
@@ -185,6 +173,18 @@ public final class Rows
       } else {
         return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
       }
+    }
+
+    if (outputType == null || asNumber == null) {
+      return asNumber;
+    } else if (outputType == ValueType.LONG) {
+      return asNumber.longValue();
+    } else if (outputType == ValueType.FLOAT) {
+      return asNumber.floatValue();
+    } else if (outputType == ValueType.DOUBLE) {
+      return asNumber.doubleValue();
+    } else {
+      throw new ISE("Cannot read number as type[%s]", outputType);
     }
   }
 

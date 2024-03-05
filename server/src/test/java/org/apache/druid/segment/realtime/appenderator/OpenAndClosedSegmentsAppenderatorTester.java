@@ -174,8 +174,6 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
-      private boolean mustFail = true;
-
       @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
@@ -192,11 +190,8 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
       {
-        if (enablePushFailure && mustFail) {
-          mustFail = false;
+        if (enablePushFailure) {
           throw new IOException("Push failure test");
-        } else if (enablePushFailure) {
-          mustFail = true;
         }
         pushedSegments.add(segment);
         return segment;
