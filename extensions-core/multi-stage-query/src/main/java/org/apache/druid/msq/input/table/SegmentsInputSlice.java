@@ -20,6 +20,7 @@
 package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.msq.input.InputSlice;
@@ -71,8 +72,9 @@ public class SegmentsInputSlice implements InputSlice
     return descriptors;
   }
 
-  @JsonProperty("servedSegments")
   @Nullable
+  @JsonProperty("servedSegments")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<DataServerRequestDescriptor> getServedSegments()
   {
     return servedSegments;

@@ -84,7 +84,19 @@ public class SegmentsInputSliceTest
     final ObjectMapper mapper = TestHelper.makeJsonMapper()
                                           .registerModules(new MSQIndexingModule().getJacksonModules());
 
-    final SegmentsInputSlice slice = new SegmentsInputSlice(
+    final String sliceString = "{\n"
+                               + "    \"type\": \"segments\","
+                               + "    \"dataSource\": \"myds\",\n"
+                               + "    \"segments\": [\n"
+                               + "        {\n"
+                               + "            \"itvl\": \"2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z\",\n"
+                               + "            \"ver\": \"1\",\n"
+                               + "            \"part\": 0\n"
+                               + "        }\n"
+                               + "    ]\n"
+                               + "}";
+
+    final SegmentsInputSlice expectedSlice = new SegmentsInputSlice(
         "myds",
         ImmutableList.of(
             new RichSegmentDescriptor(
@@ -98,8 +110,8 @@ public class SegmentsInputSliceTest
     );
 
     Assert.assertEquals(
-        slice,
-        mapper.readValue(mapper.writeValueAsString(slice), InputSlice.class)
+        expectedSlice,
+        mapper.readValue(sliceString, InputSlice.class)
     );
   }
 
