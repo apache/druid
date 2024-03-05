@@ -12356,10 +12356,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-<<<<<<< HEAD
-=======
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION2)
->>>>>>> apache/master
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {

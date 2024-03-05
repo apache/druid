@@ -77,13 +77,8 @@ public @interface NotYetSupported
 
   enum Modes
   {
-    PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
-<<<<<<< HEAD
-    ERROR_HANDLING(AssertionError.class, "(is <[A-Z]+> was <[A-Z]+>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
-=======
     ERROR_HANDLING(AssertionError.class, "targetPersona: is <[A-Z]+> and category: is <[A-Z_]+> and errorCode: is"),
->>>>>>> apache/master
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
@@ -98,11 +93,6 @@ public @interface NotYetSupported
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-<<<<<<< HEAD
-=======
-    MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? (was|is) (Logical)?Join"),
-    MISSING_JOIN_CONVERSION2(AssertionError.class, "Missing conversions? (was|is) (Logical)?Join"),
->>>>>>> apache/master
     UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
     UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs"),
     JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),

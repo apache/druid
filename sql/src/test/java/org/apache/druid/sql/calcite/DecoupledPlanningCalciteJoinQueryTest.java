@@ -40,10 +40,12 @@ public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
   @Rule(order = 0)
   public NotYetSupportedProcessor decoupledIgnoreProcessor = new NotYetSupportedProcessor();
 
-  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.of(
-      PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
-      QueryContexts.ENABLE_DEBUG, true
-  );
+  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES =
+      ImmutableMap.<String, Object>builder()
+      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+      .put(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+      .put(QueryContexts.ENABLE_DEBUG, true)
+      .build();
 
   @Override
   protected QueryTestBuilder testBuilder()
