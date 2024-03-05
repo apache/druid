@@ -107,7 +107,7 @@ public class GoogleStorageConnectorTest
   }
 
   @Test
-  public void testDeleteFiles() throws IOException
+  public void testDeleteFiles()
   {
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
