@@ -30,9 +30,9 @@ For the full release notes for a specific version, see the [releases page](https
 
 ### Upgrade notes
 
-### Breaking change
+#### Changes in `targetDataSource` payload present in the explain plan for MSQ queries
 
-- Druid 29 has a breaking change for EXPLAIN queries. In the attribute field returned as part of the result for an explain query, the value of the key `targetDataSource` from a string to a JSON object. This change is only present in Druid 29 and is not present in earlier or later versions.
+In the attribute field returned as part of the result for an EXPLAIN MSQ query, the value of the key `targetDataSource` from a string to a JSON object. This change is only present in Druid 29 and is not present in earlier or later versions.
 
 #### Changed `equals` filter for native queries
 
