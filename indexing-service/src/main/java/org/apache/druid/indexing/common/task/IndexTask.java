@@ -170,6 +170,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private IngestionState ingestionState;
 
   private boolean shouldCleanup;
+
+  // There are cases where index task is not run as a standalone task and the
+  // generated completion reports are written by parent. In such cases, this
+  // flag would be helpful to specify that the child index task should not
+  // publish reports.
   private boolean shouldSendReports;
 
   @MonotonicNonNull

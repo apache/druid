@@ -225,7 +225,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       ParallelIndexIngestionSpec ingestionSchema,
       @Nullable String baseSubtaskSpecName,
       Map<String, Object> context,
-      Boolean isCompactionTask
+      boolean isCompactionTask
   )
   {
     super(
@@ -662,7 +662,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    updateAndWriteCompletionReports(toolbox, taskStatus, segmentAvailabilityConfirmationCompleted);
+    updateAndWriteCompletionReports(toolbox, taskStatus);
     return taskStatus;
   }
 
@@ -829,7 +829,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    updateAndWriteCompletionReports(toolbox, taskStatus, segmentAvailabilityConfirmationCompleted);
+    updateAndWriteCompletionReports(toolbox, taskStatus);
     return taskStatus;
   }
 
@@ -926,7 +926,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    updateAndWriteCompletionReports(toolbox, taskStatus, segmentAvailabilityConfirmationCompleted);
+    updateAndWriteCompletionReports(toolbox, taskStatus);
     return taskStatus;
   }
 
@@ -1254,8 +1254,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private void updateAndWriteCompletionReports(
       TaskToolbox toolbox,
-      TaskStatus status,
-      boolean segmentAvailabilityConfirmationCompleted
+      TaskStatus status
   )
   {
     completionReports = getTaskCompletionReports(status, segmentAvailabilityConfirmationCompleted);
