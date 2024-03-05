@@ -1208,14 +1208,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getContext(),
         getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
         // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
-        false,
-        !isCompactionTask
+        false
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
         && sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
       TaskStatus status = sequentialIndexTask.run(toolbox);
       completionReports = sequentialIndexTask.getCompletionReports();
+      writeCompletionReports();
       return status;
     } else {
       String msg = "Task was asked to stop. Finish as failed";
@@ -1258,6 +1258,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     completionReports = getTaskCompletionReports(status, segmentAvailabilityConfirmationCompleted);
+    writeCompletionReports();
+  }
+
+  private void writeCompletionReports()
+  {
     if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }

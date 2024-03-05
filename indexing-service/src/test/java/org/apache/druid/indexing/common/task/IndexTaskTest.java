@@ -2714,8 +2714,7 @@ public class IndexTaskTest extends IngestionTestBase
         ),
         null,
         0,
-        false,
-        true
+        false
     ).cleanUp(null, null);
   }
 
@@ -2751,7 +2750,6 @@ public class IndexTaskTest extends IngestionTestBase
         ),
         null,
         0,
-        true,
         true
     ).cleanUp(toolbox, null);
     EasyMock.verify(toolbox, taskConfig);

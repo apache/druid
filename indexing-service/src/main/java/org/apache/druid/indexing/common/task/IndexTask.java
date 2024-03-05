@@ -169,13 +169,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private IngestionState ingestionState;
 
-  private boolean shouldCleanup;
-
-  // There are cases where index task is not run as a standalone task and the
-  // generated completion reports are written by parent. In such cases, this
-  // flag would be helpful to specify that the child index task should not
-  // write reports.
-  private boolean shouldWriteReports;
+  private boolean isStandAloneTask;
 
   @MonotonicNonNull
   private ParseExceptionHandler determinePartitionsParseExceptionHandler;
@@ -217,10 +211,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         ingestionSchema,
         context,
         -1,
-        true,
         true
     );
   }
+
+  /**
+   * @param isStandAloneTask used to specify if indextask.run() is run as a part of another task
+   *                         skips writing reports and cleanup if not a standalone task
+   */
 
   public IndexTask(
       String id,
@@ -231,8 +229,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       IndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       int maxAllowedLockCount,
-      boolean shouldCleanup,
-      boolean shouldWriteReports
+      boolean isStandAloneTask
   )
   {
     super(
@@ -247,8 +244,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.shouldCleanup = shouldCleanup;
-    this.shouldWriteReports = shouldWriteReports;
+    this.isStandAloneTask = isStandAloneTask;
   }
 
   @Override
@@ -590,7 +586,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
     completionReports = getTaskCompletionReports();
-    if (shouldWriteReports) {
+    if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
@@ -1116,7 +1112,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
-    if (shouldCleanup) {
+    if (isStandAloneTask) {
       super.cleanUp(toolbox, taskStatus);
     }
   }
