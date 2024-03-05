@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -994,16 +995,23 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     public CalciteTestConfig()
     {
+      this(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT);
     }
 
     public CalciteTestConfig(boolean isRunningMSQ)
     {
+      this();
       this.isRunningMSQ = isRunningMSQ;
     }
 
     public CalciteTestConfig(Map<String, Object> baseQueryContext)
     {
+      Preconditions.checkNotNull(baseQueryContext, "baseQueryContext is null");
       this.baseQueryContext = baseQueryContext;
+      Preconditions.checkState(
+          baseQueryContext.containsKey(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP),
+          "context must contain CTX_SQL_CURRENT_TIMESTAMP to ensure consistent behaviour!"
+      );
     }
 
     @Override
