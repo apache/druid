@@ -33,6 +33,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -152,7 +153,7 @@ public class GoogleStorage
     if (!storage.get().delete(bucket, path)) {
       throw new HttpResponseException.Builder(
           404,
-          String.format(
+          StringUtils.nonStrictFormat(
               "Google cloud storage object not found [bucket: %s, path: %s].",
               bucket,
               path
