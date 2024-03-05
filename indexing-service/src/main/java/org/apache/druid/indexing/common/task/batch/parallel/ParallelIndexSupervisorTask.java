@@ -527,12 +527,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     try {
 
       initializeSubTaskCleaner();
+      this.toolbox = toolbox;
 
       if (isParallelMode()) {
         // emit metric for parallel batch ingestion mode:
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
-
-        this.toolbox = toolbox;
 
         if (isGuaranteedRollup(
             getIngestionMode(),
