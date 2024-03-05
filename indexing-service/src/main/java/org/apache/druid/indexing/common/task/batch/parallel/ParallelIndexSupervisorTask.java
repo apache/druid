@@ -653,16 +653,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
-      publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
+      segmentsPublished = publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
       segmentsRead = parallelSinglePhaseRunner.getReports()
                                               .values()
                                               .stream()
                                               .mapToLong(report -> report.getOldSegments().size()).sum();
-      segmentsPublished = parallelSinglePhaseRunner.getReports()
-                                                   .values()
-                                                   .stream()
-                                                   .mapToLong(report -> report.getNewSegments().size())
-                                                   .sum();
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
