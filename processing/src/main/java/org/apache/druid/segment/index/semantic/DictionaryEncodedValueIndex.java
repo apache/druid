@@ -54,6 +54,5 @@ public interface DictionaryEncodedValueIndex<T>
   @Nullable
   T getValue(int index);
 
-  @SuppressWarnings({"unreachable", "unused"})
   BitmapFactory getBitmapFactory();
 }

@@ -64,6 +64,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -368,9 +369,29 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new IsTrueDimFilter(filter);
   }
 
-  public static InDimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
+  public static DimFilter in(String dimension, Collection<String> values)
   {
+    if (NullHandling.sqlCompatible()) {
+      return in(dimension, ColumnType.STRING, new ArrayList<>(values));
+    }
+    return new InDimFilter(dimension, values, null);
+  }
+
+  public static DimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
+  {
+    if (NullHandling.sqlCompatible() && extractionFn == null) {
+      return in(dimension, ColumnType.STRING, new ArrayList<>(values));
+    }
     return new InDimFilter(dimension, values, extractionFn);
+  }
+
+  public static DimFilter in(String dimension, ColumnType matchValueType, List<?> values)
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new TypedInFilter(dimension, matchValueType, values, null, null);
+    }
+    Set<String> set = values.stream().map(Evals::asString).collect(Collectors.toSet());
+    return in(dimension, set, null);
   }
 
   public static DimFilter isNull(final String fieldName)

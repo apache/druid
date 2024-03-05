@@ -21,16 +21,14 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -131,7 +129,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
    * Helper for collecting {@link SelectorDimFilter} into {@link InDimFilter}.
    */
   private static class CollectSelectors
-      extends CollectComparisons<DimFilter, SelectorDimFilter, InDimFilter, BoundRefKey>
+      extends CollectComparisons<DimFilter, SelectorDimFilter, InDimFilter, BoundRefKey, String, InDimFilter.ValuesSet>
   {
     private final RowSignature sourceRowSignature;
 
@@ -153,6 +151,12 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           // find companions in other ORs.
           Comparator.comparing(selector -> selector.getValue() == null ? 0 : 1)
       );
+    }
+
+    @Override
+    protected InDimFilter.ValuesSet makeCollection()
+    {
+      return new InDimFilter.ValuesSet();
     }
 
     @Nullable
@@ -195,7 +199,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
   /**
    * Helper for collecting {@link EqualityFilter} into {@link InDimFilter}.
    */
-  private static class CollectEqualities extends CollectComparisons<DimFilter, EqualityFilter, InDimFilter, RangeRefKey>
+  private static class CollectEqualities extends CollectComparisons<DimFilter, EqualityFilter, TypedInFilter, RangeRefKey, Object, List<Object>>
   {
     public CollectEqualities(final List<DimFilter> orExprs)
     {
@@ -216,38 +220,33 @@ public class ConvertSelectorsToIns extends BottomUpTransform
       );
     }
 
+    @Override
+    protected List<Object> makeCollection()
+    {
+      return new ArrayList<>();
+    }
+
     @Nullable
     @Override
     protected RangeRefKey getCollectionKey(EqualityFilter selector)
     {
-      if (!selector.getMatchValueType().is(ValueType.STRING)) {
-        // skip non-string equality filters since InDimFilter uses a sorted string set, which is a different sort
-        // than numbers or other types might use
-        return null;
-      }
-
       return RangeRefKey.from(selector);
     }
 
     @Override
-    protected Set<String> getMatchValues(EqualityFilter selector)
+    protected Set<Object> getMatchValues(EqualityFilter selector)
     {
-      return Collections.singleton(
-          ExprEval.ofType(ExpressionType.fromColumnType(selector.getMatchValueType()), selector.getMatchValue())
-                  .castTo(ExpressionType.STRING)
-                  .asString()
-      );
+      return Collections.singleton(selector.getMatchValue());
     }
 
     @Nullable
     @Override
-    protected InDimFilter makeCollectedComparison(RangeRefKey rangeRefKey, InDimFilter.ValuesSet values)
+    protected TypedInFilter makeCollectedComparison(RangeRefKey rangeRefKey, List<Object> values)
     {
       if (values.size() > 1) {
-        return new InDimFilter(rangeRefKey.getColumn(), values, null, null);
-      } else {
-        return null;
+        return new TypedInFilter(rangeRefKey.getColumn(), rangeRefKey.getMatchValueType(), values, null, null);
       }
+      return null;
     }
 
     @Override

@@ -43,6 +43,7 @@ import org.apache.druid.segment.index.semantic.SpatialIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
+import org.apache.druid.segment.index.semantic.ValueSetIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -100,7 +101,8 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
       } else if (
           clazz.equals(StringValueSetIndexes.class) ||
           clazz.equals(Utf8ValueSetIndexes.class) ||
-          clazz.equals(ValueIndexes.class)
+          clazz.equals(ValueIndexes.class) ||
+          clazz.equals(ValueSetIndexes.class)
       ) {
         return (T) new IndexedUtf8ValueIndexes<>(
             bitmapFactory,

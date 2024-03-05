@@ -36,6 +36,7 @@ import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -46,6 +47,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
@@ -127,7 +129,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         // to create an empty array with no argument, we just return null.
         return null;
       } else if (arrayElements.length == 1) {
-        if (plannerContext.isUseBoundsAndSelectors()) {
+        if (plannerContext.isUseBoundsAndSelectors() || (!simpleExtractionExpr.isDirectColumnAccess() && virtualColumnRegistry == null)) {
           return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
           final String column = simpleExtractionExpr.isDirectColumnAccess()
@@ -148,17 +150,27 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
           );
         }
       } else {
-        final InDimFilter.ValuesSet valuesSet = InDimFilter.ValuesSet.create();
-        for (final Object arrayElement : arrayElements) {
-          valuesSet.add(Evals.asString(arrayElement));
-        }
+        if (plannerContext.isUseBoundsAndSelectors() || !simpleExtractionExpr.isDirectColumnAccess()) {
+          final InDimFilter.ValuesSet valuesSet = InDimFilter.ValuesSet.create();
+          for (final Object arrayElement : arrayElements) {
+            valuesSet.add(Evals.asString(arrayElement));
+          }
 
-        return new InDimFilter(
-            simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            valuesSet,
-            simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
-            null
-        );
+          return new InDimFilter(
+              simpleExtractionExpr.getSimpleExtraction().getColumn(),
+              valuesSet,
+              simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
+              null
+          );
+        } else {
+          return new TypedInFilter(
+             simpleExtractionExpr.getSimpleExtraction().getColumn(),
+             ExpressionType.toColumnType((ExpressionType) exprEval.type().getElementType()),
+             Arrays.asList(arrayElements),
+             null,
+             null
+          );
+        }
       }
     }
 

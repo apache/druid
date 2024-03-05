@@ -56,7 +56,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class InFilterTest extends BaseFilterTest
 {
-  private static final List<InputRow> ROWS = ImmutableList.of(
+  static final List<InputRow> ROWS = ImmutableList.of(
       makeDefaultSchemaRow("a", "", ImmutableList.of("a", "b"), "2017-07-25", "", 0.0, 0.0f, 0L),
       makeDefaultSchemaRow("b", "10", ImmutableList.of(), "2017-07-25", "a", 10.1, 10.1f, 100L),
       makeDefaultSchemaRow("c", "2", ImmutableList.of(""), "2017-05-25", null, null, 5.5f, 40L),

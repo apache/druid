@@ -23,10 +23,10 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.filter.InDimFilter;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +37,7 @@ import java.util.Set;
  * comparisons with the same {@link CollectionKey} can potentially become a single {@link CollectedType}.
  * For example: x = 'a', x = 'b' can become x IN ('a', 'b').
  */
-public abstract class CollectComparisons<BaseType, ComparisonType extends BaseType, CollectedType extends BaseType, CollectionKey>
+public abstract class CollectComparisons<BaseType, ComparisonType extends BaseType, CollectedType extends BaseType, CollectionKey, CollectionElementType, CollectionType extends Collection<CollectionElementType>>
 {
   /**
    * List of {@link BaseType} that were ORed together.
@@ -94,7 +94,7 @@ public abstract class CollectComparisons<BaseType, ComparisonType extends BaseTy
     // Emit a collected comparison (e.g. IN filters) for each collection.
     for (Map.Entry<Pair<CollectionKey, List<BaseType>>, List<ObjectIntPair<ComparisonType>>> entry : collectMap.entrySet()) {
       final List<ObjectIntPair<ComparisonType>> comparisonList = entry.getValue();
-      final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet();
+      final CollectionType values = makeCollection();
 
       for (ObjectIntPair<ComparisonType> subEntry : comparisonList) {
         final ComparisonType selector = subEntry.first();
@@ -153,6 +153,8 @@ public abstract class CollectComparisons<BaseType, ComparisonType extends BaseTy
   @Nullable
   protected abstract Pair<ComparisonType, List<BaseType>> getCollectibleComparison(BaseType expr);
 
+  protected abstract CollectionType makeCollection();
+
   /**
    * Given a comparison, returns its collection key, which will be used to group it together with like comparisons.
    * This method will be called on objects returned by {@link #getCollectibleComparison(Object)}. If this method returns
@@ -164,14 +166,14 @@ public abstract class CollectComparisons<BaseType, ComparisonType extends BaseTy
   /**
    * Given a comparison, returns the strings that it matches.
    */
-  protected abstract Set<String> getMatchValues(ComparisonType comparison);
+  protected abstract Set<CollectionElementType> getMatchValues(ComparisonType comparison);
 
   /**
    * Given a set of strings from {@link #getMatchValues(Object)} from various comparisons, returns a single collected
    * comparison that matches all those strings.
    */
   @Nullable
-  protected abstract CollectedType makeCollectedComparison(CollectionKey key, InDimFilter.ValuesSet values);
+  protected abstract CollectedType makeCollectedComparison(CollectionKey key, CollectionType values);
 
   /**
    * Given a list of expressions, returns an AND expression with those exprs as children. Only called if

@@ -35,7 +35,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -272,7 +271,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
-                .filters(new InDimFilter("dim3", ImmutableList.of("a", "b"), null))
+                .filters(in("dim3", ImmutableList.of("a", "b")))
                 .columns("dim3")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -2160,7 +2159,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .filters(
                     or(
                         isNull("dim3"),
-                        in("dim3", ImmutableSet.of("a", "b", "other"), null)
+                        in("dim3", ImmutableSet.of("a", "b", "other"))
                     )
                 )
                 .columns("v0")
@@ -2207,12 +2206,12 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .filters(
                     or(
                         and(
-                            in("dim3", ImmutableSet.of("a", "b", "other"), null),
+                            in("dim3", ImmutableSet.of("a", "b", "other")),
                             notNull("dim3")
                         ),
                         and(
                             isNull("dim3"),
-                            in("dim2", ImmutableSet.of("a", "b", "other"), null)
+                            in("dim2", ImmutableSet.of("a", "b", "other"))
                         )
                     )
                 )

@@ -20,10 +20,9 @@
 package org.apache.druid.segment.index;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -33,23 +32,25 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
+import org.apache.druid.segment.index.semantic.ValueSetIndexes;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.List;
 import java.util.SortedSet;
 
 public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffer>>
-    implements StringValueSetIndexes, Utf8ValueSetIndexes, ValueIndexes
+    implements StringValueSetIndexes, Utf8ValueSetIndexes, ValueIndexes, ValueSetIndexes
 {
   // This determines the cut-off point to switch the merging algorithm from doing binary-search per element in the value
   // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
@@ -159,149 +160,100 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   /**
    * Helper used by {@link #forSortedValues} and {@link #forSortedValuesUtf8}.
    */
-  private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8, int size, boolean valuesContainsNull)
+  private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(
+      Iterable<ByteBuffer> valuesUtf8,
+      int size,
+      boolean valuesContainsNull
+  )
   {
     // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
     if (size > SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-      return new SimpleImmutableBitmapDelegatingIterableIndex()
-      {
-        @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
-        {
-          return () -> new Iterator<ImmutableBitmap>()
-          {
-            final PeekingIterator<ByteBuffer> valuesIterator = Iterators.peekingIterator(valuesUtf8.iterator());
-            final PeekingIterator<ByteBuffer> dictionaryIterator = Iterators.peekingIterator(dictionary.iterator());
-            int next = -1;
-            int idx = 0;
-
-            @Override
-            public boolean hasNext()
-            {
-              if (next < 0) {
-                findNext();
-              }
-              return next >= 0;
+      return ValueSetIndexes.getIndexFromSortedIteratorSortedMerged(
+          bitmapFactory,
+          COMPARATOR,
+          valuesUtf8,
+          dictionary,
+          bitmaps,
+          () -> {
+            if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+              return bitmaps.get(0);
             }
+            return null;
+          }
+      );
+    }
 
-            @Override
-            public ImmutableBitmap next()
-            {
-              if (next < 0) {
-                findNext();
-                if (next < 0) {
-                  throw new NoSuchElementException();
-                }
-              }
-              final int swap = next;
-              next = -1;
-              return getBitmap(swap);
-            }
-
-            private void findNext()
-            {
-              while (next < 0 && valuesIterator.hasNext() && dictionaryIterator.hasNext()) {
-                final ByteBuffer nextValue = valuesIterator.peek();
-                final ByteBuffer nextDictionaryKey = dictionaryIterator.peek();
-                final int comparison = COMPARATOR.compare(nextValue, nextDictionaryKey);
-                if (comparison == 0) {
-                  next = idx;
-                  valuesIterator.next();
-                  break;
-                } else if (comparison < 0) {
-                  valuesIterator.next();
-                } else {
-                  dictionaryIterator.next();
-                  idx++;
-                }
-              }
-            }
-          };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
+    // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
+    // based lookup per value. The algorithm works well for smaller number of values.
+    return ValueSetIndexes.getIndexFromSortedIterator(
+        bitmapFactory,
+        valuesUtf8,
+        dictionary,
+        bitmaps,
+        () -> {
           if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
             return bitmaps.get(0);
           }
           return null;
         }
-      };
-    }
-
-    // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
-    // based lookup per value. The algorithm works well for smaller number of values.
-    return getSimpleImmutableBitmapIterableIndexFromIterator(valuesUtf8, valuesContainsNull);
+    );
   }
 
-  /**
-   * Iterates over the value set, using binary search to look up each element. The algorithm works well for smaller
-   * number of values, and must be used if the values are not sorted in the same manner as {@link #dictionary}
-   */
-  private SimpleImmutableBitmapDelegatingIterableIndex getSimpleImmutableBitmapIterableIndexFromIterator(Iterable<ByteBuffer> valuesUtf8, boolean valuesContainsNull)
+  @Nullable
+  @Override
+  public BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType)
   {
-    return new SimpleImmutableBitmapDelegatingIterableIndex()
-    {
-      @Override
-      public Iterable<ImmutableBitmap> getBitmapIterable()
-      {
-        return () -> new Iterator<ImmutableBitmap>()
-        {
-          final int dictionarySize = dictionary.size();
-          final Iterator<ByteBuffer> iterator = valuesUtf8.iterator();
-          int next = -1;
-
-          @Override
-          public boolean hasNext()
-          {
-            if (next < 0) {
-              findNext();
-            }
-            return next >= 0;
-          }
-
-          @Override
-          public ImmutableBitmap next()
-          {
-            if (next < 0) {
-              findNext();
-              if (next < 0) {
-                throw new NoSuchElementException();
-              }
-            }
-            final int swap = next;
-            next = -1;
-            return getBitmap(swap);
-          }
-
-          private void findNext()
-          {
-            while (next < 0 && iterator.hasNext()) {
-              ByteBuffer nextValue = iterator.next();
-              next = dictionary.indexOf(nextValue);
-
-              if (next == -dictionarySize - 1) {
-                // nextValue is past the end of the dictionary so we can break early
-                // Note: we can rely on indexOf returning (-(insertion point) - 1), because of the earlier check
-                // for Indexed.isSorted(), which guarantees this behavior
-                break;
-              }
-            }
-          }
-        };
+    final boolean matchNull = sortedValues.get(0) == null;
+    final Supplier<ImmutableBitmap> unknownsIndex = () -> {
+      if (!matchNull && dictionary.get(0) == null) {
+        return bitmaps.get(0);
       }
-
-      @Nullable
-      @Override
-      protected ImmutableBitmap getUnknownsBitmap()
-      {
-        if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
-          return bitmaps.get(0);
-        }
-        return null;
-      }
+      return null;
     };
+    if (matchValueType.is(ValueType.STRING)) {
+      final List<String> tailSet;
+      final List<String> baseSet = (List<String>) sortedValues;
+
+      if (sortedValues.size() >= ValueSetIndexes.SIZE_WORTH_CHECKING_MIN) {
+        final Object minValueInColumn = dictionary.get(0);
+        final int position = Collections.binarySearch(
+            sortedValues,
+            StringUtils.fromUtf8((ByteBuffer) minValueInColumn),
+            matchValueType.getNullableStrategy()
+        );
+        tailSet = baseSet.subList(position >= 0 ? position : -(position + 1), baseSet.size());
+      } else {
+        tailSet = baseSet;
+      }
+      if (tailSet.size() > ValueSetIndexes.SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
+        return ValueSetIndexes.getIndexFromSortedIteratorSortedMerged(
+            bitmapFactory,
+            ByteBufferUtils.utf8Comparator(),
+            Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
+            dictionary,
+            bitmaps,
+            unknownsIndex
+        );
+      }
+      // fall through to value iteration
+      return ValueSetIndexes.getIndexFromSortedIterator(
+          bitmapFactory,
+          Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
+          dictionary,
+          bitmaps,
+          unknownsIndex
+      );
+    } else {
+      return ValueSetIndexes.getIndexFromIterator(
+          bitmapFactory,
+          Iterables.transform(
+              sortedValues,
+              x -> StringUtils.toUtf8ByteBuffer(DimensionHandlerUtils.convertObjectToString(x))
+          ),
+          dictionary,
+          bitmaps,
+          unknownsIndex
+      );
+    }
   }
 }
