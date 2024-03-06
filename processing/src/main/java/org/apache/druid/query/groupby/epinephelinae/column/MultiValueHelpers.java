@@ -2,12 +2,12 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 public class MultiValueHelpers
 {
-  MultiValueHelper multiValueHelperForDimensionSelectors()
+  KeyToId multiValueHelperForDimensionSelectors()
   {
     return null;
   }
 
-  MultiValueHelper multiValueHelperForSingleValueSelectors()
+  KeyToId multiValueHelperForSingleValueSelectors()
   {
     return null;
   }

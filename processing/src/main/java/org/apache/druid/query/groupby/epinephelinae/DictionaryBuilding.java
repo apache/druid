@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.column.TypeSignature;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -66,6 +68,13 @@ public class DictionaryBuilding
   private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
   {
     final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
+    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
+    return m;
+  }
+
+  public static <T>Object2IntRBTreeMap<T> createTreeSortedReverseDictionary(Comparator<T> comparator)
+  {
+    final Object2IntRBTreeMap<T> m = new Object2IntRBTreeMap<>(comparator);
     m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
     return m;
   }
