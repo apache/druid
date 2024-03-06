@@ -50,13 +50,12 @@ import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 @JsonTypeName("exportResults")
-public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory<String, Set<String>, Object>
+public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory<Object, Object, Object>
 {
   private final String queryId;
   private final ExportStorageProvider exportStorageProvider;
@@ -94,7 +93,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   }
 
   @Override
-  public ProcessorsAndChannels<String, Set<String>> makeProcessors(
+  public ProcessorsAndChannels<Object, Object> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -115,8 +114,8 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
     if (inputSliceReader.numReadableInputs(slice) == 0) {
       return new ProcessorsAndChannels<>(
           ProcessorManagers.of(Sequences.<ExportResultsFrameProcessor>empty())
-                           .withAccumulation(new HashSet<>(), (acc, file) -> {
-                             acc.add(file);
+                           .withAccumulation(new ArrayList<String>(), (acc, file) -> {
+                             ((ArrayList<String>) acc).add((String) file);
                              return acc;
                            }),
           OutputChannels.none()
@@ -127,7 +126,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
     final Sequence<ReadableInput> readableInputs =
         Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
 
-    final Sequence<FrameProcessor<String>> processors = readableInputs.map(
+    final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> new ExportResultsFrameProcessor(
             readableInput.getChannel(),
             exportFormat,
@@ -141,8 +140,8 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
 
     return new ProcessorsAndChannels<>(
         ProcessorManagers.of(processors)
-                         .withAccumulation(new HashSet<>(), (acc, file) -> {
-                           acc.add(file);
+                         .withAccumulation(new ArrayList<String>(), (acc, file) -> {
+                           ((ArrayList<String>) acc).add((String) file);
                            return acc;
                          }),
         OutputChannels.none()
@@ -151,15 +150,22 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
 
   @Nullable
   @Override
-  public TypeReference<Set<String>> getResultTypeReference()
+  public TypeReference<Object> getResultTypeReference()
   {
-    return new TypeReference<Set<String>>() {};
+    return new TypeReference<Object>() {};
   }
 
   @Override
-  public Set<String> mergeAccumulatedResult(Set<String> accumulated, Set<String> otherAccumulated)
+  public Object mergeAccumulatedResult(Object accumulated, Object otherAccumulated)
   {
-    accumulated.addAll(otherAccumulated);
+    // Maintain upgrade compatibility, if a worker does not return a list, ignore it.
+    if (!(accumulated instanceof List)) {
+      return otherAccumulated;
+    }
+    if (!(otherAccumulated instanceof List)) {
+      return accumulated;
+    }
+    ((List<String>) accumulated).addAll((List<String>) otherAccumulated);
     return accumulated;
   }
 

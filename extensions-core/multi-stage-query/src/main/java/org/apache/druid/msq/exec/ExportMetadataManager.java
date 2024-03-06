@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
+import java.util.List;
 
 /**
  * Manages writing of metadata files during export queries.
@@ -48,7 +48,7 @@ public class ExportMetadataManager
     this.exportStorageProvider = exportStorageProvider;
   }
 
-  public void writeMetadata(Set<String> exportedFiles) throws IOException
+  public void writeMetadata(List<String> exportedFiles) throws IOException
   {
     final StorageConnector storageConnector = exportStorageProvider.get();
     log.info("Writing manifest file at [%s]", exportStorageProvider.getBasePath());
@@ -65,7 +65,7 @@ public class ExportMetadataManager
    * Creates a manifest file containing the list of files created by the export query. The manifest file consists of a
    * new line separated list. Each line contains the absolute path to a file created by the export.
    */
-  public void createManifestFile(StorageConnector storageConnector, Set<String> exportedFiles) throws IOException
+  public void createManifestFile(StorageConnector storageConnector, List<String> exportedFiles) throws IOException
   {
     try (PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(storageConnector.write(MANIFEST_FILE), StandardCharsets.UTF_8))) {
       for (String exportedFile : exportedFiles) {

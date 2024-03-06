@@ -50,7 +50,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ExportResultsFrameProcessor implements FrameProcessor<String>
+public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableFrameChannel inputChannel;
   private final ResultFormat exportFormat;
@@ -92,7 +92,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<String>
   }
 
   @Override
-  public ReturnOrAwait<String> runIncrementally(IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(1);

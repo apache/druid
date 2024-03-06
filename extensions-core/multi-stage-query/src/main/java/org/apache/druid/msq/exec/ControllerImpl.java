@@ -1732,8 +1732,16 @@ public class ControllerImpl implements Controller
 
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
       //noinspection unchecked
+
+
+      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
+      if (!(resultObjectForStage instanceof List)) {
+        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
+        log.warn("Was unable to create manifest file due to ");
+        return;
+      }
       @SuppressWarnings("unchecked")
-      Set<String> exportedFiles = (Set<String>) queryKernel.getResultObjectForStage(finalStageId);
+      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
       log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
       exportMetadataManager.writeMetadata(exportedFiles);
     }
