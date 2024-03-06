@@ -20,18 +20,27 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
+import junitparams.JUnitParamsRunner;
+import org.apache.commons.lang3.RegExUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.ISE;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
+import org.junit.runner.RunWith;
 import org.junit.runners.model.Statement;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThrows;
 
@@ -68,7 +77,6 @@ public @interface NotYetSupported
 
   enum Modes
   {
-    PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     ERROR_HANDLING(AssertionError.class, "targetPersona: is <[A-Z]+> and category: is <[A-Z_]+> and errorCode: is"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
@@ -83,12 +91,17 @@ public @interface NotYetSupported
     INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
     // at least c7 is represented oddly in the parquet file
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
-    RESULT_MISMATCH(AssertionError.class, "(assertResultsEquals|AssertionError: column content mismatch)"),
+    RESULT_MISMATCH(AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? (was|is) (Logical)?Join"),
-    MISSING_JOIN_CONVERSION2(AssertionError.class, "Missing conversions? (was|is) (Logical)?Join"),
     UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
-    UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs");
+    UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs"),
+    JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),
+    JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type"),
+    JOIN_TABLE_TABLE(ISE.class, "Cannot handle subquery structure for dataSource: JoinDataSource"),
+    CORRELATE_CONVERSION(DruidException.class, "Missing conversion( is|s are) LogicalCorrelate"),
+    SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    STACK_OVERFLOW(StackOverflowError.class, ""),
+    CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -116,7 +129,7 @@ public @interface NotYetSupported
     @Override
     public Statement apply(Statement base, Description description)
     {
-      NotYetSupported annotation = description.getAnnotation(NotYetSupported.class);
+      NotYetSupported annotation = getAnnotation(description, NotYetSupported.class);
 
       if (annotation == null) {
         return base;
@@ -158,6 +171,39 @@ public @interface NotYetSupported
           throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
       };
+    }
+
+    private static Method getMethodForName(Class<?> testClass, String realMethodName)
+    {
+      List<Method> matches = Stream.of(testClass.getMethods())
+          .filter(m -> realMethodName.equals(m.getName()))
+          .collect(Collectors.toList());
+      switch (matches.size()) {
+        case 0:
+          throw new IllegalArgumentException("Expected to find method...but there is none?");
+        case 1:
+          return matches.get(0);
+        default:
+          throw new IllegalArgumentException("method overrides are not supported");
+      }
+    }
+
+    public static <T extends Annotation> T getAnnotation(Description description, Class<T> annotationType)
+    {
+      T annotation = description.getAnnotation(annotationType);
+      if (annotation != null) {
+        return annotation;
+      }
+      Class<?> testClass = description.getTestClass();
+      RunWith runWith = testClass.getAnnotation(RunWith.class);
+      if (runWith == null || !runWith.value().equals(JUnitParamsRunner.class)) {
+        return null;
+      }
+      String mehodName = description.getMethodName();
+      String realMethodName = RegExUtils.replaceAll(mehodName, "\\(.*", "");
+
+      Method m = getMethodForName(testClass, realMethodName);
+      return m.getAnnotation(annotationType);
     }
   }
 }
