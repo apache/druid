@@ -61,17 +61,17 @@ The request body takes the following properties:
 
   * `objectLines`: Returns newline-delimited JSON objects with the HTTP response header `Content-Type: text/plain`.  
      Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
-     This format includes a trailer of one blank newline character so you can detect a truncated response.
+     This format includes a single trailing newline character so you can detect a truncated response.
 
   * `arrayLines`: Returns newline-delimited JSON arrays with the HTTP response header `Content-Type: text/plain`.  
      Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
- This format includes a trailer of one blank newline character so you can detect a truncated response.
+ This format includes a single trailing newline character so you can detect a truncated response.
 
   * `csv`: Returns comma-separated values with one row per line. Sent with the HTTP response header `Content-Type: text/csv`.  
-     Druid uses double quotes to escape individual field values. For example a value with a comma returns `"A,B"`.
+     Druid uses double quotes to escape individual field values. For example, a value with a comma returns `"A,B"`.
      If the field value contains a double quote character, Druid escapes it with a second double quote character.
-     For example `foo"bar` becomes `foo""bar`.
-      This format includes a trailer of one blank newline character so you can detect a truncated response.
+     For example, `foo"bar` becomes `foo""bar`.
+      This format includes a single trailing newline character so you can detect a truncated response.
 
 * `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
 
@@ -140,11 +140,11 @@ The request body takes the following properties:
 
 #### Client-side error handling and truncated responses
 
-Druid reports errors that occur before the response body is sent as JSON, with an HTTP 500 status code, using the same format as [native Druid query errors](../querying/querying.md#query-errors).
+Druid reports errors that occur before the response body is sent as JSON with an HTTP 500 status code. The errors are reported using the same format as [native Druid query errors](../querying/querying.md#query-errors).
 If an error occurs while Druid is sending the response body, the server handling the request stops the response midstream and logs an error.
 
 This means that when you call the SQL API, you must properly handle response truncation.
-For  `object` and `array` formats, truncated responses will be invalid JSON.
+For  `object` and `array` formats, truncated responses are invalid JSON.
 For line-oriented formats, Druid includes a newline character as the final character of every complete response. Absence of a final newline character indicates a truncated response.
 
 If you detect a truncated response, treat it as an error.
