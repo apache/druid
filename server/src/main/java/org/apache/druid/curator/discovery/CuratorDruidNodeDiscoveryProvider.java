@@ -56,6 +56,7 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -70,7 +71,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   private final ZkPathsConfig config;
   private final ObjectMapper jsonMapper;
 
-  private ExecutorService listenerExecutor;
+  private ScheduledExecutorService listenerExecutor;
 
   private final ConcurrentHashMap<NodeRole, NodeRoleWatcher> nodeRoleWatchers = new ConcurrentHashMap<>();
   private final ConcurrentLinkedQueue<NodeDiscoverer> nodeDiscoverers = new ConcurrentLinkedQueue<>();
@@ -131,7 +132,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     try {
       // This is single-threaded to ensure that all listener calls are executed precisely in the order of add/remove
       // event occurrences.
-      listenerExecutor = Execs.singleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
+      listenerExecutor = Execs.scheduledSingleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
 
       log.debug("Started.");
 
@@ -174,7 +175,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     private final Object lock = new Object();
 
     NodeRoleWatcher(
-        ExecutorService listenerExecutor,
+        ScheduledExecutorService listenerExecutor,
         CuratorFramework curatorFramework,
         String basePath,
         ObjectMapper jsonMapper,
