@@ -1661,11 +1661,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
 
-        Long segmentsRead = ((IngestionStatsAndErrorsTaskReport)
+        Long currSegmentsRead = ((IngestionStatsAndErrorsTaskReport)
             taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
         ).getPayload().getSegmentsRead();
-        if (segmentsRead != null) {
-          totalSegmentsRead += segmentsRead;
+        if (currSegmentsRead != null) {
+          totalSegmentsRead += currSegmentsRead;
         }
       }
 

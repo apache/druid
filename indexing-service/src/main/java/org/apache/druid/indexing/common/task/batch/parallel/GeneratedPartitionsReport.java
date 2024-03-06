@@ -37,11 +37,7 @@ public class GeneratedPartitionsReport implements SubTaskReport
   private final List<PartitionStat> partitionStats;
   private final Map<String, TaskReport> taskReport;
 
-  GeneratedPartitionsReport(
-      String taskId,
-      List<PartitionStat> partitionStats,
-      Map<String, TaskReport> taskReport
-  )
+  GeneratedPartitionsReport(String taskId, List<PartitionStat> partitionStats, Map<String, TaskReport> taskReport)
   {
     this.taskId = taskId;
     this.partitionStats = partitionStats;
