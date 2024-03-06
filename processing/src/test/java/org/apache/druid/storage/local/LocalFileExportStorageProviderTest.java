@@ -94,7 +94,13 @@ public class LocalFileExportStorageProviderTest
   @Test
   public void testExportManifestFilePath()
   {
-    LocalFileExportStorageProvider localFileExportStorageProvider = new LocalFileExportStorageProvider("/base/path1");
-    Assert.assertEquals("file:/base/path1/file1", localFileExportStorageProvider.getFilePathForManifest("file1"));
+    Assert.assertEquals(
+        "file:/base/path1/file1",
+        new LocalFileExportStorageProvider("/base/path1").getFilePathForManifest("file1")
+    );
+    Assert.assertEquals(
+        "file:/base/path1/file1",
+        new LocalFileExportStorageProvider("/base/../base/path1").getFilePathForManifest("file1")
+    );
   }
 }

@@ -87,7 +87,8 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   @Override
   public String getFilePathForManifest(String fileName)
   {
-    return StringUtils.format("file:%s", new File(exportPath, fileName).getAbsolutePath());
+    final File exportFile = new File(exportPath, fileName);
+    return StringUtils.format("file:%s", exportFile.toPath().normalize());
   }
 
   @Override

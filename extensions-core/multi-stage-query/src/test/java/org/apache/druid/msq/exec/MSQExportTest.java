@@ -73,7 +73,7 @@ public class MSQExportTest extends MSQTestBase
         expectedFooFileContents(true)
     );
 
-    verifyManifestFile(new File(exportDir, ManifestFileManager.MANIFEST_FILE), ImmutableList.of(resultFile));
+    verifyManifestFile(exportDir, ImmutableList.of(resultFile));
   }
 
   @Test
@@ -135,20 +135,33 @@ public class MSQExportTest extends MSQTestBase
     }
   }
 
-  private void verifyManifestFile(File manifestFile, List<File> resultFiles) throws IOException
+  private void verifyManifestFile(File exportDir, List<File> resultFiles) throws IOException
   {
+    final File manifestFile = new File(exportDir, ExportMetadataManager.MANIFEST_FILE);
     try (
         BufferedReader bufferedReader = new BufferedReader(
             new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StringUtils.UTF8_STRING)
         )
     ) {
-
       for (File file : resultFiles) {
         Assert.assertEquals(
-            bufferedReader.readLine(),
-            StringUtils.format("file:%s", file.getAbsolutePath())
+            StringUtils.format("file:%s", file.getAbsolutePath()),
+            bufferedReader.readLine()
         );
       }
+      Assert.assertNull(bufferedReader.readLine());
+    }
+
+    final File metaFile = new File(exportDir, ExportMetadataManager.META_FILE);
+    try (
+        BufferedReader bufferedReader = new BufferedReader(
+            new InputStreamReader(Files.newInputStream(metaFile.toPath()), StringUtils.UTF8_STRING)
+        )
+    ) {
+      Assert.assertEquals(
+          StringUtils.format("version: %s", ExportMetadataManager.MANIFEST_FILE_VERSION),
+          bufferedReader.readLine()
+      );
       Assert.assertNull(bufferedReader.readLine());
     }
   }

@@ -1728,14 +1728,14 @@ public class ControllerImpl implements Controller
     } else if (MSQControllerTask.isExport(task.getQuerySpec())) {
       // Write manifest file.
       ExportMSQDestination destination = (ExportMSQDestination) task.getQuerySpec().getDestination();
-      ManifestFileManager manifestFileManager = new ManifestFileManager(destination.getExportStorageProvider());
-      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
 
+      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
       //noinspection unchecked
       @SuppressWarnings("unchecked")
       Set<String> exportedFiles = (Set<String>) queryKernel.getResultObjectForStage(finalStageId);
       log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
-      manifestFileManager.createManifestFile(exportedFiles);
+      exportMetadataManager.writeMetadata(exportedFiles);
     }
   }
 

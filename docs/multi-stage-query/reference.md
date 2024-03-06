@@ -98,8 +98,17 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 `EXTERN` can be used to specify a destination where you want to export data to.
 This variation of EXTERN requires one argument, the details of the destination as specified below.
 This variation additionally requires an `AS` clause to specify the format of the exported rows.
-While exporting data, a manifest file is also created at the destination listing the files which were created as
-part of the export.
+
+While exporting data, some metadata files will also be created at the destination in addition to the data. These files will be created in a directory `_symlink_format_manifest`.
+- `_symlink_format_manifest/manifest`: Lists the files which were created as part of the export. The file is in the symlink manifest format, and consists of a list of absolute paths to the files created.
+```text
+s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
+s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker1-partition1.csv
+s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-partition0.csv
+...
+s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-partition24.csv
+```
+- `_symlink_format_manifest/druid_export_meta`: Used to store additional information about the export metadata, such as the version of the manifest file format.
 
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
