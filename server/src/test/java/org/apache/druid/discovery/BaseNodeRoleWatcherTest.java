@@ -40,7 +40,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BaseNodeRoleWatcherTest
@@ -62,7 +61,7 @@ public class BaseNodeRoleWatcherTest
   @Test(timeout = 60_000L)
   public void testGeneralUseSimulation()
   {
-    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER);
+    BaseNodeRoleWatcher nodeRoleWatcher = BaseNodeRoleWatcher.create(exec, NodeRole.BROKER);
 
     DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
     DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
@@ -139,7 +138,7 @@ public class BaseNodeRoleWatcherTest
   @Test(timeout = 60_000L)
   public void testRegisterListenerBeforeTimeout() throws InterruptedException
   {
-    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 1);
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER);
 
     TestListener listener1 = new TestListener();
     nodeRoleWatcher.registerListener(listener1);
@@ -161,16 +160,18 @@ public class BaseNodeRoleWatcherTest
 
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
 
-    Assert.assertTrue(listener1.ready.await(1500, TimeUnit.MILLISECONDS));
+    BaseNodeRoleWatcher.scheduleTimeout(nodeRoleWatcher, exec, 0);
+    nodeRoleWatcher.awaitInitialization();
+
     Assert.assertTrue(listener1.nodeViewInitializationTimedOut.get());
 
     assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
 
   @Test(timeout = 60_000L)
-  public void testGetAllNodesBeforeTimeout()
+  public void testGetAllNodesBeforeTimeout() throws InterruptedException
   {
-    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER, 1);
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(exec, NodeRole.BROKER);
 
     TestListener listener1 = new TestListener();
     nodeRoleWatcher.registerListener(listener1);
@@ -192,6 +193,9 @@ public class BaseNodeRoleWatcherTest
     nodeRoleWatcher.childRemoved(broker2);
 
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
+
+    BaseNodeRoleWatcher.scheduleTimeout(nodeRoleWatcher, exec, 0);
+    nodeRoleWatcher.awaitInitialization();
 
     Assert.assertEquals(2, nodeRoleWatcher.getAllNodes().size());
 

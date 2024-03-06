@@ -76,28 +76,24 @@ public class BaseNodeRoleWatcher
       NodeRole nodeRole
   )
   {
-    this(listenerExecutor, nodeRole, DEFAULT_TIMEOUT_SECONDS);
-  }
-
-  BaseNodeRoleWatcher(
-      ScheduledExecutorService listenerExecutor,
-      NodeRole nodeRole,
-      long timeout
-  )
-  {
     this.nodeRole = nodeRole;
     this.listenerExecutor = listenerExecutor;
-    this.listenerExecutor.schedule(
-        this::cacheInitializedTimedOut,
-        timeout,
-        TimeUnit.SECONDS
-    );
+  }
+
+  public static BaseNodeRoleWatcher create(
+      ScheduledExecutorService listenerExecutor,
+      NodeRole nodeRole
+  )
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
+    scheduleTimeout(nodeRoleWatcher, listenerExecutor, DEFAULT_TIMEOUT_SECONDS);
+    return nodeRoleWatcher;
   }
 
   public Collection<DiscoveryDruidNode> getAllNodes()
   {
     try {
-      cacheInitialized.await();
+      awaitInitialization();
     }
     catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
@@ -255,12 +251,9 @@ public class BaseNodeRoleWatcher
     synchronized (lock) {
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
       // counted down.
-      if (cacheInitialized.getCount() == 0) {
-        LOGGER.warn("Cache for node watcher of role[%s] is already initialized. ignoring timeout.", nodeRole.getJsonName());
-        return;
+      if (cacheInitialized.getCount() != 0) {
+        cacheInitialized(true);
       }
-
-      cacheInitialized(true);
     }
   }
 
@@ -350,6 +343,24 @@ public class BaseNodeRoleWatcher
         }
       }
     }
+  }
+
+  static void scheduleTimeout(
+      BaseNodeRoleWatcher nodeRoleWatcher,
+      ScheduledExecutorService listenerExecutor,
+      long timeout
+  )
+  {
+    listenerExecutor.schedule(
+        nodeRoleWatcher::cacheInitializedTimedOut,
+        timeout,
+        TimeUnit.SECONDS
+    );
+  }
+
+  void awaitInitialization() throws InterruptedException
+  {
+    cacheInitialized.await();
   }
 
   private void safeSchedule(Runnable runnable, String errMsgFormat, Object... args)
