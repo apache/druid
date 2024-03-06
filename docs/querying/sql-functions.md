@@ -860,6 +860,13 @@ Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If
 
 Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.
 
+## JSON_MERGE
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`json_merge(expr1, expr2[, expr3 ...])`
+Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Right-most being preserved on key overlaps. Returning always a `COMPLEX<json>` type.
+
 ## LATEST
 
 `LATEST(expr, [maxBytesPerValue])`
