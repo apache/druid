@@ -22,6 +22,7 @@ package org.apache.druid.storage.google;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpResponseException;
+import com.google.cloud.storage.StorageException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -76,6 +77,26 @@ public class GoogleUtilsTest
     Assert.assertTrue(
         GoogleUtils.isRetryable(
             new IOException("generic io exception")
+        )
+    );
+    Assert.assertTrue(
+        GoogleUtils.isRetryable(
+            new StorageException(429, "ignored")
+        )
+    );
+    Assert.assertTrue(
+        GoogleUtils.isRetryable(
+            new StorageException(500, "ignored")
+        )
+    );
+    Assert.assertTrue(
+        GoogleUtils.isRetryable(
+            new StorageException(503, "ignored")
+        )
+    );
+    Assert.assertTrue(
+        GoogleUtils.isRetryable(
+            new StorageException(599, "ignored")
         )
     );
   }

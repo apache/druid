@@ -88,6 +88,9 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
           5
       );
     }
+    catch (StorageException e) {
+      throw e;
+    }
     catch (Exception e) {
       throw new RE(e, "Failed to delete [%s] [%s]", bucket, path);
     }
