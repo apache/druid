@@ -1686,7 +1686,7 @@ public class HttpRemoteTaskRunnerTest
   @Test(timeout = 60_000L)
   public void testSyncMonitoring_finiteIteration()
   {
-    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery(true);
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
@@ -1986,11 +1986,19 @@ public class HttpRemoteTaskRunnerTest
 
   public static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
+    private final boolean timedOut;
     private List<Listener> listeners;
+
 
     public TestDruidNodeDiscovery()
     {
+      this(false);
+    }
+
+    public TestDruidNodeDiscovery(boolean timedOut)
+    {
       listeners = new ArrayList<>();
+      this.timedOut = timedOut;
     }
 
     @Override
@@ -2003,7 +2011,11 @@ public class HttpRemoteTaskRunnerTest
     public void registerListener(Listener listener)
     {
       listener.nodesAdded(ImmutableList.of());
-      listener.nodeViewInitialized();
+      if (timedOut) {
+        listener.nodeViewInitializedTimedOut();
+      } else {
+        listener.nodeViewInitialized();
+      }
       listeners.add(listener);
     }
 
