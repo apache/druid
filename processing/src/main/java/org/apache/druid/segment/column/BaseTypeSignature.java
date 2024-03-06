@@ -22,10 +22,12 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.errorprone.annotations.Immutable;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+@Immutable
 public abstract class BaseTypeSignature<Type extends TypeDescriptor> implements TypeSignature<Type>
 {
   protected final Type type;
@@ -36,7 +38,9 @@ public abstract class BaseTypeSignature<Type extends TypeDescriptor> implements 
   @Nullable
   protected final TypeSignature<Type> elementType;
 
+  @SuppressWarnings("Immutable")
   private final Supplier<TypeStrategy> typeStrategy;
+  @SuppressWarnings("Immutable")
   private final Supplier<NullableTypeStrategy> nullableTypeStrategy;
 
   public BaseTypeSignature(

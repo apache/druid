@@ -17,32 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.concrete;
+package org.apache.druid.query.rowsandcols;
 
-import org.apache.druid.query.operator.OffsetLimit;
-import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
-import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
-import org.apache.druid.query.rowsandcols.RowsAndColumnsTestBase;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumnsTest;
+import org.apache.druid.segment.StorageAdapter;
+
 import java.util.function.Function;
 
-public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
+public class StorageAdapterRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-  public FrameRowsAndColumnsTest()
+  public StorageAdapterRowsAndColumnsTest()
   {
-    super(FrameRowsAndColumns.class);
+    super(StorageAdapterRowsAndColumns.class);
   }
 
-  public static Function<MapOfColumnsRowsAndColumns, FrameRowsAndColumns> MAKER = input -> {
-
+  public static Function<MapOfColumnsRowsAndColumns, StorageAdapterRowsAndColumns> MAKER = input -> {
     return buildFrame(input);
   };
 
-  public static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
+  private static StorageAdapterRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
-
-    rac.numRows(); // materialize
-
-    return (FrameRowsAndColumns) rac.getBase();
+    FrameRowsAndColumns fRAC = FrameRowsAndColumnsTest.buildFrame(input);
+    return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
   }
 }

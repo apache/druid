@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.errorprone.annotations.Immutable;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -68,6 +69,7 @@ import java.util.Objects;
  * can be merged, which will simplify this interface to no longer need be generic, allow {@link ColumnType} to be
  * collapsed into {@link BaseTypeSignature}, and finally unify the type system.
  */
+@Immutable
 public interface TypeSignature<Type extends TypeDescriptor>
 {
   /**
