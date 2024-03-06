@@ -22,10 +22,10 @@ package org.apache.druid.query.scan;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
@@ -78,7 +78,6 @@ import java.util.NoSuchElementException;
  * Frame7 - RowSignatureB - row 1-2 from ScanResultValue5
  * Frame8 - RowSignatureB - row 3 from ScanResultValue6
  * <p>
- * TODO(laksh): What if single scan result value, and empty
  */
 
 public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePair>
@@ -216,7 +215,7 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
           currentRowSignature
       ))) {
         while (populateCursor()) { // Do till we don't have any more rows, or the next row isn't compatible with the current row
-          if (!frameWriter.addSelection()) {
+          if (!frameWriter.addSelection()) { // Add the cursor's row to the frame, till the frame is full
             break;
           }
           firstRowWritten = true;
@@ -224,12 +223,7 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
         }
 
         if (!firstRowWritten) {
-          throw DruidException
-              .forPersona(DruidException.Persona.DEVELOPER)
-              .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
-              .build("Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
-                     + "row to the frame. This is a non-configurable static limit that can only be modified by the "
-                     + "developer.");
+          throw FrameCursorUtils.SUBQUERY_ROW_TOO_LARGE_EXCEPTION;
         }
         frame = Frame.wrap(frameWriter.toByteArray());
       }

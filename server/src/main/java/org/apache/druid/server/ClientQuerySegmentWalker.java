@@ -670,16 +670,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       case ROW_LIMIT:
         if (limitAccumulator.get() >= rowLimitToUse) {
           subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-          throw ResourceLimitExceededException.withMessage(
-              "Cannot issue the query, subqueries generated results beyond maximum[%d] rows. Try setting the"
-              + "%s in the query context to '%s' for enabling byte based limit, which chooses an optimal limit based on "
-              + "memory size and result's heap usage or manually configure the values of either %s or %s in the query context",
-              rowLimitToUse,
-              QueryContexts.MAX_SUBQUERY_BYTES_KEY,
-              SubqueryGuardrailHelper.AUTO_LIMIT_VALUE,
-              QueryContexts.MAX_SUBQUERY_BYTES_KEY,
-              QueryContexts.MAX_SUBQUERY_ROWS_KEY
-          );
+          throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
         }
         subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
@@ -830,8 +821,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     return org.apache.druid.java.util.common.StringUtils.format(
     "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes. Increase the "
-    + "JVM's memory or set the '%s' in the query context carefully to increase the space allocated for subqueries to "
-    + "materialize their results.",
+    + "JVM's memory or set the '%s' in the query context to increase the space allocated for subqueries to "
+    + "materialize their results. Manually alter the value carefully as it can cause the broker to go out of memory.",
         memoryLimit,
         QueryContexts.MAX_SUBQUERY_BYTES_KEY
     );
@@ -842,7 +833,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return org.apache.druid.java.util.common.StringUtils.format(
         "Cannot issue the query, subqueries generated results beyond maximum[%d] rows. Try setting the "
         + "'%s' in the query context to '%s' for enabling byte based limit, which chooses an optimal limit based on "
-        + "memory size and result's heap usage or manually configure the values of either '%s' or '%s' in the query context",
+        + "memory size and result's heap usage or manually configure the values of either '%s' or '%s' in the query "
+        + "context. Manually alter the value carefully as it can cause the broker to go out of memory.",
         rowLimitUsed,
         QueryContexts.MAX_SUBQUERY_BYTES_KEY,
         SubqueryGuardrailHelper.AUTO_LIMIT_VALUE,

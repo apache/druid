@@ -804,7 +804,8 @@ public class ClientQuerySegmentWalkerTest
         "Cannot issue the query, subqueries generated results beyond maximum[2] rows. Try setting the "
         + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
         + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
-        + "or 'maxSubqueryRows' in the query context"
+        + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to go out "
+        + "of memory."
     );
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
@@ -902,8 +903,9 @@ public class ClientQuerySegmentWalkerTest
     expectedException.expect(ResourceLimitExceededException.class);
     expectedException.expectMessage(
         "Cannot issue the query, subqueries generated results beyond maximum[1] bytes. Increase the "
-        + "JVM's memory or set the 'maxSubqueryBytes' in the query context carefully to increase the space "
-        + "allocated for subqueries to materialize their results."
+        + "JVM's memory or set the 'maxSubqueryBytes' in the query context to increase the space "
+        + "allocated for subqueries to materialize their results. Manually alter the value carefully as it can cause "
+        + "the broker to go out of memory."
     );
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
