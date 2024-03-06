@@ -85,15 +85,15 @@ public class GoogleStorageTest
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(RUNTIME_EXCEPTION);
     EasyMock.replay(mockStorage);
-    boolean thrownRuntimeException = false;
+    boolean thrownStorageException = false;
     try {
       googleStorage.delete(BUCKET, PATH);
 
     }
-    catch (RuntimeException e) {
-      thrownRuntimeException = true;
+    catch (StorageException e) {
+      thrownStorageException = true;
     }
-    assertTrue(thrownRuntimeException);
+    assertTrue(thrownStorageException);
   }
 
   @Test
@@ -145,15 +145,15 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.delete((Iterable<BlobId>) EasyMock.anyObject()))
             .andThrow(RUNTIME_EXCEPTION);
     EasyMock.replay(mockStorage);
-    boolean thrownRuntimeException = false;
+    boolean thrownStorageException = false;
     try {
       googleStorage.batchDelete(BUCKET, paths);
 
     }
-    catch (RuntimeException e) {
-      thrownRuntimeException = true;
+    catch (StorageException e) {
+      thrownStorageException = true;
     }
-    assertTrue(thrownRuntimeException);
+    assertTrue(thrownStorageException);
   }
 
   @Test
