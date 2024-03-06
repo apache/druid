@@ -36,6 +36,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.Either;
@@ -51,12 +52,17 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
+import org.apache.druid.utils.CollectionUtils;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -67,6 +73,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -76,7 +83,7 @@ import java.util.stream.Collectors;
  * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
  * active tasks to see which completed tasks are safe to delete.
  */
-public class WorkerTaskManager
+public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
@@ -179,9 +186,9 @@ public class WorkerTaskManager
     return completedTasks;
   }
 
-  public Map<String, TaskDetails> getRunningTasks()
+  public Map<String, Task> getRunningTasks()
   {
-    return runningTasks;
+    return CollectionUtils.mapValues(runningTasks, detail -> detail.task);
   }
 
   public Map<String, Task> getAssignedTasks()
@@ -617,7 +624,38 @@ public class WorkerTaskManager
     completedTasks.put(taskId, taskAnnouncement);
   }
 
- protected static class TaskDetails
+  private <T> Map<String, Long> getNumTasksPerDatasource(Collection<T> taskList, Function<T, String> getDataSourceFunc)
+  {
+    String dataSource;
+    final Map<String, Long> dataSourceTaskMap = new HashMap<>();
+
+    for (T task : taskList) {
+      dataSource = getDataSourceFunc.apply(task);
+      dataSourceTaskMap.putIfAbsent(dataSource, 0L);
+      dataSourceTaskMap.put(dataSource, dataSourceTaskMap.get(dataSource) + 1L);
+    }
+    return dataSourceTaskMap;
+  }
+
+  @Override
+  public Map<String, Long> getWorkerRunningTasks()
+  {
+    return getNumTasksPerDatasource(this.getRunningTasks().values(), Task::getDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerAssignedTasks()
+  {
+    return getNumTasksPerDatasource(this.getAssignedTasks().values(), Task::getDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerCompletedTasks()
+  {
+    return getNumTasksPerDatasource(this.getCompletedTasks().values(), TaskAnnouncement::getTaskDataSource);
+  }
+
+  private static class TaskDetails
   {
     private final Task task;
     private final long startTime;
@@ -630,11 +668,6 @@ public class WorkerTaskManager
       this.startTime = System.currentTimeMillis();
       this.status = TaskStatus.running(task.getId());
       this.location = TaskLocation.unknown();
-    }
-
-    public String getDataSource()
-    {
-      return task.getDataSource();
     }
   }
 

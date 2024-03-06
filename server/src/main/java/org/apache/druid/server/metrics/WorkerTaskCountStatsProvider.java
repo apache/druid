@@ -50,7 +50,6 @@ public interface WorkerTaskCountStatsProvider
    */
   Long getWorkerUsedTaskSlotCount();
 
-
   /**
    * The worker category.
    */
