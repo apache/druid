@@ -65,7 +65,7 @@ The request body takes the following properties:
 
   * `arrayLines`: Returns newline-delimited JSON arrays with the HTTP response header `Content-Type: text/plain`.  
      Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
- This format includes a single trailing newline character so you can detect a truncated response.
+     This format includes a single trailing newline character so you can detect a truncated response.
 
   * `csv`: Returns comma-separated values with one row per line. Sent with the HTTP response header `Content-Type: text/csv`.  
      Druid uses double quotes to escape individual field values. For example, a value with a comma returns `"A,B"`.
