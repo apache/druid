@@ -1838,6 +1838,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  @VisibleForTesting
+  public void setToolbox(TaskToolbox toolbox)
+  {
+    this.toolbox = toolbox;
+  }
+
   /**
    * Represents a partition uniquely identified by an Interval and a bucketId.
    *
