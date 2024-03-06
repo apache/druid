@@ -51,7 +51,7 @@ public class GoogleStorageTest
   static final String PATH = "/path";
   static final long SIZE = 100;
   static final OffsetDateTime UPDATE_TIME = OffsetDateTime.MIN;
-  private static final Exception RUNTIME_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
+  private static final Exception STORAGE_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
 
 
   @Before
@@ -83,7 +83,7 @@ public class GoogleStorageTest
   @Test
   public void testDeleteFailure()
   {
-    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(RUNTIME_EXCEPTION);
+    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
     boolean thrownStorageException = false;
     try {
@@ -143,7 +143,7 @@ public class GoogleStorageTest
   {
     List<String> paths = ImmutableList.of("/path1", "/path2");
     EasyMock.expect(mockStorage.delete((Iterable<BlobId>) EasyMock.anyObject()))
-            .andThrow(RUNTIME_EXCEPTION);
+            .andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
     boolean thrownStorageException = false;
     try {

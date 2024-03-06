@@ -43,7 +43,7 @@ public class GoogleUtils
       return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
     } else if (t instanceof StorageException) {
       final StorageException e = (StorageException) t;
-      return e.getCode() == 429 || e.getCode() == 408 || (e.getCode() / 500 == 1);
+      return e.isRetryable();
     }
     return t instanceof IOException;
   }
