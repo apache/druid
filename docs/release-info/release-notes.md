@@ -555,6 +555,35 @@ Improved the Iceberg extension as follows:
 
 ### Upgrade notes
 
+#### Changes in `targetDataSource` payload present in the explain plan for MSQ queries
+
+Druid 29 has a breaking change for EXPLAIN for INSERT/REPLACE MSQ queries.
+In the attribute field returned as part of the result for an explain query, the value of the key `targetDataSource` from a string to a JSON object.
+This change is only present in Druid 29 and is not present in earlier or later versions.
+
+The JSON object returned plan will have the structure if the target is a datasource:
+```json
+{
+  "targetDataSource": {
+    "type": "table",
+    "tableName": "wikipedia"
+  }
+}
+```
+
+The JSON object returned plan will have the structure if the target is an external export location using :
+```json
+{
+  "targetDataSource": {
+    "type": "external",
+    "storageConnectorProvider": {
+      "type": "<export-type>",
+      "exportPath": "<export-path>"
+    }
+  }
+}
+```
+
 #### Changed `equals` filter for native queries
 
 The [equality filter](https://druid.apache.org/docs/latest/querying/filters#equality-filter) on mixed type `auto` columns that contain arrays must now be filtered as their presenting type. This means that if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
