@@ -331,6 +331,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
   }
 
+  public static boolean developerIDEdetected()
+  {
+    String javaCmd = System.getProperties().getProperty("sun.java.command", "");
+    boolean isEclipse = javaCmd.contains("org.eclipse.jdt.internal.junit.runner.RemoteTestRunner");
+    return isEclipse;
+  }
+
   // Generate timestamps for expected results
   public static long timestamp(final String timeString)
   {

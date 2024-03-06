@@ -148,6 +148,24 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
             windowOrId
         );
       }
+      boolean hasBounds = lowerBound != null || upperBound != null;
+      if(call.getKind() == SqlKind.NTILE && hasBounds) {
+        throw buildCalciteContextException(
+            StringUtils.format(
+                "Framing of NTILE is not supported.",
+                QueryContexts.WINDOWING_STRICT_VALIDATION
+            ),
+            windowOrId
+        );
+      }
+      if (call.getKind() == SqlKind.FIRST_VALUE || call.getKind() == SqlKind.LAST_VALUE) {
+        if (!isValidRangeEndpoint(lowerBound) || !isValidRangeEndpoint(upperBound)) {
+          throw buildCalciteContextException(
+              "Framing of FIRST_VALUE/LAST_VALUE is only allowed with UNBOUNDED or CURRENT ROW.",
+              windowOrId
+          );
+        }
+      }
     }
 
     super.validateWindow(windowOrId, scope, call);

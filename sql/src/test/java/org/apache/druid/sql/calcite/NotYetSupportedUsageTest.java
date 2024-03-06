@@ -104,7 +104,7 @@ public class NotYetSupportedUsageTest
     @Override
     public String toString()
     {
-      return " | " + className + " | " + methodNames.size() + " | " + mode + " | ";
+      return " | " + className + " | " + methodNames.size() + " | " + mode + " | " + mode.regex + " | ";
     }
   }
 
