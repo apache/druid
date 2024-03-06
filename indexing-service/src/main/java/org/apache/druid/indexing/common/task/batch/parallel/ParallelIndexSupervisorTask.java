@@ -652,6 +652,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
+      publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
       if (isCompactionTask) {
         // Populate segmentsRead only for compaction tasks
         segmentsRead = parallelSinglePhaseRunner.getReports()
@@ -831,6 +832,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
+      publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
@@ -928,6 +930,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskState mergeState = runNextPhase(mergeRunner);
     TaskStatus taskStatus;
     if (mergeState.isSuccess()) {
+      publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
