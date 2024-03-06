@@ -79,6 +79,11 @@ public class GoogleUtilsTest
             new IOException("generic io exception")
         )
     );
+    Assert.assertFalse(
+        GoogleUtils.isRetryable(
+            new StorageException(404, "ignored")
+        )
+    );
     Assert.assertTrue(
         GoogleUtils.isRetryable(
             new StorageException(429, "ignored")
@@ -94,7 +99,7 @@ public class GoogleUtilsTest
             new StorageException(503, "ignored")
         )
     );
-    Assert.assertTrue(
+    Assert.assertFalse(
         GoogleUtils.isRetryable(
             new StorageException(599, "ignored")
         )
