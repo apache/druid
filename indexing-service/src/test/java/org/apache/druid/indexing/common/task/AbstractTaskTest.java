@@ -269,6 +269,57 @@ public class AbstractTaskTest
     verify(taskActionClient).submit(eq(action));
   }
 
+  @Test
+  public void testWithNoCleanup() throws Exception
+  {
+    TaskToolbox toolbox = mock(TaskToolbox.class);
+    when(toolbox.getAttemptId()).thenReturn("1");
+
+    DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
+    when(toolbox.getTaskExecutorNode()).thenReturn(node);
+
+    TaskLogPusher pusher = mock(TaskLogPusher.class);
+    when(toolbox.getTaskLogPusher()).thenReturn(pusher);
+
+    TaskConfig config = mock(TaskConfig.class);
+    when(config.isEncapsulatedTask()).thenReturn(false);
+    File folder = temporaryFolder.newFolder();
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
+    when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
+
+    TaskActionClient taskActionClient = mock(TaskActionClient.class);
+    when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
+    when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+
+
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
+    {
+      @Nullable
+      @Override
+      public String setup(TaskToolbox toolbox) throws Exception
+      {
+        // create a reports file to test the taskLogPusher pushes task reports
+        String result = super.setup(toolbox);
+        File attemptDir = Paths.get(folder.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
+        File reportsDir = new File(attemptDir, "report.json");
+        FileUtils.write(reportsDir, "foo", StandardCharsets.UTF_8);
+        return result;
+      }
+
+      @Override
+      public boolean shouldCleanupTask()
+      {
+        return false;
+      }
+    };
+    task.run(toolbox);
+
+    // encapsulated task is set to false, should never get called
+    Mockito.verify(taskActionClient, never()).submit(any());
+    verify(pusher, never()).pushTaskReports(eq("myID"), any());
+  }
+
 
   @Test
   public void testBatchIOConfigAppend()
