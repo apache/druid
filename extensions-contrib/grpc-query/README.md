@@ -19,7 +19,7 @@
 
 # gRPC Query Extension for Druid
 
-This extension provides a gRPC API for SQL queries.
+This extension provides a gRPC API for SQL and Native queries.
 
 Druid uses REST as its RPC protocol. Druid has a large variety of REST operations
 including query, ingest jobs, monitoring, configuration and many more. Although
@@ -31,9 +31,9 @@ small result set (a few thousand rows at most). The small-query focus allows
 Druid to offer a simple, stateless request/response REST API. This gRPC API
 follows that Druid pattern: it is optimized for simple queries and follows
 Druid's request/response model. APIs such as JDBC can handle larger results
-because they stateful: a client can request pages of results using multiple
+because they are stateful: a client can request pages of results using multiple
 API calls. This API does not support paging: the entire result set is returned
-in the response, resulting in a API which is fast for small queries, and not
+in the response, resulting in an API which is fast for small queries, and not
 suitable for larger result sets.
 
 ## Use Cases
@@ -131,7 +131,7 @@ extension.
 
 ## Usage
 
-See the `src/main/proto/query.proto` file in the `grpc-shaded` project for the request and
+See the `src/main/proto/query.proto` file in the `grpc-query` project for the request and
 response message formats. The request message format closely follows the REST JSON message
 format. The response is optimized for gRPC: it contains an error (if the request fails),
 or the result schema and result data as a binary payload. You can query the gRPC endpoint
@@ -146,7 +146,7 @@ Use the `double` type instead.
 ## Security
 
 The extension supports both "anonymous" and basic authorization. Anonymous is the mode
-for an out-of-the-box Druid: not authorization needed. The extension does not yet support
+for an out-of-the-box Druid: no authorization needed. The extension does not yet support
 other security extensions: each needs its own specific integration.
 
 Clients that use basic authentication must include a set of credentials. See
@@ -157,7 +157,7 @@ configure the credentials in the client.
 
 This project contains several components:
 
-* Guice modules and associated server initialization code.
+* Guice module and associated server initialization code.
 * Netty-based gRPC server.
 * A "driver" that performs the actual query and generates the results.
 
