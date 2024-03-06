@@ -38,6 +38,7 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
+import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
@@ -227,6 +228,20 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     // Determine the output (target) schema.
     final RelDataType targetType = validateTargetType(scope, insertNs, insert, sourceType, tableMetadata);
+
+    // WITH node type is computed to be the type of the body recursively in
+    // org.apache.calcite.sql2rel.SqlToRelConverter.convertQuery}. If this computed type
+    // is different than the type validated and stored for the node in memory a nasty relational
+    // algebra error will occur in org.apache.calcite.sql2rel.SqlToRelConverter.checkConvertedType.
+    // During the validateTargetType call above, the WITH body node validated type may be updated
+    // with any coercions applied. We update the validated node type of the WITH node here so
+    // that they are consistent.
+    if (source instanceof SqlWith) {
+      final RelDataType withBodyType = getValidatedNodeTypeIfKnown(((SqlWith) source).body);
+      if (withBodyType != null) {
+        setValidatedNodeType(source, withBodyType);
+      }
+    }
 
     // Set the type for the INSERT/REPLACE node
     setValidatedNodeType(insert, targetType);
