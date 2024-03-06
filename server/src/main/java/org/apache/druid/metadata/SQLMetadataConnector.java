@@ -288,6 +288,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
+    alterPendingSegmentsTableAddParentIdAndTaskGroup(tableName);
   }
 
   public void createDataSourceTable(final String tableName)
@@ -454,6 +455,26 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     } else {
       log.info("Adding column[group_id] to table[%s].", tableName);
       statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+    }
+    if (!statements.isEmpty()) {
+      alterTable(tableName, statements);
+    }
+  }
+
+  private void alterPendingSegmentsTableAddParentIdAndTaskGroup(final String tableName)
+  {
+    List<String> statements = new ArrayList<>();
+    if (tableHasColumn(tableName, "parent_id")) {
+      log.info("Table[%s] already has column[parent_id].", tableName);
+    } else {
+      log.info("Adding column[parent_id] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN parent_id VARCHAR(255)", tableName));
+    }
+    if (tableHasColumn(tableName, "task_group")) {
+      log.info("Table[%s] already has column[task_group].", tableName);
+    } else {
+      log.info("Adding column[task_group] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN task_group VARCHAR(255)", tableName));
     }
     if (!statements.isEmpty()) {
       alterTable(tableName, statements);

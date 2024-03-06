@@ -277,6 +277,13 @@ public abstract class AbstractTask implements Task
     return groupId;
   }
 
+  @Nullable
+  @Override
+  public String getPendingSegmentGroup()
+  {
+    return null;
+  }
+
   @JsonProperty("resource")
   @Override
   public TaskResource getTaskResource()

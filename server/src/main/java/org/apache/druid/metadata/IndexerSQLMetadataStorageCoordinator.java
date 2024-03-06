@@ -333,6 +333,34 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return pendingSegmentToSequenceName;
   }
 
+  List<PendingSegment> getPendingSegmentsForTaskGroupWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final String taskGroup
+  )
+  {
+    String sql = "SELECT payload, sequence_name, sequence_prev_id, task_group, parent_id"
+                 + " FROM " + dbTables.getPendingSegmentsTable()
+                 + " WHERE dataSource = :dataSource AND task_group = :task_group";
+
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("dataSource", dataSource)
+                                             .bind("task_group", taskGroup);
+
+    final ResultIterator<PendingSegment> pendingSegmentRecords =
+        query.map((index, r, ctx) -> PendingSegment.fromResultSet(r, jsonMapper))
+             .iterator();
+
+    final List<PendingSegment> pendingSegments = new ArrayList<>();
+    while (pendingSegmentRecords.hasNext()) {
+      pendingSegments.add(pendingSegmentRecords.next());
+    }
+
+    pendingSegmentRecords.close();
+
+    return pendingSegments;
+  }
+
   private Map<SegmentIdWithShardSpec, String> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,
@@ -1349,6 +1377,48 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         throw e;
       }
     }
+  }
+
+  private int insertPendingSegmentsIntoMetastore(
+      Handle handle,
+      List<PendingSegment> pendingSegments,
+      String dataSource,
+      boolean skipSegmentLineageCheck
+  ) throws JsonProcessingException
+  {
+    final PreparedBatch insertBatch = handle.prepareBatch(
+        StringUtils.format(
+            "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
+            + "sequence_name_prev_id_sha1, payload, task_group, parent_id) "
+            + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
+            + ":sequence_name_prev_id_sha1, :payload, :task_group, :parent_id)",
+            dbTables.getPendingSegmentsTable(),
+            connector.getQuoteString()
+        ));
+
+    final String now = DateTimes.nowUtc().toString();
+    for (PendingSegment pendingSegment : pendingSegments) {
+      final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
+      final Interval interval = segmentId.getInterval();
+
+      insertBatch.add()
+                 .bind("id", segmentId.toString())
+                 .bind("dataSource", dataSource)
+                 .bind("created_date", now)
+                 .bind("start", interval.getStart().toString())
+                 .bind("end", interval.getEnd().toString())
+                 .bind("sequence_name", pendingSegment.getSequenceName())
+                 .bind("sequence_prev_id", pendingSegment.getSequencePrevId())
+                 .bind(
+                     "sequence_name_prev_id_sha1",
+                     pendingSegment.computeSequenceNamePrevIdSha1(skipSegmentLineageCheck)
+                 )
+                 .bind("payload", jsonMapper.writeValueAsBytes(segmentId))
+                 .bind("task_group", pendingSegment.getTaskGroup())
+                 .bind("parent_id", pendingSegment.getParentId());
+    }
+    int[] updated = insertBatch.execute();
+    return Arrays.stream(updated).sum();
   }
 
   private int insertPendingSegmentsIntoMetastore(
