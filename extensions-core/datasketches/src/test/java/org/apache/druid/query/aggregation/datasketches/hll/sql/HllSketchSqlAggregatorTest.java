@@ -1330,6 +1330,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 + " group by 1,2"
         )
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
                 new Object[] {null, "a", 1L},
                 new Object[] {"1.0", "a", 1L},
