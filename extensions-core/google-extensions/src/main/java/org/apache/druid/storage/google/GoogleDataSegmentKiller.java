@@ -86,7 +86,7 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
       throw e;
     }
     catch (Exception e) {
-      throw new RE(e, "Failed to delete google cloud storage object from bucket[%s] and path[%s].", bucket, path);
+      throw new RE(e, "Failed to delete google cloud storage object from bucket [%s] and path [%s].", bucket, path);
     }
   }
 
