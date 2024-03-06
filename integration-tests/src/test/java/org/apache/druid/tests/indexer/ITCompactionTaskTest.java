@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -31,6 +32,7 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -198,7 +200,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       );
 
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      compactData(compactionResource, newSegmentGranularity, null);
+      String taskId = compactData(compactionResource, newSegmentGranularity, null);
 
       // The original 4 segments should be compacted into 2 new segments
       checkNumberOfSegments(2);
@@ -215,10 +217,17 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         expectedIntervalAfterCompaction = newIntervals;
       }
       checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      Map<String, IngestionStatsAndErrorsTaskReport> reports = indexer.getTaskReport(taskId);
+      Assert.assertTrue(reports != null && reports.size() > 0);
     }
   }
 
-  private void compactData(String compactionResource, GranularityType newSegmentGranularity, GranularityType newQueryGranularity) throws Exception
+  private String compactData(
+      String compactionResource,
+      GranularityType newSegmentGranularity,
+      GranularityType newQueryGranularity
+  ) throws Exception
   {
     String template = getResourceAsString(compactionResource);
     template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
@@ -251,6 +260,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Compaction"
     );
+
+    return taskID;
   }
 
   private void checkQueryGranularity(String queryResource, String expectedQueryGranularity, int segmentCount) throws Exception

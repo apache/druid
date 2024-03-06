@@ -32,15 +32,21 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHandlingTest
@@ -54,7 +60,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, true)) {
+    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, false)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       // startJob
@@ -127,6 +133,84 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
     }
   }
 
+  @Test
+  public void testPushFailure() throws Exception
+  {
+    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      // startJob
+      Assert.assertNull(appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(ClosedSegmensSinksBatchAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // add #1
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      // add #2
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 2), null)
+                      .getNumRowsInSegment()
+      );
+
+      // getSegments
+      Assert.assertEquals(
+          IDENTIFIERS.subList(0, 2),
+          appenderator.getSegments().stream().sorted().collect(Collectors.toList())
+      );
+
+      // add #3, this hits max rows in memory:
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "sux", 1), null)
+                      .getNumRowsInSegment()
+      );
+
+      // since we just added three rows and the max rows in memory is three, all the segments (sinks etc.)
+      // above should be cleared now
+      Assert.assertEquals(
+          Collections.emptyList(),
+          ((BatchAppenderator) appenderator).getInMemorySegments().stream().sorted().collect(Collectors.toList())
+      );
+
+      // add #4, this will add one more temporary segment:
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(2), createInputRow("2001", "qux", 4), null)
+                      .getNumRowsInSegment()
+      );
+
+      // push all
+      final ListenableFuture<SegmentsAndCommitMetadata> segmentsAndCommitMetadata = appenderator.push(
+          appenderator.getSegments(),
+          null,
+          false
+      );
+
+      final ExecutionException e = Assert.assertThrows(
+          ExecutionException.class,
+          segmentsAndCommitMetadata::get
+      );
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IOException.class)))
+      );
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(
+              CoreMatchers.startsWith("Push failure test"))))
+      );
+    }
+  }
+
   /**
    * Test the case when a segment identifier contains non UTC timestamps in its interval. This can happen
    * when a custom segment granularity for an interval with a non UTC Chronlogy is created by
@@ -135,7 +219,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testPeriodGranularityNonUTCIngestion() throws Exception
   {
-    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(1, true)) {
+    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(1, false)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       // startJob
@@ -565,7 +649,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testMaxRowsInMemory() throws Exception
   {
-    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, true)) {
+    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, false)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
@@ -631,7 +715,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testTotalRowsPerSegment() throws Exception
   {
-    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, true)) {
+    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, false)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
@@ -691,7 +775,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testRestoreFromDisk() throws Exception
   {
-    final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(2, true);
+    final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(2, false);
     final Appenderator appenderator = tester.getAppenderator();
 
     appenderator.startJob();
@@ -730,7 +814,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testCleanupFromDiskAfterClose() throws Exception
   {
-    final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(2, true);
+    final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(2, false);
     final Appenderator appenderator = tester.getAppenderator();
 
     appenderator.startJob();
@@ -770,7 +854,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test(timeout = 5000L)
   public void testTotalRowCount() throws Exception
   {
-    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, true)) {
+    try (final ClosedSegmensSinksBatchAppenderatorTester tester = new ClosedSegmensSinksBatchAppenderatorTester(3, false)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       Assert.assertEquals(0, appenderator.getTotalRowCount());

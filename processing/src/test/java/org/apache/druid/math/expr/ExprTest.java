@@ -139,7 +139,7 @@ public class ExprTest
   public void testEqualsContractForStringExpr()
   {
     EqualsVerifier.forClass(StringExpr.class)
-                  .withIgnoredFields("outputType", "expr")
+                  .withIgnoredFields("outputType")
                   .withPrefabValues(ExpressionType.class, ExpressionType.STRING, ExpressionType.DOUBLE)
                   .usingGetClass()
                   .verify();
@@ -149,7 +149,7 @@ public class ExprTest
   public void testEqualsContractForDoubleExpr()
   {
     EqualsVerifier.forClass(DoubleExpr.class)
-                  .withIgnoredFields("outputType", "expr")
+                  .withIgnoredFields("outputType")
                   .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.LONG)
                   .usingGetClass()
                   .verify();
@@ -159,7 +159,7 @@ public class ExprTest
   public void testEqualsContractForLongExpr()
   {
     EqualsVerifier.forClass(LongExpr.class)
-                  .withIgnoredFields("outputType", "expr")
+                  .withIgnoredFields("outputType")
                   .withPrefabValues(ExpressionType.class, ExpressionType.LONG, ExpressionType.STRING)
                   .usingGetClass()
                   .verify();
@@ -187,7 +187,6 @@ public class ExprTest
                       ExpressionTypeFactory.getInstance().ofComplex("bar")
                   )
                   .withNonnullFields("outputType")
-                  .withIgnoredFields("expr")
                   .usingGetClass()
                   .verify();
   }
