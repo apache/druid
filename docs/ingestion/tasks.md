@@ -156,7 +156,9 @@ For some task types, the indexing task can wait for the newly ingested segments 
 |`recordsProcessed`| Partitions that were processed by an ingestion task and includes count of records processed from each partition.|
 
 
-|Field| Description|
+#### Compaction task segment info fields
+
+|Field|Description|
 |---|---|
 |`segmentsRead`|Number of segments read by compaction task with more than 1 subtask.|
 |`segmentsPublished`|Number of segments published by compaction task with more than 1 subtask.|

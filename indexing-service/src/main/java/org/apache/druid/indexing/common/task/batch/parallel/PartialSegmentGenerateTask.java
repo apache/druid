@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
@@ -126,13 +127,9 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox.getIndexingTmpDir()
     );
 
-    Map<String, TaskReport> taskReport = getTaskCompletionReports(getSegementsSize(inputSource));
+    Map<String, TaskReport> taskReport = getTaskCompletionReports(getNumSegmentsRead(inputSource));
 
-    taskClient.report(createGeneratedPartitionsReport(
-        toolbox,
-        segments,
-        taskReport
-    ));
+    taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
     return TaskStatus.success(getId());
   }
@@ -154,10 +151,13 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       Map<String, TaskReport> taskReport
   );
 
-  private Long getSegementsSize(InputSource inputSource)
+  private Long getNumSegmentsRead(InputSource inputSource)
   {
     if (inputSource instanceof DruidInputSource) {
-      return (long) ((DruidInputSource) inputSource).getSegmentIds().size();
+      List<WindowedSegmentId> segments = ((DruidInputSource) inputSource).getSegmentIds();
+      if (segments != null) {
+        return (long) segments.size();
+      }
     }
 
     return null;

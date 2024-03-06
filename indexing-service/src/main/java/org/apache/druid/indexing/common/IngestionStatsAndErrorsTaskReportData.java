@@ -64,8 +64,8 @@ public class IngestionStatsAndErrorsTaskReportData
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
       @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
       @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed,
-      @JsonProperty("segmentsRead") Long segmentsRead,
-      @JsonProperty("segmentsPublished") Long segmentsPublished
+      @Nullable @JsonProperty("segmentsRead") Long segmentsRead,
+      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished
   )
   {
     this.ingestionState = ingestionState;

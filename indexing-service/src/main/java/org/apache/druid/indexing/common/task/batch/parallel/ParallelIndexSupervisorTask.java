@@ -652,11 +652,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
-      segmentsPublished = publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
       if (isCompactionTask) {
-        // segements are only read for compactiont tasks. For `index_parallel`
-        // tasks this would result to 0, but we want to rather have it as null
-        // because segmentsRead is not applicable for such tasks.
+        // Populate segmentsRead only for compaction tasks
         segmentsRead = parallelSinglePhaseRunner.getReports()
                                                 .values()
                                                 .stream()
@@ -834,7 +831,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
-      segmentsPublished = publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
@@ -932,7 +928,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskState mergeState = runNextPhase(mergeRunner);
     TaskStatus taskStatus;
     if (mergeState.isSuccess()) {
-      segmentsPublished = publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
@@ -1144,7 +1139,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return Pair.of(start, stop);
   }
 
-  private long publishSegments(
+  private void publishSegments(
       TaskToolbox toolbox,
       Map<String, PushedSegmentsReport> reportsMap
   )
@@ -1213,7 +1208,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       throw new ISE("Failed to publish segments");
     }
 
-    return newSegments.size();
+    segmentsPublished = (long) newSegments.size();
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
@@ -1661,11 +1656,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
 
-        Long currSegmentsRead = ((IngestionStatsAndErrorsTaskReport)
+        Long segmentsReadFromPartition = ((IngestionStatsAndErrorsTaskReport)
             taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
         ).getPayload().getSegmentsRead();
-        if (currSegmentsRead != null) {
-          totalSegmentsRead += currSegmentsRead;
+        if (segmentsReadFromPartition != null) {
+          totalSegmentsRead += segmentsReadFromPartition;
         }
       }
 
