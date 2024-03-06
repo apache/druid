@@ -29,7 +29,7 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.util.stream.Collectors;
@@ -41,22 +41,22 @@ import java.util.stream.Collectors;
 public class SqlSegmentsMetadataManagerEmptyTest
 {
 
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @ClassRule
+  public static final TestDerbyConnector.DerbyConnectorRule DERBYCONNECTORRULE = new TestDerbyConnector.DerbyConnectorRule();
 
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSONMAPPER = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp()
   {
-    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    TestDerbyConnector connector = DERBYCONNECTORRULE.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(1));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
-        jsonMapper,
+        JSONMAPPER,
         Suppliers.ofInstance(config),
-        derbyConnectorRule.metadataTablesConfigSupplier(),
+        DERBYCONNECTORRULE.metadataTablesConfigSupplier(),
         connector
     );
     sqlSegmentsMetadataManager.start();
