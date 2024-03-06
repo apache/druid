@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -1325,11 +1324,17 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     // this query was not planable: https://github.com/apache/druid/issues/15353
     testBuilder()
-        .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
         .sql(
             "SELECT d1,dim2,APPROX_COUNT_DISTINCT_DS_HLL(dim2, 18) as val"
                 + " FROM (select d1,dim1,dim2 from druid.foo group by d1,dim1,dim2 order by dim1 limit 3) t "
                 + " group by 1,2"
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {null, "a", 1L},
+                new Object[] {"1.0", "a", 1L},
+                new Object[] {"1.7", null, 0L}
+            )
         )
         .run();
   }
