@@ -257,8 +257,13 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .build();
     testIngestionQuery()
         .sql("INSERT INTO foo\n" +
-             "SELECT TIME_PARSE(a) AS __time, b AS dim1, 1 AS cnt,\n" +
-             "        CAST(c AS DOUBLE) AS m1, CAST(d AS BIGINT) AS extra2, e AS extra3\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  1 AS cnt,\n" +
+             "  c AS m1,\n" +
+             "  CAST(d AS BIGINT) AS extra2,\n" +
+             "  e AS extra3\n" +
              "FROM TABLE(inline(\n" +
              "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
              "  format => 'csv'))\n" +
@@ -316,25 +321,23 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .add("extra3", ColumnType.STRING)
         .build();
     testIngestionQuery()
-        .sql("INSERT INTO \"foo\"\n"
-             + "WITH \"ext\" AS (\n"
-             + "  SELECT *\n"
-             + "  FROM TABLE(\n"
-             + "    EXTERN(\n"
-             + "      '{\"type\":\"inline\",\"data\":\"{\\\"a\\\":\\\"2022-12-26T12:34:56\\\", \\\"b\\\": \\\"extra\\\", \\\"c\\\": 10, \\\"d\\\": \\\"20\\\", \\\"e\\\": \\\"foo\\\"}\"}',\n"
-             + "      '{\"type\":\"json\"}'\n"
-             + "    )\n"
-             + "  ) EXTEND (\"a\" VARCHAR, \"b\" VARCHAR, \"c\" BIGINT, \"d\" VARCHAR, \"e\" VARCHAR)\n"
-             + ")\n"
-             + "SELECT\n"
-             + "  TIME_PARSE(a) AS __time,\n"
-             + "  b AS dim1,\n"
-             + "  1 AS cnt,\n"
-             + "  c AS m1,\n"
-             + "  CAST(d AS BIGINT) AS extra2,\n"
-             + "  e AS extra3\n"
-             + "FROM \"ext\"\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO \"foo\"\n" +
+             "WITH \"ext\" AS (\n" +
+             "  SELECT *\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             ")\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  1 AS cnt,\n" +
+             "  c AS m1,\n" +
+             "  CAST(d AS BIGINT) AS extra2,\n" +
+             "  e AS extra3\n" +
+             "FROM \"ext\"\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("foo", signature)
         .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
