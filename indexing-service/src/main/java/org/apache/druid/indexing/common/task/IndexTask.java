@@ -219,7 +219,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    * @param isStandAloneTask used to specify if indextask.run() is run as a part of another task
    *                         skips writing reports and cleanup if not a standalone task
    */
-
   public IndexTask(
       String id,
       String groupId,
