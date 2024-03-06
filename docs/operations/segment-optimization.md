@@ -51,7 +51,7 @@ You may need to consider the followings to optimize your segments.
   doesn't match with the "number of rows per segment", please consider optimizing
   number of rows per segment rather than this value. Note that certain deep storage
   implementations also impose an upper limit on segment size. For example, S3 deep
-  storage imposes an upper limit of 5GB.
+  storage imposes an upper limit of 5 GB.
 
 :::info
  The above recommendation works in general, but the optimal setting can
