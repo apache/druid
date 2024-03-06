@@ -170,18 +170,20 @@ public class GoogleStorage
   public void batchDelete(final String bucket, final Iterable<String> paths)
   {
     final List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
-    final List<String> failedPaths = new ArrayList<>();
-    final Iterator<String> pathIterator = paths.iterator();
-    int cursor = 0;
-    while (pathIterator.hasNext()) {
-      String failedPath = pathIterator.next();
-      if (!statuses.get(cursor)) {
-        failedPaths.add(failedPath);
-      }
-      cursor++;
-    }
     if (statuses.contains(false)) {
-      log.debug("Google cloud storage object(s) in bucket %s to be deleted not found. Paths: " + failedPaths, bucket);
+      if (log.isDebugEnabled()) {
+        final List<String> failedPaths = new ArrayList<>();
+        final Iterator<String> pathIterator = paths.iterator();
+        int cursor = 0;
+        while (pathIterator.hasNext()) {
+          String failedPath = pathIterator.next();
+          if (!statuses.get(cursor)) {
+            failedPaths.add(failedPath);
+          }
+          cursor++;
+        }
+        log.debug("Google cloud storage object(s) in bucket %s to be deleted not found. Paths: " + failedPaths, bucket);
+      }
     }
   }
 
