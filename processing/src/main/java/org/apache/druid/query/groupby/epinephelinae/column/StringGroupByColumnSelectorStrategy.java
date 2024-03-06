@@ -84,16 +84,6 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     return 0;
   }
 
-  /**
-   * Writes a dictionary ID to the grouping key.
-   *
-   * Protected so subclasses can access it, like {@link DictionaryBuildingStringGroupByColumnSelectorStrategy}.
-   */
-  protected void writeToKeyBuffer(int keyBufferPosition, int dictId, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putInt(keyBufferPosition, dictId);
-  }
-
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
@@ -117,7 +107,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     IndexedInts row = (IndexedInts) rowObj;
     int rowSize = row.size();
 
-    initializeGroupingKeyV2Dimension(row, rowSize, keyBuffer, keyBufferPosition);
+    initializeGroupingKeyDimension(row, rowSize, keyBuffer, keyBufferPosition);
     stack[dimensionIndex] = rowSize == 0 ? 0 : 1;
   }
 
@@ -143,7 +133,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     }
   }
 
-  private void initializeGroupingKeyV2Dimension(
+  private void initializeGroupingKeyDimension(
       final IndexedInts values,
       final int rowSize,
       final ByteBuffer keyBuffer,

@@ -143,6 +143,7 @@ public interface TypeStrategy<T> extends Comparator<Object>
    * Callers MUST check that the return value is positive which indicates a successful write, while a negative response
    * a partial write.
    *
+   * // TODO(laksh): Can be optimised for the primitive types
    * @return number of bytes written
    */
   default int write(ByteBuffer buffer, int offset, T value, int maxSizeBytes)

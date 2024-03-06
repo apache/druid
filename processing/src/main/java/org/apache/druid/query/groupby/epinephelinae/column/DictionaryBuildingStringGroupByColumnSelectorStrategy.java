@@ -103,6 +103,16 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
     return stateFootprintIncrease;
   }
 
+  /**
+   * Writes a dictionary ID to the grouping key.
+   */
+  private void writeToKeyBuffer(int keyBufferPosition, int dictId, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putInt(keyBufferPosition, dictId);
+  }
+
+
+
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {

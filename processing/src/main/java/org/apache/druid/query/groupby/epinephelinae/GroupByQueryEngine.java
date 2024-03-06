@@ -46,6 +46,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColum
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.FixedWidthGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
@@ -250,17 +251,32 @@ public class GroupByQueryEngine
       switch (capabilities.getType()) {
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
-          if (dimSelector.getValueCardinality() >= 0) {
+          if (dimSelector.getValueCardinality() >= 0 && dimSelector.nameLookupPossibleInAdvance()) {
             return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
           } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
-          return makeNullableNumericStrategy(new LongGroupByColumnSelectorStrategy());
+          return new FixedWidthGroupByColumnSelectorStrategy<Long>(
+              Byte.BYTES + Long.BYTES,
+              null,
+              true,
+              ColumnType.LONG
+          );
         case FLOAT:
-          return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
+          return new FixedWidthGroupByColumnSelectorStrategy<Long>(
+              Byte.BYTES + Float.BYTES,
+              null,
+              true,
+              ColumnType.FLOAT
+          );
         case DOUBLE:
-          return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
+          return new FixedWidthGroupByColumnSelectorStrategy<Long>(
+              Byte.BYTES + Double.BYTES,
+              null,
+              true,
+              ColumnType.DOUBLE
+          );
         case ARRAY:
           switch (capabilities.getElementType().getType()) {
             case LONG:
@@ -280,14 +296,14 @@ public class GroupByQueryEngine
       }
     }
 
-    private GroupByColumnSelectorStrategy makeNullableNumericStrategy(GroupByColumnSelectorStrategy delegate)
-    {
-      if (NullHandling.sqlCompatible()) {
-        return new NullableNumericGroupByColumnSelectorStrategy(delegate);
-      } else {
-        return delegate;
-      }
-    }
+//    private GroupByColumnSelectorStrategy makeNullableNumericStrategy(GroupByColumnSelectorStrategy delegate)
+//    {
+//      if (NullHandling.sqlCompatible()) {
+//        return new NullableNumericGroupByColumnSelectorStrategy(delegate);
+//      } else {
+//        return delegate;
+//      }
+//    }
   }
 
   private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable

@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import org.apache.druid.common.config.NullHandling;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -66,6 +67,7 @@ public final class NullableTypeStrategy<T> implements Comparator<T>
     return delegate.read(buffer);
   }
 
+  @CheckReturnValue
   public int write(ByteBuffer buffer, @Nullable T value, int maxSizeBytes)
   {
     final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
@@ -112,6 +114,7 @@ public final class NullableTypeStrategy<T> implements Comparator<T>
     return delegate.readRetainsBufferReference();
   }
 
+  @CheckReturnValue
   public int write(ByteBuffer buffer, int offset, @Nullable T value, int maxSizeBytes)
   {
     final int oldPosition = buffer.position();

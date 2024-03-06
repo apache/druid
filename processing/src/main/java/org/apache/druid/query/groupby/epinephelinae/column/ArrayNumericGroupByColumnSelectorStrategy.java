@@ -144,6 +144,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy
   @Override
   public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
+    // TODO(laksh): This can be optimised probably if stringComparator == null
     StringComparator comparator = stringComparator == null ? StringComparators.NUMERIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
       Object[] lhs = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
