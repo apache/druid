@@ -227,6 +227,9 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
       context.forEach((k, v) -> expectedResources.add(
           new ResourceAction(new Resource(k, ResourceType.QUERY_CONTEXT), Action.WRITE)
       ));
+      expectedResources.add(new ResourceAction(new Resource("sqlCurrentTimestamp", ResourceType.QUERY_CONTEXT), Action.WRITE));
+      expectedResources.add(new ResourceAction(new Resource("maxScatterGatherBytes", ResourceType.QUERY_CONTEXT), Action.WRITE));
+      expectedResources.add(new ResourceAction(new Resource("defaultTimeout", ResourceType.QUERY_CONTEXT), Action.WRITE));
     }
     analyzeResources(
         plannerConfig,
@@ -286,6 +289,9 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
         context,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
+            new ResourceAction(new Resource("sqlCurrentTimestamp", ResourceType.QUERY_CONTEXT), Action.WRITE),
+            new ResourceAction(new Resource("maxScatterGatherBytes", ResourceType.QUERY_CONTEXT), Action.WRITE),
+            new ResourceAction(new Resource("defaultTimeout", ResourceType.QUERY_CONTEXT), Action.WRITE),
             new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
             new ResourceAction(new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE),
             new ResourceAction(new Resource("nested-bar", ResourceType.QUERY_CONTEXT), Action.WRITE)
