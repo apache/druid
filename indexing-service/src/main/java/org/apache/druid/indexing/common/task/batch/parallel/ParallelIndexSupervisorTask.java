@@ -1762,6 +1762,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  @Override
+  protected boolean shouldCleanupTask()
+  {
+    return !isCompactionTask;
+  }
+
   @GET
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)

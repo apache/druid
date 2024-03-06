@@ -201,7 +201,11 @@ public abstract class AbstractTask implements Task
     // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
     Thread.interrupted();
 
-    if (!toolbox.getConfig().isEncapsulatedTask()) {
+    // isEncapsulatedTask() currently means "isK8sIngestion".
+    // We don't need to push reports and status here for other ingestion methods.
+    // shouldCleanupTask is a separate per-task check that some tasks can conditionally override.
+    // e.g. a IndexTask running inside a IndexParallelTask should not publish its reports/status
+    if (!toolbox.getConfig().isEncapsulatedTask() || !shouldCleanupTask()) {
       log.debug("Not pushing task logs and reports from task.");
       return;
     }
@@ -446,6 +450,11 @@ public abstract class AbstractTask implements Task
       return;
     }
     emitter.emit(getMetricBuilder().setMetric(metric, value));
+  }
+
+  protected boolean shouldCleanupTask()
+  {
+    return true;
   }
 
 
