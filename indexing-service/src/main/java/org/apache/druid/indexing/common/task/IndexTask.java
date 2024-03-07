@@ -169,8 +169,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private IngestionState ingestionState;
 
-  // used to specify if indextask.run() is run as a part of another task
-  // skips writing reports and cleanup if not a standalone task
   private boolean isStandAloneTask;
 
   @MonotonicNonNull
@@ -217,6 +215,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     );
   }
 
+  /**
+   * @param isStandAloneTask used to specify if indextask.run() is run as a part of another task
+   *                         skips writing reports and cleanup if not a standalone task
+   */
   public IndexTask(
       String id,
       String groupId,
@@ -567,8 +569,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
-      completionReports = getTaskCompletionReports();
-      writeCompletionReports(toolbox);
+      updateAndWriteCompletionReports(toolbox);
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -580,8 +581,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  private void writeCompletionReports(TaskToolbox toolbox)
+
+  private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
+    completionReports = getTaskCompletionReports();
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
@@ -1043,8 +1046,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
-        completionReports = getTaskCompletionReports();
-        writeCompletionReports(toolbox);
+        updateAndWriteCompletionReports(toolbox);
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -1067,8 +1069,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
-        completionReports = getTaskCompletionReports();
-        writeCompletionReports(toolbox);
+        updateAndWriteCompletionReports(toolbox);
         return TaskStatus.success(getId());
       }
     }
