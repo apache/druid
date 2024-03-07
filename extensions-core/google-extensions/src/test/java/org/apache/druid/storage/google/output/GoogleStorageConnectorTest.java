@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.google.output;
 
+import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
@@ -54,6 +55,8 @@ public class GoogleStorageConnectorTest
 
   GoogleStorageConnector googleStorageConnector;
   private final GoogleStorage googleStorage = EasyMock.createMock(GoogleStorage.class);
+  private static final Exception RECOVERABLE_EXCEPTION = new StorageException(429, "recoverable");
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new StorageException(404, "non-recoverable");
 
   @Before
   public void setUp() throws IOException
@@ -91,7 +94,7 @@ public class GoogleStorageConnectorTest
   }
 
   @Test
-  public void testDeleteFile() throws IOException
+  public void testDeleteFileSuccess() throws IOException
   {
     Capture<String> bucketCapture = EasyMock.newCapture();
     Capture<String> pathCapture = EasyMock.newCapture();
@@ -107,7 +110,40 @@ public class GoogleStorageConnectorTest
   }
 
   @Test
-  public void testDeleteFiles() throws IOException
+  public void testDeleteFileRetrySuccess() throws IOException
+  {
+    Capture<String> bucketCapture = EasyMock.newCapture();
+    Capture<String> pathCapture = EasyMock.newCapture();
+    googleStorage.delete(
+        EasyMock.capture(bucketCapture),
+        EasyMock.capture(pathCapture)
+    );
+    EasyMock.expectLastCall().andThrow(RECOVERABLE_EXCEPTION).once().andVoid().once();
+
+    EasyMock.replay(googleStorage);
+    googleStorageConnector.deleteFile(TEST_FILE);
+    Assert.assertEquals(BUCKET, bucketCapture.getValue());
+    Assert.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
+  }
+
+  @Test
+  public void testDeleteFileFailure()
+  {
+    Capture<String> bucketCapture = EasyMock.newCapture();
+    Capture<String> pathCapture = EasyMock.newCapture();
+    googleStorage.delete(
+        EasyMock.capture(bucketCapture),
+        EasyMock.capture(pathCapture)
+    );
+    EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION).once().andVoid().once();
+    EasyMock.replay(googleStorage);
+    Assert.assertThrows(IOException.class, () -> googleStorageConnector.deleteFile(TEST_FILE));
+    Assert.assertEquals(BUCKET, bucketCapture.getValue());
+    Assert.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
+  }
+
+  @Test
+  public void testDeleteFilesSuccess() throws IOException
   {
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
@@ -123,6 +159,191 @@ public class GoogleStorageConnectorTest
         Lists.newArrayList(pathsCapture.getValue())
     );
     EasyMock.reset(googleStorage);
+  }
+
+  @Test
+  public void testDeleteFilesRetrySuccess() throws IOException
+  {
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    googleStorage.batchDelete(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.expectLastCall().andThrow(RECOVERABLE_EXCEPTION).once().andVoid().once();
+
+    EasyMock.replay(googleStorage);
+    googleStorageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.json"));
+    Assert.assertEquals(BUCKET, containerCapture.getValue());
+    Assert.assertEquals(
+        ImmutableList.of(
+            PREFIX + "/" + TEST_FILE + "_1.part",
+            PREFIX + "/" + TEST_FILE + "_2.json"
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
+    EasyMock.reset(googleStorage);
+  }
+
+  @Test
+  public void testDeleteFilesFailure()
+  {
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    googleStorage.batchDelete(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION).once().andVoid().once();
+
+    EasyMock.replay(googleStorage);
+    Assert.assertThrows(
+        IOException.class,
+        () -> googleStorageConnector.deleteFiles(ImmutableList.of(
+            TEST_FILE + "_1.part",
+            TEST_FILE + "_2.json"
+        ))
+    );
+    Assert.assertEquals(BUCKET, containerCapture.getValue());
+    Assert.assertEquals(
+        ImmutableList.of(
+            PREFIX + "/" + TEST_FILE + "_1.part",
+            PREFIX + "/" + TEST_FILE + "_2.json"
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
+    EasyMock.reset(googleStorage);
+  }
+
+  @Test
+  public void testDeleteFilesRecursivelySuccess() throws IOException
+  {
+
+    GoogleStorageObjectMetadata objectMetadata1 = new GoogleStorageObjectMetadata(
+        BUCKET,
+        PREFIX + "/x/y/" + TEST_FILE,
+        (long) 3,
+        null
+    );
+
+    GoogleStorageObjectMetadata objectMetadata2 = new GoogleStorageObjectMetadata(
+        BUCKET,
+        PREFIX + "/p/q/r/" + TEST_FILE,
+        (long) 4,
+        null
+    );
+
+    Capture<Long> maxListingCapture = EasyMock.newCapture();
+    Capture<String> pageTokenCapture = EasyMock.newCapture();
+    EasyMock.expect(googleStorage.list(
+                EasyMock.anyString(),
+                EasyMock.anyString(),
+                EasyMock.capture(maxListingCapture),
+                EasyMock.capture(pageTokenCapture)
+            ))
+            .andReturn(new GoogleStorageObjectPage(ImmutableList.of(objectMetadata1, objectMetadata2), null));
+
+
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    googleStorage.batchDelete(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.expectLastCall().andVoid().once();
+
+    EasyMock.replay(googleStorage);
+    googleStorageConnector.deleteRecursively("");
+    Assert.assertEquals(BUCKET, containerCapture.getValue());
+    Assert.assertEquals(
+        ImmutableList.of(
+            PREFIX + "/x/y/" + TEST_FILE,
+            PREFIX + "/p/q/r/" + TEST_FILE
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
+    EasyMock.reset(googleStorage);
+  }
+  @Test
+  public void testDeleteFilesRecursivelyRetrySuccess() throws IOException
+  {
+
+    GoogleStorageObjectMetadata objectMetadata1 = new GoogleStorageObjectMetadata(
+        BUCKET,
+        PREFIX + "/x/y/" + TEST_FILE,
+        (long) 3,
+        null
+    );
+
+    GoogleStorageObjectMetadata objectMetadata2 = new GoogleStorageObjectMetadata(
+        BUCKET,
+        PREFIX + "/p/q/r/" + TEST_FILE,
+        (long) 4,
+        null
+    );
+
+    Capture<Long> maxListingCapture = EasyMock.newCapture();
+    Capture<String> pageTokenCapture = EasyMock.newCapture();
+    EasyMock.expect(googleStorage.list(
+                EasyMock.anyString(),
+                EasyMock.anyString(),
+                EasyMock.capture(maxListingCapture),
+                EasyMock.capture(pageTokenCapture)
+            ))
+            .andReturn(new GoogleStorageObjectPage(ImmutableList.of(objectMetadata1, objectMetadata2), null));
+
+
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    googleStorage.batchDelete(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.expectLastCall().andThrow(RECOVERABLE_EXCEPTION).once().andVoid().once();
+
+    EasyMock.replay(googleStorage);
+    googleStorageConnector.deleteRecursively("");
+    Assert.assertEquals(BUCKET, containerCapture.getValue());
+    Assert.assertEquals(
+        ImmutableList.of(
+            PREFIX + "/x/y/" + TEST_FILE,
+            PREFIX + "/p/q/r/" + TEST_FILE
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
+  }
+  @Test
+  public void testDeleteFilesRecursivelyFailure() throws IOException
+  {
+
+    GoogleStorageObjectMetadata objectMetadata1 = new GoogleStorageObjectMetadata(
+        BUCKET,
+        PREFIX + "/x/y/" + TEST_FILE,
+        (long) 3,
+        null
+    );
+
+    GoogleStorageObjectMetadata objectMetadata2 = new GoogleStorageObjectMetadata(
+        BUCKET,
+        PREFIX + "/p/q/r/" + TEST_FILE,
+        (long) 4,
+        null
+    );
+
+    Capture<Long> maxListingCapture = EasyMock.newCapture();
+    Capture<String> pageTokenCapture = EasyMock.newCapture();
+    EasyMock.expect(googleStorage.list(
+                EasyMock.anyString(),
+                EasyMock.anyString(),
+                EasyMock.capture(maxListingCapture),
+                EasyMock.capture(pageTokenCapture)
+            ))
+            .andReturn(new GoogleStorageObjectPage(ImmutableList.of(objectMetadata1, objectMetadata2), null));
+
+
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    googleStorage.batchDelete(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION).once().andVoid().once();
+
+    EasyMock.replay(googleStorage);
+    Assert.assertThrows(IOException.class, () -> googleStorageConnector.deleteRecursively(""));
+    Assert.assertEquals(BUCKET, containerCapture.getValue());
+    Assert.assertEquals(
+        ImmutableList.of(
+            PREFIX + "/x/y/" + TEST_FILE,
+            PREFIX + "/p/q/r/" + TEST_FILE
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
   }
 
   @Test

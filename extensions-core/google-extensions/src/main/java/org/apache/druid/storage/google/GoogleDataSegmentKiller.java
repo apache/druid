@@ -19,13 +19,12 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.http.HttpResponseException;
+import com.google.cloud.storage.StorageException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -70,35 +69,24 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
       // anymore, but we still delete them if exists.
       deleteIfPresent(bucket, descriptorPath);
     }
-    catch (IOException e) {
+    catch (StorageException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getMessage());
     }
   }
 
-  private void deleteIfPresent(String bucket, String path) throws IOException
+  private void deleteIfPresent(String bucket, String path)
   {
     try {
-      RetryUtils.retry(
-          (RetryUtils.Task<Void>) () -> {
-            storage.delete(bucket, path);
-            return null;
-          },
-          GoogleUtils::isRetryable,
-          1,
-          5
-      );
+      GoogleUtils.retryGoogleCloudStorageOperation(() -> {
+        storage.delete(bucket, path);
+        return null;
+      });
     }
-    catch (HttpResponseException e) {
-      if (e.getStatusCode() != 404) {
-        throw e;
-      }
-      LOG.debug("Already deleted: [%s] [%s]", bucket, path);
-    }
-    catch (IOException ioe) {
-      throw ioe;
+    catch (StorageException e) {
+      throw e;
     }
     catch (Exception e) {
-      throw new RE(e, "Failed to delete [%s] [%s]", bucket, path);
+      throw new RE(e, "Failed to delete google cloud storage object from bucket [%s] and path [%s].", bucket, path);
     }
   }
 
