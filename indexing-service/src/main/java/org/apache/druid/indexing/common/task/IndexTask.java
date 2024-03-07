@@ -1108,11 +1108,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   }
 
   @Override
-  protected boolean shouldCleanupTask()
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
-    return isStandAloneTask;
+    if (isStandAloneTask) {
+      super.cleanUp(toolbox, taskStatus);
+    }
   }
-
 
   public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>
   {

@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -2688,11 +2689,11 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  // If isStandaloneTask is false, shouldCleanupTask should return false
+  // If isStandaloneTask is false, cleanup should be a no-op
   @Test
   public void testCleanupIndexTask() throws Exception
   {
-    Assert.assertFalse(new IndexTask(
+    new IndexTask(
         null,
         null,
         null,
@@ -2714,7 +2715,44 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         0,
         false
-    ).shouldCleanupTask());
+    ).cleanUp(null, null);
+  }
+
+  /* if shouldCleanup is true, we should fall back to AbstractTask.cleanup,
+   * check isEncapsulatedTask=false, and then exit.
+   */
+  @Test
+  public void testCleanup() throws Exception
+  {
+    TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
+    TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
+    EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig);
+    EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false);
+    EasyMock.replay(toolbox, taskConfig);
+    new IndexTask(
+        null,
+        null,
+        null,
+        "dataSource",
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            temporaryFolder.newFolder(),
+            new UniformGranularitySpec(
+                Granularities.MINUTE,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null,
+        0,
+        true
+    ).cleanUp(toolbox, null);
+    EasyMock.verify(toolbox, taskConfig);
   }
 
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)

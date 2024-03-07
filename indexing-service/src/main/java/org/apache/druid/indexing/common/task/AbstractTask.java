@@ -203,9 +203,7 @@ public abstract class AbstractTask implements Task
 
     // isEncapsulatedTask() currently means "isK8sIngestion".
     // We don't need to push reports and status here for other ingestion methods.
-    // shouldCleanupTask is a separate per-task check that some tasks can conditionally override.
-    // e.g. a IndexTask running inside a IndexParallelTask should not publish its reports/status
-    if (!toolbox.getConfig().isEncapsulatedTask() || !shouldCleanupTask()) {
+    if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
       return;
     }
@@ -450,11 +448,6 @@ public abstract class AbstractTask implements Task
       return;
     }
     emitter.emit(getMetricBuilder().setMetric(metric, value));
-  }
-
-  protected boolean shouldCleanupTask()
-  {
-    return true;
   }
 
 
