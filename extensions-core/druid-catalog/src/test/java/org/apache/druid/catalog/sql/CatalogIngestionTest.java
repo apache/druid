@@ -382,10 +382,8 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
 
 
   /**
-   * Attempt to verify that types specified in the catalog are pushed down to
-   * MSQ. At present, Druid does not have the tools needed to do a full push-down.
-   * We have to accept a good-enough push-down: that the produced type is at least
-   * compatible with the desired type.
+   * Adding a new column during ingestion that is not defined in a sealed table should fail with
+   * proper validation error.
    */
   @Test
   public void testInsertAddNonDefinedColumnIntoSealedCatalogTable()
@@ -413,6 +411,9 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+  /**
+   * Adding a new column during ingestion that is not defined in a non-sealed table should succeed.
+   */
   @Test
   public void testInsertAddNonDefinedColumnIntoNonSealedCatalogTable()
   {
