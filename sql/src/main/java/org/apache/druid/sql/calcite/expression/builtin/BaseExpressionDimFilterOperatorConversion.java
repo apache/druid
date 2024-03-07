@@ -42,7 +42,7 @@ public abstract class BaseExpressionDimFilterOperatorConversion extends DirectOp
 
   protected String getFilterExpression(List<DruidExpression> druidExpressions)
   {
-    return DruidExpression.functionCall(getDruidFunctionName(), druidExpressions);
+    return DruidExpression.functionCall(getDruidFunctionName()).compile(druidExpressions);
   }
 
   protected DimFilter toExpressionFilter(

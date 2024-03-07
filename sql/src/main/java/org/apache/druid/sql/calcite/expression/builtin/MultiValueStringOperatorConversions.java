@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
@@ -172,10 +171,7 @@ public class MultiValueStringOperatorConversions
     @Override
     protected String getFilterExpression(List<DruidExpression> druidExpressions)
     {
-      if (druidExpressions.get(0).isDirectColumnAccess()) {
-        return haromonizeNullsMvdArg0FilterExpression(getDruidFunctionName(), druidExpressions);
-      }
-      return super.getFilterExpression(druidExpressions);
+      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
     }
 
     @Override
@@ -393,10 +389,7 @@ public class MultiValueStringOperatorConversions
     @Override
     protected String getFilterExpression(List<DruidExpression> druidExpressions)
     {
-      if (druidExpressions.get(0).isDirectColumnAccess()) {
-        return haromonizeNullsMvdArg0FilterExpression(getDruidFunctionName(), druidExpressions);
-      }
-      return super.getFilterExpression(druidExpressions);
+      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
     }
 
     @Override
@@ -605,23 +598,6 @@ public class MultiValueStringOperatorConversions
       newArgs = druidExpressions;
     }
     return newArgs;
-  }
-
-  private static String haromonizeNullsMvdArg0FilterExpression(
-      String druidFunctionName,
-      List<DruidExpression> druidExpressions
-  )
-  {
-    return DruidExpression.functionCall(
-        druidFunctionName,
-        ImmutableList.of(
-            DruidExpression.fromFunctionCall(
-                "mv_harmonize_nulls",
-                Collections.singletonList(druidExpressions.get(0))
-            ),
-            druidExpressions.get(1)
-        )
-    );
   }
 
   private MultiValueStringOperatorConversions()
