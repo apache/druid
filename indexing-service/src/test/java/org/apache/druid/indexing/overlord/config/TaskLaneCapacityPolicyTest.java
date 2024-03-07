@@ -17,43 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.indexing.overlord.config;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.msq.exec.ControllerContext;
+
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
-import java.util.concurrent.TimeUnit;
-
-public class MSQWorkerTaskLauncherTest
+public class TaskLaneCapacityPolicyTest
 {
-
-  MSQWorkerTaskLauncher target;
-
-  @Before
-  public void setUp()
+  @Test
+  public void testPolicyCreationSuccessfully()
   {
-    target = new MSQWorkerTaskLauncher(
-        "controller-id",
-        "foo",
-        Mockito.mock(ControllerContext.class),
-        (task, fault) -> {},
-        ImmutableMap.of(),
-        TimeUnit.SECONDS.toMillis(5),
-        ""
-    );
+    TaskLaneCapacityPolicy max = TaskLaneCapacityPolicy.fromString("MAX");
+    Assert.assertEquals(TaskLaneCapacityPolicy.MAX, max);
   }
 
-  @Test
-  public void testRetryInactiveTasks()
+  @Test(expected = IllegalStateException.class)
+  public void testPolicyCreationFailedOnNullInputValue()
   {
-    target.reportFailedInactiveWorker(1);
-    target.retryInactiveTasksIfNeeded(5);
-
-    Assert.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
+    TaskLaneCapacityPolicy.fromString(null);
   }
 }

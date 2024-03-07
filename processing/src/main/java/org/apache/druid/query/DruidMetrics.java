@@ -41,6 +41,7 @@ public class DruidMetrics
 
   // task metrics
   public static final String TASK_TYPE = "taskType";
+  public static final String TASK_LABEL = "taskLabel";
   public static final String TASK_STATUS = "taskStatus";
 
   public static final String STREAM = "stream";

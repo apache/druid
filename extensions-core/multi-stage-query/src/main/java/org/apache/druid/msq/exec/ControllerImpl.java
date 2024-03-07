@@ -706,7 +706,8 @@ public class ControllerImpl implements Controller
         },
         taskContextOverridesBuilder.build(),
         // 10 minutes +- 2 minutes jitter
-        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
+        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
+        task.getLabel()
     );
 
     this.faultsExceededChecker = new FaultsExceededChecker(

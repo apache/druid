@@ -147,6 +147,12 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     return TYPE;
   }
 
+  @Override
+  public String getLabel()
+  {
+    return "msq_" + querySpec.getDestination().getDestinationLabel();
+  }
+
   @Nonnull
   @JsonIgnore
   @Override

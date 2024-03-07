@@ -32,6 +32,7 @@ public class TaskReportMSQDestination implements MSQDestination
 {
   public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
   public static final String TYPE = "taskReport";
+  private static final String LABEL = "task_report";
 
   private TaskReportMSQDestination()
   {
@@ -60,5 +61,11 @@ public class TaskReportMSQDestination implements MSQDestination
   public Optional<Resource> getDestinationResource()
   {
     return Optional.of(new Resource(MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT, ResourceType.DATASOURCE));
+  }
+
+  @Override
+  public String getDestinationLabel()
+  {
+    return LABEL;
   }
 }

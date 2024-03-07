@@ -38,4 +38,15 @@ public interface MSQDestination
   ShuffleSpecFactory getShuffleSpecFactory(int targetSize);
 
   Optional<Resource> getDestinationResource();
+
+  /**
+   * Retrieves a unique label for an MSQ task based on its destination's specific attributes.
+   * This method standardizes label generation across MSQ tasks, promoting accurate identification and efficient
+   * categorization. The resulting label reflects the task's destination, enhancing task management and analysis
+   * by providing a clear, concise identifier for each task type within the scheduling and monitoring framework.
+   *
+   * @return A string label that distinctively identifies the MSQ task according to its destination, essential
+   *         for detailed task organization and oversight.
+   */
+  String getDestinationLabel();
 }
