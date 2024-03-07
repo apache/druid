@@ -91,7 +91,8 @@ Window functions support aliasing.
 
 ## Window function syntax
 
-In general, window functions in Druid use the following syntax:
+You can write a window function in Druid using either syntax below.
+The second syntax shows a window alias to reference a window that you can reuse.
 
 
 ```sql
