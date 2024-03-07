@@ -191,6 +191,6 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
         }
       }
     }
-    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+    return toExpressionFilter(plannerContext, druidExpressions);
   }
 }

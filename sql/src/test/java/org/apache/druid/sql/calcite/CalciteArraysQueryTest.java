@@ -1292,6 +1292,36 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayContainsArrayStringColumns()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_CONTAINS(arrayStringNulls, ARRAY['a', 'b']), ARRAY_CONTAINS(arrayStringNulls, arrayString) FROM druid.arrays LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE_ARRAYS)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "array_contains(\"arrayStringNulls\",array('a','b'))", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "array_contains(\"arrayStringNulls\",\"arrayString\")", ColumnType.LONG)
+                )
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? null : false, NullHandling.sqlCompatible() ? null : false},
+            new Object[]{true, false},
+            new Object[]{false, false},
+            new Object[]{NullHandling.sqlCompatible() ? null : false, NullHandling.sqlCompatible() ? null : false},
+            new Object[]{true, true}
+        )
+    );
+  }
+
+  @Test
   public void testArrayContainsFilterArrayLongColumns()
   {
     testQuery(

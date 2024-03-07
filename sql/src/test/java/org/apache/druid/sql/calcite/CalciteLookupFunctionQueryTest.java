@@ -772,7 +772,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
         QUERY_CONTEXT,
         NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(expressionFilter("array_contains(\"dim1\",null)"))
+        ? buildFilterTestExpectedQuery(expressionFilter("array_contains(mv_harmonize_nulls(\"dim1\"),null)"))
         : buildFilterTestExpectedQueryAlwaysFalse(),
         ImmutableList.of()
     );
