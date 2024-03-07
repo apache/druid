@@ -203,6 +203,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private IngestionState ingestionState;
   private Map<String, TaskReport> completionReports;
+  private Long segmentsRead;
+  private Long segmentsPublished;
   private final boolean isCompactionTask;
 
 
@@ -643,6 +645,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
+      if (isCompactionTask) {
+        // Populate segmentsRead only for compaction tasks
+        segmentsRead = parallelSinglePhaseRunner.getReports()
+                                                .values()
+                                                .stream()
+                                                .mapToLong(report -> report.getOldSegments().size()).sum();
+      }
+
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
@@ -1189,6 +1199,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       throw new ISE("Failed to publish segments");
     }
+
+    segmentsPublished = (long) newSegments.size();
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
@@ -1245,7 +1257,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
                 segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                segmentsRead,
+                segmentsPublished
             )
         )
     );
@@ -1629,6 +1643,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
+      long totalSegmentsRead = 0L;
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
         Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
         if (taskReport == null || taskReport.isEmpty()) {
@@ -1639,6 +1654,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
+
+        Long segmentsReadFromPartition = ((IngestionStatsAndErrorsTaskReport)
+            taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+        ).getPayload().getSegmentsRead();
+        if (segmentsReadFromPartition != null) {
+          totalSegmentsRead += segmentsReadFromPartition;
+        }
       }
 
       RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
@@ -1647,6 +1669,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           includeUnparseable
       );
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+      if (totalSegmentsRead > 0) {
+        segmentsRead = totalSegmentsRead;
+      }
 
       return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
     }
