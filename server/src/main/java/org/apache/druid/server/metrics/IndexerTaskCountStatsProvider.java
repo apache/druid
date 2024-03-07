@@ -28,17 +28,17 @@ import java.util.Map;
 public interface IndexerTaskCountStatsProvider
 {
   /**
-   * The number of running tasks on an indexer
+   * Map from datasource name to the number of running tasks on the Indexer.
    */
   Map<String, Long> getWorkerRunningTasks();
 
   /**
-   * The number of assigned tasks to an indexer
+   * Map from datasource name to the number of assigned tasks to the Indexer.
    */
   Map<String, Long> getWorkerAssignedTasks();
 
   /**
-   * The number of completed tasks by the indexer
+   * Map from datasource name to the number of completed tasks by the Indexer.
    */
   Map<String, Long> getWorkerCompletedTasks();
 }
