@@ -110,14 +110,11 @@ public class DruidOperatorTableTest
     Set<SqlOperator> windowOps = operatorTable.getOperatorList().stream()
         .filter(o -> keySet.contains(o.getKind().toString())).collect(Collectors.toSet());
     for (SqlOperator operator : windowOps) {
-      switch (operator.kind)
-      {
-        /**
-         * These are handled with DruidSqlValidator and a rewrite rule.
-         */
+      switch (operator.kind) {
         case FIRST_VALUE:
         case LAST_VALUE:
         case NTILE:
+          // These are handled with DruidSqlValidator and a rewrite rule.
           continue;
         default:
           assertFalse(
