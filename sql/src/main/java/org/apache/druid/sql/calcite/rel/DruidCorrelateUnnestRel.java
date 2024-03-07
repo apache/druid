@@ -137,7 +137,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   {
     return new DruidCorrelateUnnestRel(
         getCluster(),
-        newQueryBuilder.getTraitSet(getConvention()),
+        newQueryBuilder.getTraitSet(getConvention(), getPlannerContext()),
         correlateRel,
         newQueryBuilder,
         getPlannerContext()

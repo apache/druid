@@ -125,5 +125,16 @@ public enum EngineFeature
   /**
    * Queries can write to an external datasource using {@link org.apache.druid.sql.destination.ExportDestination}
    */
-  WRITE_EXTERNAL_DATA;
+  WRITE_EXTERNAL_DATA,
+
+  /**
+   * Whether GROUP BY implies an ORDER BY on the same fields.
+   * There are two reasons we need this:
+   * (1) We may want MSQ to hash-partition for GROUP BY instead of using a global sort, which would mean MSQ would not
+   * implicitly ORDER BY when there is a GROUP BY.
+   * (2) When doing REPLACE with MSQ, CLUSTERED BY is transformed to ORDER BY. We need to retain that ORDER BY, as it
+   * may be a subset of the GROUP BY, and it is important to remember which fields the user wanted to include in
+   * {@link org.apache.druid.timeline.partition.DimensionRangeShardSpec}.
+   */
+  GROUPBY_IMPLICITLY_SORTS
 }

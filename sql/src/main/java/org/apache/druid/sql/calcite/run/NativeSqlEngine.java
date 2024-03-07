@@ -107,6 +107,7 @@ public class NativeSqlEngine implements SqlEngine
       case UNNEST:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
       case ALLOW_TOP_LEVEL_UNION_ALL:
+      case GROUPBY_IMPLICITLY_SORTS:
         return true;
       case TIME_BOUNDARY_QUERY:
         return plannerContext.queryContext().isTimeBoundaryPlanningEnabled();

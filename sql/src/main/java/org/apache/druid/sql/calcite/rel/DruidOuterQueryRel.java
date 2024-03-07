@@ -83,7 +83,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   {
     return new DruidOuterQueryRel(
         sourceRel.getCluster(),
-        partialQuery.getTraitSet(sourceRel.getConvention()),
+        partialQuery.getTraitSet(sourceRel.getConvention(), sourceRel.getPlannerContext()),
         sourceRel,
         partialQuery,
         sourceRel.getPlannerContext()
@@ -101,7 +101,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   {
     return new DruidOuterQueryRel(
         getCluster(),
-        newQueryBuilder.getTraitSet(getConvention()),
+        newQueryBuilder.getTraitSet(getConvention(), getPlannerContext()),
         sourceRel,
         newQueryBuilder,
         getPlannerContext()
