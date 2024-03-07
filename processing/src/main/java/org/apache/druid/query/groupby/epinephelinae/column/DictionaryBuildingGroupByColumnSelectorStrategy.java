@@ -199,6 +199,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
       assert index == 0;
       int dictId = reverseDictionary.getInt(multiValueHolder);
       int footprintIncrease = 0;
+      // Even if called again, then this is no-op
       if (dictId < 0) {
         final int size = dictionary.size();
         dictionary.add(multiValueHolder);

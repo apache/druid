@@ -89,10 +89,12 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
     int rowSize = dimensionToIdConverter.multiValueSize(rowObjCasted);
     if (rowSize == 0) {
       keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
+      stack[dimensionIndex] = 0;
     } else {
       // No need to check here, since we'd have already accounted for it when we call
       // initColumnValues
       keyBuffer.putInt(keyBufferPosition, dimensionToIdConverter.getIndividualValueDictId(rowObjCasted, 0).lhs);
+      stack[dimensionIndex] = 1;
     }
   }
 

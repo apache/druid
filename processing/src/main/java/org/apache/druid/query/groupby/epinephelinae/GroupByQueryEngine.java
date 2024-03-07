@@ -46,6 +46,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStr
 import org.apache.druid.query.groupby.epinephelinae.column.FixedWidthGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.PrebuiltDictionaryStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -246,9 +247,13 @@ public class GroupByQueryEngine
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
           if (dimSelector.getValueCardinality() >= 0 && dimSelector.nameLookupPossibleInAdvance()) {
-            return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
+            return PrebuiltDictionaryStringGroupByColumnSelectorStrategy.forType(
+                ColumnType.STRING,
+                selector,
+                capabilities
+            );
           } else {
-            return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
+            return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.STRING);
           }
         case LONG:
           return new FixedWidthGroupByColumnSelectorStrategy<Long>(
