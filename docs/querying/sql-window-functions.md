@@ -1,7 +1,7 @@
 ---
 id: sql-window-functions
 title: Window functions
-description: Reference for 
+description: Reference for window functions
 ---
 
 <!--
