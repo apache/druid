@@ -44,7 +44,7 @@ public class InlineInputSliceReader implements InputSliceReader
 {
   public static final String SEGMENT_ID = "__inline";
   private static final RichSegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR
-      = new RichSegmentDescriptor(SegmentId.dummy(SEGMENT_ID).toDescriptor(), null, null);
+      = new RichSegmentDescriptor(SegmentId.dummy(SEGMENT_ID).toDescriptor(), null);
 
   private final SegmentWrangler segmentWrangler;
 
@@ -75,7 +75,6 @@ public class InlineInputSliceReader implements InputSliceReader
             segment -> ReadableInput.segment(
                 new SegmentWithDescriptor(
                     () -> ResourceHolder.fromCloseable(segment),
-                    null,
                     DUMMY_SEGMENT_DESCRIPTOR
                 )
             )

@@ -31,25 +31,28 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
+import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
+import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
+import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Stack;
 
 /**
- * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention to a native
- * {@link DruidQuery} for execution.
+ * Converts a DAG of {@link DruidLogicalNode} convention to a native {@link DruidQuery} for execution.
  */
 public class DruidQueryGenerator
 {
-  private final RelNode relRoot;
+  private final DruidLogicalNode relRoot;
   private final PDQVertexFactory vertexFactory;
 
-  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
+  public DruidQueryGenerator(PlannerContext plannerContext, DruidLogicalNode relRoot, RexBuilder rexBuilder)
   {
     this.relRoot = relRoot;
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
@@ -57,28 +60,34 @@ public class DruidQueryGenerator
 
   public DruidQuery buildQuery()
   {
-    Vertex vertex = buildVertexFor(relRoot, true);
+    Stack<DruidLogicalNode> stack = new Stack<>();
+    stack.push(relRoot);
+    Vertex vertex = buildVertexFor(stack);
     return vertex.buildQuery(true);
   }
 
-  private Vertex buildVertexFor(RelNode node, boolean isRoot)
+  private Vertex buildVertexFor(Stack<DruidLogicalNode> stack)
   {
     List<Vertex> newInputs = new ArrayList<>();
-    for (RelNode input : node.getInputs()) {
-      newInputs.add(buildVertexFor(input, false));
+
+    for (RelNode input : stack.peek().getInputs()) {
+      stack.push((DruidLogicalNode) input);
+      newInputs.add(buildVertexFor(stack));
+      stack.pop();
     }
-    Vertex vertex = processNodeWithInputs(node, newInputs, isRoot);
+    Vertex vertex = processNodeWithInputs(stack, newInputs);
     return vertex;
   }
 
-  private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
+  private Vertex processNodeWithInputs(Stack<DruidLogicalNode> stack, List<Vertex> newInputs)
   {
-    if (node instanceof InputDescProducer) {
+    DruidLogicalNode node = stack.peek();
+    if (node instanceof SourceDescProducer) {
       return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
-      Optional<Vertex> newVertex = inputVertex.extendWith(node, isRoot);
+      Optional<Vertex> newVertex = inputVertex.extendWith(stack);
       if (newVertex.isPresent()) {
         return newVertex.get();
       }
@@ -86,7 +95,7 @@ public class DruidQueryGenerator
           PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
           ImmutableList.of(inputVertex)
       );
-      newVertex = inputVertex.extendWith(node, false);
+      newVertex = inputVertex.extendWith(stack);
       if (newVertex.isPresent()) {
         return newVertex.get();
       }
@@ -107,21 +116,21 @@ public class DruidQueryGenerator
     /**
      * Extends the current vertex to include the specified parent.
      */
-    Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot);
+    Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack);
 
     /**
-     * Decides wether this {@link Vertex} can be unwrapped into an {@link InputDesc}.
+     * Decides wether this {@link Vertex} can be unwrapped into an {@link SourceDesc}.
      */
-    boolean canUnwrapInput();
+    boolean canUnwrapSourceDesc();
 
     /**
-     * Unwraps this {@link Vertex} into an {@link InputDesc}.
+     * Unwraps this {@link Vertex} into an {@link SourceDesc}.
      *
-     * Unwraps the input of this vertex - if it doesn't do anything beyond reading its input.
+     * Unwraps the source of this vertex - if it doesn't do anything beyond reading its input.
      *
      * @throws DruidException if unwrap is not possible.
      */
-    InputDesc unwrapInputDesc();
+    SourceDesc unwrapSourceDesc();
   }
 
   /**
@@ -157,10 +166,10 @@ public class DruidQueryGenerator
       @Override
       public DruidQuery buildQuery(boolean topLevel)
       {
-        InputDesc input = getInput();
+        SourceDesc source = getSource();
         return partialDruidQuery.build(
-            input.dataSource,
-            input.rowSignature,
+            source.dataSource,
+            source.rowSignature,
             plannerContext,
             rexBuilder,
             !topLevel
@@ -168,39 +177,39 @@ public class DruidQueryGenerator
       }
 
       /**
-       * Creates the {@link InputDesc} for the current {@link Vertex}.
+       * Creates the {@link SourceDesc} for the current {@link Vertex}.
        */
-      private InputDesc getInput()
+      private SourceDesc getSource()
       {
-        List<InputDesc> inputDescs = new ArrayList<>();
+        List<SourceDesc> sourceDescs = new ArrayList<>();
         for (Vertex inputVertex : inputs) {
-          final InputDesc desc;
-          if (inputVertex.canUnwrapInput()) {
-            desc = inputVertex.unwrapInputDesc();
+          final SourceDesc desc;
+          if (inputVertex.canUnwrapSourceDesc()) {
+            desc = inputVertex.unwrapSourceDesc();
           } else {
             DruidQuery inputQuery = inputVertex.buildQuery(false);
-            desc = new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
+            desc = new SourceDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
           }
-          inputDescs.add(desc);
+          sourceDescs.add(desc);
         }
         RelNode scan = partialDruidQuery.getScan();
-        if (scan instanceof InputDescProducer) {
-          InputDescProducer inp = (InputDescProducer) scan;
-          return inp.getInputDesc(plannerContext, inputDescs);
+        if (scan instanceof SourceDescProducer) {
+          SourceDescProducer inp = (SourceDescProducer) scan;
+          return inp.getSourceDesc(plannerContext, sourceDescs);
         }
         if (inputs.size() == 1) {
-          return inputDescs.get(0);
+          return sourceDescs.get(0);
         }
-        throw DruidException.defensive("Unable to create InputDesc for Operator [%s]", scan);
+        throw DruidException.defensive("Unable to create SourceDesc for Operator [%s]", scan);
       }
 
       /**
        * Extends the the current partial query with the new parent if possible.
        */
       @Override
-      public Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot)
+      public Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack)
       {
-        Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(parentNode, isRoot);
+        Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(stack);
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
         }
@@ -210,65 +219,81 @@ public class DruidQueryGenerator
       /**
        * Merges the given {@link RelNode} into the current {@link PartialDruidQuery}.
        */
-      private Optional<PartialDruidQuery> extendPartialDruidQuery(RelNode parentNode, boolean isRoot)
+      private Optional<PartialDruidQuery> extendPartialDruidQuery(Stack<DruidLogicalNode> stack)
       {
-        if (accepts(parentNode, Stage.WHERE_FILTER, Filter.class)) {
+        DruidLogicalNode parentNode = stack.peek();
+        if (accepts(stack, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.SELECT_PROJECT, Project.class)) {
+        if (accepts(stack, Stage.SELECT_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.AGGREGATE, Aggregate.class)) {
+        if (accepts(stack, Stage.AGGREGATE, Aggregate.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
+        if (accepts(stack, Stage.AGGREGATE_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.HAVING_FILTER, Filter.class)) {
+        if (accepts(stack, Stage.HAVING_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.SORT, Sort.class)) {
+        if (accepts(stack, Stage.SORT, Sort.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.SORT_PROJECT, Project.class)) {
+        if (accepts(stack, Stage.SORT_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.WINDOW, Window.class)) {
+        if (accepts(stack, Stage.WINDOW, Window.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.WINDOW_PROJECT, Project.class)) {
+        if (accepts(stack, Stage.WINDOW_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
         return Optional.empty();
       }
 
-      private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
+      private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> clazz)
       {
-        return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
-      }
-
-      @Override
-      public InputDesc unwrapInputDesc()
-      {
-        if (canUnwrapInput()) {
-          DruidQuery q = buildQuery(false);
-          InputDesc origInput = getInput();
-          return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
+        DruidLogicalNode currentNode = stack.peek();
+        if (Project.class == clazz && stack.size() >= 2) {
+          // peek at parent and postpone project for next query stage
+          DruidLogicalNode parentNode = stack.get(stack.size() - 2);
+          if (stage.ordinal() > Stage.AGGREGATE.ordinal()
+              && parentNode instanceof DruidAggregate
+              && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
+            return false;
+          }
+          if (stage.ordinal() > Stage.SORT.ordinal()
+              && parentNode instanceof DruidSort
+              && !partialDruidQuery.canAccept(Stage.SORT)) {
+            return false;
+          }
         }
-        throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
+        return partialDruidQuery.canAccept(stage) && clazz.isInstance(currentNode);
       }
 
       @Override
-      public boolean canUnwrapInput()
+      public SourceDesc unwrapSourceDesc()
+      {
+        if (canUnwrapSourceDesc()) {
+          DruidQuery q = buildQuery(false);
+          SourceDesc origInput = getSource();
+          return new SourceDesc(origInput.dataSource, q.getOutputRowSignature());
+        }
+        throw DruidException.defensive("Can't unwrap source of vertex[%s]", partialDruidQuery);
+      }
+
+      @Override
+      public boolean canUnwrapSourceDesc()
       {
         if (partialDruidQuery.stage() == Stage.SCAN) {
           return true;

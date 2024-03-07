@@ -72,7 +72,7 @@ import java.util.regex.Pattern;
  * Druid extended SQL validator. (At present, it doesn't actually
  * have any extensions yet, but it will soon.)
  */
-class DruidSqlValidator extends BaseDruidSqlValidator
+public class DruidSqlValidator extends BaseDruidSqlValidator
 {
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
@@ -531,15 +531,22 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     super.validateCall(call, scope);
   }
 
-  private CalciteContextException buildCalciteContextException(String message, SqlNode call)
+  public static CalciteContextException buildCalciteContextException(String message, SqlNode call)
+  {
+    return buildCalciteContextException(new CalciteException(message, null), message, call);
+  }
+
+  public static CalciteContextException buildCalciteContextException(Throwable t, String message, SqlNode call)
   {
     SqlParserPos pos = call.getParserPosition();
-    return new CalciteContextException(message,
-        new CalciteException(message, null),
+    return new CalciteContextException(
+        message,
+        t,
         pos.getLineNum(),
         pos.getColumnNum(),
         pos.getEndLineNum(),
-        pos.getEndColumnNum());
+        pos.getEndColumnNum()
+    );
   }
 
   private SqlNode getSqlNodeFor(SqlInsert insert, int idx)

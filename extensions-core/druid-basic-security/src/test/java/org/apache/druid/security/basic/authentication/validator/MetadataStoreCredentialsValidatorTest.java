@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.security.authentication.validator;
+package org.apache.druid.security.basic.authentication.validator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
@@ -28,28 +28,21 @@ import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticato
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
-import org.apache.druid.security.basic.authentication.validator.MetadataStoreCredentialsValidator;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Map;
 
-public class DBCredentialsValidatorTest
+public class MetadataStoreCredentialsValidatorTest
 {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  private static BasicAuthenticatorCredentials USER_A_CREDENTIALS = new BasicAuthenticatorCredentials(
+  private static final BasicAuthenticatorCredentials USER_A_CREDENTIALS = new BasicAuthenticatorCredentials(
       new BasicAuthenticatorCredentialUpdate("helloworld", 20)
   );
 
-  private static Provider<BasicAuthenticatorCacheManager> CACHE_MANAGER_PROVIDER = Providers.of(
+  private static final Provider<BasicAuthenticatorCacheManager> CACHE_MANAGER_PROVIDER = Providers.of(
       new BasicAuthenticatorCacheManager()
       {
         @Override
@@ -69,9 +62,8 @@ public class DBCredentialsValidatorTest
       }
   );
 
-  private static MetadataStoreCredentialsValidator validator = new MetadataStoreCredentialsValidator(CACHE_MANAGER_PROVIDER);
-
-
+  private static final MetadataStoreCredentialsValidator VALIDATOR
+      = new MetadataStoreCredentialsValidator(CACHE_MANAGER_PROVIDER);
 
   @Test
   public void validateBadAuthenticator()
@@ -87,9 +79,11 @@ public class DBCredentialsValidatorTest
 
     MetadataStoreCredentialsValidator validator = new MetadataStoreCredentialsValidator(Providers.of(cacheManager));
 
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("No userMap is available for authenticator with prefix: [notbasic]");
-    validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
+    IAE exception = Assert.assertThrows(
+        IAE.class,
+        () -> validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray())
+    );
+    Assert.assertEquals("No userMap is available for authenticator with prefix: [notbasic]", exception.getMessage());
 
     EasyMock.verify(cacheManager);
   }
@@ -102,7 +96,7 @@ public class DBCredentialsValidatorTest
     String username = "userB";
     String password = "helloworld";
 
-    AuthenticationResult result = validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
+    AuthenticationResult result = VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
     Assert.assertNull(result);
   }
 
@@ -114,7 +108,7 @@ public class DBCredentialsValidatorTest
     String username = "userC";
     String password = "helloworld";
 
-    AuthenticationResult result = validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
+    AuthenticationResult result = VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
     Assert.assertNull(result);
   }
 
@@ -126,7 +120,7 @@ public class DBCredentialsValidatorTest
     String username = "userA";
     String password = "helloworld";
 
-    AuthenticationResult result = validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
+    AuthenticationResult result = VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
 
     Assert.assertNotNull(result);
     Assert.assertEquals(username, result.getIdentity());
@@ -143,8 +137,10 @@ public class DBCredentialsValidatorTest
     String username = "userA";
     String password = "badpassword";
 
-    expectedException.expect(BasicSecurityAuthenticationException.class);
-    expectedException.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
-    validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
+    Exception exception = Assert.assertThrows(
+        BasicSecurityAuthenticationException.class,
+        () -> VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray())
+    );
+    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, exception.getMessage());
   }
 }

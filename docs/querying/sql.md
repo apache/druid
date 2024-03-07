@@ -359,6 +359,12 @@ GROUP BY col1
 
 With table-level UNION ALL, the rows from the unioned tables are not guaranteed to process in any particular order. They may process in an interleaved fashion. If you need a particular result ordering, use [ORDER BY](#order-by) on the outer query.
 
+To reference such unions a [TABLE(APPEND())](datasource.md#dynamic-table-append) datasource could also be used:
+```sql
+SELECT col1, COUNT(*) from TABLE(APPEND('tbl1', 'tbl2'))
+```
+
+
 ## EXPLAIN PLAN
 
 Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about how it will be translated. In this case,
