@@ -56,6 +56,4 @@ public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy extends KeyMa
       }
     };
   }
-
-
 }

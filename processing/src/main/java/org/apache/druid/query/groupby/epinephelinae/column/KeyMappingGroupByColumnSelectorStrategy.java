@@ -14,20 +14,24 @@ import org.apache.druid.segment.column.NullableTypeStrategy;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByColumnSelectorStrategy
+// Only supports int mapping.
+// DimensionType is the dimension's type - eg strings
+// DimensionHolderType is the multi value holder for the dimension, if it exists, else it will be same as DimensionType
+public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType>
+    implements GroupByColumnSelectorStrategy
 {
-  @Nullable
-  final KeyToId<Object> keyToId;
+  final KeyToId<DimensionHolderType> keyToId;
   final ColumnType columnType;
   final NullableTypeStrategy<DimensionType> nullableTypeStrategy;
-  final Object defaultValue;
+  final DimensionType defaultValue;
   final KeyMapper<DimensionType> keyMapper;
 
-  public KeyMappingGroupByColumnSelectorStrategy(
-      @Nullable final KeyToId<Object> keyToId,
+  // Restricted access, callers should use one of it's subclasses
+  KeyMappingGroupByColumnSelectorStrategy(
+      final KeyToId<DimensionHolderType> keyToId,
       final ColumnType columnType,
       final NullableTypeStrategy<DimensionType> nullableTypeStrategy,
-      final Object defaultValue,
+      final DimensionType defaultValue,
       final KeyMapper<DimensionType> keyMapper
   )
   {
@@ -63,7 +67,7 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements G
   @Override
   public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    Pair<Object, Integer> multiValueHolderAndSizeIncrease = keyToId.getMultiValueHolder(selector, null);
+    Pair<DimensionHolderType, Integer> multiValueHolderAndSizeIncrease = keyToId.getMultiValueHolder(selector, null);
     valuess[columnIndex] = multiValueHolderAndSizeIncrease.lhs;
     return multiValueHolderAndSizeIncrease.rhs;
   }
@@ -77,13 +81,16 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements G
       int[] stack
   )
   {
-    int rowSize = keyToId.multiValueSize(rowObj);
+    // It is always called with the DimensionHolderType, created
+    //noinspection unchecked
+    DimensionHolderType rowObjCasted = (DimensionHolderType) rowObj;
+    int rowSize = keyToId.multiValueSize(rowObjCasted);
     if (rowSize == 0) {
       keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
     } else {
       // No need to check here, since we'd have already accounted for it when we call
       // initColumnValues
-      keyBuffer.putInt(keyBufferPosition, keyToId.getIndividualValueDictId(rowObj, 0).lhs);
+      keyBuffer.putInt(keyBufferPosition, keyToId.getIndividualValueDictId(rowObjCasted, 0).lhs);
     }
   }
 
@@ -95,11 +102,12 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements G
       ByteBuffer keyBuffer
   )
   {
-    int rowSize = keyToId.multiValueSize(rowObj);
+    DimensionHolderType rowObjCasted = (DimensionHolderType) rowObj;
+    int rowSize = keyToId.multiValueSize(rowObjCasted);
     if (rowValIdx < rowSize) {
       keyBuffer.putInt(
           keyBufferPosition,
-          keyToId.getIndividualValueDictId(rowObj, rowValIdx).lhs
+          keyToId.getIndividualValueDictId(rowObjCasted, rowValIdx).lhs
       );
       return true;
     } else {
@@ -110,15 +118,16 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements G
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    Object multiValueHolder = keyToId.getMultiValueHolder(selector, null);
-    int multiValueSize = keyToId.multiValueSize(multiValueHolder);
+    Pair<DimensionHolderType, Integer> multiValueHolder = keyToId.getMultiValueHolder(selector, null);
+    int multiValueSize = keyToId.multiValueSize(multiValueHolder.lhs);
     Preconditions.checkState(multiValueSize < 2, "Not supported for multi-value dimensions");
-    Pair<Integer, Integer> dictIdAndSizeIncrease = keyToId.getIndividualValueDictId(multiValueHolder, 0);
-    final int dictId = multiValueSize == 1
-                       ? dictIdAndSizeIncrease.lhs
-                       : GROUP_BY_MISSING_VALUE;
+    Pair<Integer, Integer> dictIdAndSizeIncrease = keyToId.getIndividualValueDictId(multiValueHolder.lhs, 0);
+    final int dictId = multiValueSize == 1 ? dictIdAndSizeIncrease.lhs : GROUP_BY_MISSING_VALUE;
     keyBuffer.putInt(keyBufferPosition, dictId);
-    return dictIdAndSizeIncrease.rhs;
+
+    // The implementations must return a non-nullable and non-negative size increase
+    //noinspection ConstantConditions
+    return multiValueHolder.rhs + dictIdAndSizeIncrease.rhs;
   }
 
   @Override
