@@ -376,7 +376,10 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_contains([1, 2, 3], [3, 4])", 0L);
     assertExpr("array_contains(b, [3, 4])", 1L);
     assertExpr("array_contains(null, [3, 4])", null);
+    assertExpr("array_contains(null, null)", null);
     assertExpr("array_contains([1, null, 2], null)", 1L);
+    assertExpr("array_contains([1, null, 2], [null])", 1L);
+    assertExpr("array_contains([1, 2], null)", 0L);
   }
 
   @Test
@@ -385,7 +388,11 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", 1L);
     assertExpr("array_overlap([1, 2, 3], [4, 5, 6])", 0L);
     assertExpr("array_overlap(null, [4, 5, 6])", null);
-    assertExpr("array_overlap([4, 5, 6], null)", null);
+    assertExpr("array_overlap([4, null], [4, 5, 6])", 1L);
+    assertExpr("array_overlap([4, 5, 6], null)", 0L);
+    assertExpr("array_overlap([4, 5, 6], [null])", 0L);
+    assertExpr("array_overlap([4, 5, null, 6], null)", 0L);
+    assertExpr("array_overlap([4, 5, null, 6], [null])", 1L);
   }
 
   @Test
