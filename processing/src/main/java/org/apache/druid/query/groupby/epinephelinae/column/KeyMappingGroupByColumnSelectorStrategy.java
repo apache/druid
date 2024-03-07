@@ -12,34 +12,36 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.nio.ByteBuffer;
 
 // Only supports int mapping.
 // DimensionType is the dimension's type - eg strings
 // DimensionHolderType is the multi value holder for the dimension, if it exists, else it will be same as DimensionType
+@NotThreadSafe
 public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType>
     implements GroupByColumnSelectorStrategy
 {
-  final KeyToId<DimensionHolderType> keyToId;
+  final DimensionToIdConverter<DimensionHolderType> dimensionToIdConverter;
   final ColumnType columnType;
   final NullableTypeStrategy<DimensionType> nullableTypeStrategy;
   final DimensionType defaultValue;
-  final KeyMapper<DimensionType> keyMapper;
+  final IdToDimensionConverter<DimensionType> idToDimensionConverter;
 
   // Restricted access, callers should use one of it's subclasses
   KeyMappingGroupByColumnSelectorStrategy(
-      final KeyToId<DimensionHolderType> keyToId,
+      final DimensionToIdConverter<DimensionHolderType> dimensionToIdConverter,
       final ColumnType columnType,
       final NullableTypeStrategy<DimensionType> nullableTypeStrategy,
       final DimensionType defaultValue,
-      final KeyMapper<DimensionType> keyMapper
+      final IdToDimensionConverter<DimensionType> idToDimensionConverter
   )
   {
-    this.keyToId = keyToId;
+    this.dimensionToIdConverter = dimensionToIdConverter;
     this.columnType = columnType;
     this.nullableTypeStrategy = nullableTypeStrategy;
     this.defaultValue = defaultValue;
-    this.keyMapper = keyMapper;
+    this.idToDimensionConverter = idToDimensionConverter;
   }
 
   @Override
@@ -58,7 +60,7 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
   {
     final int id = key.getInt(keyBufferPosition);
     if (id != GROUP_BY_MISSING_VALUE) {
-      resultRow.set(selectorPlus.getResultRowPosition(), keyMapper.idToKey(id));
+      resultRow.set(selectorPlus.getResultRowPosition(), idToDimensionConverter.idToKey(id));
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), defaultValue);
     }
@@ -67,7 +69,7 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
   @Override
   public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    Pair<DimensionHolderType, Integer> multiValueHolderAndSizeIncrease = keyToId.getMultiValueHolder(selector, null);
+    Pair<DimensionHolderType, Integer> multiValueHolderAndSizeIncrease = dimensionToIdConverter.getMultiValueHolder(selector, null);
     valuess[columnIndex] = multiValueHolderAndSizeIncrease.lhs;
     return multiValueHolderAndSizeIncrease.rhs;
   }
@@ -84,13 +86,13 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
     // It is always called with the DimensionHolderType, created
     //noinspection unchecked
     DimensionHolderType rowObjCasted = (DimensionHolderType) rowObj;
-    int rowSize = keyToId.multiValueSize(rowObjCasted);
+    int rowSize = dimensionToIdConverter.multiValueSize(rowObjCasted);
     if (rowSize == 0) {
       keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
     } else {
       // No need to check here, since we'd have already accounted for it when we call
       // initColumnValues
-      keyBuffer.putInt(keyBufferPosition, keyToId.getIndividualValueDictId(rowObjCasted, 0).lhs);
+      keyBuffer.putInt(keyBufferPosition, dimensionToIdConverter.getIndividualValueDictId(rowObjCasted, 0).lhs);
     }
   }
 
@@ -103,11 +105,11 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
   )
   {
     DimensionHolderType rowObjCasted = (DimensionHolderType) rowObj;
-    int rowSize = keyToId.multiValueSize(rowObjCasted);
+    int rowSize = dimensionToIdConverter.multiValueSize(rowObjCasted);
     if (rowValIdx < rowSize) {
       keyBuffer.putInt(
           keyBufferPosition,
-          keyToId.getIndividualValueDictId(rowObjCasted, rowValIdx).lhs
+          dimensionToIdConverter.getIndividualValueDictId(rowObjCasted, rowValIdx).lhs
       );
       return true;
     } else {
@@ -118,10 +120,10 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    Pair<DimensionHolderType, Integer> multiValueHolder = keyToId.getMultiValueHolder(selector, null);
-    int multiValueSize = keyToId.multiValueSize(multiValueHolder.lhs);
+    Pair<DimensionHolderType, Integer> multiValueHolder = dimensionToIdConverter.getMultiValueHolder(selector, null);
+    int multiValueSize = dimensionToIdConverter.multiValueSize(multiValueHolder.lhs);
     Preconditions.checkState(multiValueSize < 2, "Not supported for multi-value dimensions");
-    Pair<Integer, Integer> dictIdAndSizeIncrease = keyToId.getIndividualValueDictId(multiValueHolder.lhs, 0);
+    Pair<Integer, Integer> dictIdAndSizeIncrease = dimensionToIdConverter.getIndividualValueDictId(multiValueHolder.lhs, 0);
     final int dictId = multiValueSize == 1 ? dictIdAndSizeIncrease.lhs : GROUP_BY_MISSING_VALUE;
     keyBuffer.putInt(keyBufferPosition, dictId);
 
@@ -136,15 +138,15 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
     boolean usesNaturalComparator =
         stringComparator == null
         || DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator);
-    if (keyMapper.canCompareIds() && usesNaturalComparator) {
+    if (idToDimensionConverter.canCompareIds() && usesNaturalComparator) {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Integer.compare(
           lhsBuffer.getInt(lhsPosition + keyBufferPosition),
           rhsBuffer.getInt(rhsPosition + keyBufferPosition)
       );
     } else {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-        Object lhsObject = keyMapper.idToKey(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
-        Object rhsObject = keyMapper.idToKey(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+        Object lhsObject = idToDimensionConverter.idToKey(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
+        Object rhsObject = idToDimensionConverter.idToKey(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
         if (usesNaturalComparator) {
           return nullableTypeStrategy.compare(
               (DimensionType) DimensionHandlerUtils.convertObjectToType(lhsObject, columnType),
@@ -163,11 +165,4 @@ public class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHol
 
   }
 
-  // Doesn't handle GROUP_BY_MISSING_VALUE, should be done by the callers
-  public interface KeyMapper<KeyType>
-  {
-    KeyType idToKey(int id);
-
-    boolean canCompareIds();
-  }
 }

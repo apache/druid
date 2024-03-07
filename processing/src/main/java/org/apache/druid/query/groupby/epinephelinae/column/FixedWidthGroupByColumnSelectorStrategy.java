@@ -22,20 +22,20 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
 
   final int keySize;
   @Nullable
-  final KeyToId keyToId;
+  final DimensionToIdConverter dimensionToIdConverter;
   final boolean isPrimitive;
   final ColumnType columnType;
   final NullableTypeStrategy<T> nullableTypeStrategy;
 
   public FixedWidthGroupByColumnSelectorStrategy(
       int keySize,
-      @Nullable KeyToId keyToId,
+      @Nullable DimensionToIdConverter dimensionToIdConverter,
       boolean isPrimitive,
       ColumnType columnType
   )
   {
     this.keySize = keySize;
-    this.keyToId = keyToId;
+    this.dimensionToIdConverter = dimensionToIdConverter;
     this.isPrimitive = isPrimitive;
     this.columnType = columnType;
     this.nullableTypeStrategy = columnType.getNullableStrategy();

@@ -1,59 +1,102 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 
-public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy extends KeyMappingGroupByColumnSelectorStrategy
+// Note: Avoiding anonymous classes
+// This is more of a helper class, as it just creates an instance of the KeyMappingGroupingColumnSelectorStrategy
+public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy
 {
-  public PrebuiltDictionaryStringGroupByColumnSelectorStrategy(
-      @Nullable KeyToId keyToId,
-      ColumnType columnType,
-      NullableTypeStrategy nullableTypeStrategy,
-      Object defaultValue,
-      KeyMapper keyMapper
+
+  public static GroupByColumnSelectorStrategy forType(
+      final ColumnType columnType,
+      final ColumnValueSelector columnValueSelector,
+      final ColumnCapabilities columnCapabilities
   )
   {
-    DimensionSelector dimS;
-    KeyToId<Object> keyToId1 = new KeyToId<Object>()
+    if (columnType.equals(ColumnType.STRING)) {
+      return forString(columnValueSelector, columnCapabilities);
+    } else {
+      // This can change with array columns
+      throw DruidException.defensive("Only string columns expose prebuilt dictionaries");
+    }
+  }
+
+  private static GroupByColumnSelectorStrategy forString(
+      final ColumnValueSelector columnValueSelector,
+      final ColumnCapabilities columnCapabilities
+  )
+  {
+    return new KeyMappingGroupByColumnSelectorStrategy<>(
+        new StringDimensionToIdConverter(),
+        ColumnType.STRING,
+        ColumnType.STRING.getNullableStrategy(),
+        NullHandling.defaultStringValue(),
+        new StringIdToDimensionConverter((DimensionSelector) columnValueSelector, columnCapabilities)
+    );
+  }
+
+  private static class StringDimensionToIdConverter implements DimensionToIdConverter<IndexedInts>
+  {
+    @Override
+    public Pair<IndexedInts, Integer> getMultiValueHolder(
+        final ColumnValueSelector selector,
+        final IndexedInts reusableValue
+    )
     {
-      @Override
-      public Pair<Object, Integer> getMultiValueHolder(ColumnValueSelector selector, Object reusableValue)
-      {
-        return Pair.of(((DimensionSelector) selector).getRow(), 0);
-      }
+      return Pair.of(((DimensionSelector) selector).getRow(), 0);
+    }
 
-      @Override
-      public int multiValueSize(Object multiValueHolder)
-      {
-        return ((IndexedInts) multiValueHolder).size();
-      }
-
-      @Override
-      public Pair<Integer, Integer> getIndividualValueDictId(Object multiValueHolder, int index)
-      {
-        return Pair.of(((IndexedInts) multiValueHolder).get(index), 0);
-      }
-    };
-
-    KeyMapper<String> keyMapper1 = new KeyMapper<String>()
+    @Override
+    public int multiValueSize(IndexedInts multiValueHolder)
     {
-      @Override
-      public String idToKey(int id)
-      {
-        return dimS.lookupName(id);
-      }
+      return multiValueHolder.size();
+    }
 
-      @Override
-      public boolean canCompareIds()
-      {
-        return false;
-      }
-    };
+    @Override
+    public Pair<Integer, Integer> getIndividualValueDictId(IndexedInts multiValueHolder, int index)
+    {
+      return Pair.of(multiValueHolder.get(index), 0);
+    }
+  }
+
+  private static class StringIdToDimensionConverter implements IdToDimensionConverter<String>
+  {
+
+    final DimensionSelector dimensionSelector;
+    @Nullable
+    final ColumnCapabilities columnCapabilities;
+
+    public StringIdToDimensionConverter(
+        final DimensionSelector dimensionSelector,
+        @Nullable final ColumnCapabilities columnCapabilities
+    )
+    {
+      this.dimensionSelector = dimensionSelector;
+      this.columnCapabilities = columnCapabilities;
+    }
+
+    @Override
+    public String idToKey(int id)
+    {
+      return dimensionSelector.lookupName(id);
+    }
+
+    @Override
+    public boolean canCompareIds()
+    {
+      return columnCapabilities != null
+             && columnCapabilities.hasBitmapIndexes()
+             && (columnCapabilities.areDictionaryValuesSorted()
+                                   .and(columnCapabilities.areDictionaryValuesUnique())).isTrue();
+    }
   }
 }

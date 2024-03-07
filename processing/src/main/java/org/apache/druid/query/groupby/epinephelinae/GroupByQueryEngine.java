@@ -41,17 +41,11 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FixedWidthGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -280,11 +274,11 @@ public class GroupByQueryEngine
         case ARRAY:
           switch (capabilities.getElementType().getType()) {
             case LONG:
-              return new ArrayLongGroupByColumnSelectorStrategy();
+              return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.LONG_ARRAY);
             case STRING:
-              return new ArrayStringGroupByColumnSelectorStrategy();
+              return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.STRING_ARRAY);
             case DOUBLE:
-              return new ArrayDoubleGroupByColumnSelectorStrategy();
+              return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.DOUBLE_ARRAY);
             case FLOAT:
               // Array<Float> not supported in expressions, ingestion
             default:
