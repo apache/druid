@@ -105,7 +105,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
       );
     }
     catch (Exception e) {
-      log.error("Failed to delete object at bucket[%s] and path[%s].", config.getBucket(), path);
+      log.error("Failed to delete object at bucket [%s] and path [%s].", config.getBucket(), path);
       throw new IOException(e);
     }
   }
