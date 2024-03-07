@@ -23,18 +23,19 @@ sidebar_label: "Rabbitmq superstream"
   ~ under the License.
   -->
 
-When you enable the rabbit stream indexing service, you can configure *supervisors* on the Overlord to manage the creation and lifetime of rabbit indexing tasks. These indexing tasks read events from a rabbit super-stream. The supervisor oversees the state of the indexing tasks to:
+The rabbit stream indexing service allows you to configure *supervisors* on the Overlord to manage the creation and lifetime of [RabbitMQ](https://www.rabbitmq.com/) indexing tasks. 
+These indexing tasks read events from a rabbit super-stream. The supervisor oversees the state of the indexing tasks to:
+
   - coordinate handoffs
   - manage failures
-  - ensure that scalability and replication requirements are maintained.
+  - ensure that Druid maintains scalability and replication requirements
 
-  To use the rabbit stream indexing service, load the `druid-rabbit-indexing-service` community druid extension (see
-[Including Extensions](../configuration/extensions.md#loading-extensions)).
+  To use the rabbit stream indexing service, load the `druid-rabbit-indexing-service` community druid extension.
+  See [Loading community extensions](../../configuration/extensions.md#loading-community-extensions) for more information.
 
+## Submitting a supervisor spec
 
-## Submitting a Supervisor Spec
-
-To use the rabbit stream indexing service, load the `druid-rabbit-indexing-service` extension on both the Overlord and the MiddleManagers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. Submit your supervisor spec to the following endpoint:
+To use the rabbit stream indexing service, load the `druid-rabbit-indexing-service` extension on both the Overlord and the Middle Managers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. Submit your supervisor spec to the following endpoint:
 
 
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
@@ -109,13 +110,13 @@ Where the file `supervisor-spec.json` contains a rabbit supervisor spec:
 }
 ```
 
-## Supervisor Spec
+## Supervisor spec
 
 |Field|Description|Required|
 |--------|-----------|---------|
 |`type`|The supervisor type; this should always be `rabbit`.|yes|
 |`spec`|Container object for the supervisor configuration.|yes|
-|`dataSchema`|The schema that will be used by the rabbit indexing task during ingestion. See [`dataSchema`](ingestion-spec.md#dataschema).|yes|
+|`dataSchema`|The schema that will be used by the rabbit indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema).|yes|
 |`ioConfig`|An [`ioConfig`](#ioconfig) object for configuring rabbit super stream connection and I/O-related settings for the supervisor and indexing task.|yes|
 |`tuningConfig`|A [`tuningConfig`](#tuningconfig) object for configuring performance-related settings for the supervisor and indexing tasks.|no|
 
@@ -124,7 +125,7 @@ Where the file `supervisor-spec.json` contains a rabbit supervisor spec:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`stream`|String|The RabbitMQ super stream to read.|yes|
-|`inputFormat`|Object|[`inputFormat`](data-formats.md#input-format) to specify how to parse input data. See [Specifying data format](data-formats.md#input-format) for details about specifying the input format.|yes|
+|`inputFormat`|Object|The input format to specify how to parse input data. See [`inputFormat`](../../ingestion/data-formats.md#input-format) for details.|yes|
 |`uri`|String|The URI to connect to RabbitMQ with. |yes |
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. |no (default == 1)|
@@ -203,21 +204,21 @@ For Concise bitmaps:
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|`type`|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
+|`type`|String|See [Additional Peon configuration: SegmentWriteOutMediumFactory](../../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
 
 
 ## Operations
 
 This section describes how some supervisor APIs work in the Rabbit Stream Indexing Service.
-For all supervisor APIs, check [Supervisor APIs](../api-reference/supervisor-api.md).
+For all supervisor APIs, check [Supervisor APIs](../../api-reference/supervisor-api.md).
 
-### RabbitMQ Authentication
+### RabbitMQ authentication
 
 To authenticate with RabbitMQ securely, you must provide a username and password, as well as configure
 a certificate if you aren't using a standard certificate provider.
 
-In order to configure these, use the dynamic configuration provider of the ioConfig
+In order to configure these, use the dynamic configuration provider of the ioConfig:
 ```
   "ioConfig": {
     "type": "rabbit",
