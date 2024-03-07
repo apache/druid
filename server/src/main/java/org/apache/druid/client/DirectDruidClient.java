@@ -455,22 +455,29 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
       }
 
-      future = httpClient.go(
-          new Request(
-              HttpMethod.POST,
-              new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
-           .setHeader(
-               HttpHeaders.Names.CONTENT_TYPE,
-               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           ),
-          responseHandler,
-          Duration.millis(timeLeft)
-      );
+      // increment is moved up so that if future initialization is queued by some other process,
+      // we can increment the count earlier so that we can route the request to a different server
+      openConnections.getAndIncrement();
+      try {
+        future = httpClient.go(
+            new Request(
+                HttpMethod.POST,
+                new URL(url)
+            ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+             .setHeader(
+                 HttpHeaders.Names.CONTENT_TYPE,
+                 isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+             ),
+            responseHandler,
+            Duration.millis(timeLeft)
+        );
+      }
+      catch (Exception e) {
+        openConnections.getAndDecrement();
+        throw e;
+      }
 
       queryWatcher.registerQueryFuture(query, future);
-
-      openConnections.getAndIncrement();
       Futures.addCallback(
           future,
           new FutureCallback<InputStream>()

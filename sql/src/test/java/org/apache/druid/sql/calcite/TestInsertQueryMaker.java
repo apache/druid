@@ -55,7 +55,7 @@ public class TestInsertQueryMaker implements QueryMaker
 
     // 2) Return the dataSource and signature of the insert operation, so tests can confirm they are correct.
     return QueryResponse.withEmptyContext(
-        Sequences.simple(ImmutableList.of(new Object[]{destination.getType(), signature}))
+        Sequences.simple(ImmutableList.of(new Object[]{destination.getDestinationName(), signature}))
     );
   }
 }

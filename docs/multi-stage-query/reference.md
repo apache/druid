@@ -106,7 +106,8 @@ Keep the following in mind when using EXTERN to export rows:
 - You can export to Amazon S3 or local storage.
 - The destination provided should contain no other files or directories.
 
-When you export data, use the `rowsPerPage` context parameter to control how many rows get exported. The default is 100,000.
+When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
+When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
 
 ```sql
 INSERT INTO

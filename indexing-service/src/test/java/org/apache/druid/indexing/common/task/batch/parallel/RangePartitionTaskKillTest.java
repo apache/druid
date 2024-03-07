@@ -211,7 +211,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     Assert.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
-
+    task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
     Assert.assertTrue(taskStatus.isFailure());
@@ -243,7 +243,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         int succedsBeforeFailing
     )
     {
-      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
+      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context, false);
       this.failInPhase = succedsBeforeFailing;
     }
 

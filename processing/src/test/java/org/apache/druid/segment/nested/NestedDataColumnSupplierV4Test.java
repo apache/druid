@@ -51,6 +51,7 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -223,7 +224,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     bob.setFileMapper(fileMapper);
     ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.createDeserializer(NestedDataComplexTypeSerde.TYPE_NAME);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(baseBuffer, bob, NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES);
+    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE);
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
@@ -245,7 +246,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
         baseBuffer,
         bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES,
+        ColumnConfig.SELECTION_SIZE,
         NestedDataComplexTypeSerde.OBJECT_MAPPER
     );
     final String expectedReason = "none";
