@@ -98,28 +98,28 @@ public class WorkerTaskCountStatsMonitorTest
       @Override
       public Map<String, Long> getWorkerRunningTasks()
       {
-        Map <String, Long> datasourceTaskCountMap = new HashMap<>();
-        datasourceTaskCountMap.put("dummyDS1", 2L);
-        datasourceTaskCountMap.put("dummyDS2", 3L);
-        return datasourceTaskCountMap;
+        return ImmutableMap.of(
+            "wikipedia", 2L,
+            "animals", 3L
+        );
       }
 
       @Override
       public Map<String, Long> getWorkerAssignedTasks()
       {
-        Map <String, Long> datasourceTaskCountMap = new HashMap<>();
-        datasourceTaskCountMap.put("dummyDS3", 3L);
-        datasourceTaskCountMap.put("dummyDS4", 7L);
-        return datasourceTaskCountMap;
+        return ImmutableMap.of(
+            "products", 3L,
+            "orders", 7L
+        );
       }
 
       @Override
       public Map<String, Long> getWorkerCompletedTasks()
       {
-        Map <String, Long> datasourceTaskCountMap = new HashMap<>();
-        datasourceTaskCountMap.put("dummyDS5", 8L);
-        datasourceTaskCountMap.put("dummyDS6", 9L);
-        return datasourceTaskCountMap;
+        return ImmutableMap.of(
+            "inventory", 8L,
+            "metrics", 9L
+        );
       }
     };
 
@@ -243,32 +243,32 @@ public class WorkerTaskCountStatsMonitorTest
     Assert.assertEquals(6, emitter.getEvents().size());
     emitter.verifyValue(
         "worker/task/running/count",
-        ImmutableMap.of("dataSource", "dummyDS1"),
+        ImmutableMap.of("dataSource", "wikipedia"),
         2L
     );
     emitter.verifyValue(
         "worker/task/running/count",
-        ImmutableMap.of("dataSource", "dummyDS2"),
+        ImmutableMap.of("dataSource", "animals"),
         3L
     );
     emitter.verifyValue(
         "worker/task/assigned/count",
-        ImmutableMap.of("dataSource", "dummyDS3"),
+        ImmutableMap.of("dataSource", "products"),
         3L
     );
     emitter.verifyValue(
         "worker/task/assigned/count",
-        ImmutableMap.of("dataSource", "dummyDS4"),
+        ImmutableMap.of("dataSource", "orders"),
         7L
     );
     emitter.verifyValue(
         "worker/task/completed/count",
-        ImmutableMap.of("dataSource", "dummyDS5"),
+        ImmutableMap.of("dataSource", "inventory"),
         8L
     );
     emitter.verifyValue(
         "worker/task/completed/count",
-        ImmutableMap.of("dataSource", "dummyDS6"),
+        ImmutableMap.of("dataSource", "metrics"),
         9L
     );
   }

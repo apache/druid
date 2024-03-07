@@ -38,10 +38,6 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
   private final String workerCategory;
   private final String workerVersion;
   private final boolean isMiddleManager;
-  private final boolean isIndexer;
-  private static final String WORKER_RUNNING_TASK_COUNT_METRICS = "worker/task/running/count";
-  private static final String WORKER_ASSIGNED_TASK_COUNT_METRIC = "worker/task/assigned/count";
-  private static final String WORKER_COMPLETED_TASK_COUNT_METRIC = "worker/task/completed/count";
 
   @Inject
   public WorkerTaskCountStatsMonitor(
@@ -50,20 +46,14 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
   )
   {
     this.isMiddleManager = nodeRoles.contains(NodeRole.MIDDLE_MANAGER);
-    this.isIndexer = nodeRoles.contains(NodeRole.INDEXER);
     if (isMiddleManager) {
       this.statsProvider = injector.getInstance(WorkerTaskCountStatsProvider.class);
       this.indexerStatsProvider = null;
       this.workerCategory = statsProvider.getWorkerCategory();
       this.workerVersion = statsProvider.getWorkerVersion();
-    } else if (isIndexer){
+    } else {
       this.indexerStatsProvider = injector.getInstance(IndexerTaskCountStatsProvider.class);
       this.statsProvider = null;
-      this.workerCategory = null;
-      this.workerVersion = null;
-    } else {
-      this.statsProvider = null;
-      this.indexerStatsProvider = null;
       this.workerCategory = null;
       this.workerVersion = null;
     }
@@ -78,10 +68,10 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       emit(emitter, "worker/taskSlot/idle/count", statsProvider.getWorkerIdleTaskSlotCount());
       emit(emitter, "worker/taskSlot/total/count", statsProvider.getWorkerTotalTaskSlotCount());
       emit(emitter, "worker/taskSlot/used/count", statsProvider.getWorkerUsedTaskSlotCount());
-    } else if (isIndexer) {
-        emit(emitter, WORKER_RUNNING_TASK_COUNT_METRICS, indexerStatsProvider.getWorkerRunningTasks());
-        emit(emitter, WORKER_ASSIGNED_TASK_COUNT_METRIC, indexerStatsProvider.getWorkerAssignedTasks());
-        emit(emitter, WORKER_COMPLETED_TASK_COUNT_METRIC, indexerStatsProvider.getWorkerCompletedTasks());
+    } else {
+        emit(emitter, "worker/task/running/count", indexerStatsProvider.getWorkerRunningTasks());
+        emit(emitter, "worker/task/assigned/count", indexerStatsProvider.getWorkerAssignedTasks());
+        emit(emitter, "worker/task/completed/count", indexerStatsProvider.getWorkerCompletedTasks());
     }
     return true;
   }

@@ -186,16 +186,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     return completedTasks;
   }
 
-  public Map<String, Task> getRunningTasks()
-  {
-    return CollectionUtils.mapValues(runningTasks, detail -> detail.task);
-  }
-
-  public Map<String, Task> getAssignedTasks()
-  {
-    return assignedTasks;
-  }
-
   private void submitNoticeToExec(Notice notice)
   {
     exec.execute(
@@ -626,27 +616,24 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 
   private <T> Map<String, Long> getNumTasksPerDatasource(Collection<T> taskList, Function<T, String> getDataSourceFunc)
   {
-    String dataSource;
-    final Map<String, Long> dataSourceTaskMap = new HashMap<>();
+    final Map<String, Long> dataSourceToTaskCount = new HashMap<>();
 
     for (T task : taskList) {
-      dataSource = getDataSourceFunc.apply(task);
-      dataSourceTaskMap.putIfAbsent(dataSource, 0L);
-      dataSourceTaskMap.put(dataSource, dataSourceTaskMap.get(dataSource) + 1L);
+      dataSourceToTaskCount.merge(getDataSourceFunc.apply(task), 1L, Long::sum);
     }
-    return dataSourceTaskMap;
+    return dataSourceToTaskCount;
   }
 
   @Override
   public Map<String, Long> getWorkerRunningTasks()
   {
-    return getNumTasksPerDatasource(this.getRunningTasks().values(), Task::getDataSource);
+    return getNumTasksPerDatasource(CollectionUtils.mapValues(runningTasks, detail -> detail.task).values(), Task::getDataSource);
   }
 
   @Override
   public Map<String, Long> getWorkerAssignedTasks()
   {
-    return getNumTasksPerDatasource(this.getAssignedTasks().values(), Task::getDataSource);
+    return getNumTasksPerDatasource(assignedTasks.values(), Task::getDataSource);
   }
 
   @Override
