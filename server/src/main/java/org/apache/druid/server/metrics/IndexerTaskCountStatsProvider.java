@@ -22,7 +22,7 @@ package org.apache.druid.server.metrics;
 import java.util.Map;
 
 /**
- * Proides task count metrics for the indexers
+ * Provides task count metrics for the indexers
  * These metrics are reported by indexers
  */
 public interface IndexerTaskCountStatsProvider
