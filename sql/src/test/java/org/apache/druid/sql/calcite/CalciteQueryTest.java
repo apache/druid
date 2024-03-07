@@ -2810,7 +2810,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2895,7 +2894,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -4861,7 +4859,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4893,7 +4890,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4937,7 +4933,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
@@ -5777,7 +5772,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
   {
@@ -6923,7 +6917,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGG_COL_EXCHANGE)
   @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators()
   {
@@ -6978,7 +6972,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGG_COL_EXCHANGE)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
@@ -10504,7 +10498,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.IMPROVED_PLAN)
   @Test
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
@@ -12138,7 +12132,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testRequireTimeConditionPositive()
   {
@@ -12167,7 +12160,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{3L, timestamp("2001-01-01")}
         )
     );
+  }
 
+  @Test
+  public void testRequireTimeConditionPositive2()
+  {
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
@@ -12210,7 +12207,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{6L, 4L}
         )
     );
+  }
 
+  // __time >= x remains in the join condition
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
+  @Test
+  public void testRequireTimeConditionPositive3()
+  {
     // Cannot vectorize next test due to extraction dimension spec.
     cannotVectorize();
 
@@ -12344,7 +12347,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertTrue(exception.getMessage().contains("__time column"));
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION2)
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
@@ -14619,7 +14621,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
@@ -14662,7 +14663,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
@@ -15097,7 +15097,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-
   @Test
   public void testScanAndSortCanGetSchemaFromScanQuery()
   {
@@ -15115,7 +15114,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .expectedResults(expectedResults)
         .run();
   }
-
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
   @Test
@@ -15220,7 +15218,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWindowingWithOrderBy()
   {
-    skipVectorize();
     msqIncompatible();
     testBuilder()
         .sql(
@@ -15276,6 +15273,76 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 new Object[] {978307200000L, 1L, 4L},
                 new Object[] {978393600000L, 1L, 5L},
                 new Object[] {978480000000L, 1L, 6L}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testScanAndSortOnJoin()
+  {
+    msqIncompatible();
+    testBuilder()
+        .sql("with "
+            + "main as "
+            + "(select dim1 as pickup,count(*) as cnt from foo group by 1 order by 2 desc limit 200),"
+            + "compare0 as "
+            + "(select dim1 as pickup,count(*) as cnt from numfoo group by 1 order by 2 desc limit 200) "
+            + "SELECT "
+            + " main.pickup,"
+            + " main.cnt,"
+            + " coalesce(compare0.cnt,0) as prevCount,"
+            + " safe_divide(100.0 * (main.cnt - compare0.cnt), compare0.cnt) as delta "
+            + "from main "
+            + "left join compare0 on main.pickup is not distinct from compare0.pickup "
+            + "order by delta desc"
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1L, 1L, 0.0D},
+                new Object[] {"1", 1L, 1L, 0.0D},
+                new Object[] {"10.1", 1L, 1L, 0.0D},
+                new Object[] {"2", 1L, 1L, 0.0D},
+                new Object[] {"abc", 1L, 1L, 0.0D},
+                new Object[] {"def", 1L, 1L, 0.0D}
+            )
+        )
+        .run();
+  }
+
+  @NotYetSupported(Modes.WINDOW_OPERATOR_QUERY_ON_UNSUPPORTED_DATASOURCE)
+  @Test
+  public void testWindowingOverJoin()
+  {
+    msqIncompatible();
+    testBuilder()
+        .sql("with "
+            + "main as "
+            + "(select dim1 as pickup,count(*) as cnt from foo group by 1 order by 2 desc limit 200),"
+            + "compare0 as "
+            + "(select dim1 as pickup,count(*) as cnt from numfoo group by 1 order by 2 desc limit 200) "
+            + "SELECT "
+            + " main.pickup,"
+            + " main.cnt,"
+            + " compare0.cnt,"
+            + " SUM(main.cnt) OVER (ORDER BY main.pickup)"
+            + "from main "
+            + "left join compare0 on main.pickup is not distinct from compare0.pickup "
+        )
+        .queryContext(
+            ImmutableMap.of(
+                PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+                QueryContexts.ENABLE_DEBUG, true
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"", 1L, 1L, 1L},
+                new Object[]{"1", 1L, 1L, 2L},
+                new Object[]{"10.1", 1L, 1L, 3L},
+                new Object[]{"2", 1L, 1L, 4L},
+                new Object[]{"abc", 1L, 1L, 5L},
+                new Object[]{"def", 1L, 1L, 6L}
             )
         )
         .run();

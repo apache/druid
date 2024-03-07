@@ -701,7 +701,15 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
           ImmutableList.of()
       );
     });
-    assertTrue(exception.getMessage().contains("Subquery generated results beyond maximum[1]"));
+    assertTrue(
+        exception.getMessage().contains(
+            "Cannot issue the query, subqueries generated results beyond maximum[1] rows. Try setting the "
+                + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
+                + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
+                + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to "
+                + "go out of memory."
+        )
+    );
   }
 
   private void testMaxSubQueryRowsWithLimit()

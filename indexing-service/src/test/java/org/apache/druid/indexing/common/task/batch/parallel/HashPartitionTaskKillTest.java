@@ -202,7 +202,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     Assert.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
-
+    task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runHashPartitionMultiPhaseParallel(toolbox);
 
     Assert.assertTrue(taskStatus.isFailure());
