@@ -57,8 +57,8 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   private static final long TIME_NOW = 2L;
   private static final long TIME_FUTURE = 3L;
   private static final int MAX_KEYS = 1;
-  private static final Exception RECOVERABLE_EXCEPTION = new StorageException(429, "non-recoverable");
-  private static final Exception NON_RECOVERABLE_EXCEPTION = new StorageException(404, "recoverable");
+  private static final Exception RECOVERABLE_EXCEPTION = new StorageException(429, "recoverable");
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new StorageException(404, "non-recoverable");
 
   private GoogleStorage storage;
   private GoogleTaskLogs googleTaskLogs;
