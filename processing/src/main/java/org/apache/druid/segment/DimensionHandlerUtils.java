@@ -25,6 +25,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -413,9 +414,12 @@ public final class DimensionHandlerUtils
           case DOUBLE:
             return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
         }
-
+      case COMPLEX:
+        // Can't coerce complex objects, and we shouldn't need to. If in future selectors behave weirdly, or we need to
+        // cast them (for some unknown reason), we can have that casting knowledge in the type strategy
+        return obj;
       default:
-        throw new IAE("Type[%s] is not supported for dimensions!", type);
+        throw DruidException.defensive("Type[%s] is not supported for dimensions!", type);
     }
   }
 

@@ -486,14 +486,14 @@ public class DruidQuery
 
       final RelDataType dataType = rexNode.getType();
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
-      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
-        // Can't group on unknown or COMPLEX types.
-        plannerContext.setPlanningError(
-            "SQL requires a group-by on a column of type %s that is unsupported.",
-            outputType
-        );
-        throw new CannotBuildQueryException(aggregate, rexNode);
-      }
+//      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
+//        // Can't group on unknown or COMPLEX types.
+//        plannerContext.setPlanningError(
+//            "SQL requires a group-by on a column of type %s that is unsupported.",
+//            outputType
+//        );
+//        throw new CannotBuildQueryException(aggregate, rexNode);
+//      }
 
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {

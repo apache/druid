@@ -110,6 +110,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build(),
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
+                  .put("string", "bbb")
+                  .put("long", 4L)
+                  .put("nester", "hello")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2000-01-01")
                   .put("string", "ccc")
                   .put("string_sparse", "10")
                   .put("nest", ImmutableMap.of("x", 200L, "y", 3.03, "z", "abcdef", "mixed", 1.1, "mixed2", 1L))
@@ -535,6 +541,16 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$0", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
+    );
+  }
+
+  @Test
+  public void testGroupByNested()
+  {
+    testQuery(
+        "SELECT nester, COUNT(*) FROM druid.nested GROUP BY 1",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 

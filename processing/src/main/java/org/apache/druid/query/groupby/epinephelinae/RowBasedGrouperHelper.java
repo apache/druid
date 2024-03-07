@@ -89,8 +89,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -1190,6 +1192,10 @@ public class RowBasedGrouperHelper
     private final List<Object[]> doubleArrayDictionary;
     private final Object2IntMap<Object[]> reverseDoubleArrayDictionary;
 
+    // We can probably use same dictionary for all the complex types, if all of them are done using hash mapping
+    private final Map<String, List<Object>> complexTypeDictionaries = new HashMap<>();
+    private final Map<String, Object2IntMap<Object>> complexTypeReverseDictionaries = new HashMap<>();
+
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -1435,6 +1441,12 @@ public class RowBasedGrouperHelper
     )
     {
       switch (valueType.getType()) {
+        case COMPLEX:
+          if (stringComparator != null
+              && !DimensionComparisonUtils.isNaturalComparator(valueType.getType(), stringComparator)) {
+            throw DruidException.defensive("Unexpected string comparator supplied");
+          }
+          return new ComplexRowBasedKeySerdeHelper(keyBufferPosition, valueType);
         case ARRAY:
           switch (valueType.getElementType().getType()) {
             case STRING:
@@ -1520,6 +1532,73 @@ public class RowBasedGrouperHelper
           return new DoubleRowBasedKeySerdeHelper(keyBufferPosition, pushLimitDown, stringComparator);
         default:
           throw new IAE("invalid type: %s", valueType);
+      }
+    }
+
+    private class ComplexRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      final int keyBufferPosition;
+      final BufferComparator bufferComparator;
+      final ColumnType complexType;
+      final String complexTypeName;
+
+      final List<Object> complexTypeDictionary;
+      final Object2IntMap<Object> complexTypeReverseDictionary;
+
+      public ComplexRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          ColumnType complexType
+      )
+      {
+        this.keyBufferPosition = keyBufferPosition;
+        this.complexType = complexType;
+        this.complexTypeName = Preconditions.checkNotNull(complexType.getComplexTypeName(), "complex type name expected");
+        this.complexTypeDictionary = complexTypeDictionaries.computeIfAbsent(
+            complexTypeName,
+            ignored -> DictionaryBuilding.createDictionary()
+        );
+        this.complexTypeReverseDictionary = complexTypeReverseDictionaries.computeIfAbsent(
+            complexTypeName,
+            ignored -> DictionaryBuilding.createTreeSortedReverseDictionary(complexType.getNullableStrategy())
+        );
+        this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
+            complexType.getNullableStrategy().compare(
+                complexTypeDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                complexTypeDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+            );
+
+      };
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Integer.BYTES;
+      }
+
+      @Override
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
+      {
+        final Object obj = key.getKey()[idx];
+        int id = complexTypeReverseDictionary.getInt(obj);
+        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
+          id = complexTypeDictionary.size();
+          complexTypeReverseDictionary.put(obj, id);
+          complexTypeDictionary.add(obj);
+        }
+        keyBuffer.putInt(id);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
+      {
+        dimValues[dimValIdx] = complexTypeDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
+      }
+
+      @Override
+      public BufferComparator getBufferComparator()
+      {
+        return bufferComparator;
       }
     }
 
