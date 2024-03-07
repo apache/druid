@@ -1462,7 +1462,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Collection<DataSegment> overlappingSegments = retrieveUsedSegmentsForIntervals(
         dataSource,
         new ArrayList<>(appendIntervals),
-        null, Segments.INCLUDING_OVERSHADOWED
+        null,
+        Segments.INCLUDING_OVERSHADOWED
     );
 
     final Map<String, Set<Interval>> overlappingVersionToIntervals = new HashMap<>();

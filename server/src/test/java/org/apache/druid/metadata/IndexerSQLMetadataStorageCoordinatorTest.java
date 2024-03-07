@@ -1106,6 +1106,130 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testRetrieveUsedSegmentsOnlyVisibleWithVersion() throws IOException
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final DataSegment segment1 = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        now.toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment2 = createSegment(
+        Intervals.of("2023-01-02/2023-01-03"),
+        now.plusDays(2).toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment3 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        now.plusDays(3).toString(),
+        new LinearShardSpec(0)
+    );
+
+    final ImmutableSet<DataSegment> usedSegments = ImmutableSet.of(segment1, segment2, segment3);
+    Assert.assertEquals(usedSegments, coordinator.commitSegments(usedSegments));
+
+    for (DataSegment usedSegment : usedSegments) {
+      Assertions.assertThat(
+          coordinator.retrieveUsedSegmentsForIntervals(
+              DS.WIKI,
+              ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+              usedSegment.getVersion(),
+              Segments.ONLY_VISIBLE
+          )
+      ).contains(usedSegment);
+    }
+
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            DS.WIKI,
+            ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+            null,
+            Segments.ONLY_VISIBLE
+        )
+    ).containsAll(usedSegments);
+
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            DS.WIKI,
+            ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+            "some-non-existent-version",
+            Segments.ONLY_VISIBLE
+        )
+    ).containsAll(ImmutableList.of());
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsIncludingOvershadowedWithVersion() throws IOException
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final DataSegment segment1 = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        now.toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment2 = createSegment(
+        Intervals.of("2023-01-02/2023-01-03"),
+        now.plusDays(2).toString(),
+        new LinearShardSpec(0)
+    );
+
+    // segment3 and segment4 are in the same interval. However, segment4 should overshadow segment3
+    // as segment4 contains a higher version than segment3.
+    final DataSegment segment3 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        now.plusDays(3).toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment4 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        now.plusDays(4).toString(),
+        new LinearShardSpec(0)
+    );
+
+    final ImmutableSet<DataSegment> allSegments = ImmutableSet.of(segment1, segment2, segment3, segment4);
+    Assert.assertEquals(allSegments, coordinator.commitSegments(ImmutableSet.of(segment1, segment2, segment3, segment4)));
+    final ImmutableSet<DataSegment> usedSegments = ImmutableSet.of(segment1, segment2, segment4);
+
+    for (DataSegment usedSegment : usedSegments) {
+      Assertions.assertThat(
+          coordinator.retrieveUsedSegmentsForIntervals(
+              DS.WIKI,
+              ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+              usedSegment.getVersion(),
+              Segments.INCLUDING_OVERSHADOWED
+          )
+      ).contains(usedSegment);
+    }
+
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            DS.WIKI,
+            ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+            segment3.getVersion(),
+            Segments.INCLUDING_OVERSHADOWED
+        )
+    ).containsAll(ImmutableList.of());
+
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            DS.WIKI,
+            ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+            null,
+            Segments.INCLUDING_OVERSHADOWED
+        )
+    ).containsAll(usedSegments);
+
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            DS.WIKI,
+            ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
+            "some-non-existent-version",
+            Segments.INCLUDING_OVERSHADOWED
+        )
+    ).containsAll(ImmutableList.of());
+  }
+
+  @Test
   public void testRetrieveUsedSegmentsUsingMultipleIntervals() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
@@ -1203,6 +1327,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         DS.WIKI,
         Intervals.of("1900/3000"),
         null,
+        requestedLimit,
+        null
+    );
+
+    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalVersionAndLimitInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
+
+    final int requestedLimit = 10;
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        Intervals.of("1900/3000"),
+        "version",
         requestedLimit,
         null
     );
@@ -1690,6 +1833,68 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             )
         )
     );
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithVersion() throws IOException
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final DataSegment segment1 = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        now.toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment2 = createSegment(
+        Intervals.of("2023-01-02/2023-01-03"),
+        now.plusDays(2).toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment3 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        now.plusDays(3).toString(),
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment4 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        now.plusDays(4).toString(),
+        new LinearShardSpec(0)
+    );
+
+    final ImmutableSet<DataSegment> unusedSegments = ImmutableSet.of(segment1, segment2, segment3, segment4);
+    Assert.assertEquals(unusedSegments, coordinator.commitSegments(unusedSegments));
+    markAllSegmentsUnused(unusedSegments, DateTimes.nowUtc());
+
+    for (DataSegment unusedSegment : unusedSegments) {
+      Assertions.assertThat(
+          coordinator.retrieveUnusedSegmentsForInterval(
+              DS.WIKI,
+              Intervals.of("2023-01-01/2023-01-04"),
+              unusedSegment.getVersion(),
+              null,
+              null
+          )
+      ).contains(unusedSegment);
+    }
+
+    Assertions.assertThat(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            DS.WIKI,
+            Intervals.of("2023-01-01/2023-01-04"),
+            null,
+            null,
+            null
+        )
+    ).containsAll(unusedSegments);
+
+    Assertions.assertThat(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            DS.WIKI,
+            Intervals.of("2023-01-01/2023-01-04"),
+            "some-non-existent-version",
+              null,
+              null
+          )
+    ).containsAll(ImmutableSet.of());
   }
 
   @Test
