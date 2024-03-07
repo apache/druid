@@ -293,7 +293,7 @@ public class SqlSegmentsMetadataManagerTest
   public void testPrepareImmutableDataSourceWithUsedSegmentsAwaitsPollOnRestart() throws IOException
   {
     publishWikiSegments();
-    DataSegment koalaSegment = pollThenStopThenStartIntro();
+    DataSegment koalaSegment = pollThenStopThenPublishKoalaSegment();
     Assert.assertEquals(
         ImmutableSet.of(koalaSegment),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA).getSegments())
@@ -304,7 +304,7 @@ public class SqlSegmentsMetadataManagerTest
   public void testGetDataSourceWithUsedSegmentsAwaitsPollOnRestart() throws IOException
   {
     publishWikiSegments();
-    DataSegment koalaSegment = pollThenStopThenStartIntro();
+    DataSegment koalaSegment = pollThenStopThenPublishKoalaSegment();
     Assert.assertEquals(
         ImmutableSet.of(koalaSegment),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA).getSegments())
@@ -315,7 +315,7 @@ public class SqlSegmentsMetadataManagerTest
   public void testPrepareImmutableDataSourcesWithAllUsedSegmentsAwaitsPollOnRestart() throws IOException
   {
     publishWikiSegments();
-    DataSegment koalaSegment = pollThenStopThenStartIntro();
+    DataSegment koalaSegment = pollThenStopThenPublishKoalaSegment();
     Assert.assertEquals(
         ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment),
         ImmutableSet.copyOf(
@@ -332,14 +332,14 @@ public class SqlSegmentsMetadataManagerTest
   public void testIterateAllUsedSegmentsAwaitsPollOnRestart() throws IOException
   {
     publishWikiSegments();
-    DataSegment koalaSegment = pollThenStopThenStartIntro();
+    DataSegment koalaSegment = pollThenStopThenPublishKoalaSegment();
     Assert.assertEquals(
         ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
   }
 
-  private DataSegment pollThenStopThenStartIntro() throws IOException
+  private DataSegment pollThenStopThenPublishKoalaSegment() throws IOException
   {
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     sqlSegmentsMetadataManager.poll();
@@ -518,10 +518,8 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertNotNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA));
 
     Assert.assertTrue(sqlSegmentsMetadataManager.markSegmentAsUnused(koalaSegment.getId()));
-    final Stopwatch stopwatch = Stopwatch.createStarted();
     awaitDataSourceDisappeared(DS.KOALA);
     Assert.assertNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA));
-    System.out.println("Total time:" + stopwatch.millisElapsed());
   }
 
   private void awaitDataSourceAppeared(String datasource) throws InterruptedException
