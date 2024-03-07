@@ -129,11 +129,11 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 Window frames, set in ROWS and RANGE expressions, limit the set of rows used for the windowed aggregation.
 
 ROWS and RANGE accept the following values for `range start` and `range end`:
-- UNBOUND PRECEDING: from the beginning of the window as ordered by the order expression
+- UNBOUNDED PRECEDING: from the beginning of the window as ordered by the order expression
 - _N_ ROWS PRECEDING: _N_ rows before the current row as ordered by the order expression
 - CURRENT ROW: the current row
 - _N_ ROWS FOLLOWING: _N_ rows after the current row as ordered by the order expression
-- _UNBOUNDED FOLLOWING_: to the end of the window as ordered by the order expression
+- UNBOUNDED FOLLOWING: to the end of the window as ordered by the order expression
 
 See [Example with window frames](#example-with-window-frames) for more detail.
  
@@ -168,24 +168,24 @@ ORDER BY 5
 <details>
 <summary> View results </summary>
 
-| time_hour | channel | user | net_user_changes | editing_rank |
+| `time_hour` | `channel` | `user` | `net_user_changes` | `editing_rank` |
 | --- | --- | --- | --- | --- |
-| 2016-06-27T15:00:00.000Z | #kk.wikipedia | Nurkhan | 6900| 1 |
-| 2016-06-27T19:00:00.000Z | #lt.wikipedia | 77.221.66.41 | 4358 | 2 |
-| 2016-06-27T09:00:00.000Z | #kk.wikipedia | Салиха | 2702 | 3 |
-| 2016-06-27T04:00:00.000Z |#kk.wikipedia | Nurkhan | 2440 | 4 |
-| 2016-06-27T09:00:00.000Z |#lt.wikipedia | 80.4.147.222 | 894 | 5 |
-| 2016-06-27T09:00:00.000Z |#lt.wikipedia | 178.11.203.212 | 447 | 6 |
-| 2016-06-27T11:00:00.000Z |#kk.wikipedia | Нұрлан Рахымжанов | 126 | 7 |
-| 2016-06-27T06:00:00.000Z |#kk.wikipedia | Шокай | 91 | 8 |
-| 2016-06-27T11:00:00.000Z |#lt.wikipedia | MaryroseB54 | 59 | 9 |
-| 2016-06-27T04:00:00.000Z |#kk.wikipedia | Нұрлан Рахымжанов | 56 | 10 |
-| 2016-06-27T12:00:00.000Z |#lt.wikipedia | Karoliuk | 53 | 11 |
-| 2016-06-27T12:00:00.000Z |#lt.wikipedia | Powermelon | 28 | 12 |
-| 2016-06-27T07:00:00.000Z |#lt.wikipedia | Powermelon | 13 | 13 |
-| 2016-06-27T10:00:00.000Z |#lt.wikipedia | 80.4.147.222 | 1 | 14 |
-| 2016-06-27T07:00:00.000Z |#kk.wikipedia | Салиха | -1 | 15 |
-| 2016-06-27T06:00:00.000Z |#lt.wikipedia | Powermelon | -2 | 16 |
+| `2016-06-27T15:00:00.000Z` | `#kk.wikipedia` | `Nurkhan` | 6900| 1 |
+| `2016-06-27T19:00:00.000Z` | `#lt.wikipedia` | `77.221.66.41` | 4358 | 2 |
+| `2016-06-27T09:00:00.000Z` | `#kk.wikipedia` | `Салиха` | 2702 | 3 |
+| `2016-06-27T04:00:00.000Z` | `#kk.wikipedia` | `Nurkhan` | 2440 | 4 |
+| `2016-06-27T09:00:00.000Z` | `#lt.wikipedia` | `80.4.147.222` | 894 | 5 |
+| `2016-06-27T09:00:00.000Z` | `#lt.wikipedia` | `178.11.203.212` | 447 | 6 |
+| `2016-06-27T11:00:00.000Z` | `#kk.wikipedia` | `Нұрлан Рахымжанов` | 126 | 7 |
+| `2016-06-27T06:00:00.000Z` | `#kk.wikipedia` | `Шокай` | 91 | 8 |
+| `2016-06-27T11:00:00.000Z` | `#lt.wikipedia` | `MaryroseB54` | 59 | 9 |
+| `2016-06-27T04:00:00.000Z` | `#kk.wikipedia` | `Нұрлан Рахымжанов` | 56 | 10 |
+| `2016-06-27T12:00:00.000Z` | `#lt.wikipedia` | `Karoliuk` | 53 | 11 |
+| `2016-06-27T12:00:00.000Z` | `#lt.wikipedia` | `Powermelon` | 28 | 12 |
+| `2016-06-27T07:00:00.000Z` | `#lt.wikipedia` | `Powermelon` | 13 | 13 |
+| `2016-06-27T10:00:00.000Z` | `#lt.wikipedia` | `80.4.147.222` | 1 | 14 |
+| `2016-06-27T07:00:00.000Z` | `#kk.wikipedia` | `Салиха` | -1 | 15 |
+| `2016-06-27T06:00:00.000Z` | `#lt.wikipedia` | `Powermelon` | -2 | 16 |
 </details>
 
 ### PARTITION BY windows
@@ -212,24 +212,24 @@ ORDER BY channel, TIME_FLOOR(__time, 'PT1H'), user
 <details>
 <summary> View results </summary>
 
-| time_hour | channel | user | hourly_user_changes | total_user_changes | total_channel_changes |
+| `time_hour` | `channel` | `user` | `hourly_user_changes` | `total_user_changes` | `total_channel_changes` |
 | --- | ---| ---| --- | --- | --- |
-| 2016-06-27T04:00:00.000Z | #kk.wikipedia | Nurkhan | 2440 | 9340 | 12314 |
-| 2016-06-27T04:00:00.000Z | #kk.wikipedia | Нұрлан Рахымжанов | 56 | 182 | 12314 |
-| 2016-06-27T06:00:00.000Z | #kk.wikipedia | Шокай | 91 | 91 | 12314 |
-| 2016-06-27T07:00:00.000Z | #kk.wikipedia | Салиха | -1 | 2701 | 12314 |
-| 2016-06-27T09:00:00.000Z | #kk.wikipedia | Салиха | 2702 | 2701 | 12314 |
-| 2016-06-27T11:00:00.000Z | #kk.wikipedia | Нұрлан Рахымжанов | 126 | 182 | 12314 |
-| 2016-06-27T15:00:00.000Z | #kk.wikipedia | Nurkhan | 6900 | 9340 | 12314 |
-| 2016-06-27T06:00:00.000Z | #lt.wikipedia | Powermelon | -2 | 39 | 5851 |
-| 2016-06-27T07:00:00.000Z | #lt.wikipedia | Powermelon | 13 | 39 | 5851 |
-| 2016-06-27T09:00:00.000Z | #lt.wikipedia | 178.11.203.212 | 447 | 447 | 5851 |
-| 2016-06-27T09:00:00.000Z | #lt.wikipedia | 80.4.147.222 | 894 | 895 | 5851 |
-| 2016-06-27T10:00:00.000Z | #lt.wikipedia | 80.4.147.222 | 1 | 895 | 5851 |
-| 2016-06-27T11:00:00.000Z | #lt.wikipedia | MaryroseB54 | 59 | 59 | 5851 |
-| 2016-06-27T12:00:00.000Z | #lt.wikipedia | Karoliuk | 53 | 53 | 5851 |
-| 2016-06-27T12:00:00.000Z | #lt.wikipedia | Powermelon | 28 | 39 | 5851 |
-| 2016-06-27T19:00:00.000Z | #lt.wikipedia | 77.221.66.41 | 4358 | 4358 | 5851 |
+| `2016-06-27T04:00:00.000Z` | `#kk.wikipedia` | `Nurkhan` | 2440 | 9340 | 12314 |
+| `2016-06-27T04:00:00.000Z` | `#kk.wikipedia` | `Нұрлан Рахымжанов` | 56 | 182 | 12314 |
+| `2016-06-27T06:00:00.000Z` | `#kk.wikipedia` | `Шокай` | 91 | 91 | 12314 |
+| `2016-06-27T07:00:00.000Z` | `#kk.wikipedia` | `Салиха` | -1 | 2701 | 12314 |
+| `2016-06-27T09:00:00.000Z` | `#kk.wikipedia` | `Салиха` | 2702 | 2701 | 12314 |
+| `2016-06-27T11:00:00.000Z` | `#kk.wikipedia` | `Нұрлан Рахымжанов` | 126 | 182 | 12314 |
+| `2016-06-27T15:00:00.000Z` | `#kk.wikipedia` | `Nurkhan` | 6900 | 9340 | 12314 |
+| `2016-06-27T06:00:00.000Z` | `#lt.wikipedia` | `Powermelon` | -2 | 39 | 5851 |
+| `2016-06-27T07:00:00.000Z` | `#lt.wikipedia` | `Powermelon` | 13 | 39 | 5851 |
+| `2016-06-27T09:00:00.000Z` | `#lt.wikipedia` | `178.11.203.212` | 447 | 447 | 5851 |
+| `2016-06-27T09:00:00.000Z` | `#lt.wikipedia` | `80.4.147.222` | 894 | 895 | 5851 |
+| `2016-06-27T10:00:00.000Z` | `#lt.wikipedia` | `80.4.147.222` | 1 | 895 | 5851 |
+| `2016-06-27T11:00:00.000Z` | `#lt.wikipedia` | `MaryroseB54` | 59 | 59 | 5851 |
+| `2016-06-27T12:00:00.000Z` | `#lt.wikipedia` | `Karoliuk` | 53 | 53 | 5851 |
+| `2016-06-27T12:00:00.000Z` | `#lt.wikipedia` | `Powermelon` | 28 | 39 | 5851 |
+| `2016-06-27T19:00:00.000Z` | `#lt.wikipedia` | `77.221.66.41` | 4358 | 4358 | 5851 |
 
 </details>
 
@@ -389,30 +389,30 @@ WINDOW cumulative AS (
 <details>
 <summary> View results </summary>
 
-| channel | time_hour | hourly_channel_changes | cumulative_activity_in_channel | csum5 | count5 |
+| `channel` | `time_hour` | `hourly_channel_changes` | `cumulative_activity_in_channel` | `csum5` | `count5` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #en.wikipedia | 2016-06-27T00:00:00.000Z | 74996 | 74996 | 74996 | 1 |
-| #en.wikipedia | 2016-06-27T01:00:00.000Z | 24150 | 99146 | 99146 | 2 |
-| #en.wikipedia | 2016-06-27T02:00:00.000Z | 102372 | 201518 | 201518 | 3 |
-| #en.wikipedia | 2016-06-27T03:00:00.000Z | 61362 | 262880 | 262880 | 4 |
-| #en.wikipedia | 2016-06-27T04:00:00.000Z | 61666 | 324546 | 324546 | 5 |
-| #en.wikipedia | 2016-06-27T05:00:00.000Z | 144199 | 468745 | 393749 | 5 |
-| #en.wikipedia | 2016-06-27T06:00:00.000Z | 33414 | 502159 | 403013 | 5 |
-| #en.wikipedia | 2016-06-27T07:00:00.000Z | 79397 | 581556 | 380038 | 5 |
-| #en.wikipedia | 2016-06-27T08:00:00.000Z | 104436 | 685992 | 423112 | 5 |
-| #en.wikipedia | 2016-06-27T09:00:00.000Z | 58020 | 744012 | 419466 | 5 |
-| #en.wikipedia | 2016-06-27T10:00:00.000Z | 93904 | 837916 | 369171 | 5 |
-| #en.wikipedia | 2016-06-27T11:00:00.000Z | 74436 | 912352 | 410193 | 5 |
-| #en.wikipedia | 2016-06-27T12:00:00.000Z | 83491 | 995843 | 414287 | 5 |
-| #en.wikipedia | 2016-06-27T13:00:00.000Z | 103051 | 1098894 | 412902 | 5 |
-| #en.wikipedia | 2016-06-27T14:00:00.000Z | 211411 | 1310305 | 566293 | 5 |
-| #en.wikipedia | 2016-06-27T15:00:00.000Z | 101247 | 1411552 | 573636 | 5 |
-| #en.wikipedia | 2016-06-27T16:00:00.000Z | 189765 | 1601317 | 688965 | 5 |
-| #en.wikipedia | 2016-06-27T17:00:00.000Z | 74404 | 1675721 | 679878 | 5 |
-| #en.wikipedia | 2016-06-27T18:00:00.000Z | 104824 | 1780545 | 681651 | 5 |
-| #en.wikipedia | 2016-06-27T19:00:00.000Z | 71268 | 1851813 | 541508 | 5 |
-| #en.wikipedia | 2016-06-27T20:00:00.000Z | 88185 | 1939998 | 528446 | 5 |
-| #en.wikipedia | 2016-06-27T21:00:00.000Z | 42584 | 1982582 | 381265 | 5 |
+| `#en.wikipedia` | `2016-06-27T00:00:00.000Z` | 74996 | 74996 | 74996 | 1 |
+| `#en.wikipedia` | `2016-06-27T01:00:00.000Z` | 24150 | 99146 | 99146 | 2 |
+| `#en.wikipedia` | `2016-06-27T02:00:00.000Z` | 102372 | 201518 | 201518 | 3 |
+| `#en.wikipedia` | `2016-06-27T03:00:00.000Z` | 61362 | 262880 | 262880 | 4 |
+| `#en.wikipedia` | `2016-06-27T04:00:00.000Z` | 61666 | 324546 | 324546 | 5 |
+| `#en.wikipedia` | `2016-06-27T05:00:00.000Z` | 144199 | 468745 | 393749 | 5 |
+| `#en.wikipedia` | `2016-06-27T06:00:00.000Z` | 33414 | 502159 | 403013 | 5 |
+| `#en.wikipedia` | `2016-06-27T07:00:00.000Z` | 79397 | 581556 | 380038 | 5 |
+| `#en.wikipedia` | `2016-06-27T08:00:00.000Z` | 104436 | 685992 | 423112 | 5 |
+| `#en.wikipedia` | `2016-06-27T09:00:00.000Z` | 58020 | 744012 | 419466 | 5 |
+| `#en.wikipedia` | `2016-06-27T10:00:00.000Z` | 93904 | 837916 | 369171 | 5 |
+| `#en.wikipedia` | `2016-06-27T11:00:00.000Z` | 74436 | 912352 | 410193 | 5 |
+| `#en.wikipedia` | `2016-06-27T12:00:00.000Z` | 83491 | 995843 | 414287 | 5 |
+| `#en.wikipedia` | `2016-06-27T13:00:00.000Z` | 103051 | 1098894 | 412902 | 5 |
+| `#en.wikipedia` | `2016-06-27T14:00:00.000Z` | 211411 | 1310305 | 566293 | 5 |
+| `#en.wikipedia` | `2016-06-27T15:00:00.000Z` | 101247 | 1411552 | 573636 | 5 |
+| `#en.wikipedia` | `2016-06-27T16:00:00.000Z` | 189765 | 1601317 | 688965 | 5 |
+| `#en.wikipedia` | `2016-06-27T17:00:00.000Z` | 74404 | 1675721 | 679878 | 5 |
+| `#en.wikipedia` | `2016-06-27T18:00:00.000Z` | 104824 | 1780545 | 681651 | 5 |
+| `#en.wikipedia` | `2016-06-27T19:00:00.000Z` | 71268 | 1851813 | 541508 | 5 |
+| `#en.wikipedia` | `2016-06-27T20:00:00.000Z` | 88185 | 1939998 | 528446 | 5 |
+| `#en.wikipedia` | `2016-06-27T21:00:00.000Z` | 42584 | 1982582 | 381265 | 5 |
 
 </details>
 
