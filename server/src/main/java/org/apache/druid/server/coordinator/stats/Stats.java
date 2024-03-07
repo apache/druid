@@ -53,6 +53,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("underreplicated", "segment/underReplicated/count");
     public static final CoordinatorStat UNAVAILABLE
         = CoordinatorStat.toDebugAndEmit("unavailable", "segment/unavailable/count");
+    public static final CoordinatorStat DEEP_STORAGE_ONLY
+            = CoordinatorStat.toDebugAndEmit("deepStorageOnly", "segment/deepStorageOnly/count");
     public static final CoordinatorStat UNNEEDED
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
