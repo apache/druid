@@ -99,7 +99,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
 
   private void testSanity(Object[] storedValue, int expectedIndex)
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(storedValue);
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(storedValue);
     Assert.assertEquals(expectedIndex, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -114,7 +114,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
   @Test
   public void testAddingInDictionary()
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(ImmutableList.of(4.0, 2.0));
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(ImmutableList.of(4.0, 2.0));
     Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -129,7 +129,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
   @Test
   public void testAddingInDictionaryWithObjects()
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(new Object[]{4.0D, 2.0D});
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(new Object[]{4.0D, 2.0D});
     Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -142,10 +142,14 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
 
   private void addToStrategy(Object value)
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(value);
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(value);
     strategy.computeDictionaryId(columnValueSelector);
   }
-
+  public ColumnValueSelector MockColumnValueSelector(Object returnValue) {
+    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
+    Mockito.when(columnValueSelector.getObject()).thenReturn(returnValue);
+    return columnValueSelector;
+  }
   @After
   public void tearDown()
   {

@@ -113,7 +113,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   @Test
   public void testSanity()
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(ImmutableList.of("a", "b"));
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(ImmutableList.of("a", "b"));
     Assert.assertEquals(0, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -129,7 +129,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   @Test
   public void testAddingInDictionary()
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(ImmutableList.of("f", "a"));
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(ImmutableList.of("f", "a"));
     Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -144,7 +144,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   @Test
   public void testAddingInDictionaryWithObjects()
   {
-    ColumnValueSelector columnValueSelector = CreateMockColumnValueSelector.get(new Object[]{"f", "a"});
+    ColumnValueSelector columnValueSelector = MockColumnValueSelector(new Object[]{"f", "a"});
     Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -155,7 +155,11 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
     Assert.assertArrayEquals(new Object[]{"f", "a"}, (Object[]) row.get(0));
   }
-
+  public ColumnValueSelector MockColumnValueSelector(Object returnValue) {
+    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
+    Mockito.when(columnValueSelector.getObject()).thenReturn(returnValue);
+    return columnValueSelector;
+  }
   @After
   public void tearDown()
   {
