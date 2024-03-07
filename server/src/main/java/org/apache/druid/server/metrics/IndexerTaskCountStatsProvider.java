@@ -21,11 +21,24 @@ package org.apache.druid.server.metrics;
 
 import java.util.Map;
 
+/**
+ * Proides task count metrics for the indexers
+ * These metrics are reported by indexers
+ */
 public interface IndexerTaskCountStatsProvider
 {
+  /**
+   * The number of running tasks on an indexer
+   */
   Map<String, Long> getWorkerRunningTasks();
 
+  /**
+   * The number of assigned tasks to an indexer
+   */
   Map<String, Long> getWorkerAssignedTasks();
 
+  /**
+   * The number of completed tasks by the indexer
+   */
   Map<String, Long> getWorkerCompletedTasks();
 }
