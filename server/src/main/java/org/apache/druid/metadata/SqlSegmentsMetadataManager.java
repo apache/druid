@@ -393,8 +393,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         totalUpdatedEntries += numUpdatedRows;
       }
       catch (Exception e) {
-        log.warn(e, "Population of used_status_last_updated in [%s] has failed. There may be unused segments with"
-                    + " NULL values for used_status_last_updated that won't be killed!", segmentsTable);
+        log.warn(e, "Populating column 'used_status_last_updated' in table[%s] has failed. There may be unused segments with"
+                    + " NULL values for 'used_status_last_updated' that won't be killed!", segmentsTable);
         return;
       }
 

@@ -354,15 +354,16 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     return koalaSegment;
   }
-
+  /**
+   * Create a corrupted segment entry in the segments table to test
+   * whether the overall loading of segments from the database continues to work
+   * even if one of the entries is corrupted.
+   */
   @Test
   public void testPollWithCorruptedSegment() throws IOException
   {
     publishWikiSegments();
 
-    //create a corrupted segment entry in segments table, which tests
-    //that overall loading of segments from database continues to work
-    //even in one of the entries are corrupted.
     final DataSegment corruptSegment = DataSegment.builder(wikiSegment1).dataSource("corrupt-datasource").build();
     publisher.publishSegment(corruptSegment);
     updateSegmentPayload(corruptSegment, StringUtils.toUtf8("corrupt-payload"));
@@ -400,7 +401,7 @@ public class SqlSegmentsMetadataManagerTest
     publishUnusedSegments(koalaSegment1);
     updateUsedStatusLastUpdated(koalaSegment1, DateTimes.nowUtc().minus(Duration.standardHours(2)));
 
-    // Publish an unused with used_status_last_updated 2 days ago
+    // Publish an unused segment with used_status_last_updated 2 days ago
     final DataSegment koalaSegment2 = createSegment(
         DS.KOALA,
         "2017-10-16T00:00:00.000/2017-10-17T00:00:00.000",
@@ -451,7 +452,7 @@ public class SqlSegmentsMetadataManagerTest
     );
 
     // koalaSegment3 has a null used_status_last_updated which should mean getUnusedSegmentIntervals never returns it
-    // koalaSegment2 has a used_status_last_updated older than 1 day which means it should also be returned
+    // koalaSegment2 has a used_status_last_updated older than 1 day which means it should be returned
     // The last of the 3 segments in koala has a used_status_last_updated date less than one day and should not be returned
     Assert.assertEquals(
         ImmutableList.of(koalaSegment2.getInterval()),
