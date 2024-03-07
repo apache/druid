@@ -160,7 +160,7 @@ public class BaseNodeRoleWatcherTest
 
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
 
-    BaseNodeRoleWatcher.scheduleTimeout(nodeRoleWatcher, exec, 0);
+    nodeRoleWatcher.scheduleTimeout(0);
     nodeRoleWatcher.awaitInitialization();
 
     Assert.assertTrue(listener1.nodeViewInitializationTimedOut.get());
@@ -194,7 +194,7 @@ public class BaseNodeRoleWatcherTest
 
     assertListener(listener1, false, Collections.emptyList(), Collections.emptyList());
 
-    BaseNodeRoleWatcher.scheduleTimeout(nodeRoleWatcher, exec, 0);
+    nodeRoleWatcher.scheduleTimeout(0);
     nodeRoleWatcher.awaitInitialization();
 
     Assert.assertEquals(2, nodeRoleWatcher.getAllNodes().size());

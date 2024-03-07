@@ -86,7 +86,7 @@ public class BaseNodeRoleWatcher
   )
   {
     BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
-    scheduleTimeout(nodeRoleWatcher, listenerExecutor, DEFAULT_TIMEOUT_SECONDS);
+    nodeRoleWatcher.scheduleTimeout(DEFAULT_TIMEOUT_SECONDS);
     return nodeRoleWatcher;
   }
 
@@ -345,14 +345,10 @@ public class BaseNodeRoleWatcher
     }
   }
 
-  static void scheduleTimeout(
-      BaseNodeRoleWatcher nodeRoleWatcher,
-      ScheduledExecutorService listenerExecutor,
-      long timeout
-  )
+  void scheduleTimeout(long timeout)
   {
     listenerExecutor.schedule(
-        nodeRoleWatcher::cacheInitializedTimedOut,
+        this::cacheInitializedTimedOut,
         timeout,
         TimeUnit.SECONDS
     );
