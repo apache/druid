@@ -6124,7 +6124,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
     testQueryThrows(
         "SELECT COUNT(*) FROM druid.foo "
-            + "WHERE TIME_IN_INTERVAL(__time, dim1)",
+        + "WHERE TIME_IN_INTERVAL(__time, dim1)",
         DruidException.class,
         ThrowableMessageMatcher.hasMessage(
             CoreMatchers.containsString(
@@ -7614,7 +7614,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           ImmutableList.of()
       );
     });
-    assertTrue(exception.getMessage().contains("The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String"));
+    assertTrue(
+        exception.getMessage().contains(
+            "The number of values in the IN clause for [dim6] in query exceeds configured "
+            + "maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String"
+        )
+    );
   }
 
   @Test
