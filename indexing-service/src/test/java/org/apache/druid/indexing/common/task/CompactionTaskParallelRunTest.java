@@ -250,6 +250,18 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     List<IngestionStatsAndErrorsTaskReportData> reports = getIngestionReports();
     Assert.assertEquals(reports.size(), 3); // since three index tasks are run by single compaction task
+
+    // this test reads 3 segments and publishes 6 segments
+    Assert.assertEquals(
+        3,
+        reports.stream().mapToLong(IngestionStatsAndErrorsTaskReportData::getSegmentsRead).sum()
+    );
+    Assert.assertEquals(
+        6,
+        reports.stream()
+               .mapToLong(IngestionStatsAndErrorsTaskReportData::getSegmentsPublished)
+               .sum()
+    );
   }
 
   @Test

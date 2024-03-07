@@ -31,6 +31,8 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidException.Category;
+import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
@@ -127,6 +129,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -791,18 +794,21 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
-              .expectMessageIs(
-                  StringUtils.format(
-                      "Query could not be planned. A possible reason is [%s]",
-                      expectedError
-                  )
-              )
+          buildUnplannableExceptionMatcher().expectMessageContains(expectedError)
       );
     }
     catch (Exception e) {
       log.error(e, "Expected DruidException for query: %s", sql);
-      Assert.fail(sql);
+      throw e;
+    }
+  }
+
+  private DruidExceptionMatcher buildUnplannableExceptionMatcher()
+  {
+    if (testBuilder().isDecoupledMode()) {
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
+    } else {
+      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
     }
   }
 

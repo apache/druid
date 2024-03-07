@@ -503,7 +503,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
       int failCnt = 0;
       Map<String, TaskReport> completionReports = new HashMap<>();
-      for (ParallelIndexSupervisorTask eachSpec : indexTaskSpecs) {
+      for (int i = 0; i < indexTaskSpecs.size(); i++) {
+        ParallelIndexSupervisorTask eachSpec = indexTaskSpecs.get(i);
         final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         if (!currentSubTaskHolder.setTask(eachSpec)) {
           String errMsg = "Task was asked to stop. Finish as failed.";
@@ -518,9 +519,11 @@ public class CompactionTask extends AbstractBatchIndexTask
               failCnt++;
               log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
             }
+
+            String reportKeySuffix = "_" + i;
             Optional.ofNullable(eachSpec.getCompletionReports())
                     .ifPresent(reports -> completionReports.putAll(
-                        CollectionUtils.mapKeys(reports, key -> getReportkey(eachSpec.getBaseSubtaskSpecName(), key))));
+                        CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)));
           } else {
             failCnt++;
             log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
@@ -570,11 +573,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   private String createIndexTaskSpecId(int i)
   {
     return StringUtils.format("%s_%d", getId(), i);
-  }
-
-  private String getReportkey(String baseSequenceName, String currentKey)
-  {
-    return StringUtils.format("%s_%s", currentKey, baseSequenceName.substring(baseSequenceName.lastIndexOf('_') + 1));
   }
 
   /**
