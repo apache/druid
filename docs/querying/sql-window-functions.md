@@ -424,7 +424,7 @@ The query uses two windows:
 
 The number of rows considered for the `moving5` window for the `count5` column:
 - starts at a single row because there are no rows before the current one
-- grows up to five rows as defined by `ROWS BETWEEN 4 PRECEDING AND CURRENT ROW`
+- grows up to five rows as defined by `ROWS BETWEEN 4 ROWS PRECEDING AND CURRENT ROW`
 
 ## Known issues
 
