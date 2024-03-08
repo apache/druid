@@ -318,6 +318,37 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
    * compatible with the desired type.
    */
   @Test
+  public void testInsertIntoCatalogTableIncompatibleTypeAssignment()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO foo\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  1 AS cnt,\n" +
+             "  ARRAY[c] AS m1,\n" + // this assignment is should cause failure
+             "  CAST(d AS BIGINT) AS extra2,\n" +
+             "  e AS extra3\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Cannot assign to target field 'm1' of type DOUBLE from source field 'm1' of type BIGINT ARRAY (line [6], column [3])"
+        )
+        .verify();
+  }
+
+  /**
+   * Attempt to verify that types specified in the catalog are pushed down to
+   * MSQ. At present, Druid does not have the tools needed to do a full push-down.
+   * We have to accept a good-enough push-down: that the produced type is at least
+   * compatible with the desired type.
+   */
+  @Test
   public void testWithInsertIntoCatalogTable()
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(

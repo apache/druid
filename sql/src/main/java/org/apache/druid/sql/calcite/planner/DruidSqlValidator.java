@@ -36,17 +36,21 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
+import org.apache.calcite.sql.validate.SqlNonNullableAccessors;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.common.config.NullHandling;
@@ -55,6 +59,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -473,6 +478,94 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     final SqlValidatorTable target = insertNs.resolve().getTable();
     checkTypeAssignment(scope, target, sourceType, targetType, insert);
     return targetType;
+  }
+
+  @Override
+  protected void checkTypeAssignment(
+      @Nullable SqlValidatorScope sourceScope,
+      SqlValidatorTable table,
+      RelDataType sourceRowType,
+      RelDataType targetRowType,
+      final SqlNode query
+  )
+  {
+    if (SqlTypeUtil.equalAsStructSansNullability(typeFactory,
+        sourceRowType, targetRowType, null)) {
+      // Returns early if source and target row type equals sans nullability.
+      return;
+    }
+    final List<RelDataTypeField> sourceFields = sourceRowType.getFieldList();
+    List<RelDataTypeField> targetFields = targetRowType.getFieldList();
+    final int sourceCount = sourceFields.size();
+    for (int i = 0; i < sourceCount; ++i) {
+      RelDataType sourceFielRelDataType = sourceFields.get(i).getType();
+      RelDataType targetFieldRelDataType = targetFields.get(i).getType();
+      ColumnType sourceFieldColumnType = Calcites.getColumnTypeForRelDataType(sourceFielRelDataType);
+      ColumnType targetFieldColumnType = Calcites.getColumnTypeForRelDataType(targetFieldRelDataType);
+
+      if (targetFieldColumnType != ColumnType.leastRestrictiveType(targetFieldColumnType, sourceFieldColumnType)) {
+        SqlNode node = getNthExpr(query, i, sourceCount);
+        String targetTypeString;
+        String sourceTypeString;
+        if (SqlTypeUtil.areCharacterSetsMismatched(
+            sourceFielRelDataType,
+            targetFieldRelDataType)) {
+          sourceTypeString = sourceFielRelDataType.getFullTypeString();
+          targetTypeString = targetFieldRelDataType.getFullTypeString();
+        } else {
+          sourceTypeString = sourceFielRelDataType.toString();
+          targetTypeString = targetFieldRelDataType.toString();
+        }
+        throw newValidationError(node,
+            Static.RESOURCE.typeNotAssignable(
+                targetFields.get(i).getName(), targetTypeString,
+                sourceFields.get(i).getName(), sourceTypeString));
+      }
+    }
+    // the call to base class definition will insert implicit casts / coercions where needed.
+    super.checkTypeAssignment(sourceScope, table, sourceRowType, targetRowType, query);
+  }
+
+  /**
+   * Locates the n'th expression in an INSERT or UPDATE query.
+   *
+   * @param query       Query
+   * @param ordinal     Ordinal of expression
+   * @param sourceCount Number of expressions
+   * @return Ordinal'th expression, never null
+   */
+  private static SqlNode getNthExpr(SqlNode query, int ordinal, int sourceCount)
+  {
+    if (query instanceof SqlInsert) {
+      SqlInsert insert = (SqlInsert) query;
+      if (insert.getTargetColumnList() != null) {
+        return insert.getTargetColumnList().get(ordinal);
+      } else {
+        return getNthExpr(
+            insert.getSource(),
+            ordinal,
+            sourceCount);
+      }
+    } else if (query instanceof SqlUpdate) {
+      SqlUpdate update = (SqlUpdate) query;
+      if (update.getSourceExpressionList() != null) {
+        return update.getSourceExpressionList().get(ordinal);
+      } else {
+        return getNthExpr(
+            SqlNonNullableAccessors.getSourceSelect(update),
+            ordinal, sourceCount);
+      }
+    } else if (query instanceof SqlSelect) {
+      SqlSelect select = (SqlSelect) query;
+      SqlNodeList selectList = SqlNonNullableAccessors.getSelectList(select);
+      if (selectList.size() == sourceCount) {
+        return selectList.get(ordinal);
+      } else {
+        return query; // give up
+      }
+    } else {
+      return query; // give up
+    }
   }
 
   private boolean isPrecedingOrFollowing(@Nullable SqlNode bound)
