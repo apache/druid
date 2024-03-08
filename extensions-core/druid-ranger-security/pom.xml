@@ -263,7 +263,7 @@
                     </usedDependencies>
                     <!-- this is due to replacement of aws-bundle-sdk with aws-logs-sdk  -->
                     <ignoredDependencies>
-                        <ignoredDependency>com.amazonaws:aws-java-sdk-bundle</ignoredDependency>
+                        <ignoredDependency>com.amazonaws:aws-java-sdk-logs</ignoredDependency>
                     </ignoredDependencies>
                 </configuration>
             </plugin>
