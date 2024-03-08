@@ -52,7 +52,7 @@ public class TaskLogAutoCleanerConfigTest
     Assert.assertTrue(config.isEnabled());
     Assert.assertEquals(10, config.getInitialDelay());
     Assert.assertEquals(40, config.getDelay());
-    Assert.assertEquals(30, config.getDurationToRetain());
+    Assert.assertEquals(30, config.getDurationToRetainMs());
   }
 
   @Test
@@ -74,6 +74,6 @@ public class TaskLogAutoCleanerConfigTest
     Assert.assertFalse(config.isEnabled());
     Assert.assertTrue(config.getInitialDelay() >= 60000 && config.getInitialDelay() <= 300000);
     Assert.assertEquals(6 * 60 * 60 * 1000, config.getDelay());
-    Assert.assertEquals(Long.MAX_VALUE, config.getDurationToRetain());
+    Assert.assertEquals(Long.MAX_VALUE, config.getDurationToRetainMs());
   }
 }

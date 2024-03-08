@@ -43,18 +43,18 @@ public class TaskLogAutoCleanerConfig
   private final long delay;
 
   @JsonProperty
-  private final long durationToRetain;
+  private final long durationToRetainMs;
 
   @JsonCreator
   public TaskLogAutoCleanerConfig(
       @JsonProperty("enabled") boolean enabled,
       @JsonProperty("initialDelay") Long initialDelay,
       @JsonProperty("delay") Long delay,
-      @JsonProperty("durationToRetain") Long durationToRetain
+      @JsonProperty("durationToRetain") Long durationToRetainMs
   )
   {
     if (enabled) {
-      Preconditions.checkNotNull(durationToRetain, "'durationToRetain' must be provided.");
+      Preconditions.checkNotNull(durationToRetainMs, "'durationToRetain' must be provided.");
     }
 
     this.enabled = enabled;
@@ -63,11 +63,11 @@ public class TaskLogAutoCleanerConfig
         60000 + ThreadLocalRandom.current().nextInt(4 * 60000)
     );
     this.delay = Configs.valueOrDefault(delay, TimeUnit.HOURS.toMillis(6));
-    this.durationToRetain = Configs.valueOrDefault(durationToRetain, Long.MAX_VALUE);
+    this.durationToRetainMs = Configs.valueOrDefault(durationToRetainMs, Long.MAX_VALUE);
 
     Preconditions.checkArgument(this.initialDelay > 0, "'initialDelay' must be greater than 0.");
     Preconditions.checkArgument(this.delay > 0, "'delay' must be greater than 0.");
-    Preconditions.checkArgument(this.durationToRetain > 0, "'durationToRetain' must be greater than 0.");
+    Preconditions.checkArgument(this.durationToRetainMs > 0, "'durationToRetain' must be greater than 0.");
   }
 
   public boolean isEnabled()
@@ -85,9 +85,9 @@ public class TaskLogAutoCleanerConfig
     return delay;
   }
 
-  public long getDurationToRetain()
+  public long getDurationToRetainMs()
   {
-    return durationToRetain;
+    return durationToRetainMs;
   }
 
   @Override
@@ -97,7 +97,7 @@ public class TaskLogAutoCleanerConfig
            "enabled=" + enabled +
            ", initialDelay=" + initialDelay +
            ", delay=" + delay +
-           ", durationToRetain=" + durationToRetain +
+           ", durationToRetain=" + durationToRetainMs +
            '}';
   }
 }
