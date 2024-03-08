@@ -96,7 +96,7 @@ public class GoogleStorageObjectMetadata
            "bucket='" + bucket + '\'' +
            ", name='" + name + '\'' +
            ", size=" + size +
-           ", lastUpdateTime=" + lastUpdateTimeMillis +
+           ", lastUpdateTimeMillis=" + lastUpdateTimeMillis +
            '}';
   }
 }

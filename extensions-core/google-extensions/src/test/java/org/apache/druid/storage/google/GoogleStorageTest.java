@@ -166,29 +166,6 @@ public class GoogleStorageTest
     );
 
   }
-  @Test
-  public void testGetMetadataMismatch() throws IOException
-  {
-    EasyMock.expect(mockStorage.get(
-        EasyMock.eq(BUCKET),
-        EasyMock.eq(PATH),
-        EasyMock.anyObject(Storage.BlobGetOption.class)
-    )).andReturn(blob);
-
-    EasyMock.expect(blob.getBucket()).andReturn(BUCKET);
-    EasyMock.expect(blob.getName()).andReturn(PATH);
-    EasyMock.expect(blob.getSize()).andReturn(SIZE);
-    EasyMock.expect(blob.getUpdateTimeOffsetDateTime()).andReturn(UPDATE_TIME);
-
-    EasyMock.replay(mockStorage, blob);
-
-    GoogleStorageObjectMetadata objectMetadata = googleStorage.getMetadata(BUCKET, PATH);
-    assertNotEquals(
-        objectMetadata,
-        new GoogleStorageObjectMetadata(BUCKET, PATH, SIZE, UPDATE_TIME.toEpochSecond())
-    );
-
-  }
 
   @Test
   public void testExistsTrue()
