@@ -62,9 +62,11 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -686,28 +688,26 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
 
   private void testMaxSubqueryRowsWithoutMemoryLimit()
   {
-    Throwable exception = assertThrows(ResourceLimitExceededException.class, () -> {
-      Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-      modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+    Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
+    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
 
-      testQuery(
-          "SELECT\n"
-              + "  SUM(cnt),\n"
-              + "  COUNT(*)\n"
-              + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
-              + "WHERE cnt > 0",
-          modifiedQueryContext,
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
-    });
-    assertTrue(
-        exception.getMessage().contains(
-            "Cannot issue the query, subqueries generated results beyond maximum[1] rows. Try setting the "
-                + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
-                + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
-                + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to "
-                + "go out of memory."
+    testQueryThrows(
+        "SELECT\n"
+            + "  SUM(cnt),\n"
+            + "  COUNT(*)\n"
+            + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
+            + "WHERE cnt > 0",
+        modifiedQueryContext,
+        ImmutableList.of(),
+        ResourceLimitExceededException.class,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot issue the query, subqueries generated results beyond maximum[1] rows. Try setting the "
+                    + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
+                    + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
+                    + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to "
+                    + "go out of memory."
+            )
         )
     );
   }
