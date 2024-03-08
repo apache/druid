@@ -18,6 +18,11 @@
 
 import * as JSONBig from 'json-bigint-native';
 
+import type {
+  AsyncStatusResponse,
+  MsqTaskPayloadResponse,
+  MsqTaskReportResponse,
+} from '../druid-models';
 import { Api } from '../singletons';
 
 import { downloadFile } from './download';
@@ -26,9 +31,9 @@ export interface QueryDetailArchive {
   id: string;
   detailArchiveVersion: number;
   status?: any;
-  reports?: any;
-  payload?: any;
-  statementsStatus?: any;
+  reports?: MsqTaskReportResponse;
+  payload?: MsqTaskPayloadResponse;
+  statementsStatus?: AsyncStatusResponse;
   serverStatus?: any;
 }
 
