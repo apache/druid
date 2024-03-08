@@ -23,9 +23,11 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,6 +52,8 @@ public class GoogleStorageTest
   static final String PATH = "/path";
   static final long SIZE = 100;
   static final OffsetDateTime UPDATE_TIME = OffsetDateTime.MIN;
+  private static final Exception STORAGE_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
+
 
   @Before
   public void setUp()
@@ -62,7 +66,7 @@ public class GoogleStorageTest
   }
 
   @Test
-  public void testDeleteSuccess() throws IOException
+  public void testDeleteSuccess()
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(true);
     EasyMock.replay(mockStorage);
@@ -70,23 +74,23 @@ public class GoogleStorageTest
   }
 
   @Test
-  public void testDeleteFailure()
+  public void testDeleteFileNotFound()
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(false);
     EasyMock.replay(mockStorage);
-    boolean thrownIOException = false;
-    try {
-      googleStorage.delete(BUCKET, PATH);
-
-    }
-    catch (IOException e) {
-      thrownIOException = true;
-    }
-    assertTrue(thrownIOException);
+    googleStorage.delete(BUCKET, PATH);
   }
 
   @Test
-  public void testBatchDeleteSuccess() throws IOException
+  public void testDeleteFailure()
+  {
+    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(STORAGE_EXCEPTION);
+    EasyMock.replay(mockStorage);
+    Assert.assertThrows(StorageException.class, () -> googleStorage.delete(BUCKET, PATH));
+  }
+
+  @Test
+  public void testBatchDeleteSuccess()
   {
     List<String> paths = ImmutableList.of("/path1", "/path2");
     final Capture<Iterable<BlobId>> pathIterable = Capture.newInstance();
@@ -103,6 +107,29 @@ public class GoogleStorageTest
     assertTrue(paths.size() == recordedPaths.size() && paths.containsAll(recordedPaths) && recordedPaths.containsAll(
         paths));
     assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
+
+  }
+
+  @Test
+  public void testBatchDeleteFileNotFound()
+  {
+    List<String> paths = ImmutableList.of("/path1", "/path2");
+    final Capture<Iterable<BlobId>> pathIterable = Capture.newInstance();
+    EasyMock.expect(mockStorage.delete(EasyMock.capture(pathIterable))).andReturn(ImmutableList.of(true, false));
+    EasyMock.replay(mockStorage);
+
+    googleStorage.batchDelete(BUCKET, paths);
+
+    List<BlobId> recordedBlobIds = new ArrayList<>();
+    pathIterable.getValue().iterator().forEachRemaining(recordedBlobIds::add);
+
+    List<String> recordedPaths = recordedBlobIds.stream().map(BlobId::getName).collect(Collectors.toList());
+
+    assertTrue(paths.size() == recordedPaths.size());
+    assertTrue(paths.containsAll(recordedPaths));
+    assertTrue(recordedPaths.containsAll(paths));
+    assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
+
   }
 
   @Test
@@ -110,17 +137,9 @@ public class GoogleStorageTest
   {
     List<String> paths = ImmutableList.of("/path1", "/path2");
     EasyMock.expect(mockStorage.delete((Iterable<BlobId>) EasyMock.anyObject()))
-            .andReturn(ImmutableList.of(false, true));
+            .andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
-    boolean thrownIOException = false;
-    try {
-      googleStorage.batchDelete(BUCKET, paths);
-
-    }
-    catch (IOException e) {
-      thrownIOException = true;
-    }
-    assertTrue(thrownIOException);
+    Assert.assertThrows(StorageException.class, () -> googleStorage.batchDelete(BUCKET, paths));
   }
 
   @Test

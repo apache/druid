@@ -1783,6 +1783,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  @Override
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
+  {
+    if (!isCompactionTask) {
+      super.cleanUp(toolbox, taskStatus);
+    }
+  }
+
   @GET
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)

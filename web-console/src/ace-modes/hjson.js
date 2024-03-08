@@ -25,15 +25,15 @@
 ace.define(
   'ace/mode/hjson_highlight_rules',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function(acequire, exports, module) {
+  function (acequire, exports, module) {
     'use strict';
 
     var oop = acequire('../lib/oop');
     var TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
-    var HjsonHighlightRules = function() {
+    var HjsonHighlightRules = function () {
       this.$rules = {
-        start: [
+        'start': [
           {
             include: '#comments',
           },
@@ -277,23 +277,23 @@ ace.define(
     'ace/mode/text',
     'ace/mode/hjson_highlight_rules',
   ],
-  function(acequire, exports, module) {
+  function (acequire, exports, module) {
     'use strict';
 
     var oop = acequire('../lib/oop');
     var TextMode = acequire('./text').Mode;
     var HjsonHighlightRules = acequire('./hjson_highlight_rules').HjsonHighlightRules;
 
-    var Mode = function() {
+    var Mode = function () {
       this.HighlightRules = HjsonHighlightRules;
     };
     oop.inherits(Mode, TextMode);
 
-    (function() {
+    (function () {
       this.lineCommentStart = '//';
       this.blockComment = { start: '/*', end: '*/' };
       this.$id = 'ace/mode/hjson';
-    }.call(Mode.prototype));
+    }).call(Mode.prototype);
 
     exports.Mode = Mode;
   },

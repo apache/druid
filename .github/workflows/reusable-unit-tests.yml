@@ -55,13 +55,13 @@ jobs:
       coverage_failure: ${{ steps.set_outputs.outputs.coverage_failure }}
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       # skip the "cache: maven" step from setup-java. We explicitly use a
       # different cache key since we cannot reuse it across commits.
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: ${{ inputs.jdk }}
@@ -70,7 +70,7 @@ jobs:
       # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ github.sha }}
