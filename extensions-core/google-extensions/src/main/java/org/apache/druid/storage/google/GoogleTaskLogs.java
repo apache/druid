@@ -204,7 +204,7 @@ public class GoogleTaskLogs implements TaskLogs
           inputDataConfig,
           config.getBucket(),
           config.getPrefix(),
-          (object) -> object.getLastUpdateTimeMs() < timestampMs
+          (object) -> object.getLastUpdateTimeMillis() < timestampMs
       );
     }
     catch (Exception e) {

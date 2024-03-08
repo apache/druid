@@ -62,7 +62,7 @@ public class GoogleStorageObjectMetadata
     return size;
   }
 
-  public Long getLastUpdateTimeMs()
+  public Long getLastUpdateTimeMillis()
   {
     return lastUpdateTimeMs;
   }
@@ -79,13 +79,14 @@ public class GoogleStorageObjectMetadata
     GoogleStorageObjectMetadata that = (GoogleStorageObjectMetadata) o;
     return Objects.equals(bucket, that.bucket)
            && Objects.equals(name, that.name)
-           && Objects.equals(size, that.size);
+           && Objects.equals(size, that.size)
+           && Objects.equals(lastUpdateTimeMs, that.getLastUpdateTimeMillis());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, name, size);
+    return Objects.hash(bucket, name, size, lastUpdateTimeMs);
   }
 
   @Override
