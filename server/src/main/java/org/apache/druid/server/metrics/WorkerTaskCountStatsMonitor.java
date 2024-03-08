@@ -69,9 +69,9 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       emit(emitter, "worker/taskSlot/total/count", statsProvider.getWorkerTotalTaskSlotCount());
       emit(emitter, "worker/taskSlot/used/count", statsProvider.getWorkerUsedTaskSlotCount());
     } else {
-        emit(emitter, "worker/task/running/count", indexerStatsProvider.getWorkerRunningTasks());
-        emit(emitter, "worker/task/assigned/count", indexerStatsProvider.getWorkerAssignedTasks());
-        emit(emitter, "worker/task/completed/count", indexerStatsProvider.getWorkerCompletedTasks());
+      emit(emitter, "worker/task/running/count", indexerStatsProvider.getWorkerRunningTasks());
+      emit(emitter, "worker/task/assigned/count", indexerStatsProvider.getWorkerAssignedTasks());
+      emit(emitter, "worker/task/completed/count", indexerStatsProvider.getWorkerCompletedTasks());
     }
     return true;
   }
