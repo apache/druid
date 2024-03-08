@@ -39,6 +39,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 import it.unimi.dsi.fastutil.floats.FloatOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ByteBufferUtils;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -72,8 +74,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class TypedInFilter extends AbstractOptimizableDimFilter implements Filter
 {
@@ -135,8 +135,13 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       this.unsortedValues = null;
       this.lazyMatchValues = () -> sortedValues;
     } else {
-      this.unsortedValues = values;
-      this.lazyMatchValues = Suppliers.memoize(() -> sortValues(unsortedValues, matchValueType));
+      if (checkSorted(values, matchValueType)) {
+        this.unsortedValues = null;
+        this.lazyMatchValues = () -> values;
+      } else {
+        this.unsortedValues = values;
+        this.lazyMatchValues = Suppliers.memoize(() -> sortValues(unsortedValues, matchValueType));
+      }
     }
     if (matchValueType.is(ValueType.STRING)) {
       this.lazyMatchValueBytes = Suppliers.memoize(() -> {
@@ -151,7 +156,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     }
 
     this.predicateFactorySupplier = Suppliers.memoize(
-        () -> new InFilterDruidPredicateFactory(lazyMatchValues.get(), matchValueType)
+        () -> new PredicateFactory(lazyMatchValues.get(), matchValueType)
     );
     this.cacheKeySupplier = Suppliers.memoize(this::computeCacheKey);
   }
@@ -384,19 +389,63 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
         .build();
   }
 
+  private static boolean checkSorted(List<?> unsortedValues, ColumnType matchValueType)
+  {
+    final Comparator<Object> comparator = matchValueType.getNullableStrategy();
+    Object prev = null;
+    boolean needsCoerceCheck = true;
+    for (Object o : unsortedValues) {
+      if (needsCoerceCheck && o != null) {
+        Object coerced = coerceValue(o, matchValueType);
+        //noinspection ObjectEquality
+        if (coerced != o) {
+          return false;
+        }
+        needsCoerceCheck = false;
+      }
+      if (prev != null && comparator.compare(prev, o) >= 0) {
+        return false;
+      }
+      prev = o;
+    }
+    return true;
+  }
+
+  @Nullable
+  private static Object coerceValue(@Nullable Object o, ColumnType matchValueType)
+  {
+    if (o == null) {
+      return o;
+    }
+    switch (matchValueType.getType()) {
+      case STRING:
+        return DimensionHandlerUtils.convertObjectToString(o);
+      case LONG:
+        return DimensionHandlerUtils.convertObjectToLong(o);
+      case FLOAT:
+        return DimensionHandlerUtils.convertObjectToFloat(o);
+      case DOUBLE:
+        return DimensionHandlerUtils.convertObjectToDouble(o);
+      default:
+        throw InvalidInput.exception("Unsupported matchValueType[%s]", matchValueType);
+    }
+  }
+
   private static List<?> sortValues(List<?> unsortedValues, ColumnType matchValueType)
   {
-    final Stream<?> coerced;
-    if (matchValueType.is(ValueType.LONG)) {
-      coerced = unsortedValues.stream().map(DimensionHandlerUtils::convertObjectToLong).distinct();
-    } else if (matchValueType.is(ValueType.DOUBLE)) {
-      coerced = unsortedValues.stream().map(DimensionHandlerUtils::convertObjectToDouble).distinct();
-    } else if (matchValueType.is(ValueType.FLOAT)) {
-      coerced = unsortedValues.stream().map(DimensionHandlerUtils::convertObjectToFloat).distinct();
-    } else {
-      coerced = unsortedValues.stream().distinct();
+    final Object[] a = unsortedValues.toArray();
+    // check if values need coerced
+    for (int i = 0; i < a.length; i++) {
+      Object coerced = coerceValue(a[i], matchValueType);
+      //noinspection ObjectEquality
+      if (coerced != null && a[i] == coerced) {
+        // assume list is all same type objects...
+        break;
+      }
+      a[i] = coerced;
     }
-    return coerced.sorted(matchValueType.getNullableStrategy()).collect(Collectors.toList());
+    ObjectArrays.quickSort(a, matchValueType.getNullableStrategy());
+    return Arrays.asList(a);
   }
 
   /**
@@ -593,7 +642,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     };
   }
 
-  public static class InFilterDruidPredicateFactory implements DruidPredicateFactory
+  public static class PredicateFactory implements DruidPredicateFactory
   {
     private final ColumnType matchValueType;
     private final List<?> sortedValues;
@@ -602,7 +651,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
-    public InFilterDruidPredicateFactory(final List<?> sortedValues, final ColumnType matchValueType)
+    public PredicateFactory(final List<?> sortedValues, final ColumnType matchValueType)
     {
       this.sortedValues = sortedValues;
       this.matchValueType = matchValueType;
@@ -650,7 +699,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      InFilterDruidPredicateFactory that = (InFilterDruidPredicateFactory) o;
+      PredicateFactory that = (PredicateFactory) o;
       return Objects.equals(matchValueType, that.matchValueType) &&
              Objects.equals(sortedValues, that.sortedValues);
     }

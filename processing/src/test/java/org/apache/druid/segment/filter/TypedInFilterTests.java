@@ -319,8 +319,8 @@ public class TypedInFilterTests
     public void testGetCacheKey()
     {
       Assume.assumeTrue(NullHandling.sqlCompatible());
-      TypedInFilter filterUnsorted = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "b", null, "c"));
-      TypedInFilter filterDifferent = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "b", "c"));
+      TypedInFilter filterUnsorted = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", null, "c"));
+      TypedInFilter filterDifferent = inFilter("column", ColumnType.STRING, Arrays.asList("a", "c", "b"));
       TypedInFilter filterPresorted = new TypedInFilter(
           "column",
           ColumnType.STRING,
@@ -334,7 +334,7 @@ public class TypedInFilterTests
       Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
       Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
 
-      filterUnsorted = inFilter("column", ColumnType.LONG, Arrays.asList(2L, -2L, 1L, null, 2L, 3L));
+      filterUnsorted = inFilter("column", ColumnType.LONG, Arrays.asList(2L, -2L, 1L, null, 3L));
       filterDifferent = inFilter("column", ColumnType.LONG, Arrays.asList(2L, -2L, 1L, 3L));
       filterPresorted = new TypedInFilter(
           "column",
@@ -349,7 +349,7 @@ public class TypedInFilterTests
       Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
       Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
 
-      filterUnsorted = inFilter("column", ColumnType.DOUBLE, Arrays.asList(2.2, -2.2, 1.1, null, 2.2, 3.3));
+      filterUnsorted = inFilter("column", ColumnType.DOUBLE, Arrays.asList(2.2, -2.2, 1.1, null, 3.3));
       filterDifferent = inFilter("column", ColumnType.DOUBLE, Arrays.asList(2.2, -2.2, 1.1, 3.3));
       filterPresorted = new TypedInFilter(
           "column",
@@ -364,7 +364,7 @@ public class TypedInFilterTests
       Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
       Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
 
-      filterUnsorted = inFilter("column", ColumnType.FLOAT, Arrays.asList(2.2f, -2.2f, 1.1f, null, 2.2f, 3.3f));
+      filterUnsorted = inFilter("column", ColumnType.FLOAT, Arrays.asList(2.2f, -2.2f, 1.1f, null, 3.3f));
       filterDifferent = inFilter("column", ColumnType.FLOAT, Arrays.asList(2.2f, -2.2f, 1.1f, 3.3f));
       filterPresorted = new TypedInFilter(
           "column",
