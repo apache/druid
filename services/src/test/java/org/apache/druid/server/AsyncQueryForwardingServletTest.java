@@ -128,6 +128,22 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   private static int port1;
   private static int port2;
 
+  private String errorMessage;
+  private ObjectMapper mockMapper;
+  private HttpServletRequest request;
+  private HttpServletResponse response;
+
+  private ServletOutputStream outputStream;
+  
+  @Before
+  public void init() throws IOException {
+    errorMessage = "test exception message"; 
+    mockMapper = Mockito.mock(ObjectMapper.class);
+    request = Mockito.mock(HttpServletRequest.class);
+    response = Mockito.mock(HttpServletResponse.class);
+    outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+  }
   @Override
   @Before
   public void setup() throws Exception
@@ -277,11 +293,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testHandleExceptionWithFilterDisabled() throws Exception
   {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         mockMapper,
@@ -309,11 +320,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testHandleExceptionWithFilterEnabled() throws Exception
   {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         mockMapper,
@@ -355,11 +361,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testHandleExceptionWithFilterEnabledButMessageMatchAllowedRegex() throws Exception
   {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         mockMapper,
@@ -401,12 +402,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testHandleQueryParseExceptionWithFilterDisabled() throws Exception
   {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         mockMapper,
@@ -435,12 +430,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testHandleQueryParseExceptionWithFilterEnabled() throws Exception
   {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         mockMapper,
@@ -483,12 +472,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testHandleQueryParseExceptionWithFilterEnabledButMessageMatchAllowedRegex() throws Exception
   {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         mockMapper,
