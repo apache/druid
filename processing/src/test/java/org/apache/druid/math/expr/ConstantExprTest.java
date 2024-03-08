@@ -19,20 +19,139 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPair;
+import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPairTypeStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 
+import java.math.BigInteger;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 
 public class ConstantExprTest extends InitializedNullHandlingTest
 {
   @Test
-  public void testLongSingleThreadedExpr()
+  public void testArrayExpr()
   {
-    LongExpr expr = new LongExpr(11L);
-    assertNotSame(expr.eval(null), expr.eval(null));
+    checkExpr(
+        new ArrayExpr(ExpressionType.LONG_ARRAY, new Long[] {1L, 3L}),
+        true,
+        "[1, 3]",
+        "ARRAY<LONG>[1, 3]"
+    );
+  }
+
+  @Test
+  public void testBigIntegerExpr()
+  {
+    checkExpr(
+        new BigIntegerExpr(BigInteger.valueOf(37L)),
+        true,
+        "37",
+        "37"
+    );
+  }
+
+  @Test
+  public void testComplexExpr()
+  {
+    TypeStrategies.registerComplex("nullablePair", new NullableLongPairTypeStrategy());
+    checkExpr(
+        new ComplexExpr(
+            ExpressionTypeFactory.getInstance().ofComplex("nullablePair"),
+            new NullableLongPair(21L, 37L)
+        ),
+        true,
+        "Pair{lhs=21, rhs=37}",
+        "complex_decode_base64('nullablePair', 'AAAAAAAAAAAVAAAAAAAAAAAl')"
+    );
+  }
+
+  @Test
+  public void testDoubleExpr()
+  {
+    checkExpr(
+        new DoubleExpr(11.73D),
+        true,
+        "11.73",
+        "11.73"
+    );
+  }
+
+  @Test
+  public void testNullDoubleExpr()
+  {
+    TypeStrategies.registerComplex("nullablePair", new NullableLongPairTypeStrategy());
+    checkExpr(
+        new NullDoubleExpr(),
+        true,
+        "null",
+        "null"
+    );
+  }
+
+  @Test
+  public void testNullLongExpr()
+  {
+    checkExpr(
+        new NullLongExpr(),
+        true,
+        "null",
+        "null"
+    );
+  }
+
+  @Test
+  public void testLong()
+  {
+    checkExpr(
+        new LongExpr(11L),
+        true,
+        "11",
+        "11"
+    );
+  }
+
+  @Test
+  public void testString()
+  {
+    checkExpr(
+        new StringExpr("some"),
+        true,
+        "some",
+        "'some'"
+    );
+  }
+
+  @Test
+  public void test()
+  {
+    checkExpr(
+        new StringExpr("some"),
+        true,
+        "some",
+        "'some'"
+    );
+  }
+
+  private void checkExpr(Expr expr, boolean supportsSingleThreaded, String expectedToString,
+      String expectedStringify)
+  {
+    if (expr.getLiteralValue() != null) {
+      assertNotSame(expr.eval(null), expr.eval(null));
+    }
     Expr singleExpr = Expr.singleThreaded(expr);
-    assertSame(singleExpr.eval(null), singleExpr.eval(null));
+    if (supportsSingleThreaded) {
+      assertSame(singleExpr.eval(null), singleExpr.eval(null));
+    } else {
+      assertNotSame(singleExpr.eval(null), singleExpr.eval(null));
+    }
+    assertEquals(expectedToString, expr.toString());
+    assertEquals(expectedStringify, expr.stringify());
+    assertEquals(expectedToString, singleExpr.toString());
+    assertEquals(expectedStringify, singleExpr.stringify());
   }
 }
