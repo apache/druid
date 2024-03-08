@@ -127,14 +127,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
   private static int port1;
   private static int port2;
-
   private String errorMessage;
   private ObjectMapper mockMapper;
   private HttpServletRequest request;
   private HttpServletResponse response;
-
   private ServletOutputStream outputStream;
-  
   @Before
   public void init() throws IOException {
     errorMessage = "test exception message"; 
