@@ -54,7 +54,7 @@ jobs:
       # run everything if not a PR
       core: ${{ steps.filter.outputs.core  || github.event_name != 'pull_request'}}
     steps:
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         if: github.event_name == 'pull_request'
         id: filter
         with:

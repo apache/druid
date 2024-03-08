@@ -33,7 +33,7 @@ jobs:
       # the common extension in revised ITs is different from the one in standard ITs
       common-extensions: ${{ steps.filter.outputs.common-extensions }}
     steps:
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         if: github.event_name == 'pull_request'
         id: filter
         with:
