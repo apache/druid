@@ -21,7 +21,6 @@ package org.apache.druid.segment.vector;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -44,15 +43,12 @@ public class FilteredVectorOffset implements VectorOffset
 
   public static FilteredVectorOffset create(
       final VectorOffset baseOffset,
-      final VectorColumnSelectorFactory baseColumnSelectorFactory,
-      final Filter filter
+      final VectorValueMatcher filterMatcher
   )
   {
     // This is not the same logic as the row-by-row FilteredOffset, which uses bitmaps whenever possible.
     // I am not convinced that approach is best in all cases (it's potentially too eager) and also have not implemented
     // it for vector matchers yet. So let's keep this method simple for now, and try to harmonize them in the future.
-    Preconditions.checkState(filter.canVectorizeMatcher(baseColumnSelectorFactory), "Cannot vectorize");
-    final VectorValueMatcher filterMatcher = filter.makeVectorMatcher(baseColumnSelectorFactory);
     return new FilteredVectorOffset(baseOffset, filterMatcher);
   }
 

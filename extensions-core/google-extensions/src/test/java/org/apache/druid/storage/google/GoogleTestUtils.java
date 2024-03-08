@@ -71,7 +71,7 @@ public class GoogleTestUtils extends EasyMockSupport
       GoogleStorage storage,
       List<GoogleStorageObjectMetadata> deleteObjectExpected,
       Map<GoogleStorageObjectMetadata, Exception> deleteObjectToException
-  ) throws IOException
+  )
   {
     Map<GoogleStorageObjectMetadata, IExpectationSetters<GoogleStorageObjectMetadata>> requestToResultExpectationSetter = new HashMap<>();
     for (Map.Entry<GoogleStorageObjectMetadata, Exception> deleteObjectAndException : deleteObjectToException.entrySet()) {
