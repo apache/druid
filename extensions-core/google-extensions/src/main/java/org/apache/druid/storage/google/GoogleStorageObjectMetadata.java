@@ -26,24 +26,24 @@ public class GoogleStorageObjectMetadata
   final String bucket;
   final String name;
   final Long size;
-  Long lastUpdateTimeMs;
+  Long lastUpdateTimeMillis;
 
   public GoogleStorageObjectMetadata(
       final String bucket,
       final String name,
       final Long size,
-      final Long lastUpdateTimeMs
+      final Long lastUpdateTimeMillis
   )
   {
     this.bucket = bucket;
     this.name = name;
     this.size = size;
-    this.lastUpdateTimeMs = lastUpdateTimeMs;
+    this.lastUpdateTimeMillis = lastUpdateTimeMillis;
   }
 
-  public void setLastUpdateTimeMs(Long lastUpdateTimeMs)
+  public void setLastUpdateTimeMillis(Long lastUpdateTimeMillis)
   {
-    this.lastUpdateTimeMs = lastUpdateTimeMs;
+    this.lastUpdateTimeMillis = lastUpdateTimeMillis;
   }
 
 
@@ -64,7 +64,7 @@ public class GoogleStorageObjectMetadata
 
   public Long getLastUpdateTimeMillis()
   {
-    return lastUpdateTimeMs;
+    return lastUpdateTimeMillis;
   }
 
   @Override
@@ -80,13 +80,13 @@ public class GoogleStorageObjectMetadata
     return Objects.equals(bucket, that.bucket)
            && Objects.equals(name, that.name)
            && Objects.equals(size, that.size)
-           && Objects.equals(lastUpdateTimeMs, that.getLastUpdateTimeMillis());
+           && Objects.equals(lastUpdateTimeMillis, that.getLastUpdateTimeMillis());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, name, size, lastUpdateTimeMs);
+    return Objects.hash(bucket, name, size, lastUpdateTimeMillis);
   }
 
   @Override
@@ -96,7 +96,7 @@ public class GoogleStorageObjectMetadata
            "bucket='" + bucket + '\'' +
            ", name='" + name + '\'' +
            ", size=" + size +
-           ", lastUpdateTime=" + lastUpdateTimeMs +
+           ", lastUpdateTime=" + lastUpdateTimeMillis +
            '}';
   }
 }
