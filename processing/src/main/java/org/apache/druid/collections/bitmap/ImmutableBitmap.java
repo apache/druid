@@ -80,4 +80,12 @@ public interface ImmutableBitmap
    */
   ImmutableBitmap intersection(ImmutableBitmap otherBitmap);
 
+  /**
+   * Compute the bitwise-or of this bitmap with another bitmap. A new bitmap is generated.
+   *
+   * Note that the other bitmap should be of the same class instance.
+   *
+   * @param otherBitmap other bitmap
+   */
+  ImmutableBitmap union(ImmutableBitmap otherBitmap);
 }

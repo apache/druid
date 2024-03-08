@@ -71,6 +71,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
+import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -561,7 +562,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           newRoot
       );
 
-      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, newRoot, rexBuilder);
+      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
       DruidQuery baseQuery = generator.buildQuery();
       try {
         log.info(

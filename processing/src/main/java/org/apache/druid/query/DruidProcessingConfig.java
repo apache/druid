@@ -177,12 +177,6 @@ public class DruidProcessingConfig implements ColumnConfig
     return indexes.getSkipValueRangeIndexScale();
   }
 
-  @Override
-  public double skipValuePredicateIndexScale()
-  {
-    return indexes.getSkipValuePredicateIndexScale();
-  }
-
   public boolean isNumThreadsConfigured()
   {
     return numThreadsConfigured;

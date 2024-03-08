@@ -2588,7 +2588,9 @@ function isIntegerOrNull(x: any): boolean {
 
 function isIntegerOrNullAcceptString(x: any): boolean {
   return (
-    x == null || ((typeof x === 'number' || typeof x === 'string') && Number.isInteger(Number(x)))
+    x == null ||
+    (typeof x === 'number' && Number.isInteger(x)) ||
+    (typeof x === 'string' && !x.includes('.') && Number.isInteger(Number(x)))
   );
 }
 
