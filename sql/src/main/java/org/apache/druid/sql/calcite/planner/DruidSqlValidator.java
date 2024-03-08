@@ -49,6 +49,7 @@ import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
@@ -450,11 +451,18 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;
       }
-      RelDataType relType = typeFactory.createSqlType(SqlTypeName.get(sqlTypeName));
-      fields.add(Pair.of(
-          colName,
-          typeFactory.createTypeWithNullability(relType, true)
-      ));
+      if (NullHandling.replaceWithDefault()) {
+        fields.add(Pair.of(
+            colName,
+            typeFactory.createSqlType(SqlTypeName.get(sqlTypeName))
+        ));
+      } else {
+        RelDataType relType = typeFactory.createSqlType(SqlTypeName.get(sqlTypeName));
+        fields.add(Pair.of(
+            colName,
+            typeFactory.createTypeWithNullability(relType, true)
+        ));
+      }
     }
 
     // Perform the SQL-standard check: that the SELECT column can be
