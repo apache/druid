@@ -132,15 +132,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   private HttpServletRequest request;
   private HttpServletResponse response;
   private ServletOutputStream outputStream;
-  @Before
-  public void init() throws IOException {
-    errorMessage = "test exception message"; 
-    mockMapper = Mockito.mock(ObjectMapper.class);
-    request = Mockito.mock(HttpServletRequest.class);
-    response = Mockito.mock(HttpServletResponse.class);
-    outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
-  }
   @Override
   @Before
   public void setup() throws Exception
@@ -156,6 +147,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);
     client = holder.getClient();
+    errorMessage = "test exception message"; 
+    mockMapper = Mockito.mock(ObjectMapper.class);
+    request = Mockito.mock(HttpServletRequest.class);
+    response = Mockito.mock(HttpServletResponse.class);
+    outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
   }
 
   @Override
