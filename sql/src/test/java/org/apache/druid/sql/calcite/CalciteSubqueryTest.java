@@ -698,7 +698,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
             + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
             + "WHERE cnt > 0",
         modifiedQueryContext,
-        ImmutableList.of(),
         ResourceLimitExceededException.class,
         ThrowableMessageMatcher.hasMessage(
             CoreMatchers.containsString(

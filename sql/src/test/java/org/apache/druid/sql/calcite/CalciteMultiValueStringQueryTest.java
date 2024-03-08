@@ -129,7 +129,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         groupByOnMultiValueColumnDisabled,
-        ImmutableList.of(),
         RuntimeException.class,
         ThrowableMessageMatcher.hasMessage(
             CoreMatchers.containsString(
