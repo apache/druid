@@ -385,7 +385,7 @@
             <dependency>
                 <groupId>org.bitbucket.b_c</groupId>
                 <artifactId>jose4j</artifactId>
-                <version>0.9.3</version>
+                <version>0.9.6</version>
             </dependency>
             <!-- transitive dependency of kafka-clientorg.apache.calcite:calcite-testkit
             and kafka-protobuf-provider
