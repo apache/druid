@@ -4963,7 +4963,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.5
+version: 7.22.15
 license_file_path: licenses/bin/@babel-helper-module-imports.MIT
 
 ---
@@ -5013,7 +5013,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.23.5
+version: 7.24.0
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
