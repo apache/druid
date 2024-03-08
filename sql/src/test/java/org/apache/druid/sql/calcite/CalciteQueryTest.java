@@ -2573,7 +2573,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
     // When useApproximateCountDistinct=false and useGroupingSetForExactDistinct=false, planning fails due
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
-    Assert.assertThrows(
+    assertThrows(
         RuntimeException.class,
         () -> testQuery(
             PLANNER_CONFIG_NO_HLL.withOverrides(
@@ -5730,7 +5730,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarWithNotOfDegenerateFilter()
   {
-
     msqIncompatible();
     // HashJoinSegmentStorageAdapter is not vectorizable
     cannotVectorize();
@@ -12313,9 +12312,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRequireTimeConditionSimpleQueryNegative()
   {
+    msqIncompatible();
     Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
-      msqIncompatible();
-
       testQuery(
           PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
           "SELECT SUM(cnt), gran FROM (\n"
@@ -12335,9 +12333,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRequireTimeConditionSubQueryNegative()
   {
+    msqIncompatible();
     Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
-      msqIncompatible();
-
       testQuery(
           PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
           "SELECT\n"
@@ -12355,8 +12352,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
+    msqIncompatible();
     Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
-      msqIncompatible();
 
       testQuery(
           PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
