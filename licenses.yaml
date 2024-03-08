@@ -4652,7 +4652,7 @@ libraries:
 
 name: com.amazonaws aws-java-sdk-logs
 license_category: binary
-version: 1.12.669
+version: 1.12.638
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4662,7 +4662,7 @@ libraries:
 
 name: com.amazonaws jmespath-java
 license_category: binary
-version: 1.12.669
+version: 1.12.638
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
