@@ -413,12 +413,10 @@ public class CoordinatorSimulationBuilder
   private static class Environment
   {
     private final Lifecycle lifecycle = new Lifecycle("coord-sim");
-    private final StubServiceEmitter serviceEmitter
-        = new StubServiceEmitter("coordinator", "coordinator");
+    private final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
     private final AtomicReference<CoordinatorDynamicConfig> dynamicConfig
         = new AtomicReference<>();
-    private final TestDruidLeaderSelector leaderSelector
-        = new TestDruidLeaderSelector();
+    private final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
 
     private final ExecutorFactory executorFactory;
     private final TestSegmentsMetadataManager segmentManager = new TestSegmentsMetadataManager();

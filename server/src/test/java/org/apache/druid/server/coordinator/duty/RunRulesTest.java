@@ -19,8 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
@@ -32,7 +31,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorBaseTest;
@@ -43,30 +41,26 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
-import org.apache.druid.server.coordinator.rules.IntervalDropRule;
-import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.simulate.TestMetadataRuleManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.easymock.EasyMock;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -75,32 +69,38 @@ import java.util.Set;
  */
 public class RunRulesTest extends CoordinatorBaseTest
 {
-  private static final long SERVER_SIZE_10GB = 10L << 30;
+  private static final String INTERVAL_START = "2012-01-01";
   private static final RowKey DATASOURCE_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS.WIKI);
 
-  private LoadQueuePeon mockPeon;
-  private RunRules ruleRunner;
+  private RunRules runRules;
   private StubServiceEmitter emitter;
-  private MetadataRuleManager databaseRuleManager;
-  private SegmentLoadQueueManager loadQueueManager;
-  private final List<DataSegment> usedSegments =
+  private TestMetadataRuleManager databaseRuleManager;
+
+  /**
+   * 24 hour segments starting at 2012-01-01.
+   */
+  private final DataSegment[] segments =
       CreateDataSegments.ofDatasource(DS.WIKI)
                         .forIntervals(24, Granularities.HOUR)
-                        .startingAt("2012-01-01")
+                        .startingAt(INTERVAL_START)
                         .withNumPartitions(1)
-                        .eachOfSizeInMb(1);
+                        .eachOfSizeInMb(1)
+                        .toArray(new DataSegment[0]);
 
   private ListeningExecutorService balancerExecutor;
+
+  private int segmentVersion = 0;
+  private int serverId = 0;
 
   @Before
   public void setUp()
   {
-    mockPeon = EasyMock.createMock(LoadQueuePeon.class);
-    emitter = new StubServiceEmitter("coordinator", "host");
+    serverId = 0;
+    segmentVersion = 0;
+    emitter = new StubServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
-    databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    ruleRunner = new RunRules(Set::size);
-    loadQueueManager = new SegmentLoadQueueManager(null, null);
+    databaseRuleManager = new TestMetadataRuleManager();
+    runRules = new RunRules(Set::size);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
 
@@ -108,7 +108,6 @@ public class RunRulesTest extends CoordinatorBaseTest
   public void tearDown()
   {
     balancerExecutor.shutdown();
-    EasyMock.verify(databaseRuleManager);
   }
 
   /**
@@ -120,34 +119,16 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test
   public void testOneTierTwoReplicantsWithStrictReplicantLimit()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
+    setRules(Load.on(Tier.T2, 2).forInterval("2012-01-01/P1D"));
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01/2012-01-02"),
-                ImmutableMap.of("normal", 2),
-                null
-            )
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    // server1 has all the segments already loaded
-    final DruidServer server1 = createHistorical("server1", "normal");
-    usedSegments.forEach(server1::addDataSegment);
-
-    final DruidServer server2 = createHistorical("server2", "normal");
+    // 1 tier, 2 servers, 1 server has all segments already loaded
     final DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
-            new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
-        ).build();
+        .add(createHistorical(Tier.T2, segments))
+        .add(createHistorical(Tier.T2))
+        .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
@@ -155,15 +136,12 @@ public class RunRulesTest extends CoordinatorBaseTest
                 .withSmartSegmentLoading(false)
                 .build()
         )
-        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // There are 24 under-replicated segments, but only 10 replicas are assigned
-    Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DS.WIKI));
-
-    EasyMock.verify(mockPeon);
+    Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
   }
 
   /**
@@ -176,333 +154,141 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test
   public void testTwoTiersTwoReplicantsWithStrictReplicantLimit()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("hot", 2, "normal", 2),
-                null
-            )
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    final DruidServer serverHot1 = createHistorical("serverHot", "hot");
-    final DruidServer serverHot2 = createHistorical("serverHot2", "hot");
-    usedSegments.forEach(serverHot1::addDataSegment);
-
-    final DruidServer serverNorm1 = createHistorical("serverNorm", "normal");
-    final DruidServer serverNorm2 = createHistorical("serverNorm2", "normal");
+    setRules(
+        Load.on(Tier.T1, 2).andOn(Tier.T2, 2).forInterval("2012-01-01/2012-01-02")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(serverHot1.toImmutableDruidServer(), mockPeon),
-            new ServerHolder(serverHot2.toImmutableDruidServer(), mockPeon)
-        )
-        .add(
-            new ServerHolder(serverNorm1.toImmutableDruidServer(), mockPeon),
-            new ServerHolder(serverNorm2.toImmutableDruidServer(), mockPeon)
-        )
+        .add(createHistorical(Tier.T1))
+        .add(createHistorical(Tier.T1, segments))
+        .add(createHistorical(Tier.T2))
+        .add(createHistorical(Tier.T2))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withReplicationThrottleLimit(10)
                                     .withSmartSegmentLoading(false)
                                     .build()
         )
-        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
-    Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DS.WIKI));
-
-    EasyMock.verify(mockPeon);
+    // maxNonPrimaryReplicantsToLoad takes effect on hot tier, but not normal tier
+    Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
   }
 
-  /**
-   * Nodes:
-   * hot - 1 replicant
-   * normal - 1 replicant
-   * cold - 1 replicant
-   */
   @Test
-  public void testRunThreeTiersOneReplicant()
+  public void testLoadByIntervalOnThreeTiers()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
-                ImmutableMap.of("hot", 1),
-                null
-            ),
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("normal", 1),
-                null
-            ),
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("cold", 1),
-                null
-            )
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
+    setRules(
+        Load.on(Tier.T1, 1).forInterval("2012-01-01/PT6H"),
+        Load.on(Tier.T2, 1).forInterval("2012-01-01/PT12H"),
+        Load.on(Tier.T3, 1).forInterval("2012-01-01/P1D")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(
-                createHistorical("serverHot", "hot").toImmutableDruidServer(),
-                mockPeon
-            )
-        )
-        .add(
-            new ServerHolder(
-                createHistorical("serverNorm", "normal").toImmutableDruidServer(),
-                mockPeon
-            )
-        )
-        .add(
-            new ServerHolder(
-                createHistorical("serverCold", "cold").toImmutableDruidServer(),
-                mockPeon
-            )
-        )
+        .add(createHistorical(Tier.T1))
+        .add(createHistorical(Tier.T2))
+        .add(createHistorical(Tier.T3))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
-    Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DS.WIKI));
-    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DS.WIKI));
+    Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
+    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T3, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-
-    EasyMock.verify(mockPeon);
   }
 
-  private DruidServer createHistorical(String name, String tier)
-  {
-    return new DruidServer(name, name, null, SERVER_SIZE_10GB, ServerType.HISTORICAL, tier, 0);
-  }
-
-  private ServerHolder createServerHolder(String name, String tier, LoadQueuePeon peon)
-  {
-    return new ServerHolder(createHistorical(name, tier).toImmutableDruidServer(), peon);
-  }
-
-  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(
-      DruidCluster druidCluster,
-      DataSegment segment
-  )
-  {
-    return createCoordinatorRuntimeParams(druidCluster, Collections.singletonList(segment));
-  }
-
-  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(DruidCluster druidCluster)
-  {
-    return createCoordinatorRuntimeParams(druidCluster, usedSegments);
-  }
-
-  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(
-      DruidCluster druidCluster,
-      List<DataSegment> dataSegments
-  )
-  {
-    return DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc().minusDays(1))
-        .withDruidCluster(druidCluster)
-        .withUsedSegments(dataSegments)
-        .withDatabaseRuleManager(databaseRuleManager);
-  }
-
-  /**
-   * Nodes:
-   * hot - 2 replicants
-   * cold - 1 replicant
-   */
   @Test
-  public void testRunTwoTiersTwoReplicants()
+  public void testOnlyOneRuleIsAppliedOnSegment()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
-                ImmutableMap.of("hot", 2),
-                null
-            ),
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("cold", 1),
-                null
-            )
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
+    setRules(
+        Load.on(Tier.T1, 1).forInterval("2012-01-01/PT6H"),
+        Load.on(Tier.T2, 1).forever()
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(createServerHolder("serverHot", "hot", mockPeon))
-        .add(createServerHolder("serverHot2", "hot", mockPeon))
-        .add(createServerHolder("serverCold", "cold", mockPeon))
+        .add(createHistorical(Tier.T1))
+        .add(createHistorical(Tier.T2))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
-    Assert.assertEquals(18L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DS.WIKI));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    long numFirstRuleApplied = stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI);
+    long numSecondRuleApplied = stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI);
+    Assert.assertEquals(6L, numFirstRuleApplied);
+    Assert.assertEquals(18L, numSecondRuleApplied);
+    Assert.assertEquals(segments.length, numFirstRuleApplied + numSecondRuleApplied);
 
-    EasyMock.verify(mockPeon);
+    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
   }
 
-  /**
-   * Nodes:
-   * hot - 1 replicant
-   * normal - 1 replicant
-   */
   @Test
-  public void testRunTwoTiersWithExistingSegments()
+  public void testLoadRuleDoesNotAssignFullyReplicatedSegment()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
+    setRules(
+        Load.on(Tier.T1, 1).forever()
+    );
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1),
-                null
-            ),
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("normal", 1),
-                null
-            )
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidServer normServer = createHistorical("serverNorm", "normal");
-    for (DataSegment segment : usedSegments) {
-      normServer.addDataSegment(segment);
-    }
-
+    // 1 server with all segments already loaded
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(createServerHolder("serverHot", "hot", mockPeon))
-        .add(new ServerHolder(normServer.toImmutableDruidServer(), mockPeon))
+        .add(createHistorical(Tier.T1, segments))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DS.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-
-    EasyMock.verify(mockPeon);
   }
 
   @Test
-  public void testRunTwoTiersTierDoesNotExist()
+  public void testAlertIsRaisedIfLoadRuleRefersToInvalidTier()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
+    setRules(
+        Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever()
+    );
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1),
-                null
-            ),
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("normal", 1),
-                null
-            )
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
+    // Only 1 tier
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(createServerHolder("serverNorm", "normal", mockPeon))
+        .add(createHistorical(Tier.T1))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     runDutyAndGetStats(params);
 
-    EasyMock.verify(mockPeon);
+    List<AlertEvent> alerts = emitter.getAlerts();
+    Assert.assertEquals(1, alerts.size());
   }
 
   @Test
   public void testRunRuleDoesNotExist()
   {
-
-    EasyMock
-        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
-        .andReturn(
-            Collections.singletonList(
-                new IntervalLoadRule(
-                    Intervals.of("2012-01-02T00:00:00.000Z/2012-01-03T00:00:00.000Z"),
-                    ImmutableMap.of("normal", 1),
-                    null
-                )
-            )
-        )
-        .atLeastOnce();
-
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.replay(databaseRuleManager, mockPeon);
+    setRules(
+        Load.on(Tier.T2, 1).forInterval("2012-01-02/P1D")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(createServerHolder("serverNorm", "normal", mockPeon))
+        .add(createHistorical(Tier.T2))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     runDutyAndGetStats(params);
 
@@ -512,45 +298,25 @@ public class RunRulesTest extends CoordinatorBaseTest
     AlertEvent alertEvent = events.get(0);
     EventMap eventMap = alertEvent.toMap();
     Assert.assertEquals(
-        "No matching retention rule for [24] segments in datasource[test]",
+        "No matching retention rule for [24] segments in datasource[wiki]",
         eventMap.get("description")
     );
-    EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropRemove()
   {
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("normal", 1),
-                null
-            ),
-            new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidServer server = createHistorical("serverNorm", "normal");
-    for (DataSegment segment : usedSegments) {
-      server.addDataSegment(segment);
-    }
+    setRules(
+        Load.on(Tier.T2, 1).forInterval("2012-01-01/PT12H"),
+        Drop.forInterval("2012-01-01/P1D")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(new ServerHolder(server.toImmutableDruidServer(), mockPeon))
+        .add(createHistorical(Tier.T2))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
@@ -559,201 +325,91 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test
   public void testDropTooManyInSameTier()
   {
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("normal", 1),
-                null
-            ),
-            new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidServer server1 = createHistorical("serverNorm", "normal");
-    server1.addDataSegment(usedSegments.get(0));
-
-    DruidServer server2 = createHistorical("serverNorm2", "normal");
-    for (DataSegment segment : usedSegments) {
-      server2.addDataSegment(segment);
-    }
+    setRules(
+        Load.on(Tier.T2, 1).forInterval("2012-01-01/PT12H"),
+        Drop.forInterval("2012-01-01/P1D")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
-            new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
-        )
+        .add(createHistorical(Tier.T2, segments))
+        .add(createHistorical(Tier.T2, segments[0]))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
                 .withMarkSegmentAsUnusedDelayMillis(0L)
                 .build()
         )
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DS.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS.WIKI));
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
-
-    EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropTooManyInDifferentTiers()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1),
-                null
-            ),
-            new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidServer server1 = createHistorical("server1", "hot");
-    server1.addDataSegment(usedSegments.get(0));
-    DruidServer server2 = createHistorical("serverNorm2", "normal");
-    for (DataSegment segment : usedSegments) {
-      server2.addDataSegment(segment);
-    }
+    setRules(
+        Load.on(Tier.T1, 1).forInterval("2012-01-01/PT12H"),
+        Drop.forInterval("2012-01-01/P1D")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
-        .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
+        .add(createHistorical(Tier.T1, segments[0]))
+        .add(createHistorical(Tier.T2, segments))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DS.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS.WIKI));
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
-
-    EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDontDropInDifferentTiers()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Lists.newArrayList(
-            new IntervalLoadRule(
-                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1),
-                null
-            ),
-            new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidServer server1 = createHistorical("server1", "hot");
-    DruidServer server2 = createHistorical("serverNorm2", "normal");
-    for (DataSegment segment : usedSegments) {
-      server2.addDataSegment(segment);
-    }
+    setRules(
+        Load.on(Tier.T1, 1).forInterval("2012-01-01/PT12H"),
+        Drop.forInterval("2012-01-01/P1D")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
-        .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
+        .add(createHistorical(Tier.T1))
+        .add(createHistorical(Tier.T2, segments))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
     Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
-
-    EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropServerActuallyServesSegment()
   {
-    EasyMock
-        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
-        .andReturn(
-            Collections.singletonList(
-                new IntervalLoadRule(
-                    Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T01:00:00.000Z"),
-                    ImmutableMap.of("normal", 0),
-                    null
-                )
-            )
-        )
-        .atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidServer server1 = createHistorical("server1", "normal");
-    server1.addDataSegment(usedSegments.get(0));
-    DruidServer server2 = createHistorical("serverNorm2", "normal");
-    server2.addDataSegment(usedSegments.get(1));
-    DruidServer server3 = createHistorical("serverNorm3", "normal");
-    server3.addDataSegment(usedSegments.get(1));
-    server3.addDataSegment(usedSegments.get(2));
-
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
-    EasyMock.expect(anotherMockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(anotherMockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
-
-    EasyMock.replay(anotherMockPeon);
+    setRules(
+        Load.on(Tier.T2, 0).forInterval("2012-01-01/PT1H")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(server1.toImmutableDruidServer(), mockPeon, false),
-            new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon, false),
-            new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon, false)
-        )
+        .add(createHistorical(Tier.T2, segments[0]))
+        .add(createHistorical(Tier.T2, segments[1]))
+        .add(createHistorical(Tier.T2, segments[1], segments[2]))
         .build();
-
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DS.WIKI));
-
-    EasyMock.verify(mockPeon);
-    EasyMock.verify(anotherMockPeon);
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS.WIKI));
   }
 
   /**
@@ -763,72 +419,31 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test
   public void testNoThrottleWhenSegmentNotLoadedInTier()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock
-        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
-        .andReturn(
-            Collections.singletonList(
-                new IntervalLoadRule(
-                    Intervals.of("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
-                    ImmutableMap.of("hot", 2),
-                    null
-                )
-            )
-        )
-        .atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
+    setRules(
+        Load.on(Tier.T1, 2).forInterval("2012-01-01/2013-01-01")
+    );
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(
-                createHistorical("serverHot", "hot").toImmutableDruidServer(),
-                mockPeon
-            ),
-            new ServerHolder(
-                createHistorical("serverHot2", "hot").toImmutableDruidServer(),
-                mockPeon
-            )
-        )
+        .add(createHistorical(Tier.T1))
+        .add(createHistorical(Tier.T1))
         .build();
 
-    final CostBalancerStrategy balancerStrategy = new CostBalancerStrategy(balancerExecutor);
-    DruidCoordinatorRuntimeParams params =
-        createCoordinatorRuntimeParams(druidCluster)
-            .withBalancerStrategy(balancerStrategy)
-            .withSegmentAssignerUsing(loadQueueManager)
-            .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
+    Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    DataSegment overFlowSegment = new DataSegment(
-        "test",
+    DataSegment overFlowSegment = createSegment(
         Intervals.of("2012-02-01/2012-02-02"),
-        DateTimes.nowUtc().toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        1,
         0
     );
 
-    stats = runDutyAndGetStats(
-        createCoordinatorRuntimeParams(druidCluster)
-            .withUsedSegments(overFlowSegment)
-            .withBalancerStrategy(balancerStrategy)
-            .withSegmentAssignerUsing(loadQueueManager)
-            .build()
-    );
+    params = createRuntimeParams(druidCluster, overFlowSegment).build();
+    stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
-
-    EasyMock.verify(mockPeon);
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
   }
 
   /**
@@ -839,173 +454,77 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test
   public void testReplicantThrottleAcrossTiers()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock
-        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
-        .andReturn(
-            Collections.singletonList(
-                new IntervalLoadRule(
-                    Intervals.of("2012-01-01/2013-01-01"),
-                    ImmutableMap.of("hot", 1, "normal", 1),
-                    null
-                )
-            )
-        )
-        .atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
+    setRules(
+        Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forInterval("2012-01-01/P1Y")
+    );
 
     final DruidCluster druidCluster = DruidCluster
         .builder()
-        .add(
-            new ServerHolder(
-                createHistorical("serverHot", "hot").toImmutableDruidServer(),
-                mockPeon
-            )
-        )
-        .add(
-            new ServerHolder(
-                createHistorical("serverNorm", "normal").toImmutableDruidServer(),
-                mockPeon
-            )
-        )
+        .add(createHistorical(Tier.T1))
+        .add(createHistorical(Tier.T2))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withReplicationThrottleLimit(7).build())
-        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DS.WIKI));
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DS.WIKI));
+    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-
-    EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropReplicantThrottle()
   {
-    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock
-        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
-        .andReturn(
-            Collections.singletonList(
-                new IntervalLoadRule(
-                    Intervals.of("2012-01-01/2013-01-02"),
-                    ImmutableMap.of("normal", 1),
-                    null
-                )
-            )
-        )
-        .atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DataSegment overFlowSegment = new DataSegment(
-        "test",
-        Intervals.of("2012-02-01/2012-02-02"),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        1,
-        0
+    setRules(
+        Load.on(Tier.T2, 1).forInterval("2012-01-01/P1Y1D")
     );
-    List<DataSegment> longerUsedSegments = Lists.newArrayList(usedSegments);
-    longerUsedSegments.add(overFlowSegment);
 
-    DruidServer server1 = createHistorical("serverNorm1", "normal");
-    for (DataSegment segment : longerUsedSegments) {
-      server1.addDataSegment(segment);
-    }
-    DruidServer server2 = createHistorical("serverNorm2", "normal");
-    for (DataSegment segment : longerUsedSegments) {
-      server2.addDataSegment(segment);
-    }
+    final DataSegment[] usedSegmentsWithExtra = Arrays.copyOf(segments, segments.length + 1);
+    usedSegmentsWithExtra[segments.length] = createSegment(Intervals.of("2012-02-01/P1D"), 0);
 
     DruidCluster druidCluster =
         DruidCluster.builder()
-                    .add(new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
-                    .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
+                    .add(createHistorical(Tier.T2, usedSegmentsWithExtra))
+                    .add(createHistorical(Tier.T2, usedSegmentsWithExtra))
                     .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegments(longerUsedSegments)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, usedSegmentsWithExtra).build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // There is no throttling on drop
-    Assert.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DS.WIKI));
-    EasyMock.verify(mockPeon);
+    Assert.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS.WIKI));
   }
 
   @Test
   public void testRulesRunOnNonOvershadowedSegmentsOnly()
   {
-    Set<DataSegment> usedSegments = new HashSet<>();
-    DataSegment v1 = new DataSegment(
-        "test",
-        Intervals.of("2012-01-01/2012-01-02"),
-        "1",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
+    final DataSegment[] usedSegments = new DataSegment[]{
+        createSegment(Intervals.of("2012-01-01/P1D"), 1),
+        createSegment(Intervals.of("2012-01-01/P1D"), 1)
+    };
+
+    setRules(
+        Load.on(Tier.T1, 1).forever()
     );
-    DataSegment v2 = new DataSegment(
-        "test",
-        Intervals.of("2012-01-01/2012-01-02"),
-        "2",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
-    );
-    usedSegments.add(v1);
-    usedSegments.add(v2);
 
-    mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
-    mockEmptyPeon();
+    DruidCluster druidCluster = DruidCluster
+        .builder()
+        .add(createHistorical(Tier.T1))
+        .build();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null))).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DruidCluster druidCluster = DruidCluster.builder().add(
-        createServerHolder("serverHot", DruidServer.DEFAULT_TIER, mockPeon)
-    ).build();
-
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegments(usedSegments)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(druidCluster, usedSegments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DS.WIKI));
+    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    Assert.assertEquals(2, usedSegments.size());
-    Assert.assertEquals(usedSegments, params.getUsedSegments());
-
-    EasyMock.verify(mockPeon);
+    Assert.assertEquals(2, usedSegments.length);
+    Assert.assertEquals(Sets.newHashSet(usedSegments), params.getUsedSegments());
   }
 
   /**
@@ -1017,53 +536,27 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test(timeout = 5000L)
   public void testTwoNodesOneTierThreeReplicantsRandomStrategyNotEnoughNodes()
   {
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 3), null)
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
+    setRules(
+        Load.on(Tier.T1, 3).forever()
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().add(
-        new ServerHolder(
-            createHistorical("server1", DruidServer.DEFAULT_TIER)
-                .addDataSegment(dataSegment)
-                .toImmutableDruidServer(),
-            mockPeon
-        ),
-        new ServerHolder(
-            createHistorical("server2", DruidServer.DEFAULT_TIER)
-                .addDataSegment(dataSegment)
-                .toImmutableDruidServer(),
-            mockPeon
-        )
-    ).build();
+    DataSegment dataSegment = createSegment(Intervals.utc(0, 1), 1);
+
+    DruidCluster druidCluster =
+        DruidCluster.builder()
+                    .add(createHistorical(Tier.T1, dataSegment))
+                    .add(createHistorical(Tier.T1, dataSegment))
+                    .build();
 
     DruidCoordinatorRuntimeParams params =
-        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+        createRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DS.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-
-    EasyMock.verify(mockPeon);
   }
 
 
@@ -1076,47 +569,27 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test(timeout = 5000L)
   public void testOneNodesOneTierOneReplicantRandomStrategyEnoughSpace()
   {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null)
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1
+    setRules(
+        Load.on(Tier.T1, 1).forever()
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().add(
-        new ServerHolder(
-            createHistorical("server1", DruidServer.DEFAULT_TIER).toImmutableDruidServer(),
-            mockPeon
-        )
-    ).build();
+    DataSegment dataSegment = createSegment(Intervals.utc(0, 1), 1);
+
+    DruidCluster druidCluster =
+        DruidCluster
+            .builder()
+            .add(createHistorical(Tier.T1))
+            .build();
 
     DruidCoordinatorRuntimeParams params =
-        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+        createRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DS.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-
-    EasyMock.verify(mockPeon);
   }
 
   /**
@@ -1128,56 +601,35 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test(timeout = 5000L)
   public void testOneNodesOneTierOneReplicantRandomStrategyNotEnoughSpace()
   {
-    mockEmptyPeon();
-    int numReplicants = 1;
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(
-                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants),
-                null
-            )
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    final DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        11
+    setRules(
+        Load.on(Tier.T1, 1).forever()
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().add(
-        new ServerHolder(
-            new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
-                .toImmutableDruidServer(),
-            mockPeon
-        )
-    ).build();
+    final DataSegment dataSegment = createSegment(Intervals.utc(0, 1), 11);
+
+    ServerHolder server = new ServerHolder(
+        new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, Tier.T1, 0)
+            .toImmutableDruidServer(),
+        new TestLoadQueuePeon()
+    );
+    DruidCluster druidCluster = DruidCluster.builder().add(server).build();
 
     DruidCoordinatorRuntimeParams params =
-        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+        createRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
+    final RowKey tierRowKey = RowKey.of(Dimension.TIER, Tier.T1);
     Assert.assertEquals(
-        dataSegment.getSize() * numReplicants,
+        dataSegment.getSize(),
         stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
     );
 
     // Verify that primary assignment failed
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DS.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-
-    EasyMock.verify(mockPeon);
   }
 
   /**
@@ -1189,77 +641,76 @@ public class RunRulesTest extends CoordinatorBaseTest
   @Test
   public void testOneNodesOneTierOneReplicantCostBalancerStrategyNotEnoughSpace()
   {
-    mockEmptyPeon();
-    int numReplicants = 1;
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(
-                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants),
-                null
-            )
-        )).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
-
-    DataSegment dataSegment = new DataSegment(
-        "test",
-        Intervals.utc(0, 1),
-        DateTimes.nowUtc().toString(),
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        11
+    setRules(
+        Load.on(Tier.T1, 1).forever()
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().add(
-        new ServerHolder(
-            new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
-                .toImmutableDruidServer(),
-            mockPeon
-        )
-    ).build();
+    DataSegment dataSegment = createSegment(Intervals.utc(0, 1), 11);
+
+    ServerHolder server = new ServerHolder(
+        new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, Tier.T1, 0)
+            .toImmutableDruidServer(),
+        new TestLoadQueuePeon()
+    );
+    DruidCluster druidCluster = DruidCluster.builder().add(server).build();
 
     DruidCoordinatorRuntimeParams params =
-        createCoordinatorRuntimeParams(druidCluster, dataSegment)
+        createRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
+    final RowKey tierRowKey = RowKey.of(Dimension.TIER, Tier.T1);
     Assert.assertEquals(
-        dataSegment.getSize() * numReplicants,
+        dataSegment.getSize(),
         stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
     );
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DS.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+  }
 
-    EasyMock.verify(mockPeon);
+  private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params, Rule... rules)
+  {
+    if (rules.length > 0) {
+      databaseRuleManager.overrideRule(DS.WIKI, Arrays.asList(rules), null);
+    }
+    return runRules.run(params).getCoordinatorStats();
+  }
+
+  private void setRules(Rule... rules)
+  {
+    databaseRuleManager.overrideRule(DS.WIKI, Arrays.asList(rules), null);
+  }
+
+  /**
+   * Create a historical with max size 10GB and serving the given segments.
+   */
+  private ServerHolder createHistorical(String tier, DataSegment... servedSegments)
+  {
+    final String name = "server_" + serverId++;
+    DruidServer server = new DruidServer(name, name, null, 10L << 30, ServerType.HISTORICAL, tier, 0);
+    for (DataSegment segment : servedSegments) {
+      server.addDataSegment(segment);
+    }
+    return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon());
   }
 
   @Test
   public void testSegmentWithZeroRequiredReplicasHasZeroReplicationFactor()
   {
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(Collections.emptyMap(), false)
-        )
-    ).anyTimes();
-    EasyMock.replay(databaseRuleManager);
+    setRules(
+        Load.on(Tier.T1, 0).forever()
+    );
 
     final DruidCluster cluster = DruidCluster
         .builder()
-        .add(createServerHolder("server", "normal", new TestLoadQueuePeon()))
+        .add(createHistorical(Tier.T1))
         .build();
 
-    final DataSegment segment = usedSegments.get(0);
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(cluster, segment)
-        .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
-    params = ruleRunner.run(params);
+    final DataSegment segment = segments[0];
+    DruidCoordinatorRuntimeParams params = createRuntimeParams(cluster, segment).build();
+    params = runRules.run(params);
 
     Assert.assertNotNull(params);
     SegmentReplicationStatus replicationStatus = params.getSegmentReplicationStatus();
@@ -1272,18 +723,34 @@ public class RunRulesTest extends CoordinatorBaseTest
     Assert.assertEquals(0, replicaCounts.requiredAndLoadable());
   }
 
-  private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)
+  private DataSegment createSegment(Interval interval, long size)
   {
-    params = ruleRunner.run(params);
-    return params.getCoordinatorStats();
+    return new DataSegment(
+        DS.WIKI,
+        interval,
+        "" + segmentVersion++,
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        size
+    );
   }
 
-  private void mockEmptyPeon()
+  private DruidCoordinatorRuntimeParams.Builder createRuntimeParams(
+      DruidCluster druidCluster,
+      DataSegment... segments
+  )
   {
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.replay(mockPeon);
+    return DruidCoordinatorRuntimeParams
+        .newBuilder(DateTimes.nowUtc().minusDays(1))
+        .withDruidCluster(druidCluster)
+        .withUsedSegments(segments)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().build())
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null));
   }
 
 }

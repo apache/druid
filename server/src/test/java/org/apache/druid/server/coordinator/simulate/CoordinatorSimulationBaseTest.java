@@ -34,8 +34,10 @@ import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base test for coordinator simulations.
@@ -60,7 +62,15 @@ public abstract class CoordinatorSimulationBaseTest
   private CoordinatorSimulation sim;
   private MetricsVerifier metricsVerifier;
 
+  private final Map<String, AtomicInteger> tierToServerId = new HashMap<>();
+
   @Before
+  public void setupTest()
+  {
+    tierToServerId.clear();
+    setUp();
+  }
+
   public abstract void setUp();
 
   @After
@@ -187,9 +197,10 @@ public abstract class CoordinatorSimulationBaseTest
    * Creates a historical. The {@code uniqueIdInTier} must be correctly specified
    * as it is used to identify the historical throughout the simulation.
    */
-  static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
+  DruidServer createHistorical(String tier, long serverSizeMb)
   {
-    final String name = tier + "__" + "hist__" + uniqueIdInTier;
+    int serverId = tierToServerId.computeIfAbsent(tier, t -> new AtomicInteger(0)).incrementAndGet();
+    final String name = tier + "__" + "hist__" + serverId;
     return new DruidServer(name, name, name, serverSizeMb << 20, ServerType.HISTORICAL, tier, 1);
   }
 

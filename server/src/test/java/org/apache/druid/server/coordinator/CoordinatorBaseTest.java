@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -49,6 +50,7 @@ public abstract class CoordinatorBaseTest
   {
     public static final String T1 = "tier_t1";
     public static final String T2 = "tier_t2";
+    public static final String T3 = "tier_t3";
   }
 
   /**
@@ -99,6 +101,11 @@ public abstract class CoordinatorBaseTest
     public static Rule forever()
     {
       return new ForeverDropRule();
+    }
+
+    public static Rule forInterval(String interval)
+    {
+      return new IntervalDropRule(Intervals.of(interval));
     }
   }
 }
