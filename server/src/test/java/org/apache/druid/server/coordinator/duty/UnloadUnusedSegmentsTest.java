@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,8 +31,6 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
-import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.simulate.TestMetadataRuleManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -130,13 +127,13 @@ public class UnloadUnusedSegmentsTest extends CoordinatorBaseTest
 
   private void setupRuleManager()
   {
-    final LoadRule loadOnT1T2 = new ForeverLoadRule(ImmutableMap.of(Tier.T1, 1, Tier.T2, 1), true);
+    final LoadRule loadOnT1T2 = Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever();
     databaseRuleManager.overrideRule(DS.WIKI, Collections.singletonList(loadOnT1T2), null);
     databaseRuleManager.overrideRule(DS.KOALA, Collections.singletonList(loadOnT1T2), null);
 
     databaseRuleManager.overrideRule(
         DS.BROADCAST,
-        Collections.singletonList(new ForeverBroadcastDistributionRule()),
+        Collections.singletonList(Broadcast.forever()),
         null
     );
   }
