@@ -201,6 +201,8 @@ public abstract class AbstractTask implements Task
     // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
     Thread.interrupted();
 
+    // isEncapsulatedTask() currently means "isK8sIngestion".
+    // We don't need to push reports and status here for other ingestion methods.
     if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
       return;
