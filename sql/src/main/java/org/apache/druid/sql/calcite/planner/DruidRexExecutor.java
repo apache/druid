@@ -176,6 +176,17 @@ public class DruidRexExecutor implements RexExecutor
               }
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);
             }
+          } else if (constExp.getType().getComponentType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+            List<Boolean> resultAsBooleanList = new ArrayList<>(array.length);
+            for (Object val : exprResult.castTo(ExpressionType.LONG_ARRAY).asArray()) {
+              final Number longVal = (Number) val;
+              if (longVal == null) {
+                resultAsBooleanList.add(null);
+              } else {
+                resultAsBooleanList.add(longVal.longValue() > 0);
+              }
+            }
+            literal = rexBuilder.makeLiteral(resultAsBooleanList, constExp.getType(), true);
           } else {
             literal = rexBuilder.makeLiteral(Arrays.asList(array), constExp.getType(), true);
           }
