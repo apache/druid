@@ -989,4 +989,40 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       return port;
     }
   }
+    private ArgumentCaptor<Exception> getArgumentCaptor(ServerConfig serverConfig,String errorMessage,boolean haverequest) throws IOException {
+    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
+    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+            new MapQueryToolChestWarehouse(ImmutableMap.of()),
+            mockMapper,
+            TestHelper.makeSmileMapper(),
+            null,
+            null,
+            null,
+            new NoopServiceEmitter(),
+            new NoopRequestLogger(),
+            new DefaultGenericQueryMetricsFactory(),
+            new AuthenticatorMapper(ImmutableMap.of()),
+            new Properties(),
+            serverConfig
+    );
+    Exception testException = new IllegalStateException(errorMessage);
+
+    if(haverequest){
+      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+      Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
+      IOException testException2 = new IOException(errorMessage);
+      servlet.handleQueryParseException(request, response, mockMapper, testException2, false);
+    }
+    else {
+      servlet.handleException(response, mockMapper, testException);
+    }
+
+    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
+    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
+
+    return captor;
+  }
 }
