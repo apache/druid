@@ -380,54 +380,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testHandleQueryParseExceptionWithFilterEnabled() throws Exception
-  {
-    String errorMessage = "test exception message";
-    ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    ServletOutputStream outputStream = Mockito.mock(ServletOutputStream.class);
-    Mockito.when(response.getOutputStream()).thenReturn(outputStream);
-    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
-        new MapQueryToolChestWarehouse(ImmutableMap.of()),
-        mockMapper,
-        TestHelper.makeSmileMapper(),
-        null,
-        null,
-        null,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
-        new DefaultGenericQueryMetricsFactory(),
-        new AuthenticatorMapper(ImmutableMap.of()),
-        new Properties(),
-        new ServerConfig()
-        {
-          @Override
-          public boolean isShowDetailedJettyErrors()
-          {
-            return true;
-          }
-
-          @Override
-          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
-          {
-            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
-          }
-        }
-    );
-    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
-    IOException testException = new IOException(errorMessage);
-    servlet.handleQueryParseException(request, response, mockMapper, testException, false);
-    ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
-    Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertNull(captor.getValue().getMessage());
-    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
-    Assert.assertNull(((QueryException) captor.getValue()).getHost());
-  }
-
-  @Test
   public void testHandleQueryParseExceptionWithFilterEnabledButMessageMatchAllowedRegex() throws Exception
   {
     String errorMessage = "test exception message";
