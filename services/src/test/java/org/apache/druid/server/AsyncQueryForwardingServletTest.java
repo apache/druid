@@ -354,7 +354,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void testHandleQueryParseExceptionWithFilterDisabled() throws Exception
   {
     String errorMessage = "test exception message";
-    boolean haveRequest = true;
     ServerConfig serverConfig = new ServerConfig();
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
         serverConfig,
@@ -371,7 +370,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void testHandleQueryParseExceptionWithFilterEnabled() throws Exception
   {
     String errorMessage = "test exception message";
-    boolean haveRequest = true;
     ServerConfig serverConfig = new ServerConfig() {
       @Override
       public boolean isShowDetailedJettyErrors()
@@ -401,7 +399,6 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void testHandleQueryParseExceptionWithFilterEnabledButMessageMatchAllowedRegex() throws Exception
   {
     String errorMessage = "test exception message";
-    boolean haveRequest = true;
     ServerConfig serverConfig = new ServerConfig()
     {
       @Override
