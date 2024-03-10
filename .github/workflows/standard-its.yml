@@ -32,7 +32,7 @@ jobs:
       core: ${{ steps.filter.outputs.core || github.event_name != 'pull_request'}}
       common-extensions: ${{ steps.filter.outputs.common-extensions }}
     steps:
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3.0.0
         if: github.event_name == 'pull_request'
         id: filter
         with:
@@ -148,10 +148,10 @@ jobs:
       BUILD_DRUID_CLUSTER: true
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: setup java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '8'
           distribution: 'zulu'
@@ -160,7 +160,7 @@ jobs:
       # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-8-${{ github.sha }}
@@ -183,7 +183,8 @@ jobs:
         run: |
           for v in broker middlemanager router coordinator historical ; do
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
-          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
+          /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
+          /usr/local/bin/kubectl get events | grep druid-tiny-cluster-"$v"s-0 ||:;
           done
 
   integration-other-tests:

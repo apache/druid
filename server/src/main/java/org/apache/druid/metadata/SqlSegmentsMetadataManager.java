@@ -64,7 +64,6 @@ import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import javax.annotation.Nullable;
@@ -72,6 +71,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -335,7 +335,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     usedFlagLastUpdatedPopulationFuture = executorService.submit(
-        () -> populateUsedFlagLastUpdated()
+        this::populateUsedFlagLastUpdated
     );
   }
 
@@ -347,70 +347,68 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @VisibleForTesting
   void populateUsedFlagLastUpdated()
   {
-    String segmentsTable = getSegmentsTable();
+    final String segmentsTable = getSegmentsTable();
     log.info(
-        "Populating used_status_last_updated with non-NULL values for unused segments in [%s]",
+        "Populating column 'used_status_last_updated' with non-NULL values for unused segments in table[%s].",
         segmentsTable
     );
 
-    int limit = 100;
+    final int batchSize = 100;
     int totalUpdatedEntries = 0;
 
+    // Update the rows in batches of size 100
     while (true) {
-      List<String> segmentsToUpdate = new ArrayList<>(100);
+      final List<String> segmentsToUpdate = new ArrayList<>(batchSize);
+      int numUpdatedRows;
       try {
         connector.retryWithHandle(
-            new HandleCallback<Void>()
-            {
-              @Override
-              public Void withHandle(Handle handle)
-              {
-                segmentsToUpdate.addAll(handle.createQuery(
-                    StringUtils.format(
-                        "SELECT id FROM %1$s WHERE used_status_last_updated IS NULL and used = :used %2$s",
-                        segmentsTable,
-                        connector.limitClause(limit)
-                    )
-                ).bind("used", false).mapTo(String.class).list());
-                return null;
-              }
+            handle -> {
+              segmentsToUpdate.addAll(handle.createQuery(
+                  StringUtils.format(
+                      "SELECT id FROM %1$s WHERE used_status_last_updated IS NULL and used = :used %2$s",
+                      segmentsTable,
+                      connector.limitClause(batchSize)
+                  )
+              ).bind("used", false).mapTo(String.class).list());
+              return null;
             }
         );
 
         if (segmentsToUpdate.isEmpty()) {
-          // We have no segments to process
           break;
         }
 
-        connector.retryWithHandle(
-            new HandleCallback<Void>()
-            {
-              @Override
-              public Void withHandle(Handle handle)
-              {
-                Batch updateBatch = handle.createBatch();
-                String sql = "UPDATE %1$s SET used_status_last_updated = '%2$s' WHERE id = '%3$s'";
-                String now = DateTimes.nowUtc().toString();
-                for (String id : segmentsToUpdate) {
-                  updateBatch.add(StringUtils.format(sql, segmentsTable, now, id));
-                }
-                updateBatch.execute();
-                return null;
+        numUpdatedRows = connector.retryWithHandle(
+            handle -> {
+              final Batch updateBatch = handle.createBatch();
+              final String sql = "UPDATE %1$s SET used_status_last_updated = '%2$s' WHERE id = '%3$s'";
+              String now = DateTimes.nowUtc().toString();
+              for (String id : segmentsToUpdate) {
+                updateBatch.add(StringUtils.format(sql, segmentsTable, now, id));
               }
+              int[] results = updateBatch.execute();
+              return Arrays.stream(results).sum();
             }
         );
+        totalUpdatedEntries += numUpdatedRows;
       }
       catch (Exception e) {
-        log.warn(e, "Population of used_status_last_updated in [%s] has failed. There may be unused segments with"
-                    + " NULL values for used_status_last_updated that won't be killed!", segmentsTable);
+        log.warn(e, "Populating column 'used_status_last_updated' in table[%s] has failed. There may be unused segments with"
+                    + " NULL values for 'used_status_last_updated' that won't be killed!", segmentsTable);
         return;
       }
 
-      totalUpdatedEntries += segmentsToUpdate.size();
-      log.info("Updated a batch of %d rows in [%s] with a valid used_status_last_updated date",
-               segmentsToUpdate.size(),
-               segmentsTable
+      log.debug(
+          "Updated a batch of [%d] rows in table[%s] with a valid used_status_last_updated date",
+          segmentsToUpdate.size(), segmentsTable
       );
+
+      // Do not wait if there are no more segments to update
+      if (segmentsToUpdate.size() == numUpdatedRows && numUpdatedRows < batchSize) {
+        break;
+      }
+
+      // Wait for some time before processing the next batch
       try {
         Thread.sleep(10000);
       }
@@ -420,9 +418,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       }
     }
     log.info(
-        "Finished updating [%s] with a valid used_status_last_updated date. %d rows updated",
-        segmentsTable,
-        totalUpdatedEntries
+        "Populated column 'used_status_last_updated' in table[%s] in [%d] rows.",
+        segmentsTable, totalUpdatedEntries
     );
   }
 
@@ -1140,7 +1137,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      DateTime maxUsedStatusLastUpdatedTime
+      final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column

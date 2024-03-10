@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.RowSignature;
@@ -112,13 +113,12 @@ public class QueryTestBuilder
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
+    Preconditions.checkNotNull(
+        config.baseQueryContext(),
+        "config's queryContext is null - probably set it to BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT"
+    );
     this.config = config;
-    // Done to maintain backwards compat. So,
-    // 1. If no base context is provided in config, the queryContext is set to the default one
-    // 2. If some base context is provided in config, we set that context as the queryContext
-    // 3. If someone overrides the context, we merge the context with the empty/non-empty base context provided in the config
-    this.queryContext =
-        config.baseQueryContext() == null ? BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT : config.baseQueryContext();
+    this.queryContext = config.baseQueryContext();
   }
 
   public QueryTestBuilder plannerConfig(PlannerConfig plannerConfig)

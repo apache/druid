@@ -29,8 +29,10 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -63,7 +65,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   @Override
   public List<ReadableFrameChannel> inputChannels()
   {
-    if (baseInput.hasSegment()) {
+    if (baseInput.hasSegment() || baseInput.hasDataServerQuery()) {
       return Collections.emptyList();
     } else {
       return Collections.singletonList(baseInput.getChannel());
@@ -79,21 +81,19 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   @Override
   public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    final ReturnOrAwait<Unit> retVal;
+    //noinspection rawtypes
+    final ReturnOrAwait retVal;
 
     if (baseInput.hasSegment()) {
-      SegmentWithDescriptor segment = baseInput.getSegment();
-      if (segment.getDescriptor().isLoadedOnServer()) {
-        retVal = runWithLoadedSegment(baseInput.getSegment());
-      } else {
-        retVal = runWithSegment(baseInput.getSegment());
-      }
+      retVal = runWithSegment(baseInput.getSegment());
+    } else if (baseInput.hasDataServerQuery()) {
+      retVal = runWithDataServerQuery(baseInput.getDataServerQuery());
     } else {
       retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
 
-    //noinspection rawtypes,unchecked
-    return (ReturnOrAwait) retVal;
+    //noinspection rawtype,unchecked
+    return retVal;
   }
 
   @Override
@@ -109,8 +109,17 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
     return frameWriterFactoryHolder.get();
   }
 
+  /**
+   * Runs the leaf processor using a segment described by the {@link SegmentWithDescriptor} as the input. This may result
+   * in calls to fetch the segment from an external source.
+   */
   protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException;
-  protected abstract ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException;
+
+  /**
+   * Runs the leaf processor using the results from a data server as the input. The query and data server details are
+   * described by {@link DataServerQueryHandler}.
+   */
+  protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
       ReadableFrameChannel inputChannel,

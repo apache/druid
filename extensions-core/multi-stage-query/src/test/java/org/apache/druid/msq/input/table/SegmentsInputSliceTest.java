@@ -21,7 +21,6 @@ package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
@@ -47,9 +46,12 @@ public class SegmentsInputSliceTest
                 Intervals.of("2000/P1M"),
                 Intervals.of("2000/P1M"),
                 "1",
-                0,
-                ImmutableSet.of(
-                    new DruidServerMetadata(
+                0
+            )
+        ),
+        ImmutableList.of(
+            new DataServerRequestDescriptor(
+                new DruidServerMetadata(
                     "name1",
                     "host1",
                     null,
@@ -57,6 +59,13 @@ public class SegmentsInputSliceTest
                     ServerType.REALTIME,
                     "tier1",
                     0
+                ),
+                ImmutableList.of(
+                    new RichSegmentDescriptor(
+                        Intervals.of("2002/P1M"),
+                        Intervals.of("2002/P1M"),
+                        "1",
+                        0
                     )
                 )
             )
@@ -66,6 +75,43 @@ public class SegmentsInputSliceTest
     Assert.assertEquals(
         slice,
         mapper.readValue(mapper.writeValueAsString(slice), InputSlice.class)
+    );
+  }
+
+  @Test
+  public void testSerde2() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                          .registerModules(new MSQIndexingModule().getJacksonModules());
+
+    final String sliceString = "{\n"
+                               + "    \"type\": \"segments\","
+                               + "    \"dataSource\": \"myds\",\n"
+                               + "    \"segments\": [\n"
+                               + "        {\n"
+                               + "            \"itvl\": \"2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z\",\n"
+                               + "            \"ver\": \"1\",\n"
+                               + "            \"part\": 0\n"
+                               + "        }\n"
+                               + "    ]\n"
+                               + "}";
+
+    final SegmentsInputSlice expectedSlice = new SegmentsInputSlice(
+        "myds",
+        ImmutableList.of(
+            new RichSegmentDescriptor(
+                Intervals.of("2000/P1M"),
+                Intervals.of("2000/P1M"),
+                "1",
+                0
+            )
+        ),
+        null
+    );
+
+    Assert.assertEquals(
+        expectedSlice,
+        mapper.readValue(sliceString, InputSlice.class)
     );
   }
 

@@ -19,31 +19,19 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupByColumnSelectorStrategy<Double>
+public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupByColumnSelectorStrategy
 {
   public ArrayDoubleGroupByColumnSelectorStrategy()
   {
-    super(Double.BYTES);
-  }
-
-  @VisibleForTesting
-  ArrayDoubleGroupByColumnSelectorStrategy(
-      List<List<Double>> dictionary,
-      Object2IntOpenHashMap<List<Double>> reverseDictionary
-  )
-  {
-    super(dictionary, reverseDictionary, Double.BYTES);
+    super(Double.BYTES, ColumnType.DOUBLE_ARRAY);
   }
 
   @Override
@@ -53,15 +41,14 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
     if (object == null) {
       return GROUP_BY_MISSING_VALUE;
     } else if (object instanceof Double) {
-      return addToIndexedDictionary(ImmutableList.of((Double) object));
+      return addToIndexedDictionary(new Object[]{object});
     } else if (object instanceof List) {
-      return addToIndexedDictionary((List<Double>) object);
+      return addToIndexedDictionary(((List) object).toArray());
     } else if (object instanceof Double[]) {
-      return addToIndexedDictionary(Arrays.asList((Double[]) object));
+      // Defensive check, since we don't usually expect to encounter Double[] objects from selectors
+      return addToIndexedDictionary(Arrays.stream((Double[]) object).toArray());
     } else if (object instanceof Object[]) {
-      return addToIndexedDictionary(Arrays.stream(((Object[]) (object)))
-                                          .map(a -> (Double) a)
-                                          .collect(Collectors.toList()));
+      return addToIndexedDictionary((Object[]) object);
     } else {
       throw new ISE("Found unexpected object type [%s] in %s array.", object.getClass().getName(), ValueType.DOUBLE);
     }
