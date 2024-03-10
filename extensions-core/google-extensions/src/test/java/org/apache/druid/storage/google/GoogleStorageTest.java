@@ -143,7 +143,7 @@ public class GoogleStorageTest
   }
 
   @Test
-  public void testGetMetadata() throws IOException
+  public void testGetMetadataMatch() throws IOException
   {
     EasyMock.expect(mockStorage.get(
         EasyMock.eq(BUCKET),
@@ -159,7 +159,10 @@ public class GoogleStorageTest
     EasyMock.replay(mockStorage, blob);
 
     GoogleStorageObjectMetadata objectMetadata = googleStorage.getMetadata(BUCKET, PATH);
-    assertEquals(objectMetadata, new GoogleStorageObjectMetadata(BUCKET, PATH, SIZE, UPDATE_TIME.toEpochSecond()));
+    assertEquals(
+        objectMetadata,
+        new GoogleStorageObjectMetadata(BUCKET, PATH, SIZE, UPDATE_TIME.toEpochSecond() * 1000)
+    );
 
   }
 
@@ -262,13 +265,13 @@ public class GoogleStorageTest
         bucket1,
         path1,
         size1,
-        updateTime1.toEpochSecond()
+        updateTime1.toEpochSecond() * 1000
     );
     GoogleStorageObjectMetadata objectMetadata2 = new GoogleStorageObjectMetadata(
         bucket2,
         path2,
         size2,
-        updateTime2.toEpochSecond()
+        updateTime2.toEpochSecond() * 1000
     );
 
     GoogleStorageObjectPage objectPage = googleStorage.list(BUCKET, PATH, null, null);
