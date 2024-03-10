@@ -23,24 +23,20 @@ sidebar_label: Update data
   ~ under the License.
   -->
 
-:::info
-
-Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
-This document describes the SQL language.
-
-:::
-
 Apache Druid stores data and indexes in [segment files](../design/segments.md) partitioned by time.
 Once segments are created, they cannot be modified.
-To update existing data, you must rebuild and republish the segments.
-Druid updates existing data using time ranges, not primary key. Data outside the replacement time range is not touched.
+In general, you update data by overwriting the segment you want to change.
+In some cases, you can overshadow a portion of a segment using a smaller segment granularity than the original segment.
+
+In Druid, use time ranges to specify the data you want to update, as opposed to a primary key or dimensions often used in transactional databases. Data outside the specified replacement time range is not touched.
+You can use this Druid functionality to perform data updates, inserts, and deletes, similar to UPSERT functionality for transactional databases.
 
 This tutorial shows you how to use the Druid SQL [REPLACE](../multi-stage-query/reference.md#replace) function with the OVERWRITE clause to update existing data.
 
 The tutorial walks you through the following use cases:
 
 * [Overwrite all data](#overwrite-all-data)
-* [Overwrite a specific row](#overwrite-a-specific-row)
+* [Overwrite records for a specific time range](#overwrite-records-for-a-specific-time-range)
 * [Update a row using partial segment overshadowing](#update-a-row-using-partial-segment-overshadowing)
 
 All examples use the [multi-stage query (MSQ)](../multi-stage-query/index.md) task engine to executes SQL statements.
@@ -51,9 +47,9 @@ Before you follow the steps in this tutorial, download Druid as described in [Qu
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
-## Load initial data
+## Load sample data
 
-Load an initial dataset using [REPLACE](../multi-stage-query/reference.md#replace) and [EXTERN](../multi-stage-query/reference.md#extern-function) functions.
+Load a sample dataset using [REPLACE](../multi-stage-query/reference.md#replace) and [EXTERN](../multi-stage-query/reference.md#extern-function) functions.
 In Druid SQL, the REPLACE function can create a new [datasource](../design/storage.md) or update an existing datasource.
 
 In the [web console](../operations/web-console.md), go to the **Query** view and run the following query:
@@ -144,7 +140,7 @@ PARTITIONED BY DAY
 
 Note that the values in the `__time` column have changed to one day later.
 
-## Overwrite a specific row
+## Overwrite records for a specific time range
 
 You can use the REPLACE function to overwrite a specific time range of a datasource. When you overwrite a specific time range, that time range must align with the granularity specified in the PARTITIONED BY clause.
 
@@ -195,16 +191,10 @@ Note the changes in the resulting datasource:
 ## Update a row using partial segment overshadowing
 
 In Druid, you can overlay older data with newer data for the entire segment or portions of the segment within a particular partition.
-This capability is commonly referred to as [overshadowing](../ingestion/tasks.md#overshadowing-between-segments).
-
-:::info
-
-The overshadow relation holds only for the same time chunk and the same datasource.
-
-:::
+This capability is called [overshadowing](../ingestion/tasks.md#overshadowing-between-segments).
 
 You can use partial overshadowing to update a single row by adding a smaller time granularity segment on top of the existing data.
-It's a niche variation on a more common approach where you replace the entire time chunk.
+It's a less common variation on a more common approach where you replace the entire time chunk.
 
 The following example demonstrates how update data using partial overshadowing with mixed segment granularity.  
 Note the following important points about the example:
@@ -247,7 +237,7 @@ PARTITIONED BY FLOOR(__time TO HOUR)
 
 Note that the `number` for `polecat` has changed from 626 to 486.
 
-When you perform partial segment overshadowing multiple times, you create fragmentation. Use [compaction](../data-management/compaction.md) to consolidate fragmented segments and remove the overshadowed areas of the earlier granularity segment.
+When you perform partial segment overshadowing multiple times, you can create fragmentation. Use [compaction](../data-management/compaction.md) to consolidate fragmented segments and remove the overshadowed areas of the earlier granularity segment.
 
 ## Learn more
 
