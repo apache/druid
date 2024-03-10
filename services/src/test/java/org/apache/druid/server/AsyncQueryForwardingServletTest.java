@@ -280,9 +280,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     String errorMessage = "test exception message";
     ServerConfig serverConfig = new ServerConfig();
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
-            serverConfig,
-            (servlet, request, response, mapper)
-                    -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
+        serverConfig,
+        (servlet, request, response, mapper)
+            -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
     );
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
@@ -309,9 +309,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
-            serverConfig,
-            (servlet, request, response, mapper)
-                    -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
+        serverConfig,
+        (servlet, request, response, mapper)
+            -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
     );
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
@@ -339,9 +339,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
-            serverConfig,
-            (servlet, request, response, mapper)
-                    -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
+        serverConfig,
+        (servlet, request, response, mapper)
+            -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
     );
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
@@ -357,9 +357,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     boolean haveRequest = true;
     ServerConfig serverConfig = new ServerConfig();
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
-            serverConfig,
-            (servlet, request, response, mapper)
-                    -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
+        serverConfig,
+        (servlet, request, response, mapper)
+            -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
     );
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
@@ -372,7 +372,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     String errorMessage = "test exception message";
     boolean haveRequest = true;
-    ServerConfig serverConfig = new ServerConfig()  {
+    ServerConfig serverConfig = new ServerConfig() {
       @Override
       public boolean isShowDetailedJettyErrors()
       {
@@ -386,9 +386,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
-            serverConfig,
-            (servlet, request, response, mapper)
-                    -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
+        serverConfig,
+        (servlet, request, response, mapper)
+            -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
     );
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
@@ -417,9 +417,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     ArgumentCaptor<Exception> captor = captureExceptionHandledByServlet(
-            serverConfig,
-            (servlet, request, response, mapper)
-                    -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
+        serverConfig,
+        (servlet, request, response, mapper)
+            -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
     );
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
@@ -963,9 +963,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       return port;
     }
   }
-  interface ServletTestAction {
+  interface ServletTestAction
+  {
     void execute(AsyncQueryForwardingServlet servlet, HttpServletRequest request, HttpServletResponse response, ObjectMapper mapper) throws Exception;
   }
+
   private ArgumentCaptor<Exception> captureExceptionHandledByServlet(ServerConfig serverConfig, ServletTestAction action) throws Exception
   {
     ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
@@ -988,7 +990,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
-    action.execute(servlet,request, response, mockMapper);
+    action.execute(servlet, request, response, mockMapper);
     ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
     return captor;
