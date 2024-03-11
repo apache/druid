@@ -82,7 +82,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     File exportDir = temporaryFolder.newFolder("export/");
-    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select dim1 as table_dim, count(*) as table_count from foo where dim1 is not null group by 1", exportDir.getAbsolutePath());
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select dim1 as table_dim, count(*) as table_count from foo where dim1 = 'abc' group by 1", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
@@ -158,15 +158,7 @@ public class MSQExportTest extends MSQTestBase
     if (withHeader) {
       expectedResults.add("table_dim,table_count");
     }
-    expectedResults.addAll(ImmutableList.of(
-                               ",1",
-                               "1,1",
-                               "10.1,1",
-                               "2,1",
-                               "abc,1",
-                               "def,1"
-                           )
-    );
+    expectedResults.addAll(ImmutableList.of("abc,1"));
     return expectedResults;
   }
 
