@@ -200,11 +200,11 @@ public class GoogleStorage
 
   public String version(final String bucket, final String path) throws IOException
   {
-    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
+    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.ETAG));
     if (blob == null) {
       throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path [%s].", bucket, path);
     }
-    return blob.getGeneratedId();
+    return blob.getEtag();
   }
 
   /***
