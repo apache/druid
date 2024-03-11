@@ -52,7 +52,7 @@ You should be familiar with data querying in Druid. If you haven't already, go t
 Load a sample dataset using [REPLACE](../multi-stage-query/reference.md#replace) and [EXTERN](../multi-stage-query/reference.md#extern-function) functions.
 In Druid SQL, the REPLACE function can create a new [datasource](../design/storage.md) or update an existing datasource.
 
-In the [web console](../operations/web-console.md), go to the **Query** view and run the following query:
+In the Druid [web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
 ```sql
 REPLACE INTO "update_tutorial" OVERWRITE ALL
