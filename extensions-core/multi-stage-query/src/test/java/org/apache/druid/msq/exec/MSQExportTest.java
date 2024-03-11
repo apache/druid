@@ -78,12 +78,11 @@ public class MSQExportTest extends MSQTestBase
   public void testExport2() throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
     File exportDir = temporaryFolder.newFolder("export/");
-    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select __time, dim1 as table_dim, count(*) as table_count from foo where dim1 is not null group by 1,2", exportDir.getAbsolutePath());
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select dim1 as table_dim, count(*) as table_count from foo where dim1 is not null group by 1", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
@@ -157,15 +156,15 @@ public class MSQExportTest extends MSQTestBase
   {
     ArrayList<String> expectedResults = new ArrayList<>();
     if (withHeader) {
-      expectedResults.add("__time,table_dim,table_count");
+      expectedResults.add("table_dim,table_count");
     }
     expectedResults.addAll(ImmutableList.of(
-                               "946684800000,,1",
-                               "946771200000,10.1,1",
-                               "946857600000,2,1",
-                               "978307200000,1,1",
-                               "978393600000,def,1",
-                               "978480000000,abc,1"
+                               ",1",
+                               "1,1",
+                               "10.1,1",
+                               "2,1",
+                               "abc,1",
+                               "def,1"
                            )
     );
     return expectedResults;

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -64,7 +65,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final ChannelCounters channelCounter;
   final String exportFilePath;
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
-  private final ColumnMappings columnMappings;
+  private final RowSignature exportRowSignature;
 
   public ExportResultsFrameProcessor(
       final ReadableFrameChannel inputChannel,
@@ -84,15 +85,37 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
-    this.columnMappings = columnMappings;
     this.outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
-    this.outputColumnNameToFrameColumnNumberMap.defaultReturnValue(-1);
+    final RowSignature inputRowSignature = frameReader.signature();
 
-    for (final ColumnMapping columnMapping : columnMappings.getMappings()) {
-      this.outputColumnNameToFrameColumnNumberMap.put(
-          columnMapping.getOutputColumn(),
-          frameReader.signature().indexOf(columnMapping.getQueryColumn())
-      );
+    if (columnMappings == null) {
+      // If the column mappings wasn't sent, populate with the frame row signature.
+      for (int i = 0; i < inputRowSignature.size(); i++) {
+        outputColumnNameToFrameColumnNumberMap.put(inputRowSignature.getColumnName(i), i);
+      }
+
+      RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
+      inputRowSignature.getColumnNames()
+                       .stream()
+                       .filter(name -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(name))
+                       .forEach(name -> exportRowSignatureBuilder.add(name, inputRowSignature.getColumnType(name).orElse(null)));
+      this.exportRowSignature = exportRowSignatureBuilder.build();
+    } else {
+      for (final ColumnMapping columnMapping : columnMappings.getMappings()) {
+        this.outputColumnNameToFrameColumnNumberMap.put(
+            columnMapping.getOutputColumn(),
+            frameReader.signature().indexOf(columnMapping.getQueryColumn())
+        );
+      }
+      final RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
+
+      for (String outputColumn : columnMappings.getOutputColumnNames()) {
+        exportRowSignatureBuilder.add(
+            outputColumn,
+            inputRowSignature.getColumnType(outputColumnNameToFrameColumnNumberMap.getInt(outputColumn)).orElse(null)
+        );
+      }
+      this.exportRowSignature = exportRowSignatureBuilder.build();
     }
   }
 
@@ -125,8 +148,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private void exportFrame(final Frame frame) throws IOException
   {
-    final RowSignature exportRowSignature = createRowSignatureForExport(frameReader.signature(), columnMappings);
-
     final Sequence<Cursor> cursorSequence =
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
@@ -178,19 +199,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       );
       formatter.writeResponseEnd();
     }
-  }
-
-  private RowSignature createRowSignatureForExport(RowSignature inputRowSignature, ColumnMappings columnMappings)
-  {
-    final RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
-
-    for (String outputColumn : columnMappings.getOutputColumnNames()) {
-      exportRowSignatureBuilder.add(
-          outputColumn,
-          inputRowSignature.getColumnType(outputColumnNameToFrameColumnNumberMap.getInt(outputColumn)).orElse(null)
-      );
-    }
-    return exportRowSignatureBuilder.build();
   }
 
   @Override
