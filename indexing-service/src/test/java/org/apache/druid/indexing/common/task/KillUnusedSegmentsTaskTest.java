@@ -179,66 +179,19 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(new KillTaskReport.Stats(1, 2, 1), getReportedStats());
   }
 
-
   @Test
-  public void testKillWithVersions() throws Exception
+  public void testKillSegmentsWithVersions() throws Exception
   {
-    final DateTime version = DateTimes.nowUtc();
-    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.toString());
-    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version.minusHours(1).toString());
-    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version.minusHours(2).toString());
-    final DataSegment segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version.minusHours(3).toString());
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 =  now.minusHours(2).toString();
+    final String v3 =  now.minusHours(3).toString();
 
-    final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-
-    Assert.assertEquals(
-        segments,
-        getMetadataStorageCoordinator().commitSegments(segments)
-    );
-    Assert.assertEquals(
-        segments.size(),
-        getSegmentsMetadataManager().markSegmentsAsUnused(
-            segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
-        )
-    );
-
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018/2020"),
-        ImmutableList.of(segment3.getVersion()),
-        null,
-        false,
-        3,
-        null,
-        null
-    );
-
-    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
-    Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2, 0),
-        getReportedStats()
-    );
-
-    final List<DataSegment> unusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
-        DATA_SOURCE,
-        Intervals.of("2018/2020"),
-        null,
-        null
-    );
-
-    Assert.assertEquals(Arrays.asList(segment1, segment2, segment4), unusedSegments);
-  }
-
-  @Test
-  public void testKillMultipleSegmentsWithVersions() throws Exception
-  {
-    final DateTime version = DateTimes.nowUtc();
-    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.toString());
-    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version.toString());
-    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version.toString());
-    final DataSegment segment4 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.minusHours(2).toString());
-    final DataSegment segment5 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.minusHours(3).toString());
+    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
+    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
+    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), v1);
+    final DataSegment segment4 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v2);
+    final DataSegment segment5 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v3);
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
 
@@ -257,7 +210,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        ImmutableList.of(version.toString(), version.minusHours(2).toString()),
+        ImmutableList.of(v1, v2),
         null,
         false,
         3,
@@ -282,14 +235,18 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testKillMultipleSegmentsWithVersionAndLimit() throws Exception
+  public void testKillSegmentsWithVersionsAndLimit() throws Exception
   {
-    final DateTime version = DateTimes.nowUtc();
-    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.toString());
-    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version.toString());
-    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version.toString());
-    final DataSegment segment4 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.minusHours(2).toString());
-    final DataSegment segment5 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.minusHours(3).toString());
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 =  now.minusHours(2).toString();
+    final String v3 =  now.minusHours(3).toString();
+
+    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
+    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
+    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), v1);
+    final DataSegment segment4 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v2);
+    final DataSegment segment5 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v3);
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
 
@@ -308,7 +265,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        ImmutableList.of(version.toString()),
+        ImmutableList.of(v1),
         null,
         false,
         3,
@@ -335,12 +292,16 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillWithNonExistentVersion() throws Exception
   {
-    final DateTime version = DateTimes.nowUtc();
-    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.toString());
-    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version.toString());
-    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version.toString());
-    final DataSegment segment4 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.minusHours(2).toString());
-    final DataSegment segment5 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.minusHours(3).toString());
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 =  now.minusHours(2).toString();
+    final String v3 =  now.minusHours(3).toString();
+
+    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
+    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
+    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), v1);
+    final DataSegment segment4 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v2);
+    final DataSegment segment5 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v3);
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
 
@@ -359,7 +320,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        ImmutableList.of(version.plusDays(100).toString()),
+        ImmutableList.of(now.plusDays(100).toString()),
         null,
         false,
         3,
