@@ -1197,7 +1197,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, minimalSegmentSchemas).isSuccess();
 
     if (published) {
-      LOG.info("Published [%d] segments", newSegments.size());
+      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), minimalSegmentSchemas.size());
 
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());

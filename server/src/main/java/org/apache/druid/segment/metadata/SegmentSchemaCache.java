@@ -103,6 +103,7 @@ public class SegmentSchemaCache
 
   public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
   {
+    log.debug("SegmentStatsMap is [%s].", segmentStatsMap);
     this.finalizedSegmentStats = segmentStatsMap;
   }
 

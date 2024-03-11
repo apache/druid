@@ -265,7 +265,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     this.connector = connector;
     this.segmentSchemaCache = segmentSchemaCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    log.info("CentralizedDatasourceSchema config is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   /**
@@ -1228,6 +1227,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       }
     });
 
+    log.debug("SchemaMap polled from the database is [%s]", schemaMap);
+
     schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
     segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
     segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
@@ -1236,8 +1237,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       segmentSchemaCache.setInitialized();
     }
     latestSegmentSchemaPoll = maxCreatedDate[0];
-
-    log.info("Found [%d] schema since [%s].", schemaMap.size(), latestSegmentSchemaPoll);
 
     Preconditions.checkNotNull(
         segments,
@@ -1257,7 +1256,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     if (segments.isEmpty()) {
       log.info("No segments found in the database!");
     } else {
-      log.info("Polled and found %,d segments in the database", segments.size());
+      log.info(
+          "Polled and found total %,d segments and [%d] new schema since [%s] in the database",
+          segments.size(),
+          schemaMap.size(),
+          latestSegmentSchemaPoll
+      );
     }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).

@@ -1734,7 +1734,12 @@ public class ControllerImpl implements Controller
       //noinspection unchecked
       @SuppressWarnings("unchecked")
       final SegmentAndSchemas segmentAndSchemas = (SegmentAndSchemas) queryKernel.getResultObjectForStage(finalStageId);
-      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segmentAndSchemas.getSegments().size());
+      log.info(
+          "Query [%s] publishing %d segments and [%d] schemas.",
+          queryDef.getQueryId(),
+          segmentAndSchemas.getSegments().size(),
+          segmentAndSchemas.getMinimalSegmentSchemas().size()
+      );
       publishAllSegments(segmentAndSchemas);
     }
   }

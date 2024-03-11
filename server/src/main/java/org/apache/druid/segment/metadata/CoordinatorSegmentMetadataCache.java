@@ -179,6 +179,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   protected void unmarkSegmentAsMutable(SegmentId segmentId)
   {
     synchronized (lock) {
+      log.debug("SegmentId [%s] is marked as finalized.", segmentId);
       mutableSegments.remove(segmentId);
       segmentSchemaCache.segmentRemoved(segmentId);
     }
@@ -187,6 +188,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   protected void removeSegmentAction(SegmentId segmentId)
   {
+    log.debug("SegmentId [%s] is removed.", segmentId);
     segmentSchemaCache.segmentRemoved(segmentId);
   }
 
@@ -219,6 +221,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     return null;
                   } else {
                     long numRows = analysis.getNumRows();
+                    log.debug("Publishing segment schema. SegmentId [%s], RowSignature [%s], numRows [%d]", segmentId, rowSignature, numRows);
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
                     // cache the signature
                     segmentSchemaCache.addInTransitSMQResult(segmentId, rowSignature, numRows);
@@ -245,12 +248,15 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
+    log.debug("Fetching segmentMetadataSnapshot.");
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
     for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
       for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
         Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
+        log.debug("SchemaMetadata for segmentId [%s] is present [%s].", entry.getKey(), metadata.isPresent());
         AvailableSegmentMetadata copied = entry.getValue();
         if (metadata.isPresent()) {
+          log.debug("SchemaMetadata for segmentId [%s] is [%s].", entry.getKey(), metadata.get());
           copied = AvailableSegmentMetadata.from(entry.getValue())
                                            .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
                                            .withNumRows(metadata.get().getNumRows())
@@ -271,7 +277,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
     AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataInfo.get(datasource).get(segmentId);
     Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
+    log.debug("SchemaMetadata for segmentId [%s] is present [%s].", segmentId, metadata.isPresent());
     if (metadata.isPresent()) {
+      log.debug("SchemaMetadata for segmentId [%s] is [%s].", segmentId, metadata.get());
       availableSegmentMetadata = AvailableSegmentMetadata.from(availableSegmentMetadata)
                                        .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
                                        .withNumRows(metadata.get().getNumRows())
@@ -361,6 +369,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public RowSignature buildDataSourceRowSignature(final String dataSource)
   {
+    log.debug("Building dataSource RowSignature.");
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
     // Preserve order.
@@ -369,7 +378,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (SegmentId segmentId : segmentsMap.keySet()) {
         Optional<SegmentSchemaMetadata> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
+        log.debug("SchemaMetadata for segmentId [%s] is present [%s].", segmentId, optionalSchema.isPresent());
         if (optionalSchema.isPresent()) {
+          log.debug("SchemaMetadata for segmentId [%s] is [%s].", segmentId, optionalSchema.get());
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
           for (String column : rowSignature.getColumnNames()) {
             final ColumnType columnType =
@@ -397,6 +408,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @VisibleForTesting
   void updateSchemaForRealtimeSegments(SegmentSchemas segmentSchemas)
   {
+    log.debug("SchemaUpdate for realtime segments [%s].", segmentSchemas);
+
     List<SegmentSchemas.SegmentSchema> segmentSchemaList = segmentSchemas.getSegmentSchemaList();
 
     for (SegmentSchemas.SegmentSchema segmentSchema : segmentSchemaList) {

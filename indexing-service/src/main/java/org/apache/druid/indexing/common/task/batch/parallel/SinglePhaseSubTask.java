@@ -466,8 +466,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
             pushedSegments.addAll(pushed.getSegments());
             minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
-            LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+            LOG.info("Pushed [%s] segments and [%s] schemas", pushed.getSegments().size(), minimalSegmentSchemas.size());
             LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+            LOG.info("SegmentSchema is [%s]", minimalSegmentSchemas);
           }
         } else {
           throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -479,8 +480,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
       minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
-      LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+      LOG.info("Pushed [%s] segments and [%s] schemas", pushed.getSegments().size(), minimalSegmentSchemas.size());
       LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+      LOG.info("SegmentSchema is [%s]", minimalSegmentSchemas);
       appenderator.close();
 
       return Pair.of(pushedSegments, minimalSegmentSchemas);

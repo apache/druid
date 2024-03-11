@@ -2005,14 +2005,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           && minimalSegmentSchemas != null
           && minimalSegmentSchemas.isNonEmpty()) {
         schemaPresent = true;
-        log.info("Inserting schema in db table.");
+        log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
         segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
 
         // fetch schemaId
         fingerprintSchemaIdMap =
             segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
-        log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
+        log.info("FingerprintSchemaId map: [%s].", fingerprintSchemaIdMap);
       }
 
       Set<String> existedSegments = segmentExistsBatch(handle, segments);

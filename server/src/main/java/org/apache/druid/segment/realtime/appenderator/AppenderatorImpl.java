@@ -801,9 +801,6 @@ public class AppenderatorImpl implements Appenderator
                 useUniquePath
             );
 
-            log.info("AppenderatorImpl mergeAndPush is invoked. CentralizedDatasourceSchema is [%s]",
-                     centralizedDatasourceSchemaConfig.isEnabled());
-
             if (segmentAndSchema != null) {
               DataSegment segment = segmentAndSchema.lhs;
               dataSegments.add(segment);

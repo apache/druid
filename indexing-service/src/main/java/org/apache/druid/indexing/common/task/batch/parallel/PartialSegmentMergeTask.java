@@ -329,6 +329,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
       }
     }
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      LOG.info("SegmentSchema for the pushed segments is [%s]", minimalSegmentSchemas);
+    }
     return Pair.of(pushedSegments, minimalSegmentSchemas);
   }
 

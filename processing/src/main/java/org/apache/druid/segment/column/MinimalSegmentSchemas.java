@@ -93,6 +93,11 @@ public class MinimalSegmentSchemas
     this.schemaPayloadMap.putAll(other.getSchemaPayloadMap());
   }
 
+  public int size()
+  {
+    return schemaPayloadMap.size();
+  }
+
   @Override
   public boolean equals(Object o)
   {

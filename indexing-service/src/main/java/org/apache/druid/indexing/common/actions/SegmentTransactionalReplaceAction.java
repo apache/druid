@@ -62,7 +62,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    log.info("Segment Append replace action ");
     return new SegmentTransactionalReplaceAction(segmentsToPublish, minimalSegmentSchemas);
   }
 
@@ -109,7 +108,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final Set<ReplaceTaskLock> replaceLocksForTask
         = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
-    log.info("Replace action starting. Commit replace segments, schema map is [%s].", minimalSegmentSchemas);
     final SegmentPublishResult publishResult;
     try {
       publishResult = toolbox.getTaskLockbox().doInCriticalSection(
