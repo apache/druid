@@ -19,36 +19,20 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.errorprone.annotations.Immutable;
-import org.apache.druid.segment.column.TypeDescriptor;
+import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.junit.Test;
 
-/**
- * Base 'value' types of Druid expression language, all {@link Expr} must evaluate to one of these types.
- */
-@Immutable
-public enum ExprType implements TypeDescriptor
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+
+public class ConstantExprTest extends InitializedNullHandlingTest
 {
-  DOUBLE,
-  LONG,
-  STRING,
-  ARRAY,
-  COMPLEX;
-
-  @Override
-  public boolean isNumeric()
+  @Test
+  public void testLongSingleThreadedExpr()
   {
-    return LONG.equals(this) || DOUBLE.equals(this);
-  }
-
-  @Override
-  public boolean isPrimitive()
-  {
-    return this != ARRAY && this != COMPLEX;
-  }
-
-  @Override
-  public boolean isArray()
-  {
-    return this == ExprType.ARRAY;
+    LongExpr expr = new LongExpr(11L);
+    assertNotSame(expr.eval(null), expr.eval(null));
+    Expr singleExpr = Expr.singleThreaded(expr);
+    assertSame(singleExpr.eval(null), singleExpr.eval(null));
   }
 }
