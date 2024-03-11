@@ -96,7 +96,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test(expected = RE.class)
-  public void killWithErrorTest() throws SegmentLoadingException
+  public void killWithErrorTest() throws SegmentLoadingException, IOException
   {
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
     EasyMock.expectLastCall().andThrow(RUNTIME_EXCEPTION);
@@ -111,7 +111,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test(expected = RE.class)
-  public void killRetryWithErrorTest() throws SegmentLoadingException
+  public void killRetryWithErrorTest() throws SegmentLoadingException, IOException
   {
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
     EasyMock.expectLastCall().andThrow(RUNTIME_EXCEPTION).once().andVoid().once();
