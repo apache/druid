@@ -207,6 +207,11 @@ public interface Expr extends Cacheable
 
       final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
       if (delegateIndexSupplier == null) {
+        // if the column doesn't exist, check to see if the expression evaluates to a non-null result... if so, we might
+        // need to make a value matcher anyway
+        if (eval(InputBindings.nilBindings()).valueOrDefault() != null) {
+          return NoIndexesColumnIndexSupplier.getInstance();
+        }
         return null;
       }
       final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
