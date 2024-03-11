@@ -59,15 +59,19 @@ public interface TaskLabelsProvider
   Map<String, Object> getTaskMetricTags(Task task);
 
   /**
-   * Determines the appropriate lane label for a task based on its characteristics and labels. Task
-   * laning is a mechanism to optimize the execution of tasks across available computing resources
-   * by categorizing tasks into lanes. This method provides a singular, definitive label used to
-   * categorize the task for scheduling purposes, ensuring that tasks are executed according to their
-   * operational priority and resource requirements.
+   * Generates a configuration label for a given task based on its attributes and predefined labels. This label
+   * is used to assist in scheduling decisions and resource allocation within the Druid ecosystem. It aids in
+   * task laning by categorizing tasks for efficient distribution across computing resources, and in pod template
+   * selection by associating tasks with suitable pod configurations according to their specific requirements.
+   * <p>
+   * The method streamlines the process of matching tasks with the appropriate execution environments and
+   * operational priorities. By providing a unified label, it simplifies the identification and grouping of tasks
+   * for various configuration-related tasks.
    *
-   * @param task The Druid task for which the lane label is being determined.
-   * @return A string representing the task's lane label, which is critical for the task scheduling
-   * process, enabling efficient allocation and execution of tasks within the Druid cluster.
+   * @param task The Druid task for which the configuration label is generated.
+   * @return A string that serves as the task's configuration label, intended for use in task scheduling and
+   * resource allocation strategies. This label reflects the task’s key characteristics and aids in its
+   * management within the cluster.
    */
-  String getTaskLaneLabel(Task task);
+  String getTaskConfigLabel(Task task);
 }
