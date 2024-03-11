@@ -141,7 +141,7 @@ public class GoogleStorage
         blob.getName(),
         blob.getSize(),
         blob.getUpdateTimeOffsetDateTime()
-            .toEpochSecond()
+            .toEpochSecond() * 1000
     );
   }
 
@@ -250,7 +250,7 @@ public class GoogleStorage
                     blob.getName(),
                     blob.getSize(),
                     blob.getUpdateTimeOffsetDateTime()
-                        .toEpochSecond()
+                        .toEpochSecond() * 1000
                 ))
                 .collect(Collectors.toList());
 
