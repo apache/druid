@@ -57,6 +57,9 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
     return new GroupByQueryRunner(segment, groupingEngine);
   }
 
+  /**
+   * @see GroupingEngine#mergeRunners(QueryProcessingPool, Iterable)
+   */
   @Override
   public QueryRunner<ResultRow> mergeRunners(
       final QueryProcessingPool queryProcessingPool,

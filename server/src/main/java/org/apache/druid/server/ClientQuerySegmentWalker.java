@@ -58,7 +58,6 @@ import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -76,6 +75,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -171,7 +171,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
@@ -184,6 +184,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getId(),
         query.getSqlQueryId()
     ));
+
+    newQuery = populateResourceId(newQuery);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
@@ -254,10 +256,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+
     // Inlining isn't done for segments-based queries, but we still globalify the table datasources if possible
-    final Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
+    Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
+
+    freeTradeQuery = populateResourceId(freeTradeQuery);
 
     if (canRunQueryUsingClusterWalker(query)) {
       return new QuerySwappingQueryRunner<>(
@@ -519,7 +524,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return FluentQueryRunner
         .create(baseRunner, toolChest)
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(false)
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter)
         .postProcess(
@@ -844,32 +849,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * A {@link QueryRunner} which validates that a *specific* query is passed in, and then swaps it with another one.
-   * Useful since the inlining we do relies on passing the modified query to the underlying {@link QuerySegmentWalker},
-   * and callers of {@link #getQueryRunnerForIntervals} aren't able to do this themselves.
+   * Assigns a random resource id to the given query
    */
-  private static class QuerySwappingQueryRunner<T> implements QueryRunner<T>
+  public static <T> Query<T> populateResourceId(Query<T> query)
   {
-    private final QueryRunner<T> baseRunner;
-    private final Query<T> query;
-    private final Query<T> newQuery;
-
-    public QuerySwappingQueryRunner(QueryRunner<T> baseRunner, Query<T> query, Query<T> newQuery)
-    {
-      this.baseRunner = baseRunner;
-      this.query = query;
-      this.newQuery = newQuery;
-    }
-
-    @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-    {
-      //noinspection ObjectEquality
-      if (queryPlus.getQuery() != query) {
-        throw new ISE("Unexpected query received");
-      }
-
-      return baseRunner.run(queryPlus.withQuery(newQuery), responseContext);
-    }
+    return query.withOverriddenContext(Collections.singletonMap(
+        QueryContexts.QUERY_RESOURCE_ID,
+        UUID.randomUUID().toString()
+    ));
   }
+
 }

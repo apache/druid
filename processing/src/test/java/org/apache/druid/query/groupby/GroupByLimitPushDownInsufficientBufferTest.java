@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -257,10 +258,10 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
     final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
+    final TestBufferPool bufferPool2 = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
 
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
+    // Since the test has nested 'mergeResults' calls, we require 2 merge buffers for each mergeResults call.
     final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
     final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 2);
 
     resourceCloser.register(() -> {
@@ -324,11 +325,19 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
+        mergePool,
+        config
+    );
+    GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(
+        tooSmallMergePool,
+        config
+    );
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -337,22 +346,21 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final GroupingEngine tooSmallEngine = new GroupingEngine(
         tooSmallDruidProcessingConfig,
         configSupplier,
-        bufferPool,
-        tooSmallMergePool,
+        bufferPool2,
+        tooSmallGroupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
     );
 
-
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
     );
 
     tooSmallGroupByFactory = new GroupByQueryRunnerFactory(
         tooSmallEngine,
-        new GroupByQueryQueryToolChest(tooSmallEngine)
+        new GroupByQueryQueryToolChest(tooSmallEngine, tooSmallGroupByResourcesReservationPool)
     );
   }
 
@@ -380,16 +388,19 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> tooSmallToolChest = tooSmallGroupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getRunner1())
+            groupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner1()),
+            true
         ),
         (QueryToolChest) toolChest
     );
 
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
+        tooSmallToolChest.mergeResults(
+            tooSmallGroupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner2()),
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -404,13 +415,24 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            Sequences.simple(
+                                theRunner.run(
+                                    GroupByQueryRunnerTestHelper.populateResourceId(queryPlus),
+                                    responseContext
+                                ).toList()
+                            ),
+                            Sequences.simple(
+                                theRunner2.run(
+                                    GroupByQueryRunnerTestHelper.populateResourceId(queryPlus),
+                                    responseContext
+                                ).toList()
+                            )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -434,7 +456,10 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = theRunner3.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = theRunner3.run(
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -468,19 +493,19 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<ResultRow>(
+        (queryPlus, responseContext) -> toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1())
-        ),
+        ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
         (QueryToolChest) toolChest
     );
 
-
-    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
+    QueryToolChest<ResultRow, GroupByQuery> tooSmalltoolChest = tooSmallGroupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<ResultRow>(
+        (queryPlus, responseContext) -> tooSmalltoolChest.mergeResults(
             tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
-        ),
-        (QueryToolChest) toolChest
+        ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
+        (QueryToolChest) tooSmalltoolChest
     );
 
     QueryRunner<ResultRow> theRunner3 = new FinalizeResultsQueryRunner<>(
@@ -493,13 +518,14 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            Sequences.simple(theRunner.run(queryPlus, responseContext).toList()),
+                            Sequences.simple(theRunner2.run(queryPlus, responseContext).toList())
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -531,7 +557,10 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         )
         .build();
 
-    Sequence<ResultRow> queryResult = theRunner3.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = theRunner3.run(
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(

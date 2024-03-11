@@ -119,6 +119,22 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
+   * Like {@link #mergeResults(QueryRunner)}, but additional context parameter to determine whether the input runner
+   * to the method would be the result from the corresponding {@link QueryRunnerFactory#mergeRunners}. Merging can
+   * require additional resources, like merge buffers for group-by queries, therefore the flag, can help
+   * determine if the mergeResults should acquire those resources for the merging runners, before beginning execution.
+   * If not overridden, this method will ignore the {@code willMergeRunner} parameter.
+   *
+   * Ideally {@link #mergeResults(QueryRunner)} should have delegated to this method after setting the default value of
+   * the `willMergeRunner` however this was added later, therefore the existing toolchests (in extensions) would
+   * not have implemented this.
+   */
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner, boolean willMergeRunner)
+  {
+    return mergeResults(runner);
+  }
+
+  /**
    * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
    * function is used in the default {@link ResultMergeQueryRunner} provided by
    * {@link QueryToolChest#mergeResults(QueryRunner)} and also used in

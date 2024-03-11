@@ -408,6 +408,40 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testGroupByOnGroupByOnInlineTable()
+  {
+    final GroupByQuery subquery =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(FOO_INLINE)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("s"))
+                                   .build()
+                                   .withId("queryId");
+
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(new QueryDataSource(subquery))
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster. Also, it gets a subquery id
+        ImmutableList.of(ExpectedQuery.local(query.withDataSource(new QueryDataSource(subquery.withSubQueryId("1.1"))))),
+        ImmutableList.of(new Object[]{3L})
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testGroupByOnUnionOfTwoTables()
   {
     final GroupByQuery query =
@@ -1505,6 +1539,7 @@ public class ClientQuerySegmentWalkerTest
                     .build(),
                 conglomerate,
                 schedulerForTest,
+                new GroupByQueryConfig(),
                 injector
             ),
             ClusterOrLocal.CLUSTER
@@ -1565,19 +1600,19 @@ public class ClientQuerySegmentWalkerTest
     {
       Query<?> modifiedQuery;
       // Need to blast various parameters that will vary and aren't important to test for.
-      modifiedQuery = query.withOverriddenContext(
-          ImmutableMap.<String, Object>builder()
-              .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
-              .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
-              .put(QueryContexts.FINALIZE_KEY, true)
-              .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0L)
-              .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
-              .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
-              .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
-              .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
-              .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
-              .build()
-      );
+      ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
+      contextBuilder.put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
+                    .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
+                    .put(QueryContexts.FINALIZE_KEY, true)
+                    .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0L)
+                    .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
+                    .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
+                    .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
+                    .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
+                    .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
+                    .put(QueryContexts.QUERY_RESOURCE_ID, "dummy");
+
+      modifiedQuery = query.withOverriddenContext(contextBuilder.build());
 
       if (modifiedQuery.getDataSource() instanceof FrameBasedInlineDataSource) {
         // Do round-trip serialization in order to replace FrameBasedInlineDataSource with InlineDataSource, so

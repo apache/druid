@@ -127,7 +127,7 @@ public class MaterializedViewQueryQueryToolChestTest extends InitializedNullHand
     QueryToolChest queryToolChest =
         new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null))
+                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null, null))
                 .build()
         ));
 
@@ -186,7 +186,7 @@ public class MaterializedViewQueryQueryToolChestTest extends InitializedNullHand
     QueryToolChest materializedViewQueryQueryToolChest =
         new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null))
+                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null, null))
                 .build()
         ));
 
@@ -245,7 +245,7 @@ public class MaterializedViewQueryQueryToolChestTest extends InitializedNullHand
     MaterializedViewQueryQueryToolChest materializedViewQueryQueryToolChest =
         new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null))
+                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null, null))
                 .build()
         ));
 

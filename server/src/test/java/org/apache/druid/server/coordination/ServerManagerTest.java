@@ -615,7 +615,7 @@ public class ServerManagerTest
           @Override
           public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
           {
-            return null;
+            return this;
           }
 
           @Override

@@ -184,7 +184,8 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
         )
     );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+                                        .toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "approx-histo");
   }
 
@@ -231,7 +232,8 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
         )
     );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+                                        .toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "approx-histo");
   }
 }

@@ -22,12 +22,15 @@ package org.apache.druid.query.groupby;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.Segment;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -40,6 +43,16 @@ import java.util.stream.Collectors;
 /**
  * This class contains resources required for a groupBy query execution.
  * Currently, it contains only merge buffers, but any additional resources can be added in the future.
+ *
+ * It contains merge buffers for the execution of
+ * a) {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} - Required for merging the results of the subqueries
+ *    and the subtotals.
+ * b) {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner} - Required for merging the results
+ *    of the individual runners created by {@link GroupByQueryRunnerFactory#createRunner(Segment)}
+ *
+ * The resources should be acquired once throughout the execution of the query (with caveats such as union being treated
+ * as separate queries on the data servers) or it should release all the resources before re-acquiring them (if needed),
+ * to prevent deadlocks.
  */
 public class GroupByQueryResources implements Closeable
 {
@@ -91,40 +104,86 @@ public class GroupByQueryResources implements Closeable
     return Math.max(1, numMergeBuffersNeededForSubQuerySubtotal);
   }
 
+  /**
+   * Counts the number of merge buffers required for {@link GroupByQueryQueryToolChest#mergeResults}. For a given query,
+   * it is dependent on the structure of the group by query.
+   */
   @VisibleForTesting
-  public static int countRequiredMergeBufferNum(GroupByQuery query)
+  public static int countRequiredMergeBufferNumForToolchestMerge(GroupByQuery query)
   {
     return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
   }
 
-  @Nullable
-  private final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
-  private final Deque<ByteBuffer> mergeBuffers;
-
-  public GroupByQueryResources()
+  /**
+   * Count the number of merge buffers required for {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
+   * It can be either 1 or 2, depending on the query's config
+   */
+  public static int countRequiredMergeBufferNumForMergingQueryRunner(GroupByQueryConfig config, GroupByQuery query)
   {
-    this.mergeBufferHolders = null;
-    this.mergeBuffers = new ArrayDeque<>();
+    GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
+    return querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
   }
 
-  public GroupByQueryResources(List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders)
+  @Nullable
+  private final List<ReferenceCountingResourceHolder<ByteBuffer>> toolchestMergeBuffersHolders;
+
+  private final Deque<ByteBuffer> toolchestMergeBuffers = new ArrayDeque<>();
+
+  @Nullable
+  private final List<ReferenceCountingResourceHolder<ByteBuffer>> mergingQueryRunnerMergeBuffersHolders;
+
+  private final Deque<ByteBuffer> mergingQueryRunnerMergeBuffers = new ArrayDeque<>();
+
+  public GroupByQueryResources(
+      @Nullable List<ReferenceCountingResourceHolder<ByteBuffer>> toolchestMergeBuffersHolders,
+      @Nullable List<ReferenceCountingResourceHolder<ByteBuffer>> mergingQueryRunnerMergeBuffersHolders
+  )
   {
-    this.mergeBufferHolders = mergeBufferHolders;
-    this.mergeBuffers = new ArrayDeque<>(mergeBufferHolders.size());
-    mergeBufferHolders.forEach(holder -> mergeBuffers.add(holder.get()));
+    this.toolchestMergeBuffersHolders = toolchestMergeBuffersHolders;
+    if (toolchestMergeBuffersHolders != null) {
+      toolchestMergeBuffersHolders.forEach(holder -> toolchestMergeBuffers.add(holder.get()));
+    }
+    this.mergingQueryRunnerMergeBuffersHolders = mergingQueryRunnerMergeBuffersHolders;
+    if (mergingQueryRunnerMergeBuffersHolders != null) {
+      mergingQueryRunnerMergeBuffersHolders.forEach(holder -> mergingQueryRunnerMergeBuffers.add(holder.get()));
+    }
+  }
+
+  /**
+   * Returns a merge buffer associate with the {@link GroupByQueryQueryToolChest#mergeResults}
+   */
+  public ResourceHolder<ByteBuffer> getToolchestMergeBuffer()
+  {
+    return getMergeBuffer(toolchestMergeBuffers);
+  }
+
+  /**
+   * Returns a merge buffer associated with the {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
+   */
+  public ResourceHolder<ByteBuffer> getMergingQueryRunnerMergeBuffer()
+  {
+    return getMergeBuffer(mergingQueryRunnerMergeBuffers);
+  }
+
+  /**
+   * Returns the number of the currently unused merge buffers reserved for {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
+   */
+  public int getNumMergingQueryRunnerMergeBuffers()
+  {
+    return mergingQueryRunnerMergeBuffers.size();
   }
 
   /**
    * Get a merge buffer from the pre-acquired resources.
    *
    * @return a resource holder containing a merge buffer
-   *
-   * @throws IllegalStateException if this resource is initialized with empty merge buffers, or
-   *                               there isn't any available merge buffers
    */
-  public ResourceHolder<ByteBuffer> getMergeBuffer()
+  private static ResourceHolder<ByteBuffer> getMergeBuffer(Deque<ByteBuffer> acquiredBufferPool)
   {
-    final ByteBuffer buffer = mergeBuffers.pop();
+    if (acquiredBufferPool.size() == 0) {
+      throw DruidException.defensive("Insufficient free merge buffers present.");
+    }
+    final ByteBuffer buffer = acquiredBufferPool.pop();
     return new ResourceHolder<ByteBuffer>()
     {
       @Override
@@ -136,19 +195,39 @@ public class GroupByQueryResources implements Closeable
       @Override
       public void close()
       {
-        mergeBuffers.add(buffer);
+        acquiredBufferPool.add(buffer);
       }
     };
   }
 
+  /**
+   * Closes the query resource. It must be called to release back the acquired merge buffers back into the global
+   * merging pool from where all the merge buffers are acquired. The references to the merge buffers will become invalid
+   * once this method is called. The user must ensure that the callers are not using the stale references to the merge
+   * buffers after this method is called, as reading them would give incorrect results and writing there would interfere
+   * with other users of the merge buffers
+   */
   @Override
   public void close()
   {
-    if (mergeBufferHolders != null) {
-      if (mergeBuffers.size() != mergeBufferHolders.size()) {
-        log.warn("%d resources are not returned yet", mergeBufferHolders.size() - mergeBuffers.size());
+    if (toolchestMergeBuffersHolders != null) {
+      if (toolchestMergeBuffers.size() != toolchestMergeBuffersHolders.size()) {
+        log.warn(
+            "%d toolchest merge buffers are not returned yet",
+            toolchestMergeBuffersHolders.size() - toolchestMergeBuffers.size()
+        );
       }
-      mergeBufferHolders.forEach(ReferenceCountingResourceHolder::close);
+      toolchestMergeBuffersHolders.forEach(ReferenceCountingResourceHolder::close);
+    }
+
+    if (mergingQueryRunnerMergeBuffersHolders != null) {
+      if (mergingQueryRunnerMergeBuffers.size() != mergingQueryRunnerMergeBuffersHolders.size()) {
+        log.warn(
+            "%d merging query runner merge buffers are not returned yet",
+            mergingQueryRunnerMergeBuffersHolders.size() - mergingQueryRunnerMergeBuffers.size()
+        );
+      }
+      mergingQueryRunnerMergeBuffersHolders.forEach(ReferenceCountingResourceHolder::close);
     }
   }
 }

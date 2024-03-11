@@ -109,7 +109,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
     this.runner = runner;
     this.decoratedRunner = FluentQueryRunner.create(runner, TOOL_CHEST)
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration();
   }
 

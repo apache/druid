@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
@@ -95,16 +94,17 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         DEFAULT_PROCESSING_CONFIG,
         configSupplier,
         BUFFER_POOL,
-        MERGE_BUFFER_POOL,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 
@@ -151,8 +151,8 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 60_000L)
   public void testNotEnoughMergeBuffersOnQueryable()
   {
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Cannot acquire enough merge buffers");
+    expectedException.expect(ResourceLimitExceededException.class);
+    expectedException.expectMessage("Query needs 2 merge buffers, but only 1 merge buffers were configured");
 
     final GroupByQuery query = GroupByQuery
         .builder()
@@ -239,8 +239,8 @@ public class GroupByQueryRunnerFailureTest
     List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
     try {
       holder = MERGE_BUFFER_POOL.takeBatch(1, 10);
-      expectedException.expect(QueryCapacityExceededException.class);
-      expectedException.expectMessage("Cannot acquire 1 merge buffers. Try again after current running queries are finished.");
+      expectedException.expect(ResourceLimitExceededException.class);
+      expectedException.expectMessage("Query needs 2 merge buffers, but only 1 merge buffers were configured");
       GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
     }
     finally {

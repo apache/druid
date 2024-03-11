@@ -115,7 +115,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     return FluentQueryRunner
         .create(scheduler.wrapQueryRunner(baseRunner), queryRunnerFactory.getToolchest())
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }

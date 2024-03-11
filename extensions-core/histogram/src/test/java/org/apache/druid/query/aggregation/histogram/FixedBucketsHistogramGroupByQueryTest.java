@@ -186,7 +186,8 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
         )
     );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+                                        .toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 
@@ -233,7 +234,8 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
         )
     );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+                                        .toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 }

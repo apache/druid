@@ -43,12 +43,14 @@ import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
@@ -86,7 +88,7 @@ import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
 /**
- *
+ * Toolchest for GroupBy queries
  */
 public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupByQuery>
 {
@@ -102,27 +104,45 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private final GroupingEngine groupingEngine;
   private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
+  private final GroupByResourcesReservationPool groupByResourcesReservationPool;
 
   @VisibleForTesting
-  public GroupByQueryQueryToolChest(GroupingEngine groupingEngine)
+  public GroupByQueryQueryToolChest(
+      GroupingEngine groupingEngine,
+      GroupByResourcesReservationPool groupByResourcesReservationPool
+  )
   {
-    this(groupingEngine, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance());
+    this(
+        groupingEngine,
+        GroupByQueryConfig::new,
+        DefaultGroupByQueryMetricsFactory.instance(),
+        groupByResourcesReservationPool
+    );
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
-      GroupByQueryMetricsFactory queryMetricsFactory
+      GroupByQueryMetricsFactory queryMetricsFactory,
+      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
     this.groupingEngine = groupingEngine;
     this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
+    this.groupByResourcesReservationPool = groupByResourcesReservationPool;
   }
 
   @Override
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner)
+  {
+    return mergeResults(runner, true);
+  }
+
+
+  @Override
+  public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner, boolean willMergeRunner)
   {
     return (queryPlus, responseContext) -> {
       if (queryPlus.getQuery().context().isBySegment()) {
@@ -130,7 +150,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
+      return initAndMergeGroupByResults(groupByQuery, runner, responseContext, willMergeRunner);
     };
   }
 
@@ -149,10 +169,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private Sequence<ResultRow> initAndMergeGroupByResults(
       final GroupByQuery query,
       QueryRunner<ResultRow> runner,
-      ResponseContext context
+      ResponseContext context,
+      boolean willMergeRunner
   )
   {
-    final GroupByQueryResources resource = groupingEngine.prepareResource(query);
+    // Reserve the group by resources (merge buffers) required for executing the query
+    final String queryResourceId = query.context().getQueryResourceId();
+    groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
+
+    final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
+    if (resource == null) {
+      throw DruidException.defensive(
+          "Did not associate any resources with the given query resource id [%s]",
+          queryResourceId
+      );
+    }
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
@@ -160,8 +191,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           runner,
           context
       );
+      Closer closer = Closer.create();
 
-      return Sequences.withBaggage(mergedSequence, resource);
+      // Clean up the resources reserved during the execution of the query
+      closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
+      return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {
       // Error creating the Sequence; release resources.
