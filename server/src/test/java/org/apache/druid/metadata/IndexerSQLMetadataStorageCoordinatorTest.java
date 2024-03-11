@@ -1106,7 +1106,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUsedSegmentsOnlyVisibleWithVersion() throws IOException
+  public void testRetrieveVisibleOnlyUsedSegmentsWithVersions() throws IOException
   {
     final DateTime now = DateTimes.nowUtc();
     final String v1 = now.toString();
@@ -1172,7 +1172,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUsedSegmentsIncludingOvershadowedWithVersion() throws IOException
+  public void testRetrieveIncludingOvershadowedUsedSegmentsWithVersions() throws IOException
   {
     final DateTime now = DateTimes.nowUtc();
     final String v1 = now.toString();
@@ -1863,27 +1863,32 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithVersion() throws IOException
+  public void testRetrieveUnusedSegmentsWithVersions() throws IOException
   {
     final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.plusDays(2).toString();
+    final String v3 = now.plusDays(3).toString();
+    final String v4 = now.plusDays(4).toString();
+
     final DataSegment segment1 = createSegment(
         Intervals.of("2023-01-01/2023-01-02"),
-        now.toString(),
+        v1,
         new LinearShardSpec(0)
     );
     final DataSegment segment2 = createSegment(
         Intervals.of("2023-01-02/2023-01-03"),
-        now.plusDays(2).toString(),
+        v2,
         new LinearShardSpec(0)
     );
     final DataSegment segment3 = createSegment(
         Intervals.of("2023-01-03/2023-01-04"),
-        now.plusDays(3).toString(),
+        v3,
         new LinearShardSpec(0)
     );
     final DataSegment segment4 = createSegment(
         Intervals.of("2023-01-03/2023-01-04"),
-        now.plusDays(4).toString(),
+        v4,
         new LinearShardSpec(0)
     );
 
@@ -1902,6 +1907,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           )
       ).contains(unusedSegment);
     }
+
+    Assertions.assertThat(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            DS.WIKI,
+            Intervals.of("2023-01-01/2023-01-04"),
+            ImmutableList.of(v1, v2),
+            null,
+            null
+        )
+    ).contains(segment1, segment2);
 
     Assertions.assertThat(
         coordinator.retrieveUnusedSegmentsForInterval(

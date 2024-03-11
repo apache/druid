@@ -115,31 +115,29 @@ public class RetrieveSegmentsActionsTest
   }
 
   @Test
-  public void testRetrieveUsedSegmentsActionWithVersionVisibleOnly()
+  public void testRetrieveVisibleOnlyUsedSegmentsWithVersions()
   {
-    final RetrieveUsedSegmentsAction action =
-        new RetrieveUsedSegmentsAction(
-            task.getDataSource(),
-            null,
-            ImmutableList.of(INTERVAL),
-            VERSIONS,
-            Segments.ONLY_VISIBLE
-        );
+    final RetrieveUsedSegmentsAction action = new RetrieveUsedSegmentsAction(
+        task.getDataSource(),
+        null,
+        ImmutableList.of(INTERVAL),
+        VERSIONS,
+        Segments.ONLY_VISIBLE
+    );
     final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUsedSegments, actualSegments);
   }
 
   @Test
-  public void testRetrieveUsedSegmentsActionWithVersionIncludingOvershadowed()
+  public void testRetrieveIncludingOvershadowedUsedSegmentsWithVersions()
   {
-    final RetrieveUsedSegmentsAction action =
-        new RetrieveUsedSegmentsAction(
-            task.getDataSource(),
-            null,
-            ImmutableList.of(INTERVAL),
-            VERSIONS,
-            Segments.INCLUDING_OVERSHADOWED
-        );
+    final RetrieveUsedSegmentsAction action = new RetrieveUsedSegmentsAction(
+        task.getDataSource(),
+        null,
+        ImmutableList.of(INTERVAL),
+        VERSIONS,
+        Segments.INCLUDING_OVERSHADOWED
+    );
     final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUsedSegments, actualSegments);
   }
