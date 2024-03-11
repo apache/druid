@@ -41,7 +41,8 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String id;
   private final String dataSource;
   private final Interval interval;
-  @Nullable private final List<String> versions;
+  @Nullable
+  private final List<String> versions;
   private final Boolean markAsUnused;
   private final Integer batchSize;
   @Nullable private final Integer limit;
@@ -52,7 +53,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("versions") List<String> versions,
+      @JsonProperty("versions") @Nullable List<String> versions,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("limit") @Nullable Integer limit,
