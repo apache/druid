@@ -198,6 +198,15 @@ public class GoogleStorage
     return blob.getSize();
   }
 
+  /**
+   * Return the etag for an object. This is a value that changes whenever the object's data or metadata changes and is
+   * typically but not always the MD5 hash of the object. Ref:
+   * <a href="https://cloud.google.com/storage/docs/hashes-etags#etags">ETags</a>
+   * @param bucket
+   * @param path
+   * @return
+   * @throws IOException
+   */
   public String version(final String bucket, final String path) throws IOException
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.ETAG));
