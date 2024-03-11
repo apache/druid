@@ -15307,7 +15307,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testScanAndSortOnJoin()
   {
@@ -15340,7 +15339,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
+  @NotYetSupported(Modes.WINDOW_OPERATOR_QUERY_ON_UNSUPPORTED_DATASOURCE)
   @Test
   public void testWindowingOverJoin()
   {

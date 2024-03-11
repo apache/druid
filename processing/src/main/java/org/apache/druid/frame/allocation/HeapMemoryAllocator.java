@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.allocation;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.collections.ResourceHolder;
@@ -37,7 +38,8 @@ public class HeapMemoryAllocator implements MemoryAllocator
 
   private long bytesAllocated = 0;
 
-  private HeapMemoryAllocator(final long capacity)
+  @VisibleForTesting
+  HeapMemoryAllocator(final long capacity)
   {
     this.capacity = capacity;
   }
@@ -53,7 +55,7 @@ public class HeapMemoryAllocator implements MemoryAllocator
   @Override
   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)
   {
-    if (bytesAllocated < capacity - size) {
+    if (size <= capacity - bytesAllocated) {
       bytesAllocated += size;
 
       return Optional.of(

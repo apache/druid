@@ -67,7 +67,7 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
         if (pattern != null && !pattern.matcher(keyString).matches()) {
           continue;
         }
-        final long latestModified = objectMetadata.getLastUpdateTime();
+        final long latestModified = objectMetadata.getLastUpdateTimeMillis();
         if (latestModified >= mostRecent) {
           mostRecent = latestModified;
           latest = objectLocation.toUri(GoogleStorageDruidModule.SCHEME_GS);
