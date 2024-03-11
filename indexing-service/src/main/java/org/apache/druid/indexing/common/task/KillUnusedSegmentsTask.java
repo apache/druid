@@ -87,7 +87,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   /**
    * The version of segments to delete in this {@link #getInterval()}.
    */
-  @Nullable private final List<String> versions;
+  @Nullable
+  private final List<String> versions;
 
   @Deprecated
   private final boolean markAsUnused;
@@ -135,11 +136,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     if (limit != null && limit <= 0) {
       throw InvalidInput.exception("limit[%d] must be a positive integer.", limit);
     }
-    if (limit != null && Boolean.TRUE.equals(markAsUnused)) {
-      throw InvalidInput.exception("limit[%d] cannot be provided when markAsUnused is enabled.", limit);
-    }
-    if (!CollectionUtils.isNullOrEmpty(versions) && Boolean.TRUE.equals(markAsUnused)) {
-      throw InvalidInput.exception("versions[%s] cannot be provided when markAsUnused is enabled.", versions);
+    if (Boolean.TRUE.equals(markAsUnused)) {
+      if (limit != null) {
+        throw InvalidInput.exception("limit[%d] cannot be provided when markAsUnused is enabled.", limit);
+      }
+      if (!CollectionUtils.isNullOrEmpty(versions)) {
+        throw InvalidInput.exception("versions[%s] cannot be provided when markAsUnused is enabled.", versions);
+      }
     }
     this.versions = versions;
     this.limit = limit;

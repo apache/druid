@@ -1316,7 +1316,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         DS.WIKI,
         Intervals.of("1900/3000"),
         null,
-        null,
         null
     );
 
@@ -1334,7 +1333,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        null,
         requestedLimit,
         null
     );
@@ -1353,7 +1351,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        null,
         requestedLimit,
         null
     );
@@ -1391,7 +1388,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        null,
         limit,
         null
     );
@@ -1413,7 +1409,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         outOfRangeInterval,
-        null,
         limit,
         null
     );
@@ -1855,7 +1850,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 defaultSegment.getDataSource(),
                 defaultSegment.getInterval(),
                 null,
-                null,
                 null
             )
         )
@@ -2065,7 +2059,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 defaultSegment.getInterval().getStart().plus(1)
             ),
             null,
-            null,
             null
         ).isEmpty()
     );
@@ -2080,7 +2073,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
             new Interval(defaultSegment.getInterval().getStart().plus(1), defaultSegment.getInterval().getEnd()),
-            null,
             null,
             null
         ).isEmpty()
@@ -2098,7 +2090,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             defaultSegment.getDataSource(),
             new Interval(defaultSegment.getInterval().getStart(), defaultSegment.getInterval().getEnd().minus(1)),
             null,
-            null,
             null
         ).isEmpty()
     );
@@ -2113,7 +2104,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
             defaultSegment.getInterval().withStart(defaultSegment.getInterval().getEnd().minus(1)),
-            null,
             null,
             null
         ).isEmpty()
@@ -2131,7 +2121,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
                 Intervals.of("2000/2999"),
-                null,
                 null,
                 null
             )
@@ -2151,7 +2140,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 defaultSegment.getDataSource(),
                 defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minus(1)),
                 null,
-                null,
                 null
             )
         )
@@ -2162,7 +2150,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
                 defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minusYears(1)),
-                null,
                 null,
                 null
             )
@@ -2182,7 +2169,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 defaultSegment.getDataSource(),
                 defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plus(1)),
                 null,
-                null,
                 null
             )
         )
@@ -2193,7 +2179,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
                 defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusYears(1)),
-                null,
                 null,
                 null
             )
@@ -3450,7 +3435,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 existingSegment2.getDataSource(),
                 existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1)),
                 null,
-                null,
                 null
             )
         )
@@ -3476,7 +3460,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 existingSegment1.getDataSource(),
                 existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1)),
                 null,
-                null,
                 null
             )
         )
@@ -3487,7 +3470,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             coordinator.retrieveUnusedSegmentsForInterval(
                 existingSegment2.getDataSource(),
                 existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1)),
-                null,
                 null,
                 null
             )
