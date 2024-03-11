@@ -39,7 +39,6 @@ import java.util.Optional;
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";
-  private static final String LABEL = "export";
   private final ExportStorageProvider exportStorageProvider;
   private final ResultFormat resultFormat;
 
@@ -106,11 +105,5 @@ public class ExportMSQDestination implements MSQDestination
   public Optional<Resource> getDestinationResource()
   {
     return Optional.of(new Resource(getExportStorageProvider().getResourceType(), ResourceType.EXTERNAL));
-  }
-
-  @Override
-  public String getDestinationLabel()
-  {
-    return LABEL;
   }
 }

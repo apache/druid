@@ -31,7 +31,6 @@ import java.util.Optional;
 public class DurableStorageMSQDestination implements MSQDestination
 {
   public static final String TYPE = "durableStorage";
-  private static final String LABEL = "export_durable_storage";
 
   public static final DurableStorageMSQDestination INSTANCE = new DurableStorageMSQDestination();
 
@@ -63,11 +62,5 @@ public class DurableStorageMSQDestination implements MSQDestination
   public Optional<Resource> getDestinationResource()
   {
     return Optional.of(new Resource(MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT, ResourceType.DATASOURCE));
-  }
-
-  @Override
-  public String getDestinationLabel()
-  {
-    return LABEL;
   }
 }
