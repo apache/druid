@@ -26,15 +26,14 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
-import org.apache.druid.sql.http.ResultFormat;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,14 +45,13 @@ public class MSQExportTest extends MSQTestBase
   @Test
   public void testExport() throws IOException
   {
-    TestExportStorageConnector storageConnector = (TestExportStorageConnector) exportStorageConnectorProvider.get();
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    final String sql = StringUtils.format("insert into extern(%s()) as csv select cnt, dim1 from foo", TestExportStorageConnector.TYPE_NAME);
+    File exportDir = temporaryFolder.newFolder("export/");
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 as dim from foo", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
@@ -63,11 +61,48 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
-    List<Object[]> objects = expectedFooFileContents();
+    Assert.assertEquals(
+        1,
+        Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
+    );
+
+    File resultFile = new File(exportDir, "query-test-query-worker0-partition0.csv");
+    List<String> results = readResultsFromFile(resultFile);
+    Assert.assertEquals(
+        expectedFooFileContents(true),
+        results
+    );
+  }
+
+  @Test
+  public void testExport2() throws IOException
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    File exportDir = temporaryFolder.newFolder("export/");
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select __time, dim1 as table_dim, count(*) as table_count from foo where dim1 is not null group by 1,2", exportDir.getAbsolutePath());
+
+    testIngestQuery().setSql(sql)
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
 
     Assert.assertEquals(
-        convertResultsToString(objects),
-        new String(storageConnector.getByteArrayOutputStream().toByteArray(), Charset.defaultCharset())
+        1,
+        Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
+    );
+
+    File resultFile = new File(exportDir, "query-test-query-worker0-partition0.csv");
+    List<String> results = readResultsFromFile(resultFile);
+    Assert.assertEquals(
+        expectedFoo2FileContents(true),
+        results
     );
   }
 
@@ -95,36 +130,56 @@ public class MSQExportTest extends MSQTestBase
                      .verifyResults();
 
     Assert.assertEquals(
-        expectedFooFileContents().size(),
+        expectedFooFileContents(false).size(),
         Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
     );
   }
 
-  private List<Object[]> expectedFooFileContents()
+  private List<String> expectedFooFileContents(boolean withHeader)
   {
-    return new ArrayList<>(ImmutableList.of(
-        new Object[]{"1", null},
-        new Object[]{"1", 10.1},
-        new Object[]{"1", 2},
-        new Object[]{"1", 1},
-        new Object[]{"1", "def"},
-        new Object[]{"1", "abc"}
-    ));
+    ArrayList<String> expectedResults = new ArrayList<>();
+    if (withHeader) {
+      expectedResults.add("cnt,dim");
+    }
+    expectedResults.addAll(ImmutableList.of(
+                               "1,",
+                               "1,10.1",
+                               "1,2",
+                               "1,1",
+                               "1,def",
+                               "1,abc"
+                           )
+    );
+    return expectedResults;
   }
 
-  private String convertResultsToString(List<Object[]> expectedRows) throws IOException
+  private List<String> expectedFoo2FileContents(boolean withHeader)
   {
-    ByteArrayOutputStream expectedResult = new ByteArrayOutputStream();
-    ResultFormat.Writer formatter = ResultFormat.CSV.createFormatter(expectedResult, objectMapper);
-    formatter.writeResponseStart();
-    for (Object[] row : expectedRows) {
-      formatter.writeRowStart();
-      for (Object object : row) {
-        formatter.writeRowField("", object);
-      }
-      formatter.writeRowEnd();
+    ArrayList<String> expectedResults = new ArrayList<>();
+    if (withHeader) {
+      expectedResults.add("__time,table_dim,table_count");
     }
-    formatter.writeResponseEnd();
-    return new String(expectedResult.toByteArray(), Charset.defaultCharset());
+    expectedResults.addAll(ImmutableList.of(
+                               "946684800000,,1",
+                               "946771200000,10.1,1",
+                               "946857600000,2,1",
+                               "978307200000,1,1",
+                               "978393600000,def,1",
+                               "978480000000,abc,1"
+                           )
+    );
+    return expectedResults;
+  }
+
+  private List<String> readResultsFromFile(File resultFile) throws IOException
+  {
+    List<String> results = new ArrayList<>();
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(resultFile.toPath()), StringUtils.UTF8_STRING))) {
+      String line;
+      while (!(line = br.readLine()).isEmpty()) {
+        results.add(line);
+      }
+      return results;
+    }
   }
 }

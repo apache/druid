@@ -42,6 +42,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
 
@@ -60,6 +61,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final ObjectMapper jsonMapper;
   private final ChannelCounters channelCounter;
   final String exportFilePath;
+  private final ColumnMappings columnMappings;
 
   public ExportResultsFrameProcessor(
       final ReadableFrameChannel inputChannel,
@@ -68,7 +70,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       final StorageConnector storageConnector,
       final ObjectMapper jsonMapper,
       final ChannelCounters channelCounter,
-      final String exportFilePath
+      final String exportFilePath,
+      final ColumnMappings columnMappings
   )
   {
     this.inputChannel = inputChannel;
@@ -78,6 +81,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
+    this.columnMappings = columnMappings;
   }
 
   @Override
@@ -123,7 +127,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       formatter.writeResponseStart();
 
       if (writeHeader) {
-        formatter.writeHeaderFromRowSignature(exportRowSignature, false);
+        formatter.writeHeaderFromRowSignature(createHeaderSignature(exportRowSignature, columnMappings), false);
       }
 
       SequenceUtils.forEach(
@@ -169,6 +173,23 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
                      .stream()
                      .filter(name -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(name))
                      .forEach(name -> exportRowSignatureBuilder.add(name, inputRowSignature.getColumnType(name).orElse(null)));
+    return exportRowSignatureBuilder.build();
+  }
+
+  private static RowSignature createHeaderSignature(RowSignature inputRowSignature, ColumnMappings columnMappings)
+  {
+    if (columnMappings == null) {
+      return inputRowSignature;
+    }
+    final RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
+    inputRowSignature.getColumnNames()
+                     .forEach(queryColumnName -> {
+                       int outputColumn = columnMappings.getOutputColumnsForQueryColumn(queryColumnName).getInt(0);
+                       exportRowSignatureBuilder.add(
+                           columnMappings.getOutputColumnName(outputColumn),
+                           inputRowSignature.getColumnType(queryColumnName).orElse(null)
+                       );
+                     });
     return exportRowSignatureBuilder.build();
   }
 
