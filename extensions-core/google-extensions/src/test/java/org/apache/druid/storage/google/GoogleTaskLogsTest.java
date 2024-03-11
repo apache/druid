@@ -20,13 +20,13 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.InputStreamContent;
-import com.google.cloud.storage.StorageException;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -57,7 +57,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   private static final long TIME_NOW = 2L;
   private static final long TIME_FUTURE = 3L;
   private static final int MAX_KEYS = 1;
-  private static final Exception RUNTIME_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
+  private static final Exception RUNTIME_EXCEPTION = new IAE("Runtime Exception");
 
 
   private GoogleStorage storage;

@@ -40,7 +40,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -150,10 +149,10 @@ public class GoogleStorage
   public void delete(final String bucket, final String path)
   {
     // Though currently not documented for the GCS delete api, a false response is indicative of file not found.
-    // All other errors appear as StorageException which is a runtime exceptions. Ref:
+    // All other errors appear as StorageException which is a runtime exceptions. Refer to
     // https://github.com/googleapis/java-storage/blob/0b5f11af941032e6a55b12d243acf128a6464400/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java#L685
     if (!storage.get().delete(bucket, path)) {
-      log.debug(StringUtils.nonStrictFormat(
+      log.warn(StringUtils.nonStrictFormat(
           "Google cloud storage object to be deleted not found in bucket[%s] and path[%s].",
           bucket,
           path
@@ -169,19 +168,9 @@ public class GoogleStorage
    */
   public void batchDelete(final String bucket, final Iterable<String> paths)
   {
-    final List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
-    final List<String> failedPaths = new ArrayList<>();
-    final Iterator<String> pathIterator = paths.iterator();
-    int cursor = 0;
-    while (pathIterator.hasNext()) {
-      String failedPath = pathIterator.next();
-      if (!statuses.get(cursor)) {
-        failedPaths.add(failedPath);
-      }
-      cursor++;
-    }
+    List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
     if (statuses.contains(false)) {
-      log.debug("Google cloud storage object(s) in bucket %s to be deleted not found. Paths: " + failedPaths, bucket);
+      log.warn("Google cloud storage object(s) to be deleted not found");
     }
   }
 

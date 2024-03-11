@@ -23,8 +23,8 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.IAE;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Before;
@@ -51,7 +51,7 @@ public class GoogleStorageTest
   static final String PATH = "/path";
   static final long SIZE = 100;
   static final OffsetDateTime UPDATE_TIME = OffsetDateTime.MIN;
-  private static final Exception RUNTIME_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
+  private static final Exception RUNTIME_EXCEPTION = new IAE("Runtime Exception");
 
 
   @Before
@@ -68,14 +68,6 @@ public class GoogleStorageTest
   public void testDeleteSuccess()
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(true);
-    EasyMock.replay(mockStorage);
-    googleStorage.delete(BUCKET, PATH);
-  }
-
-  @Test
-  public void testDeleteFileNotFound()
-  {
-    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(false);
     EasyMock.replay(mockStorage);
     googleStorage.delete(BUCKET, PATH);
   }
@@ -114,28 +106,6 @@ public class GoogleStorageTest
     assertTrue(paths.size() == recordedPaths.size() && paths.containsAll(recordedPaths) && recordedPaths.containsAll(
         paths));
     assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
-
-  }
-
-  @Test
-  public void testBatchDeleteFileNotFound()
-  {
-    List<String> paths = ImmutableList.of("/path1", "/path2");
-    final Capture<Iterable<BlobId>> pathIterable = Capture.newInstance();
-    EasyMock.expect(mockStorage.delete(EasyMock.capture(pathIterable))).andReturn(ImmutableList.of(true, false));
-    EasyMock.replay(mockStorage);
-
-    googleStorage.batchDelete(BUCKET, paths);
-
-    List<BlobId> recordedBlobIds = new ArrayList<>();
-    pathIterable.getValue().iterator().forEachRemaining(recordedBlobIds::add);
-
-    List<String> recordedPaths = recordedBlobIds.stream().map(BlobId::getName).collect(Collectors.toList());
-
-    assertTrue(paths.size() == recordedPaths.size() && paths.containsAll(recordedPaths) && recordedPaths.containsAll(
-        paths));
-    assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
-
   }
 
   @Test

@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
@@ -51,7 +51,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final int MAX_KEYS = 1;
-  private static final Exception RUNTIME_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
+  private static final Exception RUNTIME_EXCEPTION = new IAE("Runtime Exception");
 
 
   private static final DataSegment DATA_SEGMENT = new DataSegment(
