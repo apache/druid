@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
@@ -35,21 +34,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class RetrieveSegmentsActionsTest
 {
   private static final Interval INTERVAL = Intervals.of("2017-10-01/2017-10-15");
-  private static final String UNUSED_V1 = "unused_v1";
-  private static final String UNUSED_V2 = "unused_v2";
-
-  private static final String USED_V1 = "used_v1";
-  private static final String USED_V2 = "used_v2";
-
-  private static final List<String> VERSIONS = Arrays.asList(USED_V1, USED_V2, UNUSED_V1, UNUSED_V2);
+  private static final String UNUSED_V0 = "v0";
+  private static final String UNUSED_V1 = "v1";
 
   @ClassRule
   public static TaskActionTestKit actionTestKit = new TaskActionTestKit();
@@ -66,11 +58,11 @@ public class RetrieveSegmentsActionsTest
     actionTestKit.getTaskLockbox().add(task);
 
     expectedUnusedSegments = new HashSet<>();
-    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-05/2017-10-06"), UNUSED_V1));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-05/2017-10-06"), UNUSED_V0));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), UNUSED_V0));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V0));
     expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), UNUSED_V1));
     expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V1));
-    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), UNUSED_V2));
-    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V2));
 
     actionTestKit.getMetadataStorageCoordinator()
                  .commitSegments(expectedUnusedSegments);
@@ -78,9 +70,9 @@ public class RetrieveSegmentsActionsTest
     expectedUnusedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 
     expectedUsedSegments = new HashSet<>();
-    expectedUsedSegments.add(createSegment(Intervals.of("2017-10-05/2017-10-06"), USED_V1));
-    expectedUsedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), USED_V2));
-    expectedUsedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), USED_V2));
+    expectedUsedSegments.add(createSegment(Intervals.of("2017-10-05/2017-10-06"), "2"));
+    expectedUsedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), "2"));
+    expectedUsedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), "2"));
 
     actionTestKit.getMetadataStorageCoordinator()
                  .commitSegments(expectedUsedSegments);
@@ -115,12 +107,12 @@ public class RetrieveSegmentsActionsTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsActionWithVersion()
+  public void testRetrieveUnusedSegmentsActionWithVersions()
   {
     final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
         task.getDataSource(),
         INTERVAL,
-        VERSIONS,
+        ImmutableList.of(UNUSED_V0, UNUSED_V1),
         null,
         null
     );

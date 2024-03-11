@@ -181,7 +181,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
 
   @Test
-  public void testKillVersion() throws Exception
+  public void testKillWithVersions() throws Exception
   {
     final DateTime version = DateTimes.nowUtc();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.toString());
@@ -223,7 +223,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final List<DataSegment> unusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        null,
         null,
         null
     );
@@ -276,7 +275,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         DATA_SOURCE,
         Intervals.of("2018/2020"),
         null,
-        null,
         null
     );
 
@@ -328,7 +326,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         DATA_SOURCE,
         Intervals.of("2018/2020"),
         null,
-        null,
         null
     );
 
@@ -379,7 +376,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final List<DataSegment> actualUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        null,
         null,
         null
     );
@@ -448,7 +444,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             Intervals.of("2019/2020"),
-            null,
             null,
             null
         );
@@ -526,7 +521,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             umbrellaInterval,
-            null,
             null,
             null
         );
@@ -621,7 +615,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             DATA_SOURCE,
             umbrellaInterval,
             null,
-            null,
             null
         );
 
@@ -647,7 +640,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             umbrellaInterval,
-            null,
             null,
             null
         );
@@ -738,7 +730,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             DATA_SOURCE,
             umbrellaInterval,
             null,
-            null,
             null
             );
 
@@ -763,7 +754,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final List<DataSegment> unusedSegments2 = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         umbrellaInterval,
-        null,
         null,
         null
     );
@@ -836,7 +826,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             DATA_SOURCE,
             umbrellaInterval,
             null,
-            null,
             null
         );
 
@@ -865,7 +854,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             umbrellaInterval,
-            null,
             null,
             null
         );
@@ -907,7 +895,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final List<DataSegment> unusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         Intervals.of("2019/2020"),
-        null,
         null,
         null
     );
