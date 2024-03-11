@@ -32,7 +32,7 @@ Apache Druid 29.0.1 is a patch release that fixes some issues in the Druid 29.0.
 
 * Added type verification for INSERT and REPLACE to validate that strings and string arrays aren't mixed [#15920](https://github.com/apache/druid/pull/15920)
 * [Concurrent replace](https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace) now allows pending Peon segments to be upgraded using the Supervisor [#15995](https://github.com/apache/druid/pull/15995)
-* Changed the `targetDataSource` attribute to return a string containing the name of the datasource [#16004](https://github.com/apache/druid/pull/16004)
+* Changed the `targetDataSource` attribute to return a string containing the name of the datasource. This reverts the breaking change introduced in Druid 29.0.0 for INSERT and REPLACE MSQ queries [#16004](https://github.com/apache/druid/pull/16004) [#16031](https://github.com/apache/druid/pull/16031)
 * Decreased the size of the distribution Docker image [#15968](https://github.com/apache/druid/pull/15968)
 * Fixed an issue with SQL-based ingestion where string inputs, such as from CSV, TSV, or string-value fields in JSON, are ingested as null values when they are typed as LONG or BIGINT [#15999](https://github.com/apache/druid/pull/15999)
 * Fixed an issue where a web console-generated Kafka supervisor spec has `flattenSpec` in the wrong location [#15946](https://github.com/apache/druid/pull/15946)
@@ -41,6 +41,10 @@ Apache Druid 29.0.1 is a patch release that fixes some issues in the Druid 29.0.
 * Improved DOUBLE type detection in the web console [#15998](https://github.com/apache/druid/pull/15998)
 * Web console-generated queries now only set the context parameter `arrayIngestMode` to `array` when you explicitly opt in to use arrays [#15927](https://github.com/apache/druid/pull/15927)
 * The web console now displays the results of an MSQ query that writes to an external destination through the [`EXTERN`](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function) function [#15969](https://github.com/apache/druid/pull/15969)
+
+### Dependency updates
+
+* Updated PostgreSQL JDBC Driver version to 42.7.2 [#15931](https://github.com/apache/druid/pull/15931)
 
 ## Druid 29.0.0
 
