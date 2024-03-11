@@ -132,7 +132,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         null,
         "datasource",
         Intervals.of("2020-01-01/P1D"),
-        ImmutableList.of(DateTimes.nowUtc().toString()),
+        ImmutableList.of("v1", "v2"),
         null,
         null,
         99,

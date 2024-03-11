@@ -39,7 +39,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class RetrieveSegmentsActionsTest
 {
@@ -118,60 +117,45 @@ public class RetrieveSegmentsActionsTest
   @Test
   public void testRetrieveUsedSegmentsActionWithVersionVisibleOnly()
   {
-    for (final String version : VERSIONS) {
-      final RetrieveUsedSegmentsAction action =
-          new RetrieveUsedSegmentsAction(
-              task.getDataSource(),
-              null,
-              ImmutableList.of(INTERVAL),
-              ImmutableList.of(version),
-              Segments.ONLY_VISIBLE
-          );
-      final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-      final Set<DataSegment> expectedSegments = expectedUsedSegments.stream()
-                                                                    .filter(d -> d.getVersion().equals(version))
-                                                                    .collect(Collectors.toSet());
-      Assert.assertEquals(expectedSegments, actualSegments);
-    }
+    final RetrieveUsedSegmentsAction action =
+        new RetrieveUsedSegmentsAction(
+            task.getDataSource(),
+            null,
+            ImmutableList.of(INTERVAL),
+            VERSIONS,
+            Segments.ONLY_VISIBLE
+        );
+    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUsedSegments, actualSegments);
   }
 
   @Test
   public void testRetrieveUsedSegmentsActionWithVersionIncludingOvershadowed()
   {
-    for (final String version : VERSIONS) {
-      final RetrieveUsedSegmentsAction action =
-          new RetrieveUsedSegmentsAction(
-              task.getDataSource(),
-              null,
-              ImmutableList.of(INTERVAL),
-              ImmutableList.of(version),
-              Segments.INCLUDING_OVERSHADOWED
-          );
-      final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-      final Set<DataSegment> expectedSegments = expectedUsedSegments.stream()
-                                                                    .filter(d -> d.getVersion().equals(version))
-                                                                    .collect(Collectors.toSet());
-      Assert.assertEquals(expectedSegments, actualSegments);
-    }
+    final RetrieveUsedSegmentsAction action =
+        new RetrieveUsedSegmentsAction(
+            task.getDataSource(),
+            null,
+            ImmutableList.of(INTERVAL),
+            VERSIONS,
+            Segments.INCLUDING_OVERSHADOWED
+        );
+    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUsedSegments, actualSegments);
   }
 
   @Test
   public void testRetrieveUnusedSegmentsActionWithVersion()
   {
-    for (final String version : VERSIONS) {
-      final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
-          task.getDataSource(),
-          INTERVAL,
-          ImmutableList.of(version),
-          null,
-          null
-      );
-      final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-      final Set<DataSegment> expectedSegments = expectedUnusedSegments.stream()
-                                                                      .filter(d -> d.getVersion().equals(version))
-                                                                      .collect(Collectors.toSet());
-      Assert.assertEquals(expectedSegments, actualSegments);
-    }
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
+        task.getDataSource(),
+        INTERVAL,
+        VERSIONS,
+        null,
+        null
+    );
+    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUnusedSegments, actualSegments);
   }
 
   @Test

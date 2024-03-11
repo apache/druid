@@ -232,7 +232,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testKillMultipleSegmentsWithVersion() throws Exception
+  public void testKillMultipleSegmentsWithVersions() throws Exception
   {
     final DateTime version = DateTimes.nowUtc();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version.toString());
@@ -258,7 +258,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        ImmutableList.of(version.toString()),
+        ImmutableList.of(version.toString(), version.minusHours(2).toString()),
         null,
         false,
         3,
@@ -268,7 +268,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(3, 2, 0),
+        new KillTaskReport.Stats(4, 3, 0),
         getReportedStats()
     );
 
@@ -280,7 +280,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null
     );
 
-    Assert.assertEquals(ImmutableSet.of(segment4, segment5), new HashSet<>(actualUnusedSegments));
+    Assert.assertEquals(ImmutableSet.of(segment5), new HashSet<>(actualUnusedSegments));
   }
 
   @Test
