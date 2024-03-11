@@ -203,18 +203,18 @@ public class GoogleStorageTest
   @Test
   public void testVersion() throws IOException
   {
-    final String version = "7";
+    final String etag = "abcd";
     EasyMock.expect(mockStorage.get(
         EasyMock.eq(BUCKET),
         EasyMock.eq(PATH),
         EasyMock.anyObject(Storage.BlobGetOption.class)
     )).andReturn(blob);
 
-    EasyMock.expect(blob.getGeneratedId()).andReturn(version);
+    EasyMock.expect(blob.getEtag()).andReturn(etag);
 
     EasyMock.replay(mockStorage, blob);
 
-    assertEquals(version, googleStorage.version(BUCKET, PATH));
+    assertEquals(etag, googleStorage.version(BUCKET, PATH));
   }
 
   @Test
