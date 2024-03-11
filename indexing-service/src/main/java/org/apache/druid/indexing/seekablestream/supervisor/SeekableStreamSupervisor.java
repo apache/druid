@@ -1753,6 +1753,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               getTaskGroupIdForPartition(resetPartitionOffset.getKey())
           );
           final boolean isSameOffset = partitionTaskGroup != null
+                                       && partitionTaskGroup.startingSequences.containsKey(resetPartitionOffset.getKey())
                                        && partitionTaskGroup.startingSequences.get(resetPartitionOffset.getKey())
                                                                               .equals(resetPartitionOffset.getValue());
           if (partitionOffsetInMetadataStore != null || isSameOffset) {
