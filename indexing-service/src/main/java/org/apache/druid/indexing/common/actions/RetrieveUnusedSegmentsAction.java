@@ -41,7 +41,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   private final Interval interval;
 
   @JsonIgnore
-  private final String version;
+  private final List<String> versions;
 
   @JsonIgnore
   private final Integer limit;
@@ -53,14 +53,14 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("version") @Nullable String version,
+      @JsonProperty("versions") @Nullable List<String> versions,
       @JsonProperty("limit") @Nullable Integer limit,
       @JsonProperty("maxUsedStatusLastUpdatedTime") @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
-    this.version = version;
+    this.versions = versions;
     this.limit = limit;
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
@@ -79,9 +79,9 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
 
   @Nullable
   @JsonProperty
-  public String getVersion()
+  public List<String> getVersions()
   {
-    return version;
+    return versions;
   }
 
   @Nullable
@@ -108,7 +108,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-        .retrieveUnusedSegmentsForInterval(dataSource, interval, version, limit, maxUsedStatusLastUpdatedTime);
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, versions, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override
@@ -123,7 +123,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
-           ", version=" + version +
+           ", versions=" + versions +
            ", limit=" + limit +
            ", maxUsedStatusLastUpdatedTime=" + maxUsedStatusLastUpdatedTime +
            '}';

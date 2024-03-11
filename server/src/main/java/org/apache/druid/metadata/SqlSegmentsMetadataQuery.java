@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
@@ -117,13 +118,13 @@ public class SqlSegmentsMetadataQuery
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version
+      @Nullable final List<String> versions
   )
   {
     return retrieveSegments(
         dataSource,
         intervals,
-        version,
+        versions,
         IntervalMode.OVERLAPS,
         true,
         null,
@@ -143,7 +144,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @param dataSource    The name of the datasource
    * @param intervals     The intervals to search over
-   * @param version       An optional version of unused segments to retrieve in the given {@code intervals}.
+   * @param versions      An optional list of unused segment versions to retrieve in the given {@code intervals}.
    *                      If unspecified, all versions of unused segments in the {@code intervals} must be retrieved.
    * @param limit         The limit of segments to return
    * @param lastSegmentId the last segment id from which to search for results. All segments returned are >
@@ -162,7 +163,7 @@ public class SqlSegmentsMetadataQuery
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
@@ -172,7 +173,7 @@ public class SqlSegmentsMetadataQuery
     return retrieveSegments(
         dataSource,
         intervals,
-        version,
+        versions,
         IntervalMode.CONTAINS,
         false,
         limit,
@@ -207,7 +208,7 @@ public class SqlSegmentsMetadataQuery
   public CloseableIterator<DataSegmentPlus> retrieveUnusedSegmentsPlus(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
@@ -217,7 +218,7 @@ public class SqlSegmentsMetadataQuery
     return retrieveSegmentsPlus(
         dataSource,
         intervals,
-        version,
+        versions,
         IntervalMode.CONTAINS,
         false,
         limit,
@@ -455,7 +456,7 @@ public class SqlSegmentsMetadataQuery
   private CloseableIterator<DataSegment> retrieveSegments(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -466,7 +467,7 @@ public class SqlSegmentsMetadataQuery
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, version, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, versions, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -477,7 +478,7 @@ public class SqlSegmentsMetadataQuery
         final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(
             dataSource,
             intervalList,
-            version,
+            versions,
             matchMode,
             used,
             limitPerBatch,
@@ -505,7 +506,7 @@ public class SqlSegmentsMetadataQuery
   private CloseableIterator<DataSegmentPlus> retrieveSegmentsPlus(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -516,7 +517,7 @@ public class SqlSegmentsMetadataQuery
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsPlusInIntervalsBatch(dataSource, intervals, version, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
+          retrieveSegmentsPlusInIntervalsBatch(dataSource, intervals, versions, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -527,7 +528,7 @@ public class SqlSegmentsMetadataQuery
         final UnmodifiableIterator<DataSegmentPlus> iterator = retrieveSegmentsPlusInIntervalsBatch(
             dataSource,
             intervalList,
-            version,
+            versions,
             matchMode,
             used,
             limitPerBatch,
@@ -555,7 +556,7 @@ public class SqlSegmentsMetadataQuery
   private UnmodifiableIterator<DataSegment> retrieveSegmentsInIntervalsBatch(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -567,7 +568,7 @@ public class SqlSegmentsMetadataQuery
     final Query<Map<String, Object>> sql = buildSegmentsTableQuery(
         dataSource,
         intervals,
-        version,
+        versions,
         matchMode,
         used,
         limit,
@@ -585,7 +586,7 @@ public class SqlSegmentsMetadataQuery
   private UnmodifiableIterator<DataSegmentPlus> retrieveSegmentsPlusInIntervalsBatch(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -598,7 +599,7 @@ public class SqlSegmentsMetadataQuery
     final Query<Map<String, Object>> sql = buildSegmentsTableQuery(
         dataSource,
         intervals,
-        version,
+        versions,
         matchMode,
         used,
         limit,
@@ -616,7 +617,7 @@ public class SqlSegmentsMetadataQuery
   private Query<Map<String, Object>> buildSegmentsTableQuery(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final String version,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -639,8 +640,11 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    if (version != null) {
-      sb.append(" AND version = :version");
+    if (!CollectionUtils.isNullOrEmpty(versions)) {
+      final String versionsStr = versions.stream()
+                                          .map(version -> "'" + version + "'")
+                                          .collect(Collectors.joining(","));
+      sb.append(StringUtils.format(" AND version IN (%s)", versionsStr));
     }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
@@ -673,10 +677,6 @@ public class SqlSegmentsMetadataQuery
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)
         .bind("dataSource", dataSource);
-
-    if (version != null) {
-      sql.bind("version", version);
-    }
 
     if (addMaxUsedLastUpdatedTimeFilter) {
       sql.bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString());

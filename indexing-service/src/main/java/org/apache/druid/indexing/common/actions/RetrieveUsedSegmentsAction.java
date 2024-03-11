@@ -74,7 +74,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   private final List<Interval> intervals;
 
   @JsonIgnore
-  private final String version;
+  private final List<String> versions;
 
   @JsonIgnore
   private final Segments visibility;
@@ -84,7 +84,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
       @JsonProperty("dataSource") String dataSource,
       @Deprecated @JsonProperty("interval") Interval interval,
       @JsonProperty("intervals") Collection<Interval> intervals,
-      @JsonProperty("version") @Nullable String version,
+      @JsonProperty("versions") @Nullable List<String> versions,
       // When JSON object is deserialized, this parameter is optional for backward compatibility.
       // Otherwise, it shouldn't be considered optional.
       @JsonProperty("visibility") @Nullable Segments visibility
@@ -104,7 +104,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
       theIntervals = JodaUtils.condenseIntervals(intervals);
     }
     this.intervals = Preconditions.checkNotNull(theIntervals, "no intervals found");
-    this.version = version;
+    this.versions = versions;
     // Defaulting to the former behaviour when visibility wasn't explicitly specified for backward compatibility
     this.visibility = visibility != null ? visibility : Segments.ONLY_VISIBLE;
   }
@@ -128,9 +128,9 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 
   @Nullable
   @JsonProperty
-  public String getVersion()
+  public List<String> getVersions()
   {
-    return version;
+    return versions;
   }
 
   @JsonProperty
@@ -218,7 +218,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   private Collection<DataSegment> retrieveUsedSegments(TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUsedSegmentsForIntervals(dataSource, intervals, version, visibility);
+                  .retrieveUsedSegmentsForIntervals(dataSource, intervals, versions, visibility);
   }
 
   @Override
@@ -239,14 +239,14 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     RetrieveUsedSegmentsAction that = (RetrieveUsedSegmentsAction) o;
     return Objects.equals(dataSource, that.dataSource)
            && Objects.equals(intervals, that.intervals)
-           && Objects.equals(version, that.version)
+           && Objects.equals(versions, that.versions)
            && visibility == that.visibility;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, intervals, version, visibility);
+    return Objects.hash(dataSource, intervals, versions, visibility);
   }
 
   @Override
@@ -255,7 +255,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", intervals=" + intervals +
-           ", version=" + version +
+           ", versions=" + versions +
            ", visibility=" + visibility +
            '}';
   }

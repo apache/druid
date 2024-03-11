@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -86,7 +87,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   /**
    * The version of segments to delete in this {@link #getInterval()}.
    */
-  @Nullable private final String version;
+  @Nullable private final List<String> versions;
 
   @Deprecated
   private final boolean markAsUnused;
@@ -112,7 +113,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("version") @Nullable String version,
+      @JsonProperty("versions") @Nullable List<String> versions,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
@@ -137,10 +138,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     if (limit != null && Boolean.TRUE.equals(markAsUnused)) {
       throw InvalidInput.exception("limit[%d] cannot be provided when markAsUnused is enabled.", limit);
     }
-    if (version != null && Boolean.TRUE.equals(markAsUnused)) {
-      throw InvalidInput.exception("version[%s] cannot be provided when markAsUnused is enabled.", version);
+    if (!CollectionUtils.isNullOrEmpty(versions) && Boolean.TRUE.equals(markAsUnused)) {
+      throw InvalidInput.exception("versions[%s] cannot be provided when markAsUnused is enabled.", versions);
     }
-    this.version = version;
+    this.versions = versions;
     this.limit = limit;
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
@@ -148,9 +149,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
   @Nullable
   @JsonProperty
-  public String getVersion()
+  public List<String> getVersions()
   {
-    return version;
+    return versions;
   }
 
   /**
@@ -225,9 +226,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     @Nullable Integer numTotalBatches = getNumTotalBatches();
     List<DataSegment> unusedSegments;
     LOG.info(
-        "Starting kill for datasource[%s] in interval[%s] and version[%s] with batchSize[%d], up to limit[%d]"
+        "Starting kill for datasource[%s] in interval[%s] and versions[%s] with batchSize[%d], up to limit[%d]"
         + " segments before maxUsedStatusLastUpdatedTime[%s] will be deleted%s",
-        getDataSource(), getInterval(), getVersion(), batchSize, limit, maxUsedStatusLastUpdatedTime,
+        getDataSource(), getInterval(), getVersions(), batchSize, limit, maxUsedStatusLastUpdatedTime,
         numTotalBatches != null ? StringUtils.format(" in [%d] batches.", numTotalBatches) : "."
     );
 
@@ -235,7 +236,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
             getDataSource(),
             null,
             ImmutableList.of(getInterval()),
-            getVersion(),
+            getVersions(),
             Segments.INCLUDING_OVERSHADOWED
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
@@ -254,7 +255,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       unusedSegments = toolbox
               .getTaskActionClient()
               .submit(
-                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersion(), nextBatchSize, maxUsedStatusLastUpdatedTime)
+                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersions(), nextBatchSize, maxUsedStatusLastUpdatedTime)
               );
 
       // Fetch locks each time as a revokal could have occurred in between batches

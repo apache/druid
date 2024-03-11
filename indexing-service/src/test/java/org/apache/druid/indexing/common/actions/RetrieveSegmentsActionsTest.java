@@ -120,7 +120,13 @@ public class RetrieveSegmentsActionsTest
   {
     for (final String version : VERSIONS) {
       final RetrieveUsedSegmentsAction action =
-          new RetrieveUsedSegmentsAction(task.getDataSource(), null, ImmutableList.of(INTERVAL), version, Segments.ONLY_VISIBLE);
+          new RetrieveUsedSegmentsAction(
+              task.getDataSource(),
+              null,
+              ImmutableList.of(INTERVAL),
+              ImmutableList.of(version),
+              Segments.ONLY_VISIBLE
+          );
       final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
       final Set<DataSegment> expectedSegments = expectedUsedSegments.stream()
                                                                     .filter(d -> d.getVersion().equals(version))
@@ -134,7 +140,13 @@ public class RetrieveSegmentsActionsTest
   {
     for (final String version : VERSIONS) {
       final RetrieveUsedSegmentsAction action =
-          new RetrieveUsedSegmentsAction(task.getDataSource(), null, ImmutableList.of(INTERVAL), version, Segments.INCLUDING_OVERSHADOWED);
+          new RetrieveUsedSegmentsAction(
+              task.getDataSource(),
+              null,
+              ImmutableList.of(INTERVAL),
+              ImmutableList.of(version),
+              Segments.INCLUDING_OVERSHADOWED
+          );
       final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
       final Set<DataSegment> expectedSegments = expectedUsedSegments.stream()
                                                                     .filter(d -> d.getVersion().equals(version))
@@ -147,8 +159,13 @@ public class RetrieveSegmentsActionsTest
   public void testRetrieveUnusedSegmentsActionWithVersion()
   {
     for (final String version : VERSIONS) {
-      final RetrieveUnusedSegmentsAction action =
-          new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, version, null, null);
+      final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
+          task.getDataSource(),
+          INTERVAL,
+          ImmutableList.of(version),
+          null,
+          null
+      );
       final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
       final Set<DataSegment> expectedSegments = expectedUnusedSegments.stream()
                                                                       .filter(d -> d.getVersion().equals(version))

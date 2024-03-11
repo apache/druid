@@ -1133,7 +1133,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           coordinator.retrieveUsedSegmentsForIntervals(
               DS.WIKI,
               ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
-              usedSegment.getVersion(),
+              ImmutableList.of(usedSegment.getVersion()),
               Segments.ONLY_VISIBLE
           )
       ).contains(usedSegment);
@@ -1152,7 +1152,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUsedSegmentsForIntervals(
             DS.WIKI,
             ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
-            "some-non-existent-version",
+            ImmutableList.of("some-non-existent-version"),
             Segments.ONLY_VISIBLE
         )
     ).containsAll(ImmutableList.of());
@@ -1195,7 +1195,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           coordinator.retrieveUsedSegmentsForIntervals(
               DS.WIKI,
               ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
-              usedSegment.getVersion(),
+              ImmutableList.of(usedSegment.getVersion()),
               Segments.INCLUDING_OVERSHADOWED
           )
       ).contains(usedSegment);
@@ -1205,7 +1205,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUsedSegmentsForIntervals(
             DS.WIKI,
             ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
-            segment3.getVersion(),
+            ImmutableList.of(segment3.getVersion()),
             Segments.INCLUDING_OVERSHADOWED
         )
     ).containsAll(ImmutableList.of());
@@ -1223,7 +1223,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUsedSegmentsForIntervals(
             DS.WIKI,
             ImmutableList.of(Intervals.of("2023-01-01/2023-01-04")),
-            "some-non-existent-version",
+            ImmutableList.of("some-non-existent-version"),
             Segments.INCLUDING_OVERSHADOWED
         )
     ).containsAll(ImmutableList.of());
@@ -1345,7 +1345,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        "version",
+        ImmutableList.of("version"),
         requestedLimit,
         null
     );
@@ -1869,7 +1869,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           coordinator.retrieveUnusedSegmentsForInterval(
               DS.WIKI,
               Intervals.of("2023-01-01/2023-01-04"),
-              unusedSegment.getVersion(),
+              ImmutableList.of(unusedSegment.getVersion()),
               null,
               null
           )
@@ -1890,7 +1890,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUnusedSegmentsForInterval(
             DS.WIKI,
             Intervals.of("2023-01-01/2023-01-04"),
-            "some-non-existent-version",
+            ImmutableList.of("some-non-existent-version"),
               null,
               null
           )

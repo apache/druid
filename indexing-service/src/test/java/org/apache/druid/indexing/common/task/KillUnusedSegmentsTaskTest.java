@@ -206,7 +206,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        segment3.getVersion(),
+        ImmutableList.of(segment3.getVersion()),
         null,
         false,
         3,
@@ -258,7 +258,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        version.toString(),
+        ImmutableList.of(version.toString()),
         null,
         false,
         3,
@@ -310,7 +310,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        version.toString(),
+        ImmutableList.of(version.toString()),
         null,
         false,
         3,
@@ -362,7 +362,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         DATA_SOURCE,
         Intervals.of("2018/2020"),
-        version.plusDays(100).toString(),
+        ImmutableList.of(version.plusDays(100).toString()),
         null,
         false,
         3,
@@ -817,7 +817,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             null,
             DATA_SOURCE,
             umbrellaInterval,
-            version.toString(),
+            ImmutableList.of(version.toString()),
             null,
             false,
             1,
@@ -847,7 +847,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             null,
             DATA_SOURCE,
             umbrellaInterval,
-            version.toString(),
+            ImmutableList.of(version.toString()),
             null,
             false,
             1,
@@ -1107,7 +1107,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
                 null,
                 DATA_SOURCE,
                 Intervals.of("2018-01-01/2020-01-01"),
-                "foo",
+                ImmutableList.of("foo"),
                 null,
                 true,
                 10,
@@ -1116,7 +1116,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             )
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "version[foo] cannot be provided when markAsUnused is enabled."
+            "versions[[foo]] cannot be provided when markAsUnused is enabled."
         )
     );
   }

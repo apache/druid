@@ -83,6 +83,8 @@ public interface OverlordClient
    * @param interval   Umbrella interval to be considered by the kill task. Note that unused segments falling in this
    *                   widened umbrella interval may have different {@code used_status_last_updated} time, so the kill task
    *                   should also filter by {@code maxUsedStatusLastUpdatedTime}
+   * @param versions   An optional list of segment versions to kill in the given {@code interval}. If unspecified, all
+   *                   versions of segments in the {@code interval} must be killed.
    * @param maxSegmentsToKill  The maximum number of segments to kill
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                   with {@code used_status_last_updated} no later than this time will be included in the
@@ -95,7 +97,7 @@ public interface OverlordClient
       String idPrefix,
       String dataSource,
       Interval interval,
-      @Nullable String version,
+      @Nullable List<String> versions,
       @Nullable Integer maxSegmentsToKill,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
@@ -105,7 +107,7 @@ public interface OverlordClient
         taskId,
         dataSource,
         interval,
-        version,
+        versions,
         false,
         null,
         maxSegmentsToKill,

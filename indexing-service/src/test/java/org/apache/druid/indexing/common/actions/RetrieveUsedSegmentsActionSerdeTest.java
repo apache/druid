@@ -74,7 +74,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
         "dataSource",
         null,
         intervals,
-        DateTimes.nowUtc().toString(),
+        ImmutableList.of(DateTimes.nowUtc().toString()),
         Segments.ONLY_VISIBLE
     );
 

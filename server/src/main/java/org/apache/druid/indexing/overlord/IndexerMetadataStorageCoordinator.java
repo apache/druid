@@ -109,7 +109,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource The data source to query
    * @param intervals  The intervals for which all applicable and used segments are requested.
-   * @param version    An optional version of segments to retrieve in the given {@code intervals}. If unspecified,
+   * @param versions   An optional list of segment versions to retrieve in the given {@code intervals}. If unspecified,
    *                   all versions of used segments in the {@code intervals} must be retrieved.
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified intervals: that is, a segment which is visible
@@ -127,7 +127,7 @@ public interface IndexerMetadataStorageCoordinator
   Collection<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
-      @Nullable String version,
+      @Nullable List<String> versions,
       Segments visibility
   );
 
@@ -137,7 +137,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
-   * @param version     An optional version of segments to retrieve in the given {@code interval}. If unspecified, all
+   * @param versions    An optional list of segment versions to retrieve in the given {@code interval}. If unspecified, all
    *                    versions of unused segments in the {@code interval} must be retrieved.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
@@ -150,7 +150,7 @@ public interface IndexerMetadataStorageCoordinator
   List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable String version,
+      @Nullable List<String> versions,
       @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   );

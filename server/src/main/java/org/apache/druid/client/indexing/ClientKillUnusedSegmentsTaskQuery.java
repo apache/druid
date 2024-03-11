@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -40,7 +41,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String id;
   private final String dataSource;
   private final Interval interval;
-  @Nullable private final String version;
+  @Nullable private final List<String> versions;
   private final Boolean markAsUnused;
   private final Integer batchSize;
   @Nullable private final Integer limit;
@@ -51,7 +52,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("version") String version,
+      @JsonProperty("versions") List<String> versions,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("limit") @Nullable Integer limit,
@@ -67,7 +68,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.id = id;
     this.dataSource = dataSource;
     this.interval = interval;
-    this.version = version;
+    this.versions = versions;
     this.markAsUnused = markAsUnused;
     this.batchSize = batchSize;
     this.limit = limit;
@@ -103,9 +104,9 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 
   @JsonProperty
   @Nullable
-  public String getVersion()
+  public List<String> getVersions()
   {
-    return version;
+    return versions;
   }
 
   /**
@@ -156,7 +157,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return Objects.equals(id, that.id)
            && Objects.equals(dataSource, that.dataSource)
            && Objects.equals(interval, that.interval)
-           && Objects.equals(version, that.version)
+           && Objects.equals(versions, that.versions)
            && Objects.equals(markAsUnused, that.markAsUnused)
            && Objects.equals(batchSize, that.batchSize)
            && Objects.equals(limit, that.limit)
@@ -166,6 +167,6 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, version, markAsUnused, batchSize, limit, maxUsedStatusLastUpdatedTime);
+    return Objects.hash(id, dataSource, interval, versions, markAsUnused, batchSize, limit, maxUsedStatusLastUpdatedTime);
   }
 }
