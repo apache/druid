@@ -733,8 +733,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -753,8 +752,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -817,8 +815,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -837,8 +834,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -924,8 +920,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -944,8 +939,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.

@@ -37,14 +37,10 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.rules.ExpectedException;
-
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -74,8 +70,6 @@ public class QueryTestBuilder
   {
     QueryLogHook queryLogHook();
 
-    ExpectedException expectedException();
-
     ObjectMapper jsonMapper();
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
@@ -99,10 +93,7 @@ public class QueryTestBuilder
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
-  @Nullable
-  protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
-  protected boolean msqCompatible = true;
   protected boolean queryCannotVectorize;
   protected Predicate<List<Query<?>>> verifyNativeQueries = xs -> true;
   protected AuthConfig authConfig = new AuthConfig();
@@ -218,12 +209,6 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedException(Consumer<ExpectedException> expectedExceptionInitializer)
-  {
-    this.expectedExceptionInitializer = expectedExceptionInitializer;
-    return this;
-  }
-
   public QueryTestBuilder skipVectorize()
   {
     return skipVectorize(true);
@@ -232,12 +217,6 @@ public class QueryTestBuilder
   public QueryTestBuilder skipVectorize(boolean skipVectorize)
   {
     this.skipVectorize = skipVectorize;
-    return this;
-  }
-
-  public QueryTestBuilder msqCompatible(boolean msqCompatible)
-  {
-    this.msqCompatible = msqCompatible;
     return this;
   }
 
