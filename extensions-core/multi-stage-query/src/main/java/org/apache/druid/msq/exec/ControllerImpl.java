@@ -76,6 +76,9 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.TaskLabel;
+import org.apache.druid.indexing.common.task.TaskLabelsProvider;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -182,6 +185,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -312,12 +316,14 @@ public class ControllerImpl implements Controller
   private boolean isDurableStorageEnabled;
   private final boolean isFaultToleranceEnabled;
   private final boolean isFailOnEmptyInsertEnabled;
+  private final TaskLabelsProvider taskLabelsProvider;
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
 
   public ControllerImpl(
       final MSQControllerTask task,
-      final ControllerContext context
-  )
+      final ControllerContext context,
+      final TaskLabelsProvider taskLabelsProvider
+      )
   {
     this.task = task;
     this.context = context;
@@ -330,6 +336,7 @@ public class ControllerImpl implements Controller
     this.isFailOnEmptyInsertEnabled = MultiStageQueryContext.isFailOnEmptyInsertEnabled(
         task.getQuerySpec().getQuery().context()
     );
+    this.taskLabelsProvider = taskLabelsProvider;
   }
 
   @Override
@@ -573,7 +580,11 @@ public class ControllerImpl implements Controller
       );
       context.writeReports(
           id(),
-          TaskReport.buildTaskReports(new MSQTaskReport(id(), taskReportPayload))
+          TaskReport.buildTaskReports(new MSQTaskReport(
+              id(),
+              taskLabelsProvider.getTaskMetricTags(task),
+              taskReportPayload
+          ))
       );
     }
     catch (Throwable e) {
@@ -697,6 +708,12 @@ public class ControllerImpl implements Controller
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
 
+    taskContextOverridesBuilder.put(Tasks.TASK_LABEL, new TaskLabel(taskLabelsProvider.getTaskLabels(task)));
+    Map<String, Object> taskMetricTags = taskLabelsProvider.getTaskMetricTags(task);
+    if (!taskMetricTags.isEmpty()) {
+      taskContextOverridesBuilder.put(DruidMetrics.TAGS, taskMetricTags);
+    }
+
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
@@ -712,8 +729,7 @@ public class ControllerImpl implements Controller
         },
         taskContextOverridesBuilder.build(),
         // 10 minutes +- 2 minutes jitter
-        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
-        task.getLabel()
+        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
     );
 
     this.faultsExceededChecker = new FaultsExceededChecker(
@@ -928,6 +944,7 @@ public class ControllerImpl implements Controller
     return TaskReport.buildTaskReports(
         new MSQTaskReport(
             id(),
+            taskLabelsProvider.getTaskMetricTags(task),
             new MSQTaskReportPayload(
                 makeStatusReport(
                     TaskState.RUNNING,

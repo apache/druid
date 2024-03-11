@@ -106,6 +106,7 @@ public class MSQTaskReportTest
 
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
+        null,
         new MSQTaskReportPayload(
             new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
             MSQStagesReport.create(
@@ -171,6 +172,7 @@ public class MSQTaskReportTest
     final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, HOST, 0, new TooManyColumnsFault(10, 5));
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
+        null,
         new MSQTaskReportPayload(
             new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
             MSQStagesReport.create(
@@ -219,6 +221,7 @@ public class MSQTaskReportTest
 
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
+        null,
         new MSQTaskReportPayload(
             new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
             MSQStagesReport.create(

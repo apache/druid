@@ -135,23 +135,6 @@ public interface Task
   String getType();
 
   /**
-   * Provides a default implementation for obtaining a task's label. This label is intended
-   * to serve as a descriptive identifier for the task's purpose or type, which can be utilized
-   * for more nuanced task management, monitoring, and logging activities.
-   *
-   * By default, this method returns the task type obtained from {@link #getType()},
-   * reflecting the basic categorization of the task.
-   *
-   * @return A string representing the task's label, which by default is the task type.
-   *         Override this method to specify more granular labels tailored to the task's
-   *         specific purpose or operational characteristics.
-   */
-  default String getLabel()
-  {
-    return getType();
-  }
-
-  /**
    * Get the nodeType for if/when this task publishes on zookeeper.
    *
    * @return the nodeType to use when publishing the server to zookeeper. null if the task doesn't expect to
