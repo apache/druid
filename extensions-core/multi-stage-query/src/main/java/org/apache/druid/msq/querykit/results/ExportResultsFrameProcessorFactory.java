@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit.results;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
@@ -41,6 +42,7 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.utils.CollectionUtils;
@@ -55,17 +57,20 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
   private final String queryId;
   private final ExportStorageProvider exportStorageProvider;
   private final ResultFormat exportFormat;
+  private final ColumnMappings columnMappings;
 
   @JsonCreator
   public ExportResultsFrameProcessorFactory(
       @JsonProperty("queryId") String queryId,
       @JsonProperty("exportStorageProvider") ExportStorageProvider exportStorageProvider,
-      @JsonProperty("exportFormat") ResultFormat exportFormat
+      @JsonProperty("exportFormat") ResultFormat exportFormat,
+      @JsonProperty("columnMappings") @Nullable ColumnMappings columnMappings
   )
   {
     this.queryId = queryId;
     this.exportStorageProvider = exportStorageProvider;
     this.exportFormat = exportFormat;
+    this.columnMappings = columnMappings;
   }
 
   @JsonProperty("queryId")
@@ -85,6 +90,14 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
   public ExportStorageProvider getExportStorageProvider()
   {
     return exportStorageProvider;
+  }
+
+  @JsonProperty("columnMappings")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public ColumnMappings getColumnMappings()
+  {
+    return columnMappings;
   }
 
   @Override
@@ -122,7 +135,8 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
             exportStorageProvider.get(),
             frameContext.jsonMapper(),
             channelCounter,
-            getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat)
+            getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat),
+            columnMappings
         )
     );
 

@@ -1909,7 +1909,8 @@ public class ControllerImpl implements Controller
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
                                      queryId,
                                      exportStorageProvider,
-                                     resultFormat
+                                     resultFormat,
+                                     columnMappings
                                  ))
       );
       return builder.build();
