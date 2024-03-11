@@ -907,7 +907,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "duration": -1,
       "location": {"host": "localhost", "port": 8100, "tlsPort": -1},
       "dataSource": "wikipedia_api",
-      "errorMsg": None
+      "errorMsg": null
     }
   }
   ```
