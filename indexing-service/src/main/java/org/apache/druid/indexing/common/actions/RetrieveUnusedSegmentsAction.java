@@ -34,16 +34,9 @@ import java.util.List;
 
 public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment>>
 {
-  @JsonIgnore
   private final String dataSource;
-
-  @JsonIgnore
   private final Interval interval;
-
-  @JsonIgnore
   private final Integer limit;
-
-  @JsonIgnore
   private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator

@@ -41,11 +41,7 @@ import javax.annotation.Nullable;
 public class TimeChunkLockAcquireAction implements TaskAction<TaskLock>
 {
   private final TaskLockType type;
-
-  @JsonIgnore
   private final Interval interval;
-
-  @JsonIgnore
   private final long timeoutMs;
 
   @JsonCreator

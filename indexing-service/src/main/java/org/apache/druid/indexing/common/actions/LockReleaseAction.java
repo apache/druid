@@ -28,7 +28,6 @@ import org.joda.time.Interval;
 
 public class LockReleaseAction implements TaskAction<Void>
 {
-  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator

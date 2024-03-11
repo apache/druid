@@ -67,13 +67,8 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 {
   private static final Logger log = new Logger(RetrieveUsedSegmentsAction.class);
 
-  @JsonIgnore
   private final String dataSource;
-
-  @JsonIgnore
   private final List<Interval> intervals;
-
-  @JsonIgnore
   private final Segments visibility;
 
   @JsonCreator

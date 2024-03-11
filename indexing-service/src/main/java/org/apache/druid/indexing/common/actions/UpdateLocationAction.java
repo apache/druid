@@ -30,7 +30,6 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 
 public class UpdateLocationAction implements TaskAction<Void>
 {
-  @JsonIgnore
   private final TaskLocation taskLocation;
 
   @JsonCreator

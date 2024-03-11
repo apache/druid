@@ -32,9 +32,7 @@ import java.util.Objects;
 
 public class UpdateStatusAction implements TaskAction<Void>
 {
-  @JsonIgnore
   private final String status;
-  @JsonIgnore
   private final TaskStatus statusFull;
 
   @Deprecated

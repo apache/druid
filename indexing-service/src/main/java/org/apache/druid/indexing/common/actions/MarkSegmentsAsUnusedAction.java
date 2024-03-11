@@ -28,10 +28,7 @@ import org.joda.time.Interval;
 
 public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
 {
-  @JsonIgnore
   private final String dataSource;
-
-  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator

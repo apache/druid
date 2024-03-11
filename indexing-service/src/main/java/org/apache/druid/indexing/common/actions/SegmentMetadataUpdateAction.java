@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 
 public class SegmentMetadataUpdateAction implements TaskAction<Void>
 {
-  @JsonIgnore
   private final Set<DataSegment> segments;
 
   @JsonCreator
