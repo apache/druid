@@ -22,6 +22,7 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -496,6 +497,51 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "case_searched(s == 'asd' || isnull(s) || n == 1, 1, n == 2, 2, 3)",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          consumeLong(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
+  }
+
+
+  @Benchmark
+  public void caseSearched100(Blackhole blackhole)
+  {
+
+    StringBuilder caseBranches = new StringBuilder();
+    for (int i = 0; i < 100; i++) {
+      caseBranches.append(
+          StringUtils.format(
+              "n == %d, %d,",
+              i,
+              i * i
+          )
+      );
+    }
+
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "v",
+                    "case_searched(s == 'asd' || isnull(s) || n == 1, 1, " + caseBranches + " 3)",
                     ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )

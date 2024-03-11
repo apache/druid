@@ -204,7 +204,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private IngestionState ingestionState;
   private Map<String, TaskReport> completionReports;
-  private final Boolean isCompactionTask;
+  private Long segmentsRead;
+  private Long segmentsPublished;
+  private final boolean isCompactionTask;
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -225,7 +227,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       ParallelIndexIngestionSpec ingestionSchema,
       @Nullable String baseSubtaskSpecName,
       Map<String, Object> context,
-      Boolean isCompactionTask
+      boolean isCompactionTask
   )
   {
     super(
@@ -301,13 +303,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public Map<String, TaskReport> getCompletionReports()
   {
     return completionReports;
-  }
-
-  @Nullable
-  @JsonIgnore
-  public String getBaseSubtaskSpecName()
-  {
-    return baseSubtaskSpecName;
   }
 
   @JsonProperty("spec")
@@ -537,12 +532,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     try {
 
       initializeSubTaskCleaner();
+      this.toolbox = toolbox;
 
       if (isParallelMode()) {
         // emit metric for parallel batch ingestion mode:
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
-
-        this.toolbox = toolbox;
 
         if (isGuaranteedRollup(
             getIngestionMode(),
@@ -654,6 +648,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
+      if (isCompactionTask) {
+        // Populate segmentsRead only for compaction tasks
+        segmentsRead = parallelSinglePhaseRunner.getReports()
+                                                .values()
+                                                .stream()
+                                                .mapToLong(report -> report.getOldSegments().size()).sum();
+      }
+
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
@@ -672,8 +674,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    writeCompletionReports(toolbox);
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -840,8 +841,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    writeCompletionReports(toolbox);
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -938,8 +938,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
-    writeCompletionReports(toolbox);
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -1207,6 +1206,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       throw new ISE("Failed to publish segments");
     }
+
+    segmentsPublished = (long) newSegments.size();
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
@@ -1232,6 +1233,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         && sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
       TaskStatus status = sequentialIndexTask.run(toolbox);
       completionReports = sequentialIndexTask.getCompletionReports();
+      writeCompletionReports();
       return status;
     } else {
       String msg = "Task was asked to stop. Finish as failed";
@@ -1262,13 +1264,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
                 segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                segmentsRead,
+                segmentsPublished
             )
         )
     );
   }
 
-  private void writeCompletionReports(TaskToolbox toolbox)
+  private void updateAndWriteCompletionReports(TaskStatus status)
+  {
+    completionReports = getTaskCompletionReports(status, segmentAvailabilityConfirmationCompleted);
+    writeCompletionReports();
+  }
+
+  private void writeCompletionReports()
   {
     if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
@@ -1640,6 +1650,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
+      long totalSegmentsRead = 0L;
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
         Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
         if (taskReport == null || taskReport.isEmpty()) {
@@ -1650,6 +1661,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
+
+        Long segmentsReadFromPartition = ((IngestionStatsAndErrorsTaskReport)
+            taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+        ).getPayload().getSegmentsRead();
+        if (segmentsReadFromPartition != null) {
+          totalSegmentsRead += segmentsReadFromPartition;
+        }
       }
 
       RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
@@ -1658,6 +1676,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           includeUnparseable
       );
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+      if (totalSegmentsRead > 0) {
+        segmentsRead = totalSegmentsRead;
+      }
 
       return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
     }
@@ -1769,6 +1790,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  @Override
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
+  {
+    if (!isCompactionTask) {
+      super.cleanUp(toolbox, taskStatus);
+    }
+  }
+
   @GET
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)
@@ -1847,6 +1876,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         throw e;
       }
     }
+  }
+
+  @VisibleForTesting
+  public void setToolbox(TaskToolbox toolbox)
+  {
+    this.toolbox = toolbox;
   }
 
   /**

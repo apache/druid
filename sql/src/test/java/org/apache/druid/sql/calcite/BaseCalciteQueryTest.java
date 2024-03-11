@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -30,6 +31,8 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidException.Category;
+import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
@@ -112,6 +115,8 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -121,10 +126,11 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -135,11 +141,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -291,15 +298,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public final SqlEngine engine0;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
-  @Rule(order = 1)
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Rule(order = 2)
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
-  public boolean msqCompatible = true;
 
   public QueryLogHook queryLogHook;
 
@@ -769,18 +772,21 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
-              .expectMessageIs(
-                  StringUtils.format(
-                      "Query could not be planned. A possible reason is [%s]",
-                      expectedError
-                  )
-              )
+          buildUnplannableExceptionMatcher().expectMessageContains(expectedError)
       );
     }
     catch (Exception e) {
       log.error(e, "Expected DruidException for query: %s", sql);
-      Assert.fail(sql);
+      throw e;
+    }
+  }
+
+  private DruidExceptionMatcher buildUnplannableExceptionMatcher()
+  {
+    if (testBuilder().isDecoupledMode()) {
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
+    } else {
+      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
     }
   }
 
@@ -963,8 +969,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final String sql,
       final AuthenticationResult authenticationResult,
       final List<Query<?>> expectedQueries,
-      final ResultsVerifier expectedResultsVerifier,
-      @Nullable final Consumer<ExpectedException> expectedExceptionInitializer
+      final ResultsVerifier expectedResultsVerifier
   )
   {
     testBuilder()
@@ -975,7 +980,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .authResult(authenticationResult)
         .expectedQueries(expectedQueries)
         .expectedResults(expectedResultsVerifier)
-        .expectedException(expectedExceptionInitializer)
         .run();
   }
 
@@ -983,8 +987,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize)
-        .msqCompatible(msqCompatible);
+        .skipVectorize(skipVectorize);
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
@@ -994,28 +997,29 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     public CalciteTestConfig()
     {
+      this(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT);
     }
 
     public CalciteTestConfig(boolean isRunningMSQ)
     {
+      this();
       this.isRunningMSQ = isRunningMSQ;
     }
 
     public CalciteTestConfig(Map<String, Object> baseQueryContext)
     {
+      Preconditions.checkNotNull(baseQueryContext, "baseQueryContext is null");
       this.baseQueryContext = baseQueryContext;
+      Preconditions.checkState(
+          baseQueryContext.containsKey(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP),
+          "context must contain CTX_SQL_CURRENT_TIMESTAMP to ensure consistent behaviour!"
+      );
     }
 
     @Override
     public QueryLogHook queryLogHook()
     {
       return queryLogHook;
-    }
-
-    @Override
-    public ExpectedException expectedException()
-    {
-      return expectedException;
     }
 
     @Override
@@ -1208,29 +1212,53 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     Assert.assertEquals(expectedResults.size(), results.size());
   }
 
-  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
-  {
-    testBuilder()
-        .sql(sql)
-        .expectedException(expectedExceptionInitializer)
-        .build()
-        .run();
-  }
-
-  public void testQueryThrows(
+  public <T extends Throwable> void testQueryThrows(
       final String sql,
-      final Map<String, Object> queryContext,
-      final List<Query<?>> expectedQueries,
-      final Consumer<ExpectedException> expectedExceptionInitializer
+      final DruidExceptionMatcher exceptionMatcher
   )
   {
-    testBuilder()
-        .sql(sql)
-        .queryContext(queryContext)
-        .expectedQueries(expectedQueries)
-        .expectedException(expectedExceptionInitializer)
-        .build()
-        .run();
+    testQueryThrows(sql, null, DruidException.class, exceptionMatcher);
+  }
+
+  public <T extends Exception> void testQueryThrows(
+      final String sql,
+      final Class<T> exceptionType,
+      final String exceptionMessage
+  )
+  {
+    testQueryThrows(
+        sql,
+        null,
+        exceptionType,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(exceptionMessage))
+    );
+  }
+
+  public <T extends Exception> void testQueryThrows(
+      final String sql,
+      final Class<T> exceptionType,
+      final Matcher<Throwable> exceptionMatcher
+  )
+  {
+    testQueryThrows(sql, null, exceptionType, exceptionMatcher);
+  }
+
+  public <T extends Exception> void testQueryThrows(
+      final String sql,
+      final Map<String, Object> queryContext,
+      final Class<T> exceptionType,
+      final Matcher<Throwable> exceptionMatcher
+  )
+  {
+    T e = assertThrows(
+        exceptionType,
+        () -> testBuilder()
+            .sql(sql)
+            .queryContext(queryContext)
+            .build()
+            .run()
+    );
+    MatcherAssert.assertThat(e, exceptionMatcher);
   }
 
   public void analyzeResources(
@@ -1314,7 +1342,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   protected void msqIncompatible()
   {
-    msqCompatible = false;
+    assumeFalse("test case is not MSQ compatible", testBuilder().config.isRunningMSQ());
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)

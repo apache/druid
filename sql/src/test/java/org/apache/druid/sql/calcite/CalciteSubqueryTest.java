@@ -62,9 +62,11 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -75,6 +77,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -675,92 +680,109 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testMaxSubqueryRows()
   {
     if ("without memory limit".equals(testName)) {
-      expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Subquery generated results beyond maximum[1]");
-      Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-      modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
-
-      testQuery(
-          "SELECT\n"
-          + "  SUM(cnt),\n"
-          + "  COUNT(*)\n"
-          + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
-          + "WHERE cnt > 0",
-          modifiedQueryContext,
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
+      testMaxSubqueryRowsWithoutMemoryLimit();
     } else {
-      // Since the results are materializable as frames, we are able to use the memory limit and donot rely on the
-      // row limit for the subquery
-      Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-      modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
-
-      testQuery(
-          "SELECT\n"
-          + "  SUM(cnt),\n"
-          + "  COUNT(*)\n"
-          + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)\n"
-          + "WHERE cnt > 0",
-          modifiedQueryContext,
-          ImmutableList.of(
-              GroupByQuery.builder()
-                          .setDataSource(
-                              new QueryDataSource(
-                                  new TopNQueryBuilder()
-                                      .dataSource(CalciteTests.DATASOURCE1)
-                                      .intervals(querySegmentSpec(Filtration.eternity()))
-                                      .granularity(Granularities.ALL)
-                                      .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                                      .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
-                                      .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                                      .threshold(1)
-                                      .build()
-                              )
-                          )
-                          .setDimFilter(range("a0", ColumnType.LONG, 0L, null, true, false))
-                          .setInterval(querySegmentSpec(Filtration.eternity()))
-                          .setGranularity(Granularities.ALL)
-                          .setAggregatorSpecs(aggregators(
-                              new LongSumAggregatorFactory("_a0", "a0"),
-                              new CountAggregatorFactory("_a1")
-                          ))
-                          .setContext(queryContext)
-                          .build()
-          ),
-          NullHandling.replaceWithDefault() ?
-          ImmutableList.of(
-              new Object[]{3L, 1L}
-          ) :
-          ImmutableList.of(
-              new Object[]{2L, 1L}
-          )
-      );
+      testMaxSubQueryRowsWithLimit();
     }
+  }
+
+  private void testMaxSubqueryRowsWithoutMemoryLimit()
+  {
+    Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
+    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+
+    testQueryThrows(
+        "SELECT\n"
+            + "  SUM(cnt),\n"
+            + "  COUNT(*)\n"
+            + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
+            + "WHERE cnt > 0",
+        modifiedQueryContext,
+        ResourceLimitExceededException.class,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot issue the query, subqueries generated results beyond maximum[1] rows. Try setting the "
+                    + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
+                    + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
+                    + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to "
+                    + "go out of memory."
+            )
+        )
+    );
+  }
+
+  private void testMaxSubQueryRowsWithLimit()
+  {
+    // Since the results are materializable as frames, we are able to use the memory limit and donot rely on the
+    // row limit for the subquery
+    Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
+    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+
+    testQuery(
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)\n"
+        + "WHERE cnt > 0",
+        modifiedQueryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                new TopNQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .granularity(Granularities.ALL)
+                                    .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                                    .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
+                                    .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                                    .threshold(1)
+                                    .build()
+                            )
+                        )
+                        .setDimFilter(range("a0", ColumnType.LONG, 0L, null, true, false))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new LongSumAggregatorFactory("_a0", "a0"),
+                            new CountAggregatorFactory("_a1")
+                        ))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{3L, 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{2L, 1L}
+        )
+    );
   }
 
   @Test
   public void testZeroMaxNumericInFilter()
   {
-    expectedException.expect(UOE.class);
-    expectedException.expectMessage("[maxNumericInFilters] must be greater than 0");
+    Throwable exception = assertThrows(UOE.class, () -> {
 
-    Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-    modifiedQueryContext.put(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0);
+      Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
+      modifiedQueryContext.put(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0);
 
 
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        modifiedQueryContext,
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE dim6 IN (\n"
-        + "1,2,3\n"
-        + ")\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          PLANNER_CONFIG_DEFAULT,
+          modifiedQueryContext,
+          "SELECT COUNT(*)\n"
+              + "FROM druid.numfoo\n"
+              + "WHERE dim6 IN (\n"
+              + "1,2,3\n"
+              + ")\n",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("[maxNumericInFilters] must be greater than 0"));
   }
 
   @Test
@@ -1296,7 +1318,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQueryThrows(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 2 OFFSET 6)",
-        exception -> exception.expectMessage("Subquery expression returned more than one row")
+        RuntimeException.class,
+        "java.util.concurrent.ExecutionException: org.apache.druid.error.DruidException: Subquery expression returned more than one row"
     );
   }
 
