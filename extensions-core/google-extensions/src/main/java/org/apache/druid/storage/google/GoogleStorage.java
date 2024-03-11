@@ -31,8 +31,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -54,8 +52,6 @@ public class GoogleStorage
    * <p>
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
-  private static final Logger log = new Logger(GoogleStorage.class);
-
   private final Supplier<Storage> storage;
 
   private final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
@@ -151,13 +147,7 @@ public class GoogleStorage
     // Though currently not documented for the GCS delete api, a false response is indicative of file not found.
     // All other errors appear as StorageException which is a runtime exceptions. Refer to
     // https://github.com/googleapis/java-storage/blob/0b5f11af941032e6a55b12d243acf128a6464400/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java#L685
-    if (!storage.get().delete(bucket, path)) {
-      log.warn(StringUtils.nonStrictFormat(
-          "Google cloud storage object to be deleted not found in bucket[%s] and path[%s].",
-          bucket,
-          path
-      ));
-    }
+    storage.get().delete(bucket, path);
   }
 
   /**
@@ -168,10 +158,7 @@ public class GoogleStorage
    */
   public void batchDelete(final String bucket, final Iterable<String> paths)
   {
-    List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
-    if (statuses.contains(false)) {
-      log.warn("Google cloud storage object(s) to be deleted not found");
-    }
+    storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
   }
 
   public boolean exists(final String bucket, final String path)

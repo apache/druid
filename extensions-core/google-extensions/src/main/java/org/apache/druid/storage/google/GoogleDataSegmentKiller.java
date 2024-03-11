@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.cloud.storage.StorageException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
@@ -70,12 +69,12 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
       // anymore, but we still delete them if exists.
       deleteIfPresent(bucket, descriptorPath);
     }
-    catch (StorageException e) {
+    catch (IOException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getMessage());
     }
   }
 
-  private void deleteIfPresent(String bucket, String path)
+  private void deleteIfPresent(String bucket, String path) throws IOException
   {
     try {
       RetryUtils.retry(
