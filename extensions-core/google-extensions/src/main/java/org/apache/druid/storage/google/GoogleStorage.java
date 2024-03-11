@@ -31,6 +31,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -59,6 +60,8 @@ public class GoogleStorage
   private final Supplier<Storage> storage;
 
   private final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
+
+  private final String FAILED_TO_FETCH_OBJECT_FROM_BUCKET_AND_PATH = "Failed to fetch google cloud storage object from bucket [%s] and path [%s].";
 
   public GoogleStorage(final Supplier<Storage> storage)
   {
@@ -135,7 +138,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
+      throw new IOE(FAILED_TO_FETCH_OBJECT_FROM_BUCKET_AND_PATH, bucket, path);
     }
     return new GoogleStorageObjectMetadata(
         blob.getBucket(),
@@ -146,29 +149,22 @@ public class GoogleStorage
     );
   }
 
-
-  /**
-   * Deletes an object in a bucket on the specified path
-
-   * A false response from GCS delete API is indicative of file not found. Any other error is raised as a StorageException
-   * and should be explicitly handled.
-   Ref: <a href="https://github.com/googleapis/java-storage/blob/v2.29.1/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java">HttpStorageRpc.java</a>
-   *
-   * @param bucket GCS bucket
-   * @param path  Object path
-   */
   public void delete(final String bucket, final String path)
   {
+    // Though currently not documented for the GCS delete api, a false response is indicative of file not found.
+    // All other errors appear as a StorageException Ref:
+    // https://github.com/googleapis/java-storage/blob/0b5f11af941032e6a55b12d243acf128a6464400/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java#L685
     if (!storage.get().delete(bucket, path)) {
-      log.debug("Google cloud storage object to be deleted not found in bucket[%s] and path[%s].", bucket, path);
+      log.debug(StringUtils.nonStrictFormat(
+          "Google cloud storage object to be deleted not found in bucket [%s] and path [%s].",
+          bucket,
+          path
+      ));
     }
   }
 
   /**
    * Deletes a list of objects in a bucket
-   * A false response from GCS delete API is indicative of file not found. Any other error is raised as a StorageException
-   * and should be explicitly handled.
-   * Ref: <a href="https://github.com/googleapis/java-storage/blob/v2.29.1/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java">HttpStorageRpc.java</a>
    *
    * @param bucket GCS bucket
    * @param paths  Iterable for absolute paths of objects to be deleted inside the bucket
@@ -188,11 +184,7 @@ public class GoogleStorage
           }
           cursor++;
         }
-        log.debug(
-            "Google cloud storage object(s) to be deleted not found in bucket[%s]. Failed paths:%s",
-            bucket,
-            failedPaths
-        );
+        log.debug("Google cloud storage object(s) to be deleted not found in bucket [%s] and path(s) " + failedPaths, bucket);
       }
     }
   }
@@ -207,7 +199,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
+      throw new IOE(FAILED_TO_FETCH_OBJECT_FROM_BUCKET_AND_PATH, bucket, path);
     }
     return blob.getSize();
   }
@@ -216,7 +208,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
+      throw new IOE(FAILED_TO_FETCH_OBJECT_FROM_BUCKET_AND_PATH, bucket, path);
     }
     return blob.getGeneratedId();
   }
@@ -253,7 +245,7 @@ public class GoogleStorage
     Page<Blob> blobPage = storage.get().list(bucket, options.toArray(new Storage.BlobListOption[0]));
 
     if (blobPage == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and prefix[%s].", bucket, prefix);
+      throw new IOE(FAILED_TO_FETCH_OBJECT_FROM_BUCKET_AND_PATH, bucket, prefix);
     }
 
 

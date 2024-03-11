@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -77,16 +78,21 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   private void deleteIfPresent(String bucket, String path)
   {
     try {
-      GoogleUtils.retryGoogleCloudStorageOperation(() -> {
-        storage.delete(bucket, path);
-        return null;
-      });
+      RetryUtils.retry(
+          (RetryUtils.Task<Void>) () -> {
+            storage.delete(bucket, path);
+            return null;
+          },
+          GoogleUtils::isRetryable,
+          1,
+          5
+      );
     }
     catch (StorageException e) {
       throw e;
     }
     catch (Exception e) {
-      throw new RE(e, "Failed to delete google cloud storage object from bucket[%s] and path[%s].", bucket, path);
+      throw new RE(e, "Failed to delete [%s] [%s]", bucket, path);
     }
   }
 

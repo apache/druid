@@ -95,21 +95,19 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test
+  @Test(expected = SegmentLoadingException.class)
   public void killWithErrorTest() throws SegmentLoadingException
   {
-    Assert.assertThrows(SegmentLoadingException.class, () -> {
-      storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
-      EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION);
+    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
+    EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION);
 
-      replayAll();
+    replayAll();
 
-      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
 
-      killer.kill(DATA_SEGMENT);
+    killer.kill(DATA_SEGMENT);
 
-      verifyAll();
-    });
+    verifyAll();
   }
 
   @Test
