@@ -116,7 +116,8 @@ public class AzureStorage
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
       // We also need to urlEncode the path to handle special characters.
-      blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).upload(stream, file.length());
+      // Set overwrite to true to keep behavior more similar to s3Client.putObject
+      blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).upload(stream, file.length(), true);
     }
   }
 
