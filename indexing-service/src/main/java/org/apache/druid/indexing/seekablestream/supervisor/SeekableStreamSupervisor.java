@@ -3181,9 +3181,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
         // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
         if (!endOffsetsAreInvalid) {
-          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-            partitionOffsets.put(entry.getKey(), entry.getValue());
-          }
+          partitionOffsets.putAll(endOffsets);
         } else {
           for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
             partitionOffsets.put(entry.getKey(), getNotSetMarker());
@@ -4151,7 +4149,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private Map<String, Task> getActiveTaskMap()
   {
     ImmutableMap.Builder activeTaskMap = ImmutableMap.builder();
-    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    final List<Task> tasks;
+    if (taskQueue.isPresent()) {
+      tasks = taskQueue.get().getActiveTasksForDatasource(dataSource);
+    } else {
+      tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    }
     for (Task task : tasks) {
       activeTaskMap.put(task.getId(), task);
     }
