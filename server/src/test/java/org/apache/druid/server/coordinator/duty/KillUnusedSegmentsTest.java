@@ -649,6 +649,26 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
+  public void testKillLargeIntervalSegments()
+  {
+    final Interval largeTimeRange1 = Intervals.of("1990-01-01T00Z/19940-01-01T00Z");
+    final Interval largeTimeRange2 = Intervals.of("-19940-01-01T00Z/1970-01-01T00Z");
+
+    createAndAddUnusedSegment(DS1, largeTimeRange1, VERSION, NOW.minusDays(60));
+    createAndAddUnusedSegment(DS1, largeTimeRange2, VERSION, NOW.minusDays(60));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(largeTimeRange2.getStart(), largeTimeRange1.getEnd()));
+  }
+
+  @Test
   public void testKillMultipleSegmentsInSameInterval()
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
