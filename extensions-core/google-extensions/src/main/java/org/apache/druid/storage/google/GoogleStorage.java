@@ -134,7 +134,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
+      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s].", bucket, path);
     }
     return new GoogleStorageObjectMetadata(
         blob.getBucket(),
@@ -154,7 +154,7 @@ public class GoogleStorage
       throw new HttpResponseException.Builder(
           404,
           StringUtils.nonStrictFormat(
-              "Google cloud storage object not found in bucket[%s] and path[%s].",
+              "Google cloud storage object not found [bucket: %s, path: %s].",
               bucket,
               path
           ),
