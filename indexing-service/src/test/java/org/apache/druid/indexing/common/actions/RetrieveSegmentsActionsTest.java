@@ -102,8 +102,8 @@ public class RetrieveSegmentsActionsTest
   {
     final RetrieveUsedSegmentsAction action =
         new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
-    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(expectedUsedSegments, actualSegments);
+    final Set<DataSegment> observedUsedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUsedSegments, observedUsedSegments);
   }
 
   @Test
@@ -116,23 +116,23 @@ public class RetrieveSegmentsActionsTest
         null,
         null
     );
-    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(expectedUnusedSegments, actualSegments);
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUnusedSegments, observedUnusedSegments);
   }
 
   @Test
   public void testRetrieveUnusedSegmentsActionWithMinUsedLastUpdatedTime()
   {
     final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null, DateTimes.MIN);
-    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(ImmutableSet.of(), actualSegments);
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(ImmutableSet.of(), observedUnusedSegments);
   }
 
   @Test
   public void testRetrieveUnusedSegmentsActionWithNowUsedLastUpdatedTime()
   {
     final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null, DateTimes.nowUtc());
-    final Set<DataSegment> actualSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(expectedUnusedSegments, actualSegments);
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUnusedSegments, observedUnusedSegments);
   }
 }
