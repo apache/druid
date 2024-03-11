@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
@@ -42,7 +41,6 @@ import java.util.Optional;
 public class DataSourceMSQDestination implements MSQDestination
 {
   public static final String TYPE = "dataSource";
-  private static final String LABEL = "index_batch";
 
   private final String dataSource;
   private final Granularity segmentGranularity;
@@ -178,14 +176,5 @@ public class DataSourceMSQDestination implements MSQDestination
   public Optional<Resource> getDestinationResource()
   {
     return Optional.of(new Resource(getDataSource(), ResourceType.DATASOURCE));
-  }
-
-  @Override
-  public String getDestinationLabel()
-  {
-    if (isReplaceTimeChunks()) {
-      return StringUtils.format("%s_%s", LABEL, "replace");
-    }
-    return LABEL;
   }
 }
