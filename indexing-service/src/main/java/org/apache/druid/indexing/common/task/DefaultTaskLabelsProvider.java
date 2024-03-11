@@ -78,17 +78,21 @@ public class DefaultTaskLabelsProvider implements TaskLabelsProvider
   }
 
   /**
-   * Determines the task lane label by concatenating all the task labels, using a
-   * dollar sign ('$') as the separator. This aggregated label serves as a unique
-   * identifier for task laning purposes, aiding in the efficient scheduling and
-   * execution of tasks based on their categorized labels.
+   * Compiles a unified configuration label for a Druid task by concatenating its individual labels,
+   * separated by a dollar sign ('$'). This combined label aids in categorizing tasks for both scheduling
+   * and resource allocation. It facilitates task management by providing a straightforward identifier
+   * that encapsulates the task's key attributes.
+   * <p>
+   * This method employs a simple yet effective approach to generate a label that reflects the composite
+   * nature of a task's characteristics. The resulting label can be utilized in various decision-making
+   * processes related to task scheduling, ensuring tasks are matched with appropriate resources.
    *
-   * @param task The Druid task for which the lane label is generated.
-   * @return A string representing the concatenated task labels, used to uniquely
-   * identify the task lane for scheduling decisions.
+   * @param task The Druid task for which the configuration label is being generated.
+   * @return A string that amalgamates the task's individual labels into a single configuration label.
+   * This label is intended to assist in the management and allocation of tasks within the system.
    */
   @Override
-  public String getTaskLaneLabel(Task task)
+  public String getTaskConfigLabel(Task task)
   {
     return Joiner.on("$").join(getTaskLabels(task));
   }

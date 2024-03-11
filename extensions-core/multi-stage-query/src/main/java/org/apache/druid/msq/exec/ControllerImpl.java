@@ -321,7 +321,7 @@ public class ControllerImpl implements Controller
       final MSQControllerTask task,
       final ControllerContext context,
       final TaskLabelsProvider taskLabelsProvider
-      )
+  )
   {
     this.task = task;
     this.context = context;
