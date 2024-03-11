@@ -112,14 +112,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    synchronized (unusedSegments) {
-      return ImmutableList.copyOf(
-          unusedSegments.stream()
-                        .filter(ds -> !nuked.contains(ds))
-                        .limit(limit != null ? limit : Long.MAX_VALUE)
-                        .iterator()
-      );
-    }
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override
@@ -131,7 +124,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    return ImmutableList.of();
+    synchronized (unusedSegments) {
+      return ImmutableList.copyOf(
+          unusedSegments.stream()
+                        .filter(ds -> !nuked.contains(ds))
+                        .limit(limit != null ? limit : Long.MAX_VALUE)
+                        .iterator()
+      );
+    }
   }
 
   @Override

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -41,7 +42,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -184,8 +184,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   {
     final DateTime now = DateTimes.nowUtc();
     final String v1 = now.toString();
-    final String v2 =  now.minusHours(2).toString();
-    final String v3 =  now.minusHours(3).toString();
+    final String v2 = now.minusHours(2).toString();
+    final String v3 = now.minusHours(3).toString();
 
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
     final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
@@ -195,10 +195,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
 
-    Assert.assertEquals(
-        segments,
-        getMetadataStorageCoordinator().commitSegments(segments)
-    );
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -224,14 +221,14 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final List<DataSegment> actualUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+    final List<DataSegment> observedUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         Intervals.of("2018/2020"),
         null,
         null
     );
 
-    Assert.assertEquals(ImmutableSet.of(segment5), new HashSet<>(actualUnusedSegments));
+    Assert.assertEquals(ImmutableSet.of(segment5), new HashSet<>(observedUnusedSegments));
   }
 
   @Test
@@ -239,8 +236,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   {
     final DateTime now = DateTimes.nowUtc();
     final String v1 = now.toString();
-    final String v2 =  now.minusHours(2).toString();
-    final String v3 =  now.minusHours(3).toString();
+    final String v2 = now.minusHours(2).toString();
+    final String v3 = now.minusHours(3).toString();
 
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
     final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
@@ -250,10 +247,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
 
-    Assert.assertEquals(
-        segments,
-        getMetadataStorageCoordinator().commitSegments(segments)
-    );
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -279,14 +273,14 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final List<DataSegment> actualUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+    final List<DataSegment> observedUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         Intervals.of("2018/2020"),
         null,
         null
     );
 
-    Assert.assertEquals(ImmutableSet.of(segment3, segment4, segment5), new HashSet<>(actualUnusedSegments));
+    Assert.assertEquals(ImmutableSet.of(segment3, segment4, segment5), new HashSet<>(observedUnusedSegments));
   }
 
   @Test
@@ -294,8 +288,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   {
     final DateTime now = DateTimes.nowUtc();
     final String v1 = now.toString();
-    final String v2 =  now.minusHours(2).toString();
-    final String v3 =  now.minusHours(3).toString();
+    final String v2 = now.minusHours(2).toString();
+    final String v3 = now.minusHours(3).toString();
 
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
     final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
@@ -305,10 +299,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
 
-    Assert.assertEquals(
-        segments,
-        getMetadataStorageCoordinator().commitSegments(segments)
-    );
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -334,14 +325,68 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final List<DataSegment> actualUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+    final List<DataSegment> observedUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
         DATA_SOURCE,
         Intervals.of("2018/2020"),
         null,
         null
     );
 
-    Assert.assertEquals(segments, new HashSet<>(actualUnusedSegments));
+    Assert.assertEquals(segments, new HashSet<>(observedUnusedSegments));
+  }
+
+  @Test
+  public void testKillWithUsedLoadSpec() throws Exception
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.minusHours(2).toString();
+    final String v3 = now.minusHours(3).toString();
+
+    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1, ImmutableMap.of("foo", "bar"));
+    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1, ImmutableMap.of("foo", "bar"));
+    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), v1, ImmutableMap.of("foo", "bar"));
+    final DataSegment segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), v2, ImmutableMap.of("foo", "bar"));
+    final DataSegment segment5 = newSegment(Intervals.of("2019-05-01/2019-06-01"), v3, ImmutableMap.of("foo", "bar"));
+
+    final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
+    final Set<DataSegment> unusedSegments = ImmutableSet.of(segment1, segment2, segment3, segment4);
+
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(
+        unusedSegments.size(),
+        getSegmentsMetadataManager().markSegmentsAsUnused(
+            unusedSegments.stream().map(DataSegment::getId).collect(Collectors.toSet())
+        )
+    );
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
+        null,
+        DATA_SOURCE,
+        Intervals.of("2018/2020"),
+        ImmutableList.of(v1, v2),
+        null,
+        false,
+        1,
+        100,
+        null
+    );
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+    Assert.assertEquals(
+        new KillTaskReport.Stats(4, 1, 0),
+        getReportedStats()
+    );
+
+    final List<DataSegment> observedUnusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+        DATA_SOURCE,
+        Intervals.of("2018/2020"),
+        null,
+        null
+    );
+
+    Assert.assertEquals(ImmutableSet.of(), new HashSet<>(observedUnusedSegments));
+    Assert.assertEquals(ImmutableSet.of(segment5), getMetadataStorageCoordinator().retrieveAllUsedSegments(DATA_SOURCE, Segments.ONLY_VISIBLE));
   }
 
   @Test
@@ -782,7 +827,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final List<DataSegment> actualUnusedSegments =
+    final List<DataSegment> observedUnusedSegments =
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             umbrellaInterval,
@@ -790,7 +835,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             null
         );
 
-    Assert.assertEquals(ImmutableSet.of(segment3, segment4, segment5), new HashSet<>(actualUnusedSegments));
+    Assert.assertEquals(ImmutableSet.of(segment3, segment4, segment5), new HashSet<>(observedUnusedSegments));
 
     final KillUnusedSegmentsTask task2 =
         new KillUnusedSegmentsTask(
@@ -811,7 +856,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final List<DataSegment> actualUnusedSegments2 =
+    final List<DataSegment> observedUnusedSegments2 =
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             umbrellaInterval,
@@ -819,7 +864,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             null
         );
 
-    Assert.assertEquals(ImmutableSet.of(segment4, segment5), new HashSet<>(actualUnusedSegments2));
+    Assert.assertEquals(ImmutableSet.of(segment4, segment5), new HashSet<>(observedUnusedSegments2));
   }
 
   @Test
@@ -1128,6 +1173,21 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         interval,
         version,
         null,
+        null,
+        null,
+        null,
+        9,
+        10L
+    );
+  }
+
+  private static DataSegment newSegment(Interval interval, String version, Map<String, Object> loadSpec)
+  {
+    return new DataSegment(
+        DATA_SOURCE,
+        interval,
+        version,
+        loadSpec,
         null,
         null,
         null,

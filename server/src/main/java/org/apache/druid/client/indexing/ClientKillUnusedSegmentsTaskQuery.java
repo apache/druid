@@ -45,8 +45,10 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final List<String> versions;
   private final Boolean markAsUnused;
   private final Integer batchSize;
-  @Nullable private final Integer limit;
-  @Nullable private final DateTime maxUsedStatusLastUpdatedTime;
+  @Nullable
+  private final Integer limit;
+  @Nullable
+  private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
