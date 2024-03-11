@@ -60,6 +60,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   private static final Exception RECOVERABLE_EXCEPTION = new StorageException(429, "non-recoverable");
   private static final Exception NON_RECOVERABLE_EXCEPTION = new StorageException(404, "recoverable");
 
+
   private GoogleStorage storage;
   private GoogleTaskLogs googleTaskLogs;
   private GoogleTaskLogsConfig config;

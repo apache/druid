@@ -73,7 +73,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     catch (IOException e) {
       throw new RE(
           e,
-          StringUtils.format("Cannot create tempDir [%s] for google storage connector", config.getTempDir())
+          StringUtils.format("Cannot create tempDir[%s] for google storage connector", config.getTempDir())
       );
     }
   }
@@ -95,7 +95,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   {
     try {
       final String fullPath = objectPath(path);
-      log.debug("Deleting file at bucket [%s] and path [%s].", config.getBucket(), fullPath);
+      log.debug("Deleting file at bucket[%s] and path[%s].", config.getBucket(), fullPath);
 
       GoogleUtils.retryGoogleCloudStorageOperation(
           () -> {
@@ -120,7 +120,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
       });
     }
     catch (Exception e) {
-      log.error("Failed to delete object(s) at bucket [%s].", config.getBucket());
+      log.error("Failed to delete object(s) at bucket[%s].", config.getBucket());
       throw new IOException(e);
     }
 
@@ -147,7 +147,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
       });
     }
     catch (Exception e) {
-      log.error("Failed to delete object(s) at bucket [%s] and prefix [%s].", config.getBucket(), fullPath);
+      log.error("Failed to delete object(s) at bucket[%s] and prefix[%s].", config.getBucket(), fullPath);
       throw new IOException(e);
     }
   }

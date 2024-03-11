@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -134,7 +135,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path[%s].", bucket, path);
+      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
     }
     return new GoogleStorageObjectMetadata(
         blob.getBucket(),
@@ -159,7 +160,7 @@ public class GoogleStorage
   public void delete(final String bucket, final String path)
   {
     if (!storage.get().delete(bucket, path)) {
-      log.debug("Google cloud storage object to be deleted not found in bucket [%s] and path [%s].", bucket, path);
+      log.debug("Google cloud storage object to be deleted not found in bucket[%s] and path[%s].", bucket, path);
     }
   }
 
@@ -176,10 +177,23 @@ public class GoogleStorage
   {
     final List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
     if (statuses.contains(false)) {
-      log.debug(
-          "Google cloud storage object(s) to be deleted not found in bucket [%s].",
-          bucket
-      );
+      if (log.isDebugEnabled()) {
+        final List<String> failedPaths = new ArrayList<>();
+        final Iterator<String> pathIterator = paths.iterator();
+        int cursor = 0;
+        while (pathIterator.hasNext()) {
+          String failedPath = pathIterator.next();
+          if (!statuses.get(cursor)) {
+            failedPaths.add(failedPath);
+          }
+          cursor++;
+        }
+        log.debug(
+            "Google cloud storage object(s) to be deleted not found in bucket[%s]. Failed paths:%s",
+            bucket,
+            failedPaths
+        );
+      }
     }
   }
 
@@ -193,7 +207,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path [%s].", bucket, path);
+      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
     }
     return blob.getSize();
   }
@@ -202,7 +216,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
     if (blob == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path [%s].", bucket, path);
+      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and path[%s].", bucket, path);
     }
     return blob.getGeneratedId();
   }
@@ -239,7 +253,7 @@ public class GoogleStorage
     Page<Blob> blobPage = storage.get().list(bucket, options.toArray(new Storage.BlobListOption[0]));
 
     if (blobPage == null) {
-      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and prefix [%s].", bucket, prefix);
+      throw new IOE("Failed to fetch google cloud storage object from bucket[%s] and prefix[%s].", bucket, prefix);
     }
 
 
@@ -263,5 +277,6 @@ public class GoogleStorage
   {
     BlobId blobId = BlobId.of(bucket, path);
     return BlobInfo.newBuilder(blobId).build();
+
   }
 }

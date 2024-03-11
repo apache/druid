@@ -130,16 +130,25 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_accountConfigWithNullBucketAndPrefix_throwsISEException()
+  public void test_killAll_accountConfigWithNullBucketAndPrefix_throwsISEException() throws IOException
   {
 
     EasyMock.expect(accountConfig.getBucket()).andReturn(null).atLeastOnce();
     EasyMock.expect(accountConfig.getPrefix()).andReturn(null).anyTimes();
-    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
-    EasyMock.replay(storage, inputDataConfig, accountConfig);
 
-    Assert.assertThrows(ISE.class, killer::killAll);
+    boolean thrownISEException = false;
 
+    try {
+      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+      EasyMock.replay(storage, inputDataConfig, accountConfig);
+
+      killer.killAll();
+    }
+    catch (ISE e) {
+      thrownISEException = true;
+    }
+
+    Assert.assertTrue(thrownISEException);
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
 
@@ -196,27 +205,34 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs() throws IOException
+  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
-    GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    boolean ioExceptionThrown = false;
+    try {
+      GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
-    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
+      GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
-    GoogleTestUtils.expectDeleteObjects(
-        storage,
-        ImmutableList.of(),
-        ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
-    );
+      GoogleTestUtils.expectDeleteObjects(
+          storage,
+          ImmutableList.of(),
+          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+      );
 
-    EasyMock.expect(accountConfig.getBucket()).andReturn(BUCKET).anyTimes();
-    EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
-    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+      EasyMock.expect(accountConfig.getBucket()).andReturn(BUCKET).anyTimes();
+      EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
+      EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(accountConfig, inputDataConfig, storage);
+      EasyMock.replay(accountConfig, inputDataConfig, storage);
 
-    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+      killer.killAll();
+    }
+    catch (IOException e) {
+      ioExceptionThrown = true;
+    }
 
-    Assert.assertThrows(IOException.class, killer::killAll);
+    Assert.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
