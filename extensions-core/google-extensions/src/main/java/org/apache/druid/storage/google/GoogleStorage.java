@@ -20,8 +20,6 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.AbstractInputStreamContent;
-import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.http.HttpResponseException;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.WriteChannel;
@@ -133,7 +131,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
     if (blob == null) {
-      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s].", bucket, path);
+      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
     }
     return new GoogleStorageObjectMetadata(
         blob.getBucket(),
@@ -146,19 +144,12 @@ public class GoogleStorage
 
   public void delete(final String bucket, final String path) throws IOException
   {
-    // Though currently not documented for the GCS delete api, a false response is indicative of file not found.
-    // All other errors appear as StorageException which is a runtime exceptions. Refer to
-    // https://github.com/googleapis/java-storage/blob/0b5f11af941032e6a55b12d243acf128a6464400/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java#L685
     if (!storage.get().delete(bucket, path)) {
-      throw new HttpResponseException.Builder(
-          404,
-          String.format(
-              "Google cloud storage object not found [bucket: %s, path: %s].",
-              bucket,
-              path
-          ),
-          new HttpHeaders()
-      ).build();
+      throw new IOE(
+          "Failed deleting google cloud storage object [bucket: %s path: %s]",
+          bucket,
+          path
+      );
     }
   }
 
@@ -172,11 +163,7 @@ public class GoogleStorage
   {
     List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
     if (statuses.contains(false)) {
-      throw new HttpResponseException.Builder(
-          404,
-          "Google cloud storage object(s) not found ",
-          new HttpHeaders()
-      ).build();
+      throw new IOE("Failed deleting google cloud storage object(s)");
     }
   }
 

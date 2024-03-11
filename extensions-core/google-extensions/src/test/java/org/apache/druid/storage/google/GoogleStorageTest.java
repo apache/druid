@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.http.HttpResponseException;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -75,17 +74,15 @@ public class GoogleStorageTest
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(false);
     EasyMock.replay(mockStorage);
-    boolean thrownHTTPNotFoundException = false;
+    boolean thrownIOException = false;
     try {
       googleStorage.delete(BUCKET, PATH);
 
     }
     catch (IOException e) {
-      if (e instanceof HttpResponseException && ((HttpResponseException) e).getStatusCode() == 404) {
-        thrownHTTPNotFoundException = true;
-      }
+      thrownIOException = true;
     }
-    assertTrue(thrownHTTPNotFoundException);
+    assertTrue(thrownIOException);
   }
 
   @Test
@@ -115,17 +112,15 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.delete((Iterable<BlobId>) EasyMock.anyObject()))
             .andReturn(ImmutableList.of(false, true));
     EasyMock.replay(mockStorage);
-    boolean thrownHTTPNotFoundException = false;
+    boolean thrownIOException = false;
     try {
       googleStorage.batchDelete(BUCKET, paths);
 
     }
     catch (IOException e) {
-      if (e instanceof HttpResponseException && ((HttpResponseException) e).getStatusCode() == 404) {
-        thrownHTTPNotFoundException = true;
-      }
+      thrownIOException = true;
     }
-    assertTrue(thrownHTTPNotFoundException);
+    assertTrue(thrownIOException);
   }
 
   @Test
