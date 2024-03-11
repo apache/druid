@@ -19,7 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
@@ -27,9 +31,15 @@ import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.timeline.DataSegment;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class CoordinatorBaseTest
 {
@@ -108,4 +118,71 @@ public abstract class CoordinatorBaseTest
       return new IntervalDropRule(Intervals.of(interval));
     }
   }
+
+  /**
+   * Builder for a {@link ServerHolder} of type
+   * {@link ServerType#HISTORICAL}.
+   */
+  public static class Historical
+  {
+    private static final AtomicLong SERVER_ID = new AtomicLong(0);
+
+    private final Set<DataSegment> segments = new HashSet<>();
+
+    /**
+     * Default size of 10GB.
+     */
+    private long size = 10L << 30;
+    private boolean decommissioning = false;
+
+    public Historical ofSizeInGb(long sizeInGb)
+    {
+      this.size = sizeInGb << 30;
+      return this;
+    }
+
+    public Historical inDecommissioningMode()
+    {
+      this.decommissioning = true;
+      return this;
+    }
+
+    public Historical withSegments(DataSegment... segments)
+    {
+      return withSegments(Arrays.asList(segments));
+    }
+
+    public Historical withSegments(Collection<DataSegment> segments)
+    {
+      this.segments.addAll(segments);
+      return this;
+    }
+
+    public DruidServer in(String tier)
+    {
+      String name = "hist_" + SERVER_ID.incrementAndGet();
+
+      final DruidServer server = new DruidServer(name, name, null, size, ServerType.HISTORICAL, tier, 1);
+      for (DataSegment segment : segments) {
+        server.addDataSegment(segment);
+      }
+
+      return server;
+    }
+
+    public ImmutableDruidServer asImmutable()
+    {
+      return in().toImmutableDruidServer();
+    }
+
+    public ServerHolder asHolder()
+    {
+      return new ServerHolder(
+          asImmutable(),
+          new TestLoadQueuePeon(),
+          decommissioning
+      );
+    }
+  }
+
 }

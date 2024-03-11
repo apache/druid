@@ -327,6 +327,7 @@ public class DruidCoordinatorRuntimeParams
     public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
     {
       this.loadQueueManager = loadQueueManager;
+      this.segmentAssigner = null;
       return this;
     }
 
