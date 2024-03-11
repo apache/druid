@@ -43,7 +43,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     Interval interval = Intervals.of("2014/2015");
 
     RetrieveUsedSegmentsAction expected =
-        new RetrieveUsedSegmentsAction("dataSource", interval, null, null, Segments.ONLY_VISIBLE);
+        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE);
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
@@ -67,30 +67,13 @@ public class RetrieveUsedSegmentsActionSerdeTest
   }
 
   @Test
-  public void testMultiIntervalWithVersionSerde() throws Exception
-  {
-    List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
-    RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
-        "dataSource",
-        null,
-        intervals,
-        ImmutableList.of(DateTimes.nowUtc().toString()),
-        Segments.ONLY_VISIBLE
-    );
-
-    RetrieveUsedSegmentsAction actual =
-        MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
-    Assert.assertEquals(expected, actual);
-  }
-
-  @Test
   public void testOldJsonDeserialization() throws Exception
   {
     String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"interval\": \"2014/2015\"}";
     RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
     Assert.assertEquals(
-        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, null, Segments.ONLY_VISIBLE),
+        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE),
         actual
     );
   }

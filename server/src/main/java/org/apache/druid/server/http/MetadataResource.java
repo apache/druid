@@ -327,7 +327,7 @@ public class MetadataResource
   )
   {
     Collection<DataSegment> segments = metadataStorageCoordinator
-        .retrieveUsedSegmentsForIntervals(dataSourceName, intervals, null, Segments.INCLUDING_OVERSHADOWED);
+        .retrieveUsedSegmentsForIntervals(dataSourceName, intervals, Segments.INCLUDING_OVERSHADOWED);
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {

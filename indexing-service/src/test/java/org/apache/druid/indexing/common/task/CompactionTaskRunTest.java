@@ -196,7 +196,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       {
         return Futures.immediateFuture(
             ImmutableList.copyOf(
-                getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, null, Segments.ONLY_VISIBLE)
+                getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
             )
         );
       }
@@ -1119,7 +1119,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1186,7 +1185,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1195,7 +1193,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1208,7 +1205,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1250,7 +1246,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1346,7 +1341,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1355,7 +1349,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1368,7 +1361,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1418,7 +1410,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1445,7 +1436,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );
@@ -1465,7 +1455,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            null,
             Segments.ONLY_VISIBLE
         )
     );

@@ -117,14 +117,13 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,
-      final Collection<Interval> intervals,
-      @Nullable final List<String> versions
+      final Collection<Interval> intervals
   )
   {
     return retrieveSegments(
         dataSource,
         intervals,
-        versions,
+        null,
         IntervalMode.OVERLAPS,
         true,
         null,

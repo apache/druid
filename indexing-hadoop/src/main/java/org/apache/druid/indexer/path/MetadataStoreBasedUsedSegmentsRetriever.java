@@ -51,6 +51,6 @@ public class MetadataStoreBasedUsedSegmentsRetriever implements UsedSegmentsRetr
       Segments visibility
   )
   {
-    return indexerMetadataStorageCoordinator.retrieveUsedSegmentsForIntervals(dataSource, intervals, null, visibility);
+    return indexerMetadataStorageCoordinator.retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
   }
 }

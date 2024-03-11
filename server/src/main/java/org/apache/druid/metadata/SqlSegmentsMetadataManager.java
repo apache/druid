@@ -680,7 +680,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               interval == null ? Intervals.ONLY_ETERNITY : Collections.singletonList(interval);
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUsedSegments(dataSourceName, intervals, null)) {
+                   queryTool.retrieveUsedSegments(dataSourceName, intervals)) {
             timeline.addSegments(iterator);
           }
 
@@ -817,7 +817,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   )
   {
     return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                   .retrieveUsedSegments(dataSource, intervals, null);
+                                   .retrieveUsedSegments(dataSource, intervals);
   }
 
   private int markSegmentsAsUsed(final List<SegmentId> segmentIds)

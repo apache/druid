@@ -98,7 +98,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
-      @Nullable List<String> versions,
       Segments visibility
   )
   {

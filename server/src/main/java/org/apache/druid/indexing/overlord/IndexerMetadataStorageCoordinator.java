@@ -68,7 +68,7 @@ public interface IndexerMetadataStorageCoordinator
       Segments visibility
   )
   {
-    return retrieveUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval), null, visibility);
+    return retrieveUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval), visibility);
   }
 
   /**
@@ -109,8 +109,6 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource The data source to query
    * @param intervals  The intervals for which all applicable and used segments are requested.
-   * @param versions   An optional list of segment versions to retrieve in the given {@code intervals}. If unspecified,
-   *                   all versions of used segments in the {@code intervals} must be retrieved.
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified intervals: that is, a segment which is visible
    *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
@@ -127,7 +125,6 @@ public interface IndexerMetadataStorageCoordinator
   Collection<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
-      @Nullable List<String> versions,
       Segments visibility
   );
 
@@ -150,7 +147,8 @@ public interface IndexerMetadataStorageCoordinator
       Interval interval,
       @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
-  ) {
+  )
+  {
     return retrieveUnusedSegmentsForInterval(dataSource, interval, null, limit, maxUsedStatusLastUpdatedTime);
   }
 
