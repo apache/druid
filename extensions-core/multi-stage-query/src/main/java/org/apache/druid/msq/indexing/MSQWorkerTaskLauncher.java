@@ -90,7 +90,6 @@ public class MSQWorkerTaskLauncher
   private final ControllerContext context;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
-  private final String taskLabel;
 
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
@@ -146,8 +145,7 @@ public class MSQWorkerTaskLauncher
       final ControllerContext context,
       final RetryTask retryTask,
       final Map<String, Object> taskContextOverrides,
-      final long maxTaskStartDelayMillis,
-      final String taskLabel
+      final long maxTaskStartDelayMillis
   )
   {
     this.controllerTaskId = controllerTaskId;
@@ -159,7 +157,6 @@ public class MSQWorkerTaskLauncher
     );
     this.retryTask = retryTask;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
-    this.taskLabel = taskLabel;
   }
 
   /**
@@ -459,7 +456,6 @@ public class MSQWorkerTaskLauncher
   private void runNewTasks()
   {
     final Map<String, Object> taskContext = new HashMap<>();
-    taskContext.put("label", taskLabel);
 
     for (Map.Entry<String, Object> taskContextOverride : taskContextOverrides.entrySet()) {
       if (taskContextOverride.getKey() == null || taskContextOverride.getValue() == null) {

@@ -24,21 +24,28 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.indexing.common.TaskReport;
 
+import javax.annotation.Nullable;
+import java.util.Map;
+
 @JsonTypeName(MSQTaskReport.REPORT_KEY)
 public class MSQTaskReport implements TaskReport
 {
   public static final String REPORT_KEY = "multiStageQuery";
 
   private final String taskId;
+  @Nullable
+  private final Map<String, Object> tags;
   private final MSQTaskReportPayload payload;
 
   @JsonCreator
   public MSQTaskReport(
       @JsonProperty("taskId") final String taskId,
+      @JsonProperty("tags") @Nullable final Map<String, Object> tags,
       @JsonProperty("payload") final MSQTaskReportPayload payload
   )
   {
     this.taskId = taskId;
+    this.tags = tags;
     this.payload = payload;
   }
 
@@ -47,6 +54,13 @@ public class MSQTaskReport implements TaskReport
   public String getTaskId()
   {
     return taskId;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Map<String, Object> getTags()
+  {
+    return tags;
   }
 
   @Override
