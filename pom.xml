@@ -1056,7 +1056,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.0</version>
+                <version>5.10.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1348,6 +1348,32 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>5.23.1</version>
+                <configuration>
+                    <activeRecipes>
+                        <recipe>org.apache.druid.RewriteRules</recipe>
+                    </activeRecipes>
+                    <configLocation>${maven.multiModuleProjectDirectory}/rewrite.yml</configLocation>
+                    <checkstyleDetectionEnabled>false</checkstyleDetectionEnabled>
+                    <failOnDryRunResults>true</failOnDryRunResults>
+                    <pomCacheEnabled>false</pomCacheEnabled>
+                    <skipMavenParsing>true</skipMavenParsing>
+                    <exclusions>
+                        <exclude>**/*.json</exclude>
+                        <exclude>**/*.yaml</exclude>
+                    </exclusions>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-testing-frameworks</artifactId>
+                        <version>2.4.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
@@ -1573,6 +1599,7 @@
                         </goals>
                         <configuration>
                             <rules>
+                                <banDuplicatePomDependencyVersions/>
                                 <requireMavenVersion>
                                     <version>3.0.0</version>
                                 </requireMavenVersion>

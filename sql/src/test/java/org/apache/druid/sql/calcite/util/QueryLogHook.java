@@ -92,27 +92,53 @@ public class QueryLogHook implements TestRule
       {
         clearRecordedQueries();
 
-        final Consumer<Object> function = query -> {
-          if (skipLog.get()) {
-            return;
-          }
-
-          try {
-            recordedQueries.add((Query<?>) query);
-            log.info(
-                "Issued query: %s",
-                objectMapperSupplier.get().writerWithDefaultPrettyPrinter().writeValueAsString(query)
-            );
-          }
-          catch (Exception e) {
-            log.warn(e, "Failed to serialize query: %s", query);
-          }
-        };
-
+        final Consumer<Object> function = new C(skipLog, recordedQueries, objectMapperSupplier);
         try (final Hook.Closeable unhook = Hook.QUERY_PLAN.add(function)) {
           base.evaluate();
         }
       }
     };
+  }
+
+  // FIXME
+  static class C implements Consumer<Object>
+  {
+    private AtomicBoolean skipLog;
+    private List<Query<?>> recordedQueries;
+    private Supplier<ObjectMapper> objectMapperSupplier;
+
+    public C(AtomicBoolean skipLog, List<Query<?>> recordedQueries, Supplier<ObjectMapper> objectMapperSupplier)
+    {
+      this.skipLog = skipLog;
+      this.recordedQueries = recordedQueries;
+      this.objectMapperSupplier = objectMapperSupplier;
+    }
+
+    @Override
+    public void accept(Object query)
+    {
+      if (skipLog.get()) {
+        return;
+      }
+
+      try {
+        recordedQueries.add((Query<?>) query);
+        log.info(
+            "Issued query: %s",
+            objectMapperSupplier.get().writerWithDefaultPrettyPrinter().writeValueAsString(query)
+        );
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to serialize query: %s", query);
+      }
+    }
+  }
+
+  public void logQueriesFor(Runnable r)
+  {
+    final Consumer<Object> function = new C(skipLog, recordedQueries, objectMapperSupplier);
+    try (final Hook.Closeable unhook = Hook.QUERY_PLAN.add(function)) {
+      r.run();
+    }
   }
 }

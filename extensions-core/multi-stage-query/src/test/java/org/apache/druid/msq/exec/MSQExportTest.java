@@ -29,7 +29,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.http.ResultFormat;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -72,14 +72,14 @@ public class MSQExportTest extends MSQTestBase
   }
 
   @Test
-  public void testNumberOfRowsPerFile() throws IOException
+  public void testNumberOfRowsPerFile()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
 
     Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);

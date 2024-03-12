@@ -87,11 +87,15 @@ public abstract class CalciteSelectJoinQueryMSQTest
   {
     private final JoinAlgorithm joinAlgorithm;
 
-
     protected Base(final JoinAlgorithm joinAlgorithm)
     {
-      super(joinAlgorithm == JoinAlgorithm.SORT_MERGE);
       this.joinAlgorithm = joinAlgorithm;
+    }
+
+    @Override
+    public boolean isSortBasedJoin()
+    {
+      return joinAlgorithm == JoinAlgorithm.SORT_MERGE;
     }
 
     @Override
@@ -99,7 +103,7 @@ public abstract class CalciteSelectJoinQueryMSQTest
     {
       super.configureGuice(builder);
       builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+          CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
       );
     }
 
