@@ -34,13 +34,24 @@ import static org.junit.Assert.assertSame;
 public class ConstantExprTest extends InitializedNullHandlingTest
 {
   @Test
-  public void testArrayExpr()
+  public void testLongArrayExpr()
   {
     checkExpr(
         new ArrayExpr(ExpressionType.LONG_ARRAY, new Long[] {1L, 3L}),
         true,
         "[1, 3]",
         "ARRAY<LONG>[1, 3]"
+    );
+  }
+
+  @Test
+  public void testStringArrayExpr()
+  {
+    checkExpr(
+        new ArrayExpr(ExpressionType.STRING_ARRAY, new String[] {"foo", "bar"}),
+        true,
+        "[foo, bar]",
+        "ARRAY<STRING>['foo', 'bar']"
     );
   }
 
