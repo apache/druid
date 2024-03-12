@@ -45,6 +45,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -669,10 +670,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       case ROW_LIMIT:
         if (limitAccumulator.get() >= rowLimitToUse) {
           subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-          throw ResourceLimitExceededException.withMessage(
-              "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
-              rowLimitToUse
-          );
+          throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
         }
         subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
@@ -687,10 +685,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       case MEMORY_LIMIT:
         if (memoryLimitAccumulator.get() >= memoryLimit) {
           subqueryStatsProvider.incrementQueriesExceedingByteLimit();
-          throw ResourceLimitExceededException.withMessage(
-              "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
-              memoryLimit
-          );
+          throw ResourceLimitExceededException.withMessage(byteLimitExceededMessage(memoryLimit));
         }
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
@@ -707,10 +702,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           // Check if the previous row limit accumulator has exceeded the memory results
           if (limitAccumulator.get() >= rowLimitToUse) {
             subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-            throw ResourceLimitExceededException.withMessage(
-                "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
-                rowLimitToUse
-            );
+            throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
           }
           subqueryStatsProvider.incrementSubqueriesWithRowLimit();
           subqueryStatsProvider.incrementSubqueriesFallingBackToRowLimit();
@@ -769,10 +761,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             limitAccumulator.addAndGet(frame.getFrame().numRows());
             if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
               subqueryStatsProvider.incrementQueriesExceedingByteLimit();
-              throw ResourceLimitExceededException.withMessage(
-                  "Subquery generated results beyond maximum[%d] bytes",
-                  memoryLimit
-              );
+              throw ResourceLimitExceededException.withMessage(byteLimitExceededMessage(memoryLimit));
 
             }
             frameSignaturePairs.add(frame);
@@ -819,16 +808,39 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {
             subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-            throw ResourceLimitExceededException.withMessage(
-                "Subquery generated results beyond maximum[%d] rows",
-                rowLimitToUse
-            );
+            throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
           }
           acc.add(in);
           return acc;
         }
     );
     return InlineDataSource.fromIterable(resultList, signature);
+  }
+
+  private static String byteLimitExceededMessage(final long memoryLimit)
+  {
+    return org.apache.druid.java.util.common.StringUtils.format(
+    "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes. Increase the "
+    + "JVM's memory or set the '%s' in the query context to increase the space allocated for subqueries to "
+    + "materialize their results. Manually alter the value carefully as it can cause the broker to go out of memory.",
+        memoryLimit,
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY
+    );
+  }
+
+  private static String rowLimitExceededMessage(final int rowLimitUsed)
+  {
+    return org.apache.druid.java.util.common.StringUtils.format(
+        "Cannot issue the query, subqueries generated results beyond maximum[%d] rows. Try setting the "
+        + "'%s' in the query context to '%s' for enabling byte based limit, which chooses an optimal limit based on "
+        + "memory size and result's heap usage or manually configure the values of either '%s' or '%s' in the query "
+        + "context. Manually alter the value carefully as it can cause the broker to go out of memory.",
+        rowLimitUsed,
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY,
+        SubqueryGuardrailHelper.AUTO_LIMIT_VALUE,
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY,
+        QueryContexts.MAX_SUBQUERY_ROWS_KEY
+    );
   }
 
   /**

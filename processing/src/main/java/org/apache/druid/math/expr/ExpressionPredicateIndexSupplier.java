@@ -28,7 +28,7 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
+import org.apache.druid.segment.index.DictionaryScanningBitmapIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 
@@ -78,7 +78,7 @@ public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
       final java.util.function.Function<Object, ExprEval<?>> evalFunction =
           inputValue -> expr.eval(InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue));
 
-      return new SimpleImmutableBitmapIterableIndex()
+      return new DictionaryScanningBitmapIndex(inputColumnIndexes.getCardinality())
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)

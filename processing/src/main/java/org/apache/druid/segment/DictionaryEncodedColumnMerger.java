@@ -423,7 +423,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
-            compressionStrategy
+            compressionStrategy,
+            segmentWriteOutMedium.getCloser()
         );
       } else {
         encodedValueSerializer = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, cardinality);

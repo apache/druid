@@ -1268,6 +1268,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+
   /**
    * This is a test in a similar vein to {@link #testEstimateStringAndDoubleAreDifferent()} except here we are
    * ensuring that float values and doubles values are considered equivalent.  The expected initial inputs were
@@ -1316,6 +1317,27 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{4.0D}
         )
     );
+  }
+
+  @Test
+  public void testDsHllOnTopOfNested()
+  {
+    // this query was not planable: https://github.com/apache/druid/issues/15353
+    testBuilder()
+        .sql(
+            "SELECT d1,dim2,APPROX_COUNT_DISTINCT_DS_HLL(dim2, 18) as val"
+                + " FROM (select d1,dim1,dim2 from druid.foo group by d1,dim1,dim2 order by dim1 limit 3) t "
+                + " group by 1,2"
+        )
+        .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
+            ImmutableList.of(
+                new Object[] {null, "a", 1L},
+                new Object[] {"1.0", "a", 1L},
+                new Object[] {"1.7", null, 0L}
+            )
+        )
+        .run();
   }
 
   private ExpressionVirtualColumn makeSketchEstimateExpression(String outputName, String field)
