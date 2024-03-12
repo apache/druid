@@ -68,7 +68,8 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
         StringUtils.format("%s.long_column", fieldName),
         ByteOrder.nativeOrder(),
         indexSpec.getLongEncoding(),
-        indexSpec.getDimensionCompression()
+        indexSpec.getDimensionCompression(),
+        fieldResourceCloser
     );
     longsSerializer.open();
   }
