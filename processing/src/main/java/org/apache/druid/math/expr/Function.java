@@ -3252,6 +3252,11 @@ public interface Function extends NamedFunction
     }
   }
 
+  /**
+   * Primarily internal helper function used to coerce null, [], and [null] into [null], similar to the logic done
+   * by {@link org.apache.druid.segment.virtual.ExpressionSelectors#supplierFromDimensionSelector} when the 3rd
+   * argument is true, which is done when implicitly mapping scalar functions over mvd values.
+   */
   class MultiValueStringHarmonizeNullsFunction implements Function
   {
     @Override
