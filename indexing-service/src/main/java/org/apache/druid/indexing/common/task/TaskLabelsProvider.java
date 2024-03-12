@@ -57,21 +57,4 @@ public interface TaskLabelsProvider
    * analysis and tracking.
    */
   Map<String, Object> getTaskMetricTags(Task task);
-
-  /**
-   * Generates a configuration label for a given task based on its attributes and predefined labels. This label
-   * is used to assist in scheduling decisions and resource allocation within the Druid ecosystem. It aids in
-   * task laning by categorizing tasks for efficient distribution across computing resources, and in pod template
-   * selection by associating tasks with suitable pod configurations according to their specific requirements.
-   * <p>
-   * The method streamlines the process of matching tasks with the appropriate execution environments and
-   * operational priorities. By providing a unified label, it simplifies the identification and grouping of tasks
-   * for various configuration-related tasks.
-   *
-   * @param task The Druid task for which the configuration label is generated.
-   * @return A string that serves as the task's configuration label, intended for use in task scheduling and
-   * resource allocation strategies. This label reflects the task’s key characteristics and aids in its
-   * management within the cluster.
-   */
-  String getTaskConfigLabel(Task task);
 }

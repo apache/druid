@@ -708,6 +708,7 @@ public class ControllerImpl implements Controller
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
 
+    // propagate the controller's labels and tags to the worker task
     taskContextOverridesBuilder.put(Tasks.TASK_LABEL, new TaskLabel(taskLabelsProvider.getTaskLabels(task)));
     Map<String, Object> taskMetricTags = taskLabelsProvider.getTaskMetricTags(task);
     if (!taskMetricTags.isEmpty()) {

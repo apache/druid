@@ -52,6 +52,7 @@ import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
+import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
@@ -303,6 +304,8 @@ public class CliPeon extends GuiceRunnable
             if ("true".equals(loadBroadcastSegments)) {
               binder.install(new BroadcastSegmentLoadingModule());
             }
+
+            IndexingServiceModuleHelper.configureTaskLabelsProvider(binder);
           }
 
           @Provides
