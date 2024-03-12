@@ -19,7 +19,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           icon="application"
           multiline={false}
           onClick={[Function]}
-          popoverProps={Object {}}
+          popoverProps={{}}
           selected={false}
           shouldDismissPopover={true}
           text="View SQL query for table"
@@ -30,7 +30,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           icon="manually-entered-data"
           multiline={false}
           onClick={[Function]}
-          popoverProps={Object {}}
+          popoverProps={{}}
           selected={false}
           shouldDismissPopover={true}
           text="Submit JSON supervisor"
@@ -41,7 +41,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           icon="play"
           multiline={false}
           onClick={[Function]}
-          popoverProps={Object {}}
+          popoverProps={{}}
           selected={false}
           shouldDismissPopover={true}
           text="Resume all supervisors"
@@ -52,7 +52,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           icon="pause"
           multiline={false}
           onClick={[Function]}
-          popoverProps={Object {}}
+          popoverProps={{}}
           selected={false}
           shouldDismissPopover={true}
           text="Suspend all supervisors"
@@ -64,7 +64,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           intent="danger"
           multiline={false}
           onClick={[Function]}
-          popoverProps={Object {}}
+          popoverProps={{}}
           selected={false}
           shouldDismissPopover={true}
           text="Terminate all supervisors"
@@ -73,7 +73,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     </React.Fragment>
     <Memo(TableColumnSelector)
       columns={
-        Array [
+        [
           "Supervisor ID",
           "Type",
           "Topic/Stream",
@@ -83,7 +83,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
         ]
       }
       onChange={[Function]}
-      tableColumnsHidden={Array []}
+      tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -110,7 +110,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -126,24 +126,24 @@ exports[`SupervisorsView matches snapshot 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Cell": [Function],
           "Header": <React.Fragment>
             Supervisor ID
@@ -157,21 +157,21 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "show": true,
           "width": 300,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Type",
           "accessor": "type",
           "show": true,
           "width": 100,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Topic/Stream",
           "accessor": "source",
           "show": true,
           "width": 300,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Status",
           "accessor": "detailed_state",
@@ -179,7 +179,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "show": true,
           "width": 250,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Running tasks",
           "accessor": "running_tasks",
@@ -188,7 +188,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "show": true,
           "width": 150,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Actions",
           "accessor": "supervisor_id",
@@ -199,18 +199,18 @@ exports[`SupervisorsView matches snapshot 1`] = `
         },
       ]
     }
-    data={Array []}
-    defaultExpanded={Object {}}
+    data={[]}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={25}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={[]}
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -218,7 +218,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
       }
     }
     filterable={true}
-    filtered={Array []}
+    filtered={[]}
     freezeWhenExpanded={false}
     getLoadingProps={[Function]}
     getNoDataProps={[Function]}
@@ -256,14 +256,14 @@ exports[`SupervisorsView matches snapshot 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         25,
         50,
         100,
       ]
     }
     pageText="Page"
-    pivotDefaults={Object {}}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -277,7 +277,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
   <Memo(AlertDialog)
