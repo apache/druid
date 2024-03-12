@@ -144,8 +144,7 @@ public abstract class CalciteSelectJoinQueryMSQTest
           .addCustomRunner(
               new ExtractResultsFactory(
                   () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-          .skipVectorize(true)
-          .msqCompatible(msqCompatible);
+          .skipVectorize(true);
     }
   }
 }

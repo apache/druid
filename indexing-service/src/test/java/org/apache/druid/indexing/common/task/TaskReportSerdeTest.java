@@ -70,7 +70,9 @@ public class TaskReportSerdeTest
             "an error message",
             true,
             1000L,
-            ImmutableMap.of("PartitionA", 5000L)
+            ImmutableMap.of("PartitionA", 5000L),
+            5L,
+            10L
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
@@ -92,6 +94,54 @@ public class TaskReportSerdeTest
         new TypeReference<Map<String, TaskReport>>() {}
     );
     Assert.assertEquals(reportMap1, reportMap2);
+  }
+
+  @Test
+  public void testSerializationOnMissingPartitionStats() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"type\": \"ingestionStatsAndErrors\",\n"
+                  + "  \"taskId\": \"ingestionStatsAndErrors\",\n"
+                  + "  \"payload\": {\n"
+                  + "    \"ingestionState\": \"COMPLETED\",\n"
+                  + "    \"unparseableEvents\": {\n"
+                  + "      \"hello\": \"world\"\n"
+                  + "    },\n"
+                  + "    \"rowStats\": {\n"
+                  + "      \"number\": 1234\n"
+                  + "    },\n"
+                  + "    \"errorMsg\": \"an error message\",\n"
+                  + "    \"segmentAvailabilityConfirmed\": true,\n"
+                  + "    \"segmentAvailabilityWaitTimeMs\": 1000\n"
+                  + "  }\n"
+                  + "}";
+
+    IngestionStatsAndErrorsTaskReport expected = new IngestionStatsAndErrorsTaskReport(
+        IngestionStatsAndErrorsTaskReport.REPORT_KEY,
+        new IngestionStatsAndErrorsTaskReportData(
+            IngestionState.COMPLETED,
+            ImmutableMap.of(
+                "hello", "world"
+            ),
+            ImmutableMap.of(
+                "number", 1234
+            ),
+            "an error message",
+            true,
+            1000L,
+            null,
+            null,
+            null
+        )
+    );
+
+
+    Assert.assertEquals(expected, jsonMapper.readValue(
+        json,
+        new TypeReference<TaskReport>()
+        {
+        }
+    ));
   }
 
   @Test

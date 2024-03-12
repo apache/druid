@@ -155,6 +155,14 @@ For some task types, the indexing task can wait for the newly ingested segments 
 |`segmentAvailabilityWaitTimeMs`|Milliseconds waited by the ingestion task for the newly ingested segments to be available for query after completing ingestion was completed.|
 |`recordsProcessed`| Partitions that were processed by an ingestion task and includes count of records processed from each partition.|
 
+
+#### Compaction task segment info fields
+
+|Field|Description|
+|---|---|
+|`segmentsRead`|Number of segments read by compaction task with more than 1 subtask.|
+|`segmentsPublished`|Number of segments published by compaction task with more than 1 subtask.|
+
 ### Live report
 
 When a task is running, a live report containing ingestion state, unparseable events and moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:

@@ -28,7 +28,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlInsert;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -46,10 +45,10 @@ import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.rules.ExpectedException;
-
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -598,26 +597,25 @@ public class QueryTestRunner
       // The builder specifies one exception, but the query can run multiple
       // times. Pick the first failure as that emulates the original code flow
       // where the first exception ended the test.
-      ExpectedException expectedException = builder.config.expectedException();
       for (QueryResults queryResults : execStep.results()) {
         if (queryResults.exception == null) {
           continue;
         }
 
-        // This variation uses JUnit exception validation: we configure the expected
-        // exception, then throw the exception from the run.
-        // If the expected exception is not configured here, then the test may
-        // have done it outside of the test builder.
+        // Delayed exception checking to let other verify steps run before running vectorized checks
         if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
-          expectedException.expect(RuntimeException.class);
-          expectedException.expectMessage("Cannot vectorize");
-        } else if (builder.expectedExceptionInitializer != null) {
-          builder.expectedExceptionInitializer.accept(expectedException);
+          MatcherAssert.assertThat(
+              queryResults.exception,
+              CoreMatchers.allOf(
+                  CoreMatchers.instanceOf(RuntimeException.class),
+                  ThrowableMessageMatcher.hasMessage(
+                      CoreMatchers.containsString("Cannot vectorize!")
+                  )
+              )
+          );
+        } else {
+          throw queryResults.exception;
         }
-        throw queryResults.exception;
-      }
-      if (builder.expectedExceptionInitializer != null) {
-        throw new ISE("Expected query to throw an exception, but none was thrown.");
       }
     }
   }
@@ -631,9 +629,6 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
-    if (config.isRunningMSQ()) {
-      Assume.assumeTrue(builder.msqCompatible);
-    }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,

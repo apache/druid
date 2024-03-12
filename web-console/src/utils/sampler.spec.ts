@@ -105,24 +105,24 @@ describe('sampler', () => {
 
     it('works', () => {
       expect(guessDimensionsFromSampleResponse(sampleResponse)).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "name": "isRobot",
             "type": "string",
           },
-          Object {
+          {
             "createBitmapIndex": true,
             "multiValueHandling": "SORTED_ARRAY",
             "name": "channel",
             "type": "string",
           },
-          Object {
+          {
             "createBitmapIndex": true,
             "multiValueHandling": "SORTED_ARRAY",
             "name": "flags",
             "type": "string",
           },
-          Object {
+          {
             "name": "isUnpatrolled",
             "type": "string",
           },

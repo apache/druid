@@ -29,6 +29,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 import java.util.Map;
 
@@ -39,6 +40,9 @@ public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
 
   @Rule(order = 0)
   public NotYetSupportedProcessor decoupledIgnoreProcessor = new NotYetSupportedProcessor();
+
+  @Rule
+  public TestRule sqlCompatOnly = DisableUnless.SQL_COMPATIBLE;
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES =
       ImmutableMap.<String, Object>builder()

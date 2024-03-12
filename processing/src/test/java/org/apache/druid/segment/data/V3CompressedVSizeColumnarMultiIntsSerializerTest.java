@@ -206,7 +206,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           "offset",
           offsetChunkFactor,
           byteOrder,
-          compressionStrategy
+          compressionStrategy,
+          segmentWriteOutMedium.getCloser()
       );
       CompressedVSizeColumnarIntsSerializer valueWriter = new CompressedVSizeColumnarIntsSerializer(
           TEST_COLUMN_NAME,
@@ -215,7 +216,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           maxValue,
           valueChunkFactor,
           byteOrder,
-          compressionStrategy
+          compressionStrategy,
+          segmentWriteOutMedium.getCloser()
       );
       V3CompressedVSizeColumnarMultiIntsSerializer writer =
           new V3CompressedVSizeColumnarMultiIntsSerializer(TEST_COLUMN_NAME, offsetWriter, valueWriter);
@@ -271,7 +273,6 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
     try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium()) {
       CompressedColumnarIntsSerializer offsetWriter = new CompressedColumnarIntsSerializer(
           TEST_COLUMN_NAME,
-          segmentWriteOutMedium,
           offsetChunkFactor,
           byteOrder,
           compressionStrategy,
@@ -279,24 +280,27 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
               segmentWriteOutMedium,
               "offset",
               compressionStrategy,
-              Long.BYTES * 250000
-          )
+              Long.BYTES * 250000,
+              segmentWriteOutMedium.getCloser()
+          ),
+          segmentWriteOutMedium.getCloser()
       );
 
       GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
           segmentWriteOutMedium,
           "value",
           compressionStrategy,
-          Long.BYTES * 250000
+          Long.BYTES * 250000,
+          segmentWriteOutMedium.getCloser()
       );
       CompressedVSizeColumnarIntsSerializer valueWriter = new CompressedVSizeColumnarIntsSerializer(
           TEST_COLUMN_NAME,
-          segmentWriteOutMedium,
           maxValue,
           valueChunkFactor,
           byteOrder,
           compressionStrategy,
-          genericIndexed
+          genericIndexed,
+          segmentWriteOutMedium.getCloser()
       );
       V3CompressedVSizeColumnarMultiIntsSerializer writer =
           new V3CompressedVSizeColumnarMultiIntsSerializer(TEST_COLUMN_NAME, offsetWriter, valueWriter);
@@ -347,7 +351,6 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
     ) {
       CompressedColumnarIntsSerializer offsetWriter = new CompressedColumnarIntsSerializer(
           TEST_COLUMN_NAME,
-          segmentWriteOutMedium,
           offsetChunkFactor,
           byteOrder,
           compressionStrategy,
@@ -355,24 +358,27 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
               segmentWriteOutMedium,
               "offset",
               compressionStrategy,
-              Long.BYTES * 250000
-          )
+              Long.BYTES * 250000,
+              segmentWriteOutMedium.getCloser()
+          ),
+          segmentWriteOutMedium.getCloser()
       );
 
       GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
           segmentWriteOutMedium,
           "value",
           compressionStrategy,
-          Long.BYTES * 250000
+          Long.BYTES * 250000,
+          segmentWriteOutMedium.getCloser()
       );
       CompressedVSizeColumnarIntsSerializer valueWriter = new CompressedVSizeColumnarIntsSerializer(
           TEST_COLUMN_NAME,
-          segmentWriteOutMedium,
           maxValue,
           valueChunkFactor,
           byteOrder,
           compressionStrategy,
-          genericIndexed
+          genericIndexed,
+          segmentWriteOutMedium.getCloser()
       );
       V3CompressedVSizeColumnarMultiIntsSerializer writer =
           new V3CompressedVSizeColumnarMultiIntsSerializer(TEST_COLUMN_NAME, offsetWriter, valueWriter);

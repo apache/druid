@@ -37,6 +37,8 @@ import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -125,7 +127,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox.getIndexingTmpDir()
     );
 
-    Map<String, TaskReport> taskReport = getTaskCompletionReports();
+    Map<String, TaskReport> taskReport = getTaskCompletionReports(getNumSegmentsRead(inputSource));
 
     taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
@@ -148,6 +150,18 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       List<DataSegment> segments,
       Map<String, TaskReport> taskReport
   );
+
+  private Long getNumSegmentsRead(InputSource inputSource)
+  {
+    if (inputSource instanceof DruidInputSource) {
+      List<WindowedSegmentId> segments = ((DruidInputSource) inputSource).getSegmentIds();
+      if (segments != null) {
+        return (long) segments.size();
+      }
+    }
+
+    return null;
+  }
 
   private List<DataSegment> generateSegments(
       final TaskToolbox toolbox,
@@ -236,7 +250,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private Map<String, TaskReport> getTaskCompletionReports(Long segmentsRead)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -248,7 +262,9 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 "",
                 false, // not applicable for parallel subtask
                 segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                segmentsRead,
+                null
             )
         )
     );

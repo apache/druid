@@ -93,8 +93,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
     return new QueryTestBuilder(new BaseCalciteQueryTest.CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
-        .msqCompatible(msqCompatible);
+        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
   /**
