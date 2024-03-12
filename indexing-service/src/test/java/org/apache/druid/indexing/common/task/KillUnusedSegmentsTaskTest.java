@@ -141,7 +141,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3);
     final Set<DataSegment> unusedSegments = ImmutableSet.of(segment1, segment2);
 
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         unusedSegments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
