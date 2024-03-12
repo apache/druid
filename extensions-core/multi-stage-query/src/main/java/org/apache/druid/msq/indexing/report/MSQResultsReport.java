@@ -96,7 +96,7 @@ public class MSQResultsReport
       if (selectDestination.shouldTruncateResultsInTaskReport() && rowCount >= Limits.MAX_SELECT_RESULT_ROWS) {
         break;
       }
-      if (rowCount % (Math.min(32, factor) * Limits.MAX_SELECT_RESULT_ROWS) == 0) {
+      if (rowCount % (factor * Limits.MAX_SELECT_RESULT_ROWS) == 0) {
         log.warn(
             "Task report is getting too large with %d rows. Large task reports can cause the controller to go out of memory. "
             + "Consider using the 'limit %d' clause in your query to reduce the number of rows in the result. "
@@ -106,7 +106,7 @@ public class MSQResultsReport
             MultiStageQueryContext.CTX_SELECT_DESTINATION,
             MSQSelectDestination.DURABLESTORAGE.getName()
         );
-        factor = factor * 2;
+        factor = factor < 32 ? factor * 2 : 32;
       }
     }
     return new MSQResultsReport(
