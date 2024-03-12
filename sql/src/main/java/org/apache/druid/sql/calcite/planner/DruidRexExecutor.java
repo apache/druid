@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
@@ -183,7 +184,7 @@ public class DruidRexExecutor implements RexExecutor
               if (longVal == null) {
                 resultAsBooleanList.add(null);
               } else {
-                resultAsBooleanList.add(longVal.longValue() > 0);
+                resultAsBooleanList.add(Evals.asBoolean(longVal.longValue()));
               }
             }
             literal = rexBuilder.makeLiteral(resultAsBooleanList, constExp.getType(), true);
