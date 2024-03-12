@@ -1771,7 +1771,9 @@ public class TaskLockbox
             action.getSequenceName(),
             action.getPreviousSegmentId(),
             acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
-            action.getPartialShardSpec()
+            action.getPartialShardSpec(),
+            null,
+            task.getPendingSegmentGroup()
         );
       }
 

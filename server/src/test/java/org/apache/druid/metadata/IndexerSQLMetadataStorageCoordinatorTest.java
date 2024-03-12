@@ -2684,7 +2684,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     final String sequenceName = "seq";
 
-    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec);
+    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId0 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2695,7 +2695,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
 
     final SegmentCreateRequest request1 =
-        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec);
+        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId1 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2706,7 +2706,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
 
     final SegmentCreateRequest request2 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId2 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2717,7 +2717,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
 
     final SegmentCreateRequest request3 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId3 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2729,7 +2729,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segmentId2, segmentId3);
 
     final SegmentCreateRequest request4 =
-        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec);
+        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId4 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
