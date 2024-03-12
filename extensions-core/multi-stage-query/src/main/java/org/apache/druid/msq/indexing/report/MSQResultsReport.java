@@ -83,18 +83,22 @@ public class MSQResultsReport
       MSQSelectDestination selectDestination
   )
   {
-    if (selectDestination.shouldTruncateResultsInTaskReport()) {
-      List<Object[]> results = new ArrayList<>();
-      int rowCount = 0;
-      while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
-        results.add(resultYielder.get());
-        resultYielder = resultYielder.next(null);
-        ++rowCount;
+    List<Object[]> results = new ArrayList<>();
+    int rowCount = 0;
+    while (!resultYielder.isDone()) {
+      results.add(resultYielder.get());
+      resultYielder = resultYielder.next(null);
+      ++rowCount;
+      if (selectDestination.shouldTruncateResultsInTaskReport() && rowCount >= Limits.MAX_SELECT_RESULT_ROWS) {
+        break;
       }
-      return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), !resultYielder.isDone());
-    } else {
-      return new MSQResultsReport(signature, sqlTypeNames, resultYielder, false);
     }
+    return new MSQResultsReport(
+        signature,
+        sqlTypeNames,
+        Yielders.each(Sequences.simple(results)),
+        !resultYielder.isDone()
+    );
   }
 
   @JsonProperty("signature")
