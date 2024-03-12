@@ -23,7 +23,7 @@ exports[`JsonCollapse matches snapshot 1`] = `
     <Blueprint4.TextArea
       readOnly={true}
       value="{
-  \\"name\\": \\"test\\"
+  "name": "test"
 }"
     />
   </Blueprint4.Collapse>

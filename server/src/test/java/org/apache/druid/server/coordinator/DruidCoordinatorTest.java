@@ -911,6 +911,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(underRepliicationCountsPerDataSourceColdTier);
     Assert.assertEquals(0, underRepliicationCountsPerDataSourceColdTier.getLong(dataSource));
 
+    Object2IntMap<String> numsDeepStorageOnlySegmentsPerDataSource =
+            coordinator.getDatasourceToDeepStorageQueryOnlySegmentCount();
+
+    Assert.assertEquals(1, numsDeepStorageOnlySegmentsPerDataSource.getInt(dataSource));
+
     coordinator.stop();
     leaderUnannouncerLatch.await();
 

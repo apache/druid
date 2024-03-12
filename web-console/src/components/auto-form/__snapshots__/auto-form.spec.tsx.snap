@@ -121,7 +121,7 @@ exports[`AutoForm matches snapshot 1`] = `
       disabled={false}
       onChange={[Function]}
       placeholder=""
-      values={Array []}
+      values={[]}
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
@@ -132,7 +132,7 @@ exports[`AutoForm matches snapshot 1`] = `
       onChange={[Function]}
       placeholder=""
       values={
-        Array [
+        [
           "Hello",
           "World",
         ]
