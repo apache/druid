@@ -143,6 +143,43 @@ usable in a Protobuf response object. Internally Druid converts all `float` valu
 An attempt to use `float` will lead to a runtime error when processing the query.
 Use the `double` type instead.
 
+Sample request, 
+
+```
+QueryRequest.newBuilder()
+            .setQuery("SELECT * FROM foo")
+            .setResultFormat(QueryResultFormat.CSV)
+            .setQueryType(QueryOuterClass.QueryType.SQL)
+            .build();
+```
+
+When using Protobuf response format, bundle up your Protobuf classes
+into a jar file, and place that jar file in the
+`$DRUID_HOME/extensions/grpc-query` directory. 
+Specify the response Protobuf message name in the request. 
+
+```
+QueryRequest.newBuilder()
+            .setQuery("SELECT dim1, dim2, dim3, cnt, m1, m2, unique_dim1, __time AS "date" FROM foo")
+            .setQueryType(QueryOuterClass.QueryType.SQL)
+            .setProtobufMessageName(QueryResult.class.getName())
+            .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
+            .build();    
+            
+Response message 
+
+message QueryResult {
+  string dim1 = 1;
+  string dim2 = 2;
+  string dim3 = 3;
+  int64 cnt = 4;
+  float m1 = 5;
+  double m2 = 6;
+  bytes unique_dim1 = 7;
+  google.protobuf.Timestamp date = 8;
+}          
+```
+
 ## Security
 
 The extension supports both "anonymous" and basic authorization. Anonymous is the mode
