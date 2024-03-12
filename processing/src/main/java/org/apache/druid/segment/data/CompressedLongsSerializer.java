@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.Serializer;
@@ -34,12 +35,17 @@ public class CompressedLongsSerializer implements Serializer
   private final CompressedBlockSerializer blockSerializer;
   private final ByteBuffer longValueConverter = ByteBuffer.allocate(Long.BYTES).order(ByteOrder.nativeOrder());
 
-  public CompressedLongsSerializer(SegmentWriteOutMedium segmentWriteOutMedium, CompressionStrategy compression)
+  public CompressedLongsSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      CompressionStrategy compression,
+      Closer closer
+  )
   {
     this.blockSerializer = new CompressedBlockSerializer(
         segmentWriteOutMedium,
         compression,
-        CompressedPools.BUFFER_SIZE
+        CompressedPools.BUFFER_SIZE,
+        closer
     );
   }
 

@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -80,6 +81,8 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
+
+  protected final Closer fieldResourceCloser = Closer.create();
 
   protected FixedIndexedIntWriter intermediateValueWriter;
   // maybe someday we allow no bitmap indexes or multi-value columns
@@ -300,6 +303,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     }
     finally {
       tmpWriteoutMedium.close();
+      fieldResourceCloser.close();
     }
   }
 
@@ -312,7 +316,8 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
           medium,
           columnName,
           maxId,
-          indexSpec.getDimensionCompression()
+          indexSpec.getDimensionCompression(),
+          fieldResourceCloser
       );
     } else {
       encodedValueSerializer = new VSizeColumnarIntsSerializer(medium, maxId);
