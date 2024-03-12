@@ -76,7 +76,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     );
   }
 
-  private void publishSegment(
+  void publishSegment(
       final String segmentId,
       final String dataSource,
       final String createdDate,
