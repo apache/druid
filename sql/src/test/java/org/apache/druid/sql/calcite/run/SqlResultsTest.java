@@ -243,7 +243,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   @Test
   public void testMayNotCoerceList()
   {
-    Assert.assertEquals("hello", SqlResults.maybeCoerceArrayToList("hello", false));
+    Assert.assertEquals("hello", SqlResults.coerceArrayToList("hello", false));
   }
 
   private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)
