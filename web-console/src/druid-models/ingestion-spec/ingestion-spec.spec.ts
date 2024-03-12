@@ -835,66 +835,66 @@ describe('spec utils', () => {
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
                 "id",
-                Object {
+                {
                   "castToType": "ARRAY<STRING>",
                   "name": "tags",
                   "type": "auto",
                 },
-                Object {
+                {
                   "castToType": "ARRAY<LONG>",
                   "name": "nums",
                   "type": "auto",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "hour",
               "rollup": true,
               "segmentGranularity": "day",
             },
-            "metricsSpec": Array [
-              Object {
+            "metricsSpec": [
+              {
                 "name": "count",
                 "type": "count",
               },
-              Object {
+              {
                 "fieldName": "followers",
                 "name": "sum_followers",
                 "type": "longSum",
               },
-              Object {
+              {
                 "fieldName": "spend",
                 "name": "sum_spend",
                 "type": "doubleSum",
               },
             ],
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
+          "tuningConfig": {
             "forceGuaranteedRollup": true,
-            "partitionsSpec": Object {
+            "partitionsSpec": {
               "type": "hashed",
             },
             "type": "index_parallel",
@@ -912,66 +912,66 @@ describe('spec utils', () => {
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
                 "id",
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "tags",
                   "type": "string",
                 },
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "nums",
                   "type": "string",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "hour",
               "rollup": true,
               "segmentGranularity": "day",
             },
-            "metricsSpec": Array [
-              Object {
+            "metricsSpec": [
+              {
                 "name": "count",
                 "type": "count",
               },
-              Object {
+              {
                 "fieldName": "followers",
                 "name": "sum_followers",
                 "type": "longSum",
               },
-              Object {
+              {
                 "fieldName": "spend",
                 "name": "sum_spend",
                 "type": "doubleSum",
               },
             ],
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
+          "tuningConfig": {
             "forceGuaranteedRollup": true,
-            "partitionsSpec": Object {
+            "partitionsSpec": {
               "type": "hashed",
             },
             "type": "index_parallel",
@@ -989,57 +989,57 @@ describe('spec utils', () => {
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
-                Object {
+                {
                   "name": "followers",
                   "type": "long",
                 },
-                Object {
+                {
                   "name": "spend",
                   "type": "double",
                 },
                 "id",
-                Object {
+                {
                   "castToType": "ARRAY<STRING>",
                   "name": "tags",
                   "type": "auto",
                 },
-                Object {
+                {
                   "castToType": "ARRAY<LONG>",
                   "name": "nums",
                   "type": "auto",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "none",
               "rollup": false,
               "segmentGranularity": "day",
             },
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
+          "tuningConfig": {
+            "partitionsSpec": {
               "type": "dynamic",
             },
             "type": "index_parallel",
@@ -1057,57 +1057,57 @@ describe('spec utils', () => {
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
-                Object {
+                {
                   "name": "followers",
                   "type": "long",
                 },
-                Object {
+                {
                   "name": "spend",
                   "type": "double",
                 },
                 "id",
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "tags",
                   "type": "string",
                 },
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "nums",
                   "type": "string",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "none",
               "rollup": false,
               "segmentGranularity": "day",
             },
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
+          "tuningConfig": {
+            "partitionsSpec": {
               "type": "dynamic",
             },
             "type": "index_parallel",

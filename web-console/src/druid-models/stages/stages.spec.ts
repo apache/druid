@@ -29,10 +29,10 @@ describe('Stages', () => {
     it('works for input', () => {
       expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'input'))
         .toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "index": 0,
-            "input0": Object {
+            "input0": {
               "bytes": 10943622,
               "files": 0,
               "frames": 21,
@@ -47,10 +47,10 @@ describe('Stages', () => {
     it('works for output', () => {
       expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'output'))
         .toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "index": 0,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 257524,
               "files": 0,
               "frames": 1,
@@ -58,9 +58,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 1,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 289731,
               "files": 0,
               "frames": 1,
@@ -68,9 +68,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 2,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 412396,
               "files": 0,
               "frames": 1,
@@ -78,9 +78,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 3,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 262388,
               "files": 0,
               "frames": 1,
@@ -88,9 +88,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 4,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 170554,
               "files": 0,
               "frames": 1,
@@ -98,9 +98,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 5,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 188324,
               "files": 0,
               "frames": 1,
@@ -108,9 +108,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 6,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 92275,
               "files": 0,
               "frames": 1,
@@ -118,9 +118,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 7,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 69531,
               "files": 0,
               "frames": 1,
@@ -128,9 +128,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 8,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 65844,
               "files": 0,
               "frames": 1,
@@ -138,9 +138,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 9,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 85875,
               "files": 0,
               "frames": 1,
@@ -148,9 +148,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 10,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 71852,
               "files": 0,
               "frames": 1,
@@ -158,9 +158,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 11,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 72512,
               "files": 0,
               "frames": 1,
@@ -168,9 +168,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 12,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 123204,
               "files": 0,
               "frames": 1,
@@ -178,9 +178,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 13,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 249217,
               "files": 0,
               "frames": 1,
@@ -188,9 +188,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 14,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 399583,
               "files": 0,
               "frames": 1,
@@ -198,9 +198,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 15,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 256916,
               "files": 0,
               "frames": 1,
@@ -208,9 +208,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 16,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 1039927,
               "files": 0,
               "frames": 2,
@@ -218,9 +218,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 17,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 1887893,
               "files": 0,
               "frames": 4,
@@ -228,9 +228,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 18,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 1307287,
               "files": 0,
               "frames": 3,
@@ -238,9 +238,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 19,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 1248166,
               "files": 0,
               "frames": 3,
@@ -248,9 +248,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 20,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 1195593,
               "files": 0,
               "frames": 3,
@@ -258,9 +258,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 21,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 738804,
               "files": 0,
               "frames": 2,
@@ -268,9 +268,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 22,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 552485,
               "files": 0,
               "frames": 2,
@@ -278,9 +278,9 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
-          Object {
+          {
             "index": 23,
-            "shuffle": Object {
+            "shuffle": {
               "bytes": 418062,
               "files": 0,
               "frames": 1,
