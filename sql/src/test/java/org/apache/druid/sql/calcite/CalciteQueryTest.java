@@ -15404,4 +15404,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[]{NullHandling.sqlCompatible() ? 4L : 0L})
     );
   }
+
+  @Test
+  public void testLatestByAggregatorOnSecondaryTimestampGroupBy()
+  {
+    msqIncompatible();
+    testQuery(
+        "SELECT __time, m1, LATEST_BY(m1, MILLIS_TO_TIMESTAMP(CAST(m2 AS NUMERIC))) from druid.numfoo GROUP BY 1,2",
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE3)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    new DefaultDimensionSpec("__time", "_d0", ColumnType.LONG),
+                    new DefaultDimensionSpec("m1", "_d1", ColumnType.FLOAT)
+                )
+                .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0", "m1", "m2")))
+                .setContext(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0F, 1.0F},
+            new Object[]{946771200000L, 2.0F, 2.0F},
+            new Object[]{946857600000L, 3.0F, 3.0F},
+            new Object[]{978307200000L, 4.0F, 4.0F},
+            new Object[]{978393600000L, 5.0F, 5.0F},
+            new Object[]{978480000000L, 6.0F, 6.0F}
+        )
+    );
+  }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
@@ -28,7 +27,6 @@ import org.joda.time.Interval;
 
 public class LockReleaseAction implements TaskAction<Void>
 {
-  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator
