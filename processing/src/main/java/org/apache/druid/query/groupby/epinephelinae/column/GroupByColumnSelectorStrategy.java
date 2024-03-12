@@ -36,7 +36,7 @@ import java.nio.ByteBuffer;
  * Each GroupByColumnSelectorStrategy is associated with a single dimension.
  *
  * Strategies may have internal state, such as the dictionary maintained by
- * {@link DictionaryBuildingStringGroupByColumnSelectorStrategy}. Callers should assume that the internal
+ * {@link DictionaryBuildingGroupByColumnSelectorStrategy}. Callers should assume that the internal
  * state footprint starts out empty (zero bytes) and is also reset to zero on each call to {@link #reset()}. Each call
  * to {@link #initColumnValues} or {@link #writeToKeyBuffer(int, ColumnValueSelector, ByteBuffer)} returns the
  * incremental increase in internal state footprint that happened as a result of that particular call.

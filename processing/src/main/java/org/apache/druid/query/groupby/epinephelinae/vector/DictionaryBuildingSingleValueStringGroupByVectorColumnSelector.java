@@ -36,7 +36,8 @@ import java.util.List;
  * single-valued STRING columns which are not natively dictionary encoded, e.g. expression virtual columns.
  *
  * This is effectively the {@link VectorGroupByEngine} analog of
- * {@link org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy}
+ * {@link org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy} for
+ * String columns
  */
 public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
