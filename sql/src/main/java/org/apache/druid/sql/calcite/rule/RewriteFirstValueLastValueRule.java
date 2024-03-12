@@ -38,6 +38,19 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Rewrites exotic cases of FIRST_VALUE/LAST_VALUE to simpler plans.
+ *
+ * LAST_VALUE(x) OVER (ORDER BY Y)
+ * implicitly means:
+ * LAST_VALUE(x) OVER (ORDER BY Y RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+ * which is equiv to
+ * LAST_VALUE(x) OVER (ORDER BY Y ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+ * since it will take the last value from the window; the value of the window will be:
+ * X at the CURRENT ROW.
+ *
+ * This rule does this and a symmetric one for FIRST_VALUE.
+ */
 public class RewriteFirstValueLastValueRule extends RelOptRule implements SubstitutionRule
 {
   public RewriteFirstValueLastValueRule()

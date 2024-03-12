@@ -14975,7 +14975,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testNtileNotSupportedWithFrame()
   {
     DruidException e = assertThrows(
-        DruidException.class, () -> testBuilder()
+        DruidException.class,
+        () -> testBuilder()
             .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
             .sql("SELECT ntile(4) OVER (ORDER BY dim1 ROWS BETWEEN 1 FOLLOWING AND CURRENT ROW) from druid.foo")
             .run()
