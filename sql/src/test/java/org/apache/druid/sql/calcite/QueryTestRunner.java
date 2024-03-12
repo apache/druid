@@ -278,7 +278,7 @@ public class QueryTestRunner
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
         AtomicReference<List<Object[]>> resultListRef = new AtomicReference<>();
-        QueryLogHook queryLogHook = new QueryLogHook(() -> builder().config.jsonMapper());
+        QueryLogHook queryLogHook = new QueryLogHook(builder().config.jsonMapper());
         queryLogHook.logQueriesFor(
             () -> {
               resultListRef.set(stmt.execute().getResults().toList());
