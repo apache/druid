@@ -273,7 +273,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;
-      numSegmentsKilled += unusedSegments.size();
+      numSegmentsKilled += segmentsToBeKilled.size();
 
       LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
