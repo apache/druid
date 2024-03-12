@@ -927,6 +927,15 @@ public class KillUnusedSegmentsTest
 
   private void updateUsedStatusLastUpdated(DataSegment segment, DateTime lastUpdatedTime)
   {
+    derbyConnectorRule.updateSegmentsTable(
+        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
+        lastUpdatedTime.toString(),
+        segment.getId().toString()
+    );
+  }
+
+  private void updateUsedStatusLastUpdatedBoilerPlate(DataSegment segment, DateTime lastUpdatedTime)
+  {
     derbyConnectorRule.getConnector().retryWithHandle(
         handle -> handle.update(
             StringUtils.format(

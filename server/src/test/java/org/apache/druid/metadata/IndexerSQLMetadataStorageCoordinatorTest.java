@@ -383,17 +383,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
           1,
-          (int) derbyConnector.getDBI().<Integer>withHandle(
-              handle -> {
-                String request = StringUtils.format(
-                    "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
-                    derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
-                );
-                return handle.createStatement(request)
-                             .bind("id", segment.getId().toString())
-                             .bind("used_status_last_updated", usedStatusLastUpdatedTime.toString()
-                ).execute();
-              }
+          (int) derbyConnectorRule.updateSegmentsTable(
+              "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",
+              usedStatusLastUpdatedTime.toString(),
+              segment.getId().toString()
           )
       );
     }

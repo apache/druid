@@ -891,15 +891,6 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertEquals(0, getCountOfRowsWithLastUsedNull());
   }
 
-  private void updateSegmentPayload(DataSegment segment, byte[] payload)
-  {
-    executeUpdate(
-        "UPDATE %1$s SET PAYLOAD = ? WHERE ID = ?",
-        payload,
-        segment.getId().toString()
-    );
-  }
-
   private int getCountOfRowsWithLastUsedNull()
   {
     return derbyConnectorRule.getConnector().retryWithHandle(
@@ -912,9 +903,18 @@ public class SqlSegmentsMetadataManagerTest
     );
   }
 
+  private void updateSegmentPayload(DataSegment segment, byte[] payload)
+  {
+    derbyConnectorRule.updateSegmentsTable(
+        "UPDATE %1$s SET PAYLOAD = ? WHERE ID = ?",
+        payload,
+        segment.getId().toString()
+    );
+  }
+
   private void updateUsedStatusLastUpdated(DataSegment segment, DateTime newValue)
   {
-    executeUpdate(
+    derbyConnectorRule.updateSegmentsTable(
         "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
         newValue.toString(),
         segment.getId().toString()
@@ -923,19 +923,9 @@ public class SqlSegmentsMetadataManagerTest
 
   private void updateUsedStatusLastUpdatedToNull(DataSegment segment)
   {
-    executeUpdate(
+    derbyConnectorRule.updateSegmentsTable(
         "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = NULL WHERE ID = ?",
         segment.getId().toString()
-    );
-  }
-
-  private void executeUpdate(String sqlFormat, Object... args)
-  {
-    derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format(sqlFormat, getSegmentsTable()),
-            args
-        )
     );
   }
 
@@ -946,7 +936,7 @@ public class SqlSegmentsMetadataManagerTest
    */
   private void allowUsedFlagLastUpdatedToBeNullable()
   {
-    executeUpdate("ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL");
+    derbyConnectorRule.updateSegmentsTable("ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL");
   }
 
   private String getSegmentsTable()

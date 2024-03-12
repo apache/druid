@@ -29,6 +29,7 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.UUID;
 
 public class TestDerbyConnector extends DerbyConnector
@@ -134,6 +135,25 @@ public class TestDerbyConnector extends DerbyConnector
     public Supplier<MetadataStorageTablesConfig> metadataTablesConfigSupplier()
     {
       return dbTables;
+    }
+
+
+    public Integer updateSegmentsTable(String sqlFormat, Object... args)
+    {
+      return this.getConnector().retryWithHandle(
+          handle -> handle.update(
+              StringUtils.format(sqlFormat, getSegmentsTable()),
+              args
+          )
+      );
+    }
+
+    private String getSegmentsTable()
+    {
+      return this.metadataTablesConfigSupplier()
+                 .get()
+                 .getSegmentsTable()
+                 .toUpperCase(Locale.ENGLISH);
     }
   }
 }
