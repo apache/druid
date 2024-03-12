@@ -20,10 +20,9 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Arguments to {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}.
+ * Arguments to {@link SqlEngine#featureAvailable(EngineFeature)}.
  */
 public enum EngineFeature
 {

@@ -122,10 +122,9 @@ public abstract class CalciteSelectJoinQueryMSQTest
       return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
       {
         @Override
-        public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+        public boolean featureAvailable(EngineFeature feature)
         {
-          plannerContext.queryContextMap().put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString());
-          return super.featureAvailable(feature, plannerContext);
+          return super.featureAvailable(feature);
         }
 
         @Override

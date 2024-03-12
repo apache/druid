@@ -107,7 +107,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature)
   {
     switch (feature) {
       case ALLOW_BINDABLE_PLAN:
