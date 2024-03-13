@@ -33,19 +33,19 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 
 /**
- * Test for INSERT DML statements for tables defined in catalog.
+ * Test for REPLACE DML statements for tables defined in catalog.
  */
-public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
+public class CalciteCatalogReplaceTest extends CalciteCatalogIngestionDmlTest
 {
   /**
    * If the segment grain is given in the catalog and absent in the PARTITIONED BY clause in the query, then use the
    * value from the catalog.
    */
   @Test
-  public void testInsertHourGrainPartitonedByFromCatalog()
+  public void testReplaceHourGrainPartitonedByFromCatalog()
   {
     testIngestionQuery()
-        .sql("INSERT INTO hourDs\n" +
+        .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
              "SELECT __time FROM foo")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("hourDs", RowSignature.builder().addTimeColumn().build())
@@ -66,10 +66,10 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
    * the query value is used.
    */
   @Test
-  public void testInsertHourGrainWithDayPartitonedByFromQuery()
+  public void testReplaceHourGrainWithDayPartitonedByFromQuery()
   {
     testIngestionQuery()
-        .sql("INSERT INTO hourDs\n" +
+        .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
              "SELECT __time FROM foo\n" +
              "PARTITIONED BY day")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -90,7 +90,7 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
    * Adding a new column during ingestion that is not defined in a non-sealed table should succeed.
    */
   @Test
-  public void testInsertAddNonDefinedColumnIntoNonSealedCatalogTable()
+  public void testReplaceAddNonDefinedColumnIntoNonSealedCatalogTable()
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
@@ -112,7 +112,7 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
         .add("extra3", ColumnType.STRING)
         .build();
     testIngestionQuery()
-        .sql("INSERT INTO foo\n" +
+        .sql("REPLACE INTO foo OVERWRITE ALL\n" +
              "SELECT\n" +
              "  TIME_PARSE(a) AS __time,\n" +
              "  b AS dim1,\n" +
@@ -153,10 +153,10 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
    * proper validation error.
    */
   @Test
-  public void testInsertAddNonDefinedColumnIntoSealedCatalogTable()
+  public void testReplaceAddNonDefinedColumnIntoSealedCatalogTable()
   {
     testIngestionQuery()
-        .sql("INSERT INTO fooSealed\n" +
+        .sql("REPLACE INTO fooSealed OVERWRITE ALL\n" +
              "SELECT\n" +
              "  TIME_PARSE(a) AS __time,\n" +
              "  b AS dim1,\n" +
@@ -178,10 +178,10 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
 
 
   /**
-   * Inserting into a catalog table with a WITH source succeeds
+   * Replacing into a catalog table with a WITH source succeeds
    */
   @Test
-  public void testInsertWithSourceIntoCatalogTable()
+  public void testReplaceWithSourceIntoCatalogTable()
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
@@ -203,7 +203,7 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
         .add("extra3", ColumnType.STRING)
         .build();
     testIngestionQuery()
-        .sql("INSERT INTO \"foo\"\n" +
+        .sql("REPLACE INTO \"foo\" OVERWRITE ALL\n" +
              "WITH \"ext\" AS (\n" +
              "  SELECT *\n" +
              "FROM TABLE(inline(\n" +
@@ -244,10 +244,10 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoExistingStrictNoDefinedSchema()
+  public void testReplaceIntoExistingStrictNoDefinedSchema()
   {
     testIngestionQuery()
-        .sql("INSERT INTO strictTableWithNoDefinedSchema SELECT __time AS __time FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO strictTableWithNoDefinedSchema OVERWRITE ALL SELECT __time AS __time FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             DruidException.class,
             "Column [__time] is not defined in the target table [druid.strictTableWithNoDefinedSchema] strict schema")
@@ -255,10 +255,10 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoExistingWithIncompatibleTypeAssignment()
+  public void testReplaceIntoExistingWithIncompatibleTypeAssignment()
   {
     testIngestionQuery()
-        .sql("INSERT INTO foo\n"
+        .sql("REPLACE INTO foo OVERWRITE ALL\n"
              + "SELECT\n"
              + "  __time AS __time,\n"
              + "  ARRAY[dim1] AS dim1\n"
