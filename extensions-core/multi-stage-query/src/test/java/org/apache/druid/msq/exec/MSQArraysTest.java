@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -112,14 +113,14 @@ public class MSQArraysTest extends MSQTestBase
     dataFileNameJsonString = queryFramework().queryJsonMapper().writeValueAsString(dataFile);
 
     RowSignature dataFileSignature = RowSignature.builder()
-                                             .add("timestamp", ColumnType.STRING)
-                                             .add("arrayString", ColumnType.STRING_ARRAY)
-                                             .add("arrayStringNulls", ColumnType.STRING_ARRAY)
-                                             .add("arrayLong", ColumnType.LONG_ARRAY)
-                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
-                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
-                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
-                                             .build();
+                                                 .add("timestamp", ColumnType.STRING)
+                                                 .add("arrayString", ColumnType.STRING_ARRAY)
+                                                 .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                                                 .add("arrayLong", ColumnType.LONG_ARRAY)
+                                                 .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                                 .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                                 .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                                                 .build();
     dataFileSignatureJsonString = queryFramework().queryJsonMapper().writeValueAsString(dataFileSignature);
 
     dataFileExternalDataSource = new ExternalDataSource(
@@ -258,11 +259,20 @@ public class MSQArraysTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
-            ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of(
                 new Object[]{0L, null},
                 new Object[]{0L, null},
                 new Object[]{0L, new Object[]{"a", "b"}},
                 new Object[]{0L, new Object[]{""}},
+                new Object[]{0L, new Object[]{"b", "c"}},
+                new Object[]{0L, new Object[]{"d"}}
+            )
+            : ImmutableList.of(
+                new Object[]{0L, null},
+                new Object[]{0L, null},
+                new Object[]{0L, null},
+                new Object[]{0L, new Object[]{"a", "b"}},
                 new Object[]{0L, new Object[]{"b", "c"}},
                 new Object[]{0L, new Object[]{"d"}}
             )
@@ -299,7 +309,7 @@ public class MSQArraysTest extends MSQTestBase
             ImmutableList.of(
                 new Object[]{0L, null},
                 new Object[]{0L, null},
-                new Object[]{0L, ""},
+                new Object[]{0L, NullHandling.sqlCompatible() ? "" : null},
                 new Object[]{0L, ImmutableList.of("a", "b")},
                 new Object[]{0L, ImmutableList.of("b", "c")},
                 new Object[]{0L, "d"}
