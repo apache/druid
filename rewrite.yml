@@ -17,7 +17,6 @@ type: specs.openrewrite.org/v1beta/recipe
 name: org.apache.druid.RewriteRules
 recipeList:
   - org.apache.druid.UpgradeCalciteTestsToJunit5
-  - org.openrewrite.staticanalysis.UnnecessaryThrows
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.apache.druid.UpgradeCalciteTestsToJunit5
