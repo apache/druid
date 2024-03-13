@@ -106,6 +106,32 @@ public class LikeFilterBenchmark
       null
   ).toFilter();
 
+  private static final Filter LIKE_CONTAINS = new LikeDimFilter(
+      "foo",
+      "%50%",
+      null,
+      null
+  ).toFilter();
+
+  private static final Filter REGEX_CONTAINS = new RegexDimFilter(
+      "foo",
+      ".*50.*",
+      null
+  ).toFilter();
+
+  private static final Filter LIKE_KILLER = new LikeDimFilter(
+      "foo",
+      "%%%%x",
+      null,
+      null
+  ).toFilter();
+
+  private static final Filter REGEX_KILLER = new RegexDimFilter(
+      "foo",
+      ".*.*.*.*x",
+      null
+  ).toFilter();
+
   // cardinality, the dictionary will contain evenly spaced integers
   @Param({"1000", "100000", "1000000"})
   int cardinality;
@@ -186,6 +212,42 @@ public class LikeFilterBenchmark
   public void matchRegexPrefix(Blackhole blackhole)
   {
     final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_PREFIX, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void matchLikeContains(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_CONTAINS, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void matchRegexContains(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_CONTAINS, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void matchLikeKiller(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_KILLER, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void matchRegexKiller(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_KILLER, selector);
     blackhole.consume(bitmapIndex);
   }
 

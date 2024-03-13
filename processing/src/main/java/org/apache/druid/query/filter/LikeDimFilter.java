@@ -26,7 +26,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,17 +34,14 @@ import org.apache.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
-  // Regex matching characters that are definitely okay to include unescaped in a regex.
-  // Leads to excessively paranoid escaping, although shouldn't affect runtime beyond compiling the regex.
-  private static final Pattern DEFINITELY_FINE = Pattern.compile("[\\w\\d\\s-]");
-  private static final String WILDCARD = ".*";
-
   private final String dimension;
   private final String pattern;
   @Nullable
@@ -73,7 +69,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     if (escape != null && escape.length() != 1) {
       throw new IllegalArgumentException("Escape must be null or a single character");
     } else {
-      this.escapeChar = (escape == null || escape.isEmpty()) ? null : escape.charAt(0);
+      this.escapeChar = escape == null ? null : escape.charAt(0);
     }
 
     this.likeMatcher = LikeMatcher.from(pattern, this.escapeChar);
@@ -214,8 +210,8 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     // Prefix that matching strings are known to start with. May be empty.
     private final String prefix;
 
-    // Regex pattern that describes matching strings.
-    private final Pattern pattern;
+    // Pattern that describes matching strings.
+    private final List<LikePattern> pattern;
 
     private final String likePattern;
 
@@ -223,7 +219,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         final String likePattern,
         final SuffixMatch suffixMatch,
         final String prefix,
-        final Pattern pattern
+        final List<LikePattern> pattern
     )
     {
       this.likePattern = likePattern;
@@ -232,13 +228,17 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     }
 
-    public static LikeMatcher from(
-        final String likePattern,
-        @Nullable final Character escapeChar
-    )
+    public static LikeMatcher from(final String likePattern, @Nullable final Character escapeChar)
     {
       final StringBuilder prefix = new StringBuilder();
-      final StringBuilder regex = new StringBuilder();
+      // The goal is to normalize the pattern so that contiguous sequences of % and/or _ have all the _'s first, then a
+      // single wildcard (if there was at least one), then the next literal, e.g., x_%_%yz = x__%yz
+      // Each pattern clause then consists of zero or more required leading characters (the _'s) and then either a
+      // literal to match immediately (startsWith) or one to search for the next occurence of.
+      final List<LikePattern> pattern = new ArrayList<>();
+      final StringBuilder value = new StringBuilder(); // literals we've seen since the last _ or %
+      LikePattern.PatternType patternType = LikePattern.PatternType.STARTS_WITH; // changes to CONTAINS when we see %
+      int leadingLength = 0; // how many _'s we've seen since the last literal
       boolean escaping = false;
       boolean inPrefix = true;
       SuffixMatch suffixMatch = SuffixMatch.MATCH_EMPTY;
@@ -251,32 +251,38 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
           if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
             suffixMatch = SuffixMatch.MATCH_ANY;
           }
-          regex.append(WILDCARD);
+          if (value.length() > 0) {
+            pattern.add(new LikePattern(patternType, value.toString(), leadingLength));
+            value.setLength(0);
+            leadingLength = 0;
+          }
+          patternType = LikePattern.PatternType.CONTAINS;
         } else if (c == '_' && !escaping) {
           inPrefix = false;
           suffixMatch = SuffixMatch.MATCH_PATTERN;
-          regex.append(".");
+          if (value.length() > 0) {
+            pattern.add(new LikePattern(patternType, value.toString(), leadingLength));
+            value.setLength(0);
+            leadingLength = 0;
+            patternType = LikePattern.PatternType.STARTS_WITH;
+          }
+          ++leadingLength;
         } else {
           if (inPrefix) {
             prefix.append(c);
           } else {
             suffixMatch = SuffixMatch.MATCH_PATTERN;
           }
-          addPatternCharacter(regex, c);
+          value.append(c);
           escaping = false;
         }
       }
 
-      return new LikeMatcher(likePattern, suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
-    }
-
-    private static void addPatternCharacter(final StringBuilder patternBuilder, final char c)
-    {
-      if (DEFINITELY_FINE.matcher(String.valueOf(c)).matches()) {
-        patternBuilder.append(c);
-      } else {
-        patternBuilder.append("\\u").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));
+      if (value.length() > 0 || leadingLength > 0 || patternType == LikePattern.PatternType.CONTAINS) {
+        pattern.add(new LikePattern(patternType, value.toString(), leadingLength));
       }
+
+      return new LikeMatcher(likePattern, suffixMatch, prefix.toString(), pattern);
     }
 
     public DruidPredicateMatch matches(@Nullable final String s)
@@ -284,13 +290,47 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       return matches(s, pattern);
     }
 
-    private static DruidPredicateMatch matches(@Nullable final String s, Pattern pattern)
+    private static DruidPredicateMatch matches(@Nullable final String s, List<LikePattern> pattern)
     {
       String val = NullHandling.nullToEmptyIfNeeded(s);
       if (val == null) {
         return DruidPredicateMatch.UNKNOWN;
       }
-      return DruidPredicateMatch.of(pattern.matcher(val).matches());
+
+      int offset = 0;
+      LikePattern suffix = null;
+      Iterator<LikePattern> iterator = pattern.iterator();
+
+      while (iterator.hasNext()) {
+        LikePattern part = iterator.next();
+
+        if (!iterator.hasNext()) {
+          suffix = part;
+          break;
+        }
+
+        offset = part.advance(val, offset);
+
+        if (offset == -1) {
+          return DruidPredicateMatch.FALSE;
+        }
+      }
+
+      if (suffix == null) {
+        return DruidPredicateMatch.of(offset == val.length());
+      }
+
+      switch (suffix.patternType) {
+        case STARTS_WITH:
+          return DruidPredicateMatch.of(suffix.advance(val, offset) == val.length());
+        case CONTAINS:
+          // Check that required suffix is at the *end* of the string, e.g., %x
+          offset += suffix.leadingLength;
+          return DruidPredicateMatch.of(offset <= val.length() && val.substring(offset).endsWith(suffix.clause));
+        default:
+          // It should be impossible to get here.
+          throw new IllegalStateException("Unknown pattern type: " + suffix.patternType);
+      }
     }
 
     /**
@@ -325,12 +365,103 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     }
 
     @VisibleForTesting
+    String describeCompilation()
+    {
+      StringBuilder description = new StringBuilder();
+
+      description.append(likePattern).append(" => ");
+      description.append(prefix).append(':');
+
+      Iterator<LikePattern> iterator = pattern.iterator();
+      while (iterator.hasNext()) {
+        description.append(iterator.next());
+
+        if (iterator.hasNext()) {
+          description.append('|');
+        }
+      }
+
+      return description.toString();
+    }
+
+    private static class LikePattern
+    {
+      public enum PatternType
+      {
+        STARTS_WITH {
+          @Override
+          int advance(int offset, String haystack, String needle)
+          {
+            return haystack.regionMatches(offset, needle, 0, needle.length()) ? offset + needle.length() : -1;
+          }
+        },
+        CONTAINS {
+          @Override
+          int advance(int offset, String haystack, String needle)
+          {
+            int matchStart = haystack.indexOf(needle, offset);
+
+            return matchStart == -1 ? -1 : matchStart + needle.length();
+          }
+        };
+
+        abstract int advance(int offset, String haystack, String needle);
+      }
+
+      private final PatternType patternType;
+      private final String clause;
+      private final int leadingLength;
+
+      public LikePattern(PatternType patternType, String clause, int leadingLength)
+      {
+        this.patternType = patternType;
+        this.clause = clause;
+        this.leadingLength = leadingLength;
+      }
+
+      public int advance(String value, int offset)
+      {
+        return patternType.advance(offset + leadingLength, value, clause);
+      }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (this == o) {
+          return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+          return false;
+        }
+        LikePattern other = (LikePattern) o;
+        return patternType == other.patternType &&
+               leadingLength == other.leadingLength &&
+               Objects.equals(clause, other.clause);
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return Objects.hash(patternType, leadingLength, clause);
+      }
+
+      @Override
+      public String toString()
+      {
+        String escaped = StringUtils.replace(clause, "\\", "\\\\");
+        escaped = StringUtils.replace(escaped, "%", "\\%");
+        escaped = StringUtils.replace(escaped, "_", "\\_");
+        return StringUtils.repeat("_", leadingLength) + (patternType == PatternType.CONTAINS ? "%" : "") + escaped;
+      }
+    }
+
+    @VisibleForTesting
     static class PatternDruidPredicateFactory implements DruidPredicateFactory
     {
       private final ExtractionFn extractionFn;
-      private final Pattern pattern;
+      private final List<LikePattern> pattern;
 
-      PatternDruidPredicateFactory(ExtractionFn extractionFn, Pattern pattern)
+      PatternDruidPredicateFactory(ExtractionFn extractionFn, List<LikePattern> pattern)
       {
         this.extractionFn = extractionFn;
         this.pattern = pattern;
@@ -387,13 +518,13 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         }
         PatternDruidPredicateFactory that = (PatternDruidPredicateFactory) o;
         return Objects.equals(extractionFn, that.extractionFn) &&
-               Objects.equals(pattern.toString(), that.pattern.toString());
+               Objects.equals(pattern, that.pattern);
       }
 
       @Override
       public int hashCode()
       {
-        return Objects.hash(extractionFn, pattern.toString());
+        return Objects.hash(extractionFn, pattern);
       }
     }
 
@@ -409,13 +540,13 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       LikeMatcher that = (LikeMatcher) o;
       return getSuffixMatch() == that.getSuffixMatch() &&
              Objects.equals(getPrefix(), that.getPrefix()) &&
-             Objects.equals(pattern.toString(), that.pattern.toString());
+             Objects.equals(pattern, that.pattern);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(getSuffixMatch(), getPrefix(), pattern.toString());
+      return Objects.hash(getSuffixMatch(), getPrefix(), pattern);
     }
 
     @Override
