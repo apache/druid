@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -150,6 +151,162 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyExecutionError();
   }
 
+  /**
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * string arrays
+   */
+  @Test
+  public void testReplaceMvdWithStringArray()
+  {
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    testIngestQuery()
+        .setSql(
+            "REPLACE INTO foo OVERWRITE ALL\n"
+            + "SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo\n"
+            + "PARTITIONED BY ALL TIME"
+        )
+        .setQueryContext(adjustedContext)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(DruidException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+                "Cannot write into field[dim3] using type[VARCHAR ARRAY] and arrayIngestMode[array], "
+                + "since the existing type is[VARCHAR]"))
+        ))
+        .verifyExecutionError();
+  }
+
+  /**
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * string arrays
+   */
+  @Test
+  public void testReplaceStringArrayWithMvdInArrayMode()
+  {
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    testIngestQuery()
+        .setSql(
+            "REPLACE INTO arrays OVERWRITE ALL\n"
+            + "SELECT ARRAY_TO_MV(arrayString) AS arrayString FROM arrays\n"
+            + "PARTITIONED BY ALL TIME"
+        )
+        .setQueryContext(adjustedContext)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(DruidException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+                "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[array], since the "
+                + "existing type is[VARCHAR ARRAY]. Try adjusting your query to make this column an ARRAY instead "
+                + "of VARCHAR."))
+        ))
+        .verifyExecutionError();
+  }
+
+  /**
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * string arrays
+   */
+  @Test
+  public void testReplaceStringArrayWithMvdInMvdMode()
+  {
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
+
+    testIngestQuery()
+        .setSql(
+            "REPLACE INTO arrays OVERWRITE ALL\n"
+            + "SELECT ARRAY_TO_MV(arrayString) AS arrayString FROM arrays\n"
+            + "PARTITIONED BY ALL TIME"
+        )
+        .setQueryContext(adjustedContext)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(DruidException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+                "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[mvd], since the "
+                + "existing type is[VARCHAR ARRAY]. Try setting arrayIngestMode to[array] and adjusting your query to "
+                + "make this column an ARRAY instead of VARCHAR."))
+        ))
+        .verifyExecutionError();
+  }
+
+  /**
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * string arrays
+   */
+  @Test
+  public void testReplaceMvdWithStringArraySkipValidation()
+  {
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+    adjustedContext.put(MultiStageQueryContext.CTX_SKIP_TYPE_VERIFICATION, "dim3");
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING_ARRAY)
+                                            .build();
+
+    testIngestQuery()
+        .setSql(
+            "REPLACE INTO foo OVERWRITE ALL\n"
+            + "SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo\n"
+            + "PARTITIONED BY ALL TIME"
+        )
+        .setQueryContext(adjustedContext)
+        .setExpectedDataSource("foo")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{0L, null},
+                new Object[]{0L, null},
+                new Object[]{0L, new Object[]{"a", "b"}},
+                new Object[]{0L, new Object[]{""}},
+                new Object[]{0L, new Object[]{"b", "c"}},
+                new Object[]{0L, new Object[]{"d"}}
+            )
+        )
+        .verifyResults();
+  }
+
+  /**
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * string arrays
+   */
+  @Test
+  public void testReplaceMvdWithMvd()
+  {
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING)
+                                            .build();
+
+    testIngestQuery()
+        .setSql(
+            "REPLACE INTO foo OVERWRITE ALL\n"
+            + "SELECT dim3 FROM foo\n"
+            + "PARTITIONED BY ALL TIME"
+        )
+        .setQueryContext(adjustedContext)
+        .setExpectedDataSource("foo")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{0L, null},
+                new Object[]{0L, null},
+                new Object[]{0L, ""},
+                new Object[]{0L, ImmutableList.of("a", "b")},
+                new Object[]{0L, ImmutableList.of("b", "c")},
+                new Object[]{0L, "d"}
+            )
+        )
+        .verifyResults();
+  }
 
   /**
    * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd (default) and the only array type to be
@@ -475,7 +632,7 @@ public class MSQArraysTest extends MSQTestBase
             null,
             Arrays.asList(3.3d, 4.4d, 5.5d),
             Arrays.asList(999.0d, null, 5.5d),
-        },
+            },
         new Object[]{
             1672531200000L,
             Arrays.asList("b", "c"),
@@ -583,7 +740,7 @@ public class MSQArraysTest extends MSQTestBase
             Arrays.asList(2L, 3L),
             null,
             Arrays.asList(null, 1.1d),
-        }
+            }
     );
 
     RowSignature rowSignatureWithoutTimeColumn =

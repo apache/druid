@@ -2136,8 +2136,7 @@ public class ControllerImpl implements Controller
           + "compatible with future behavior changes, we recommend setting %s to[array], which creates a clearer "
           + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
           + "out multi-value string dimensions using ARRAY_TO_MV. "
-          + "See https://druid.apache.org/docs/latest/querying/arrays"
-          + "#differences-between-arrays-and-multi-value-dimensions for more details.",
+          + "See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode for more details.",
           MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
           MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
       );

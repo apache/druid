@@ -114,6 +114,7 @@ public class CalciteTests
   public static final String DATASOURCE3 = "numfoo";
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
+  public static final String ARRAYS_DATASOURCE = "arrays";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";

@@ -391,19 +391,31 @@ public class MSQTaskSqlEngine implements SqlEngine
           if (newDruidType.is(ValueType.STRING)
               && newSqlType.getSqlTypeName() == SqlTypeName.ARRAY
               && arrayIngestMode == ArrayIngestMode.MVD) {
-            // Tried to insert an ARRAY, which got turned into a STRING by arrayIngestMode: mvd.
+            // Tried to insert a SQL ARRAY, which got turned into a STRING by arrayIngestMode: mvd.
             messageBuilder.append(". Try setting arrayIngestMode to[array] to retain the SQL type[")
                           .append(newSqlType)
                           .append("]");
-          }
-
-          if (newDruidType.is(ValueType.ARRAY)
-              && oldDruidType.is(ValueType.STRING)
-              && arrayIngestMode == ArrayIngestMode.ARRAY) {
-            // Tried to insert an ARRAY, which stayed an ARRAY, but wasn't compatible with existing STRING.
+          } else if (newDruidType.is(ValueType.ARRAY)
+                     && oldDruidType.is(ValueType.STRING)
+                     && arrayIngestMode == ArrayIngestMode.ARRAY) {
+            // Tried to insert a SQL ARRAY, which stayed an ARRAY, but wasn't compatible with existing STRING.
             messageBuilder.append(". Try wrapping this field using ARRAY_TO_MV(...) AS ")
                           .append(CalciteSqlDialect.DEFAULT.quoteIdentifier(columnName));
+          } else if (newDruidType.is(ValueType.STRING) && oldDruidType.is(ValueType.ARRAY)) {
+            // Tried to insert a SQL VARCHAR, but wasn't compatible with existing ARRAY.
+            messageBuilder.append(". Try");
+            if (arrayIngestMode == ArrayIngestMode.MVD) {
+              messageBuilder.append(" setting arrayIngestMode to[array] and");
+            }
+            messageBuilder.append(" adjusting your query to make this column an ARRAY instead of VARCHAR");
           }
+
+          messageBuilder.append(". You can override this check by setting the context parameter '")
+                        .append(MultiStageQueryContext.CTX_SKIP_TYPE_VERIFICATION)
+                        .append("' to[")
+                        .append(columnName)
+                        .append("]. See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode "
+                                + "for more details.");
 
           throw InvalidSqlInput.exception(StringUtils.encodeForFormat(messageBuilder.toString()));
         }
