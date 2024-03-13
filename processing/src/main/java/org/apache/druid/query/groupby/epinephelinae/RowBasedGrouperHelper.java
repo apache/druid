@@ -1566,8 +1566,7 @@ public class RowBasedGrouperHelper
                 complexTypeDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                 complexTypeDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
-
-      };
+      }
 
       @Override
       public int getKeyBufferValueSize()

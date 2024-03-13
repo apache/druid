@@ -90,8 +90,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -486,14 +484,15 @@ public class DruidQuery
 
       final RelDataType dataType = rexNode.getType();
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
-//      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
-//        // Can't group on unknown or COMPLEX types.
-//        plannerContext.setPlanningError(
-//            "SQL requires a group-by on a column of type %s that is unsupported.",
-//            outputType
-//        );
-//        throw new CannotBuildQueryException(aggregate, rexNode);
-//      }
+      // TODO(laksh): This might change if we disallow certain complex types from grouping
+      if (outputType == null) {
+        // Can't group on unknown or COMPLEX types.
+        plannerContext.setPlanningError(
+            "SQL requires a group-by on a column with unknown type that is unsupported.",
+            outputType
+        );
+        throw new CannotBuildQueryException(aggregate, rexNode);
+      }
 
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {

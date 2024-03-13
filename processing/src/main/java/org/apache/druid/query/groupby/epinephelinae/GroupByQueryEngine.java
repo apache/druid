@@ -256,21 +256,18 @@ public class GroupByQueryEngine
         case LONG:
           return new FixedWidthGroupByColumnSelectorStrategy<Long>(
               Byte.BYTES + Long.BYTES,
-              null,
               true,
               ColumnType.LONG
           );
         case FLOAT:
           return new FixedWidthGroupByColumnSelectorStrategy<Float>(
               Byte.BYTES + Float.BYTES,
-              null,
               true,
               ColumnType.FLOAT
           );
         case DOUBLE:
           return new FixedWidthGroupByColumnSelectorStrategy<Double>(
               Byte.BYTES + Double.BYTES,
-              null,
               true,
               ColumnType.DOUBLE
           );

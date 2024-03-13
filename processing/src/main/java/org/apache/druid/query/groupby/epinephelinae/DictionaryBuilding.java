@@ -72,7 +72,7 @@ public class DictionaryBuilding
     return m;
   }
 
-  public static <T>Object2IntRBTreeMap<T> createTreeSortedReverseDictionary(Comparator<T> comparator)
+  public static <T> Object2IntRBTreeMap<T> createTreeSortedReverseDictionary(Comparator<T> comparator)
   {
     final Object2IntRBTreeMap<T> m = new Object2IntRBTreeMap<>(comparator);
     m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
