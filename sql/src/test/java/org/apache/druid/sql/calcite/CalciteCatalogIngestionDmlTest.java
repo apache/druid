@@ -38,7 +38,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 
 public class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
-  ImmutableMap<String, DruidTable> resolvedTables = ImmutableMap.of(
+  public ImmutableMap<String, DruidTable> resolvedTables = ImmutableMap.of(
       "hourDs", new DatasourceTable(
           RowSignature.builder().addTimeColumn().build(),
           new DatasourceTable.PhysicalDatasourceMetadata(
