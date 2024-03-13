@@ -175,7 +175,7 @@ public class DatasourceTable extends DruidTable
       this.columns = columns;
     }
 
-    private static Map<String, EffectiveColumnMetadata> toEffectiveColumns(RowSignature rowSignature)
+    public static Map<String, EffectiveColumnMetadata> toEffectiveColumns(RowSignature rowSignature)
     {
       Map<String, EffectiveColumnMetadata> columns = new HashMap<>();
       for (int i = 0; i < rowSignature.size(); i++) {
