@@ -462,9 +462,27 @@ public class ControllerImpl implements Controller
         log.warn("Worker: %s", MSQTasks.errorReportToLogMessage(workerError));
       }
     }
-
+    MSQResultsReport resultsReport = null;
     if (queryKernel != null && queryKernel.isSuccess()) {
       // If successful, encourage the tasks to exit successfully.
+      // get results before posting finish to the tasks.
+      if (resultsYielder != null) {
+        resultsReport = makeResultsTaskReport(
+            queryDef,
+            resultsYielder,
+            task.getQuerySpec().getColumnMappings(),
+            task.getSqlTypeNames(),
+            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
+        );
+        try {
+          resultsYielder.close();
+        }
+        catch (IOException e) {
+          throw new RuntimeException("Unable to fetch results of various worker tasks successfully", e);
+        }
+      } else {
+        resultsReport = null;
+      }
       postFinishToAllTasks();
       workerTaskLauncher.stop(false);
     } else {
@@ -509,7 +527,6 @@ public class ControllerImpl implements Controller
     try {
       // Write report even if something went wrong.
       final MSQStagesReport stagesReport;
-      final MSQResultsReport resultsReport;
 
       if (queryDef != null) {
         final Map<Integer, ControllerStagePhase> stagePhaseMap;
@@ -538,18 +555,6 @@ public class ControllerImpl implements Controller
         stagesReport = null;
       }
 
-      if (resultsYielder != null) {
-        resultsReport = makeResultsTaskReport(
-            queryDef,
-            resultsYielder,
-            task.getQuerySpec().getColumnMappings(),
-            task.getSqlTypeNames(),
-            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
-        );
-      } else {
-        resultsReport = null;
-      }
-
       final MSQTaskReportPayload taskReportPayload = new MSQTaskReportPayload(
           makeStatusReport(
               taskStateForReport,
@@ -564,7 +569,6 @@ public class ControllerImpl implements Controller
           countersSnapshot,
           resultsReport
       );
-
       context.writeReports(
           id(),
           TaskReport.buildTaskReports(new MSQTaskReport(id(), taskReportPayload))

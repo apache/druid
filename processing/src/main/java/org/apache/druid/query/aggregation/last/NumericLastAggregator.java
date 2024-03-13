@@ -61,10 +61,6 @@ public abstract class NumericLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    if (timeSelector.isNull()) {
-      return;
-    }
-
     if (needsFoldCheck) {
       final Object object = valueSelector.getObject();
       if (object instanceof SerializablePair) {
@@ -83,6 +79,11 @@ public abstract class NumericLastAggregator implements Aggregator
         return;
       }
     }
+
+    if (timeSelector.isNull()) {
+      return;
+    }
+
     long time = timeSelector.getLong();
     if (time >= lastTime) {
       lastTime = time;

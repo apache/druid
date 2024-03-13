@@ -28,8 +28,10 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -39,6 +41,7 @@ import java.util.Objects;
 
 public class MSQResultsReport
 {
+  private static final Logger log = new Logger(MSQResultsReport.class);
   /**
    * Like {@link org.apache.druid.segment.column.RowSignature}, but allows duplicate column names for compatibility
    * with SQL (which also allows duplicate column names in query results).
@@ -83,18 +86,35 @@ public class MSQResultsReport
       MSQSelectDestination selectDestination
   )
   {
-    if (selectDestination.shouldTruncateResultsInTaskReport()) {
-      List<Object[]> results = new ArrayList<>();
-      int rowCount = 0;
-      while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
-        results.add(resultYielder.get());
-        resultYielder = resultYielder.next(null);
-        ++rowCount;
+    List<Object[]> results = new ArrayList<>();
+    long rowCount = 0;
+    int factor = 1;
+    while (!resultYielder.isDone()) {
+      results.add(resultYielder.get());
+      resultYielder = resultYielder.next(null);
+      ++rowCount;
+      if (selectDestination.shouldTruncateResultsInTaskReport() && rowCount >= Limits.MAX_SELECT_RESULT_ROWS) {
+        break;
       }
-      return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), !resultYielder.isDone());
-    } else {
-      return new MSQResultsReport(signature, sqlTypeNames, resultYielder, false);
+      if (rowCount % (factor * Limits.MAX_SELECT_RESULT_ROWS) == 0) {
+        log.warn(
+            "Task report is getting too large with %d rows. Large task reports can cause the controller to go out of memory. "
+            + "Consider using the 'limit %d' clause in your query to reduce the number of rows in the result. "
+            + "If you require all the results, consider setting [%s=%s] in the query context which will allow you to fetch large result sets.",
+            rowCount,
+            Limits.MAX_SELECT_RESULT_ROWS,
+            MultiStageQueryContext.CTX_SELECT_DESTINATION,
+            MSQSelectDestination.DURABLESTORAGE.getName()
+        );
+        factor = factor < 32 ? factor * 2 : 32;
+      }
     }
+    return new MSQResultsReport(
+        signature,
+        sqlTypeNames,
+        Yielders.each(Sequences.simple(results)),
+        !resultYielder.isDone()
+    );
   }
 
   @JsonProperty("signature")

@@ -95,7 +95,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.ExpressionTestHelper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -729,8 +728,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void assumeFeatureAvailable(EngineFeature feature)
   {
-    boolean featureAvailable = queryFramework().engine()
-        .featureAvailable(feature, ExpressionTestHelper.PLANNER_CONTEXT);
+    boolean featureAvailable = queryFramework().engine().featureAvailable(feature);
     assumeTrue(featureAvailable, StringUtils.format("test disabled; feature [%s] is not available!", feature));
   }
 
