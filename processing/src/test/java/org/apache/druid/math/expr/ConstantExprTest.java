@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.math.expr.Expr.ObjectBinding;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPair;
 import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPairTypeStrategy;
@@ -138,27 +139,32 @@ public class ConstantExprTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test()
+  public void testStringNull()
   {
     checkExpr(
-        new StringExpr("some"),
+        new StringExpr(null),
         true,
-        "some",
-        "'some'"
+        null,
+        "null"
     );
   }
 
-  private void checkExpr(Expr expr, boolean supportsSingleThreaded, String expectedToString,
-      String expectedStringify)
+  private void checkExpr(
+      Expr expr,
+      boolean supportsSingleThreaded,
+      String expectedToString,
+      String expectedStringify
+  )
   {
+    ObjectBinding bindings = InputBindings.nilBindings();
     if (expr.getLiteralValue() != null) {
-      assertNotSame(expr.eval(null), expr.eval(null));
+      assertNotSame(expr.eval(bindings), expr.eval(bindings));
     }
     Expr singleExpr = Expr.singleThreaded(expr);
     if (supportsSingleThreaded) {
-      assertSame(singleExpr.eval(null), singleExpr.eval(null));
+      assertSame(singleExpr.eval(bindings), singleExpr.eval(bindings));
     } else {
-      assertNotSame(singleExpr.eval(null), singleExpr.eval(null));
+      assertNotSame(singleExpr.eval(bindings), singleExpr.eval(bindings));
     }
     assertEquals(expectedToString, expr.toString());
     assertEquals(expectedStringify, expr.stringify());
