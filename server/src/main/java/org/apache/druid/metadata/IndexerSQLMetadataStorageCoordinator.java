@@ -233,6 +233,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
+      @Nullable List<String> versions,
       @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
@@ -244,6 +245,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .retrieveUnusedSegments(
                                                dataSource,
                                                Collections.singletonList(interval),
+                                               versions,
                                                limit,
                                                null,
                                                null,
@@ -255,8 +257,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedStatusLastUpdatedTime[%s].",
-             matchingSegments.size(), dataSource, interval, maxUsedStatusLastUpdatedTime);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] and versions[%s] with maxUsedStatusLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, versions, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
   }
 

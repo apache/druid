@@ -218,6 +218,7 @@ public class KillUnusedSegments implements CoordinatorDuty
                 TASK_ID_PREFIX,
                 dataSource,
                 intervalToKill,
+                null,
                 maxSegmentsToKill,
                 maxUsedStatusLastUpdatedTime
             ),

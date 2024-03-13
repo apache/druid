@@ -380,7 +380,7 @@ public class DataSourcesResource
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       final String killTaskId = FutureUtils.getUnchecked(
-          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null),
+          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null, null),
           true
       );
       auditManager.doAudit(
