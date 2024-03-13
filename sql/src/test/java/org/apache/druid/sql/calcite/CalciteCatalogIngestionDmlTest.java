@@ -71,6 +71,38 @@ public class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
               false
           )
       ),
+      "noPartitonedBy", new DatasourceTable(
+          RowSignature.builder().addTimeColumn().build(),
+          new DatasourceTable.PhysicalDatasourceMetadata(
+              new TableDataSource("hourDs"),
+              RowSignature.builder().addTimeColumn().build(),
+              false,
+              false
+          ),
+          new DatasourceTable.EffectiveMetadata(
+              new DatasourceFacade(new ResolvedTable(
+                  new TableDefn(
+                      "foo",
+                      DatasourceDefn.TABLE_TYPE,
+                      null,
+                      null
+                  ),
+                  new TableSpec(
+                      DatasourceDefn.TABLE_TYPE,
+                      ImmutableMap.of(),
+                      ImmutableList.of(
+                          new ColumnSpec("__time", Columns.TIME_COLUMN, null)
+                      )
+                  ),
+                  MAPPER
+              )),
+              DatasourceTable.EffectiveMetadata.toEffectiveColumns(
+                  RowSignature.builder()
+                      .addTimeColumn()
+                      .build()),
+              false
+          )
+      ),
       "strictTableWithNoDefinedSchema", new DatasourceTable(
           RowSignature.builder().build(),
           new DatasourceTable.PhysicalDatasourceMetadata(

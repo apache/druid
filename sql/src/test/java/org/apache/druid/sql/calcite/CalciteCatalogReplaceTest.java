@@ -46,15 +46,15 @@ public class CalciteCatalogReplaceTest extends CalciteCatalogIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
-             "SELECT __time FROM foo")
+             "SELECT * FROM foo")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("hourDs", RowSignature.builder().addTimeColumn().build())
+        .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time")
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
                 .context(queryContextWithGranularity(Granularities.HOUR))
                 .build()
         )
@@ -70,16 +70,60 @@ public class CalciteCatalogReplaceTest extends CalciteCatalogIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
-             "SELECT __time FROM foo\n" +
+             "SELECT *FROM foo\n" +
              "PARTITIONED BY day")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("hourDs", RowSignature.builder().addTimeColumn().build())
+        .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time")
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * If the segment grain is absent in the catalog and absent in the PARTITIONED BY clause in the query, then
+   * validation error.
+   */
+  @Test
+  public void testInsertNoPartitonedByFromCatalog()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO noPartitonedBy OVERWRITE ALL\n" +
+             "SELECT * FROM foo")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Operation [REPLACE] requires a PARTITIONED BY to be explicitly defined, but none was found."
+        )
+        .verify();
+  }
+
+  /**
+   * If the segment grain is absent in the catalog, but given by PARTITIONED BY, then
+   * the query value is used.
+   */
+  @Test
+  public void testInsertNoPartitonedByWithDayPartitonedByFromQuery()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO noPartitonedBy OVERWRITE ALL\n" +
+             "SELECT * FROM foo\n" +
+             "PARTITIONED BY day")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("noPartitonedBy", FOO_TABLE_SIGNATURE)
+        .expectResources(dataSourceWrite("noPartitonedBy"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
                 .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )

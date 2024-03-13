@@ -46,15 +46,17 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO hourDs\n" +
-             "SELECT __time FROM foo")
+             "SELECT * FROM foo")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("hourDs", RowSignature.builder().addTimeColumn().build())
+        .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time")
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
                 .context(queryContextWithGranularity(Granularities.HOUR))
                 .build()
         )
@@ -70,16 +72,64 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO hourDs\n" +
-             "SELECT __time FROM foo\n" +
+             "SELECT * FROM foo\n" +
              "PARTITIONED BY day")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("hourDs", RowSignature.builder().addTimeColumn().build())
+        .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time")
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * If the segment grain is absent in the catalog and absent in the PARTITIONED BY clause in the query, then
+   * validation error.
+   */
+  @Test
+  public void testInsertNoPartitonedByFromCatalog()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO noPartitonedBy\n" +
+             "SELECT * FROM foo")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found."
+        )
+        .verify();
+  }
+
+  /**
+   * If the segment grain is absent in the catalog, but given by PARTITIONED BY, then
+   * the query value is used.
+   */
+  @Test
+  public void testInsertNoPartitonedByWithDayPartitonedByFromQuery()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO noPartitonedBy\n" +
+             "SELECT * FROM foo\n" +
+             "PARTITIONED BY day")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("noPartitonedBy", FOO_TABLE_SIGNATURE)
+        .expectResources(dataSourceWrite("noPartitonedBy"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
                 .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )
@@ -139,8 +189,7 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
                     expressionVirtualColumn("v3", "CAST(\"d\", 'LONG')", ColumnType.LONG)
                 )
                 // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema. Here we just check that the
-                // set of columns is correct, but not their order.
+                // SQL project list or the defined schema.
                 .columns("b", "e", "v0", "v1", "v2", "v3")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
@@ -234,8 +283,7 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
                     expressionVirtualColumn("v3", "CAST(\"d\", 'LONG')", ColumnType.LONG)
                 )
                 // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema. Here we just check that the
-                // set of columns is correct, but not their order.
+                // SQL project list or the defined schema.
                 .columns("b", "e", "v0", "v1", "v2", "v3")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
