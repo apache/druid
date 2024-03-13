@@ -902,7 +902,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{0L, "", 1.0f, 1L},
+                             new Object[]{0L, NullHandling.sqlCompatible() ? "" : null, 1.0f, 1L},
                              new Object[]{0L, "1", 4.0f, 1L},
                              new Object[]{0L, "10.1", 2.0f, 1L},
                              new Object[]{0L, "2", 3.0f, 1L},
