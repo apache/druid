@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -444,8 +445,8 @@ public class MaterializedViewSupervisor implements Supervisor
           }
         }
         catch (DruidException e) {
-          if ("invalidInput".equals(e.getErrorCode())) {
-            log.error("Invalid input for task [%s]", task.getId());
+          if (EntryAlreadyExists.ERROR_CODE.equals(e.getErrorCode())) {
+            log.error("Task[%s] already exists", task.getId());
           } else {
             throw e;
           }

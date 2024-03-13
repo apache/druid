@@ -32,7 +32,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -501,7 +501,7 @@ public class TaskQueue
     IdUtils.validateId("Task ID", task.getId());
 
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw InvalidInput.exception("Task [%s] already exists", task.getId());
+      throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.

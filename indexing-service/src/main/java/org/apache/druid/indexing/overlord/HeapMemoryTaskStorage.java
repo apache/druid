@@ -28,7 +28,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -88,12 +88,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
     );
 
     TaskStuff newTaskStuff = new TaskStuff(task, status, DateTimes.nowUtc(), task.getDataSource());
-    TaskStuff alreadyExisted = tasks.putIfAbsent(task.getId(), newTaskStuff);
-    if (alreadyExisted != null) {
-      throw InvalidInput.exception("Task [%s] already exists", task.getId());
+    TaskStuff existingTaskStuff = tasks.putIfAbsent(task.getId(), newTaskStuff);
+    if (existingTaskStuff != null) {
+      throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
 
-    log.info("Inserted task [%s] with status [%s]", task.getId(), status);
+    log.info("Inserted task[%s] with status[%s]", task.getId(), status);
   }
 
   @Override
