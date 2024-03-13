@@ -270,10 +270,10 @@ public class RetryableS3OutputStream extends OutputStream
     closer.register(() -> {
       // This should be emitted as a metric
       LOG.info(
-          "Total: %d parts has a push time: %d ms with cumulative size: %d bytes ",
+          "Pushed total [%d] parts containing [%d] bytes in [%d]ms.",
           numChunksPushed,
-          pushStopwatch.elapsed(TimeUnit.MILLISECONDS),
-          resultsSize
+          resultsSize,
+          pushStopwatch.elapsed(TimeUnit.MILLISECONDS)
       );
     });
 
