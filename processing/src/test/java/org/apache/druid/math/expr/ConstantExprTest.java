@@ -37,22 +37,26 @@ public class ConstantExprTest extends InitializedNullHandlingTest
   @Test
   public void testLongArrayExpr()
   {
+    ArrayExpr arrayExpr = new ArrayExpr(ExpressionType.LONG_ARRAY, new Long[] {1L, 3L});
     checkExpr(
-        new ArrayExpr(ExpressionType.LONG_ARRAY, new Long[] {1L, 3L}),
+        arrayExpr,
         true,
         "[1, 3]",
-        "ARRAY<LONG>[1, 3]"
+        "ARRAY<LONG>[1, 3]",
+        arrayExpr
     );
   }
 
   @Test
   public void testStringArrayExpr()
   {
+    ArrayExpr arrayExpr = new ArrayExpr(ExpressionType.STRING_ARRAY, new String[] {"foo", "bar"});
     checkExpr(
-        new ArrayExpr(ExpressionType.STRING_ARRAY, new String[] {"foo", "bar"}),
+        arrayExpr,
         true,
         "[foo, bar]",
-        "ARRAY<STRING>['foo', 'bar']"
+        "ARRAY<STRING>['foo', 'bar']",
+        arrayExpr
     );
   }
 
@@ -63,7 +67,9 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new BigIntegerExpr(BigInteger.valueOf(37L)),
         true,
         "37",
-        "37"
+        "37",
+        // after reparsing it will become a LongExpr
+        new LongExpr(37L)
     );
   }
 
@@ -71,14 +77,16 @@ public class ConstantExprTest extends InitializedNullHandlingTest
   public void testComplexExpr()
   {
     TypeStrategies.registerComplex("nullablePair", new NullableLongPairTypeStrategy());
+    ComplexExpr complexExpr = new ComplexExpr(
+        ExpressionTypeFactory.getInstance().ofComplex("nullablePair"),
+        new NullableLongPair(21L, 37L)
+    );
     checkExpr(
-        new ComplexExpr(
-            ExpressionTypeFactory.getInstance().ofComplex("nullablePair"),
-            new NullableLongPair(21L, 37L)
-        ),
+        complexExpr,
         true,
         "Pair{lhs=21, rhs=37}",
-        "complex_decode_base64('nullablePair', 'AAAAAAAAAAAVAAAAAAAAAAAl')"
+        "complex_decode_base64('nullablePair', 'AAAAAAAAAAAVAAAAAAAAAAAl')",
+        complexExpr
     );
   }
 
@@ -89,7 +97,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new DoubleExpr(11.73D),
         true,
         "11.73",
-        "11.73"
+        "11.73",
+        new DoubleExpr(11.73D)
     );
   }
 
@@ -101,7 +110,9 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new NullDoubleExpr(),
         true,
         "null",
-        "null"
+        "null",
+        // the expressions 'null' is always parsed as a StringExpr(null)
+        new StringExpr(null)
     );
   }
 
@@ -112,7 +123,9 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new NullLongExpr(),
         true,
         "null",
-        "null"
+        "null",
+        // the expressions 'null' is always parsed as a StringExpr(null)
+        new StringExpr(null)
     );
   }
 
@@ -123,7 +136,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new LongExpr(11L),
         true,
         "11",
-        "11"
+        "11",
+        new LongExpr(11L)
     );
   }
 
@@ -134,7 +148,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new StringExpr("some"),
         true,
         "some",
-        "'some'"
+        "'some'",
+        new StringExpr("some")
     );
   }
 
@@ -145,7 +160,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new StringExpr(null),
         true,
         null,
-        "null"
+        "null",
+        new StringExpr(null)
     );
   }
 
@@ -153,8 +169,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
       Expr expr,
       boolean supportsSingleThreaded,
       String expectedToString,
-      String expectedStringify
-  )
+      String expectedStringify,
+      Expr expectedReparsedExpr)
   {
     ObjectBinding bindings = InputBindings.nilBindings();
     if (expr.getLiteralValue() != null) {
@@ -169,6 +185,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
     assertEquals(expectedToString, expr.toString());
     assertEquals(expectedStringify, expr.stringify());
     assertEquals(expectedToString, singleExpr.toString());
-    assertEquals(expectedStringify, singleExpr.stringify());
+    String stringify = singleExpr.stringify();
+    Expr reParsedExpr = Parser.parse(stringify, ExprMacroTable.nil());
+    assertEquals(expectedReparsedExpr, reParsedExpr);
   }
 }
