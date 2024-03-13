@@ -1334,6 +1334,41 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValueListFilterNonLiteral()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_FILTER_ONLY(dim3, ARRAY[dim2]) FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "filter_only((x) -> array_contains(array(\"dim2\"), x), \"dim3\")",
+                        ColumnType.STRING,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()}
+        )
+    );
+  }
+
+  @Test
   public void testMultiValueListFilterDeny()
   {
     // Cannot vectorize due to usage of expressions.
@@ -1384,6 +1419,41 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", 1L},
             new Object[]{"c", 1L},
             new Object[]{"d", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueListFilterDenyNonLiteral()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_FILTER_NONE(dim3, ARRAY[dim2]) FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "filter_only((x) -> !array_contains(array(\"dim2\"), x), \"dim3\")",
+                        ColumnType.STRING,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()}
         )
     );
   }

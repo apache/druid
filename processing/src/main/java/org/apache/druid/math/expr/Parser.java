@@ -556,6 +556,7 @@ public class Parser
       case ApplyFunction.AllMatchFunction.NAME:
       case ApplyFunction.AnyMatchFunction.NAME:
       case ApplyFunction.FilterFunction.NAME:
+      case ApplyFunction.FilterOnlyFunction.NAME:
         // i'm lazy and didn't add 'cartesian_filter', 'cartesian_any', and 'cartesian_and', so instead steal the match
         // expressions lambda and translate it into a 'cartesian_map', and apply that to the match function with a new
         // identity expression lambda since the input is an array of boolean expression results (or should be..)
