@@ -765,8 +765,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -802,8 +801,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -866,8 +864,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -900,8 +897,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -973,8 +969,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -1005,8 +1000,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1342,8 +1336,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
 
@@ -1363,8 +1356,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1447,8 +1439,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -1467,8 +1458,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.

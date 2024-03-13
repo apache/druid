@@ -21,15 +21,15 @@ import { jodaFormatToRegExp } from './joda-to-regexp';
 describe('jodaFormatToRegExp', () => {
   it('works for common formats', () => {
     expect(jodaFormatToRegExp('d/M/yyyy').toString()).toMatchInlineSnapshot(
-      `"/^(?:3[0-1]|[12][0-9]|[1-9])\\\\/(?:1[0-2]|[1-9])\\\\/[0-9]{4}$/i"`,
+      `"/^(?:3[0-1]|[12][0-9]|[1-9])\\/(?:1[0-2]|[1-9])\\/[0-9]{4}$/i"`,
     );
 
     expect(jodaFormatToRegExp('MM/dd/YYYY').toString()).toMatchInlineSnapshot(
-      `"/^(?:1[0-2]|0[1-9])\\\\/(?:3[0-1]|[12][0-9]|0[1-9])\\\\/[0-9]{4}$/i"`,
+      `"/^(?:1[0-2]|0[1-9])\\/(?:3[0-1]|[12][0-9]|0[1-9])\\/[0-9]{4}$/i"`,
     );
 
     expect(jodaFormatToRegExp('M/d/YY').toString()).toMatchInlineSnapshot(
-      `"/^(?:1[0-2]|[1-9])\\\\/(?:3[0-1]|[12][0-9]|[1-9])\\\\/[0-9]{2}$/i"`,
+      `"/^(?:1[0-2]|[1-9])\\/(?:3[0-1]|[12][0-9]|[1-9])\\/[0-9]{2}$/i"`,
     );
 
     expect(jodaFormatToRegExp('d-M-yyyy hh:mm:ss a').toString()).toMatchInlineSnapshot(
@@ -37,7 +37,7 @@ describe('jodaFormatToRegExp', () => {
     );
 
     expect(jodaFormatToRegExp('MM/dd/YYYY hh:mm:ss a').toString()).toMatchInlineSnapshot(
-      `"/^(?:1[0-2]|0[1-9])\\\\/(?:3[0-1]|[12][0-9]|0[1-9])\\\\/[0-9]{4} (?:1[0-2]|0[1-9]):[0-5][0-9]:[0-5][0-9] [ap]m$/i"`,
+      `"/^(?:1[0-2]|0[1-9])\\/(?:3[0-1]|[12][0-9]|0[1-9])\\/[0-9]{4} (?:1[0-2]|0[1-9]):[0-5][0-9]:[0-5][0-9] [ap]m$/i"`,
     );
 
     expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss').toString()).toMatchInlineSnapshot(

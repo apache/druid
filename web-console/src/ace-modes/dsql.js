@@ -139,7 +139,7 @@ ace.define(
       this.lineCommentStart = '--';
 
       this.$id = 'ace/mode/dsql';
-    }.call(Mode.prototype));
+    }).call(Mode.prototype);
 
     exports.Mode = Mode;
   },

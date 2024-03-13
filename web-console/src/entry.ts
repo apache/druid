@@ -79,7 +79,8 @@ if (consoleConfig.baseURL) {
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  apiConfig.headers![consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  // The apiConfig.headers is a union type and TS does not like this assigment
+  (apiConfig.headers as any)[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
   Object.assign(apiConfig.headers!, consoleConfig.customHeaders);

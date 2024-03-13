@@ -95,6 +95,7 @@ The available grammar is:
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
+    "versions" : <optional_list_of_segment_versions_to_delete_in_this_interval>,
     "context": <task_context>,
     "batchSize": <optional_batch_size>,
     "limit": <optional_maximum_number_of_segments_to_delete>,
@@ -106,6 +107,7 @@ Some of the parameters used in the task payload are further explained below:
 
 | Parameter   | Default         | Explanation                                                                                                                                                                                                                                                                                                                                                                 |
 |-------------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `versions` | null (all versions) | List of segment versions within the specified `interval` for the kill task to delete. The default behavior is to delete all unused segment versions in the specified `interval`.|
 | `batchSize`    |100    | Maximum number of segments that are deleted in one kill batch. Some operations on the Overlord may get stuck while a `kill` task is in progress due to concurrency constraints (such as in `TaskLockbox`). Thus, a `kill` task splits the list of unused segments to be deleted into smaller batches to yield the Overlord resources intermittently to other task operations.|
 | `limit`     | null (no limit) | Maximum number of segments for the kill task to delete.|
 | `maxUsedStatusLastUpdatedTime` | null (no cutoff) | Maximum timestamp used as a cutoff to include unused segments. The kill task only considers segments which lie in the specified `interval` and were marked as unused no later than this time. The default behavior is to kill all unused segments in the `interval` regardless of when they where marked as unused.|

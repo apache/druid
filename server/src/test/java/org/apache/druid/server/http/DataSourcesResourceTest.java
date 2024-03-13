@@ -39,7 +39,6 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -591,7 +590,7 @@ public class DataSourcesResourceTest
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
-    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null, null))
+    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null, null, null))
             .andReturn(Futures.immediateFuture("kill_task_1"));
     EasyMock.replay(overlordClient, server);
 
@@ -775,7 +774,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsSet() throws UnknownSegmentIdsException
+  public void testMarkAsUsedNonOvershadowedSegmentsSet()
   {
     DruidDataSource dataSource = new DruidDataSource("datasource1", new HashMap<>());
     Set<String> segmentIds = ImmutableSet.of(dataSegmentList.get(1).getId().toString());
