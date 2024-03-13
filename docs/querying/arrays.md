@@ -76,11 +76,18 @@ The following shows an example `dimensionsSpec` for native ingestion of the data
 Arrays can be inserted with [SQL-based ingestion](../multi-stage-query/index.md) when you include the query context
 parameter `arrayIngestMode: array`.
 
-When `arrayIngestMode` is `array`, SQL ARRAY types are stored using Druid array columns.
+When `arrayIngestMode` is `array`, SQL ARRAY types are stored using Druid array columns. This is recommended for new
+tables.
 
 When `arrayIngestMode` is `mvd`, SQL `VARCHAR ARRAY` are implicitly wrapped in [`ARRAY_TO_MV`](sql-functions.md#array-to-mv).
 This causes them to be stored as [multi-value strings](multi-value-dimensions.md), using the same `STRING` column type
-as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`.
+as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`. This
+is the default behavior when `arrayIngestMode` is not provided in your query context, although the default behavior
+may change to `array` in a future release.
+
+When `arrayIngestMode` is `none`, Druid throws an exception when trying to store any type of arrays. This mode is most
+useful when set in the system default query context with `druid.query.default.context.arrayIngestMode = none`, in cases
+where the cluster administrator wants SQL query authors to explicitly provide one or the other in their query context.
 
 The following table summarizes the differences in SQL ARRAY handling between `arrayIngestMode: array` and
 `arrayIngestMode: mvd`.
