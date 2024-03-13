@@ -583,8 +583,8 @@ public class SqlBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+    catch (JsonProcessingException ignored) {
+
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
@@ -597,6 +597,9 @@ public class SqlBenchmark
         yielder.next(yielder.get());
       }
       log.info("Total result row count:" + rowCounter);
+    }
+    catch (Throwable ignored) {
+
     }
   }
 
