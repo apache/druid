@@ -159,7 +159,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
       Expr expr,
       String expectedToString,
       String expectedStringify,
-      Expr expectedReparsedExpr)
+      Expr expectedReparsedExpr
+  )
   {
     final ObjectBinding bindings = InputBindings.nilBindings();
     if (expr.getLiteralValue() != null) {
