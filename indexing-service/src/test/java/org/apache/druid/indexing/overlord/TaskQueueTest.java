@@ -459,6 +459,66 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
   }
 
+  @Test
+  public void testGetTaskStatus()
+  {
+    final String newTask = "newTask";
+    final String waitingTask = "waitingTask";
+    final String pendingTask = "pendingTask";
+    final String runningTask = "runningTask";
+    final String successfulTask = "successfulTask";
+    final String failedTask = "failedTask";
+
+    TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    EasyMock.expect(taskStorage.getStatus(newTask))
+            .andReturn(Optional.of(TaskStatus.running(newTask)));
+    EasyMock.expect(taskStorage.getStatus(successfulTask))
+            .andReturn(Optional.of(TaskStatus.success(successfulTask)));
+    EasyMock.expect(taskStorage.getStatus(failedTask))
+            .andReturn(Optional.of(TaskStatus.failure(failedTask, failedTask)));
+    EasyMock.replay(taskStorage);
+
+    TaskRunner taskRunner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(taskRunner.getRunnerTaskState(newTask))
+            .andReturn(null);
+    EasyMock.expect(taskRunner.getRunnerTaskState(waitingTask))
+            .andReturn(RunnerTaskState.WAITING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(pendingTask))
+            .andReturn(RunnerTaskState.PENDING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(runningTask))
+            .andReturn(RunnerTaskState.RUNNING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(successfulTask))
+            .andReturn(RunnerTaskState.NONE);
+    EasyMock.expect(taskRunner.getRunnerTaskState(failedTask))
+            .andReturn(RunnerTaskState.NONE);
+    EasyMock.expect(taskRunner.getTaskLocation(waitingTask))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.expect(taskRunner.getTaskLocation(pendingTask))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.expect(taskRunner.getTaskLocation(runningTask))
+            .andReturn(TaskLocation.create("host", 8100, 8100));
+    EasyMock.replay(taskRunner);
+
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null),
+        new DefaultTaskConfig(),
+        taskStorage,
+        taskRunner,
+        createActionClientFactory(),
+        getLockbox(),
+        new StubServiceEmitter("druid/overlord", "testHost")
+    );
+    taskQueue.setActive(true);
+
+    Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
+    Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());
+    Assert.assertEquals(TaskStatus.running(pendingTask), taskQueue.getTaskStatus(pendingTask).get());
+    Assert.assertEquals(TaskStatus.running(runningTask), taskQueue.getTaskStatus(runningTask).get());
+    Assert.assertEquals(TaskStatus.success(successfulTask), taskQueue.getTaskStatus(successfulTask).get());
+    Assert.assertEquals(TaskStatus.failure(failedTask, failedTask), taskQueue.getTaskStatus(failedTask).get());
+  }
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner(List<String> runningTasks)
   {
     HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery druidNodeDiscovery = new HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery();

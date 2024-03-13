@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -820,20 +819,17 @@ public class BatchAppenderator implements Appenderator
         closer.close();
       }
 
-      // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
-      final DataSegment segment = RetryUtils.retry(
-          // This appenderator is used only for the local indexing task so unique paths are not required
-          () -> dataSegmentPusher.push(
-              mergedFile,
-              sink.getSegment()
-                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(
+      // dataSegmentPusher retries internally when appropriate; no need for retries here.
+      final DataSegment segment = dataSegmentPusher.push(
+          mergedFile,
+          sink.getSegment()
+              .withDimensions(
+                  IndexMerger.getMergedDimensionsFromQueryableIndexes(
                       indexes,
                       schema.getDimensionsSpec()
-                  )),
-              false
-          ),
-          exception -> exception instanceof Exception,
-          5
+                  )
+              ),
+          false
       );
 
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their

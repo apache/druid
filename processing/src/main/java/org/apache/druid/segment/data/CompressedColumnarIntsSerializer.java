@@ -58,12 +58,12 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
       final String filenameBase,
       final int chunkFactor,
       final ByteOrder byteOrder,
-      final CompressionStrategy compression
+      final CompressionStrategy compression,
+      final Closer closer
   )
   {
     this(
         columnName,
-        segmentWriteOutMedium,
         chunkFactor,
         byteOrder,
         compression,
@@ -71,18 +71,20 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
             segmentWriteOutMedium,
             filenameBase,
             compression,
-            chunkFactor * Integer.BYTES
-        )
+            chunkFactor * Integer.BYTES,
+            closer
+        ),
+        closer
     );
   }
 
   CompressedColumnarIntsSerializer(
       final String columnName,
-      final SegmentWriteOutMedium segmentWriteOutMedium,
       final int chunkFactor,
       final ByteOrder byteOrder,
       final CompressionStrategy compression,
-      final GenericIndexedWriter<ByteBuffer> flattener
+      final GenericIndexedWriter<ByteBuffer> flattener,
+      final Closer closer
   )
   {
     this.columnName = columnName;
@@ -90,7 +92,6 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
     this.compression = compression;
     this.flattener = flattener;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    Closer closer = segmentWriteOutMedium.getCloser();
     this.endBuffer = compressor.allocateInBuffer(chunkFactor * Integer.BYTES, closer).order(byteOrder);
     this.numInserted = 0;
   }

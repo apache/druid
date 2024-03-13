@@ -19,11 +19,7 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
-import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.http.HttpResponseException;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
@@ -54,8 +50,8 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final int MAX_KEYS = 1;
-  private static final Exception RECOVERABLE_EXCEPTION = new HttpResponseException.Builder(429, "recoverable", new HttpHeaders()).build();
-  private static final Exception NON_RECOVERABLE_EXCEPTION = new HttpResponseException.Builder(404, "non recoverable", new HttpHeaders()).build();
+  private static final Exception RECOVERABLE_EXCEPTION = new StorageException(429, "recoverable");
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new StorageException(404, "non-recoverable");
 
 
   private static final DataSegment DATA_SEGMENT = new DataSegment(
@@ -83,7 +79,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void killTest() throws SegmentLoadingException, IOException
+  public void killTest() throws SegmentLoadingException
   {
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
     EasyMock.expectLastCall();
@@ -99,38 +95,30 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = SegmentLoadingException.class)
-  public void killWithErrorTest() throws SegmentLoadingException, IOException
+  @Test
+  public void killWithErrorTest()
   {
-    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
-        JacksonFactory.getDefaultInstance(),
-        300,
-        "test"
-    );
-    storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
-    EasyMock.expectLastCall().andThrow(exception);
+    Assert.assertThrows(SegmentLoadingException.class, () -> {
+      storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
+      EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION);
 
-    replayAll();
+      replayAll();
 
-    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
 
-    killer.kill(DATA_SEGMENT);
+      killer.kill(DATA_SEGMENT);
 
-    verifyAll();
+      verifyAll();
+    });
   }
 
   @Test
-  public void killRetryWithErrorTest() throws SegmentLoadingException, IOException
+  public void killRetryWithErrorTest() throws SegmentLoadingException
   {
-    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
-        JacksonFactory.getDefaultInstance(),
-        500,
-        "test"
-    );
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
-    EasyMock.expectLastCall().andThrow(exception).once().andVoid().once();
+    EasyMock.expectLastCall().andThrow(RECOVERABLE_EXCEPTION).once().andVoid().once();
     storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(DESCRIPTOR_PATH));
-    EasyMock.expectLastCall().andThrow(exception).once().andVoid().once();
+    EasyMock.expectLastCall().andThrow(RECOVERABLE_EXCEPTION).once().andVoid().once();
 
     replayAll();
 
@@ -142,25 +130,16 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_accountConfigWithNullBucketAndPrefix_throwsISEException() throws IOException
+  public void test_killAll_accountConfigWithNullBucketAndPrefix_throwsISEException()
   {
 
     EasyMock.expect(accountConfig.getBucket()).andReturn(null).atLeastOnce();
     EasyMock.expect(accountConfig.getPrefix()).andReturn(null).anyTimes();
+    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+    EasyMock.replay(storage, inputDataConfig, accountConfig);
 
-    boolean thrownISEException = false;
+    Assert.assertThrows(ISE.class, killer::killAll);
 
-    try {
-      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
-      EasyMock.replay(storage, inputDataConfig, accountConfig);
-
-      killer.killAll();
-    }
-    catch (ISE e) {
-      thrownISEException = true;
-    }
-
-    Assert.assertTrue(thrownISEException);
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
 
@@ -217,34 +196,27 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
+  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs() throws IOException
   {
-    boolean ioExceptionThrown = false;
-    try {
-      GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
-      GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
-      GoogleTestUtils.expectDeleteObjects(
-          storage,
-          ImmutableList.of(),
-          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
-      );
+    GoogleTestUtils.expectDeleteObjects(
+        storage,
+        ImmutableList.of(),
+        ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+    );
 
-      EasyMock.expect(accountConfig.getBucket()).andReturn(BUCKET).anyTimes();
-      EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
-      EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getBucket()).andReturn(BUCKET).anyTimes();
+    EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-      EasyMock.replay(accountConfig, inputDataConfig, storage);
+    EasyMock.replay(accountConfig, inputDataConfig, storage);
 
-      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
-      killer.killAll();
-    }
-    catch (IOException e) {
-      ioExceptionThrown = true;
-    }
+    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assert.assertThrows(IOException.class, killer::killAll);
 
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }

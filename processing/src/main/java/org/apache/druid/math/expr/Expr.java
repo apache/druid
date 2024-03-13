@@ -207,6 +207,11 @@ public interface Expr extends Cacheable
 
       final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
       if (delegateIndexSupplier == null) {
+        // if the column doesn't exist, check to see if the expression evaluates to a non-null result... if so, we might
+        // need to make a value matcher anyway
+        if (eval(InputBindings.nilBindings()).valueOrDefault() != null) {
+          return NoIndexesColumnIndexSupplier.getInstance();
+        }
         return null;
       }
       final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
@@ -757,5 +762,37 @@ public interface Expr extends Cacheable
       }
       return results;
     }
+  }
+
+
+  /**
+   * Returns the single-threaded version of the given expression tree.
+   *
+   * Nested expressions in the subtree are also optimized.
+   * Individual {@link Expr}-s which have a singleThreaded implementation via {@link SingleThreadSpecializable} are substituted.
+   */
+  static Expr singleThreaded(Expr expr)
+  {
+    return expr.visit(
+        node -> {
+          if (node instanceof SingleThreadSpecializable) {
+            SingleThreadSpecializable canBeSingleThreaded = (SingleThreadSpecializable) node;
+            return canBeSingleThreaded.toSingleThreaded();
+          } else {
+            return node;
+          }
+        }
+    );
+  }
+
+  /**
+   * Implementing this interface allows to provide a non-threadsafe {@link Expr} implementation.
+   */
+  interface SingleThreadSpecializable
+  {
+    /**
+     * Non-threadsafe version of this expression.
+     */
+    Expr toSingleThreaded();
   }
 }

@@ -19,16 +19,16 @@
 
 package org.apache.druid.rpc.indexing;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.rpc.ServiceLocation;
@@ -36,9 +36,11 @@ import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
 
 import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Service locator for a specific task. Uses the {@link OverlordClient#taskStatus} API to locate tasks.
+ * Service locator for a specific task. Uses the {@link OverlordClient#taskStatuses(Set)} API to locate tasks.
  *
  * This locator has an internal cache that is updated if the last check has been over {@link #LOCATION_CACHE_MS} ago.
  *
@@ -85,10 +87,10 @@ public class SpecificTaskServiceLocator implements ServiceLocator
       } else if (closed || lastKnownState != TaskState.RUNNING) {
         return Futures.immediateFuture(ServiceLocations.closed());
       } else if (lastKnownLocation == null || lastUpdateTime + LOCATION_CACHE_MS < System.currentTimeMillis()) {
-        final ListenableFuture<TaskStatusResponse> taskStatusFuture;
+        final ListenableFuture<Map<String, TaskStatus>> taskStatusFuture;
 
         try {
-          taskStatusFuture = overlordClient.taskStatus(taskId);
+          taskStatusFuture = overlordClient.taskStatuses(ImmutableSet.of(taskId));
         }
         catch (Exception e) {
           throw new RuntimeException(e);
@@ -110,31 +112,31 @@ public class SpecificTaskServiceLocator implements ServiceLocator
 
         Futures.addCallback(
             taskStatusFuture,
-            new FutureCallback<TaskStatusResponse>()
+            new FutureCallback<Map<String, TaskStatus>>()
             {
               @Override
-              public void onSuccess(final TaskStatusResponse taskStatus)
+              public void onSuccess(final Map<String, TaskStatus> taskStatusMap)
               {
                 synchronized (lock) {
                   if (pendingFuture != null) {
                     lastUpdateTime = System.currentTimeMillis();
 
-                    final TaskStatusPlus statusPlus = taskStatus.getStatus();
+                    final TaskStatus status = taskStatusMap.get(taskId);
 
-                    if (statusPlus == null) {
+                    if (status == null) {
                       // If the task status is unknown, we'll treat it as closed.
                       lastKnownState = null;
                       lastKnownLocation = null;
                     } else {
-                      lastKnownState = statusPlus.getStatusCode();
+                      lastKnownState = status.getStatusCode();
 
-                      if (TaskLocation.unknown().equals(statusPlus.getLocation())) {
+                      if (TaskLocation.unknown().equals(status.getLocation())) {
                         lastKnownLocation = null;
                       } else {
                         lastKnownLocation = new ServiceLocation(
-                            statusPlus.getLocation().getHost(),
-                            statusPlus.getLocation().getPort(),
-                            statusPlus.getLocation().getTlsPort(),
+                            status.getLocation().getHost(),
+                            status.getLocation().getPort(),
+                            status.getLocation().getTlsPort(),
                             StringUtils.format("%s/%s", BASE_PATH, StringUtils.urlEncode(taskId))
                         );
                       }

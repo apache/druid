@@ -1129,28 +1129,88 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           defaultValue: 'kinesis.us-east-1.amazonaws.com',
           suggestions: [
-            'kinesis.us-east-2.amazonaws.com',
-            'kinesis.us-east-1.amazonaws.com',
-            'kinesis.us-west-1.amazonaws.com',
-            'kinesis.us-west-2.amazonaws.com',
-            'kinesis.ap-east-1.amazonaws.com',
-            'kinesis.ap-south-1.amazonaws.com',
-            'kinesis.ap-northeast-3.amazonaws.com',
-            'kinesis.ap-northeast-2.amazonaws.com',
-            'kinesis.ap-southeast-1.amazonaws.com',
-            'kinesis.ap-southeast-2.amazonaws.com',
-            'kinesis.ap-northeast-1.amazonaws.com',
-            'kinesis.ca-central-1.amazonaws.com',
-            'kinesis.cn-north-1.amazonaws.com.com',
-            'kinesis.cn-northwest-1.amazonaws.com.com',
-            'kinesis.eu-central-1.amazonaws.com',
-            'kinesis.eu-west-1.amazonaws.com',
-            'kinesis.eu-west-2.amazonaws.com',
-            'kinesis.eu-west-3.amazonaws.com',
-            'kinesis.eu-north-1.amazonaws.com',
-            'kinesis.sa-east-1.amazonaws.com',
-            'kinesis.us-gov-east-1.amazonaws.com',
-            'kinesis.us-gov-west-1.amazonaws.com',
+            {
+              group: 'US East',
+              suggestions: [
+                'kinesis.us-east-1.amazonaws.com',
+                'kinesis-fips.us-east-1.amazonaws.com',
+                'kinesis.us-east-2.amazonaws.com',
+                'kinesis-fips.us-east-2.amazonaws.com',
+              ],
+            },
+            {
+              group: 'US Gameday Northeast',
+              suggestions: ['kinesis.us-northeast-1.amazonaws.com'],
+            },
+            {
+              group: 'US West',
+              suggestions: [
+                'kinesis.us-west-1.amazonaws.com',
+                'kinesis-fips.us-west-1.amazonaws.com',
+                'kinesis.us-west-2.amazonaws.com',
+                'kinesis-fips.us-west-2.amazonaws.com',
+              ],
+            },
+            { group: 'Africa', suggestions: ['kinesis.af-south-1.amazonaws.com'] },
+            {
+              group: 'Asia Pacific',
+              suggestions: [
+                'kinesis.ap-east-1.amazonaws.com',
+                'kinesis.ap-south-2.amazonaws.com',
+                'kinesis.ap-southeast-3.amazonaws.com',
+                'kinesis.ap-southeast-5.amazonaws.com',
+                'kinesis.ap-southeast-4.amazonaws.com',
+                'kinesis.ap-south-1.amazonaws.com',
+                'kinesis.ap-northeast-3.amazonaws.com',
+                'kinesis.ap-northeast-2.amazonaws.com',
+                'kinesis.ap-southeast-1.amazonaws.com',
+                'kinesis.ap-southeast-2.amazonaws.com',
+                'kinesis.ap-northeast-1.amazonaws.com',
+              ],
+            },
+            {
+              group: 'Canada',
+              suggestions: [
+                'kinesis.ca-central-1.amazonaws.com',
+                'kinesis.ca-west-1.amazonaws.com',
+              ],
+            },
+            {
+              group: 'China',
+              suggestions: [
+                'kinesis.cn-north-1.amazonaws.com.cn',
+                'kinesis.cn-northwest-1.amazonaws.com.cn',
+              ],
+            },
+            {
+              group: 'Europe',
+              suggestions: [
+                'kinesis.eu-central-1.amazonaws.com',
+                'kinesis.eu-west-1.amazonaws.com',
+                'kinesis.eu-west-2.amazonaws.com',
+                'kinesis.eu-south-1.amazonaws.com',
+                'kinesis.eu-west-3.amazonaws.com',
+                'kinesis.eu-south-2.amazonaws.com',
+                'kinesis.eu-north-1.amazonaws.com',
+                'kinesis.eu-central-2.amazonaws.com',
+              ],
+            },
+            { group: 'Israel', suggestions: ['kinesis.il-central-1.amazonaws.com'] },
+            {
+              group: 'Middle East',
+              suggestions: [
+                'kinesis.me-south-1.amazonaws.com',
+                'kinesis.me-central-1.amazonaws.com',
+              ],
+            },
+            { group: 'South America', suggestions: ['kinesis.sa-east-1.amazonaws.com'] },
+            {
+              group: 'AWS GovCloud',
+              suggestions: [
+                'kinesis.us-gov-east-1.amazonaws.com',
+                'kinesis.us-gov-west-1.amazonaws.com',
+              ],
+            },
           ],
           info: (
             <>
@@ -2528,7 +2588,9 @@ function isIntegerOrNull(x: any): boolean {
 
 function isIntegerOrNullAcceptString(x: any): boolean {
   return (
-    x == null || ((typeof x === 'number' || typeof x === 'string') && Number.isInteger(Number(x)))
+    x == null ||
+    (typeof x === 'number' && Number.isInteger(x)) ||
+    (typeof x === 'string' && !x.includes('.') && Number.isInteger(Number(x)))
   );
 }
 

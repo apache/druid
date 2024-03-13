@@ -23,16 +23,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.query.BitmapResultFactory;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
  * This class provides a mechanism to influence whether or not indexes are used for a {@link Filter} during processing
- * by {@link org.apache.druid.segment.FilterAnalysis#analyzeFilter} (i.e. will a {@link Filter} be a "pre"
- * filter in which we union indexes for all values that match the filter to create a
- * {@link org.apache.druid.segment.BitmapOffset}/{@link org.apache.druid.segment.vector.BitmapVectorOffset}, or will it
- * be used as a "post" filter and evaluated while scanning row values from the
+ * by {@link Filter#makeFilterBundle(ColumnIndexSelector, BitmapResultFactory, int, int, boolean)}
+ * (i.e. will a {@link Filter} be a "pre" filter in which we union indexes for all values that match the filter to
+ * create a {@link org.apache.druid.segment.BitmapOffset}/{@link org.apache.druid.segment.vector.BitmapVectorOffset},
+ * or will it be used as a "post" filter and evaluated while scanning row values from the
  * {@link org.apache.druid.segment.FilteredOffset}/{@link org.apache.druid.segment.vector.FilteredVectorOffset}.
  *
  * This is currently only manually supplied by the user by adding to a {@link DimFilter} which will pass through to the

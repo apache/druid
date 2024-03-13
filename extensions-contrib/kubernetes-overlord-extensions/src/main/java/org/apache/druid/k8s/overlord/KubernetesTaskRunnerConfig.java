@@ -103,6 +103,10 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   @NotNull
+  private int cpuCoreInMicro = 0;
+
+  @JsonProperty
+  @NotNull
   private Map<String, String> labels = ImmutableMap.of();
 
   @JsonProperty
@@ -133,6 +137,7 @@ public class KubernetesTaskRunnerConfig
       Period k8sjobLaunchTimeout,
       List<String> peonMonitors,
       List<String> javaOptsArray,
+      int cpuCoreInMicro,
       Map<String, String> labels,
       Map<String, String> annotations,
       Integer capacity
@@ -183,6 +188,10 @@ public class KubernetesTaskRunnerConfig
     this.javaOptsArray = ObjectUtils.defaultIfNull(
         javaOptsArray,
         this.javaOptsArray
+    );
+    this.cpuCoreInMicro = ObjectUtils.defaultIfNull(
+        cpuCoreInMicro,
+        this.cpuCoreInMicro
     );
     this.labels = ObjectUtils.defaultIfNull(
         labels,
@@ -264,6 +273,11 @@ public class KubernetesTaskRunnerConfig
     return javaOptsArray;
   }
 
+  public int getCpuCoreInMicro()
+  {
+    return cpuCoreInMicro;
+  }
+
   public Map<String, String> getLabels()
   {
     return labels;
@@ -299,6 +313,7 @@ public class KubernetesTaskRunnerConfig
     private Period k8sjobLaunchTimeout;
     private List<String> peonMonitors;
     private List<String> javaOptsArray;
+    private int cpuCoreInMicro;
     private Map<String, String> labels;
     private Map<String, String> annotations;
     private Integer capacity;
@@ -379,6 +394,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withCpuCore(int cpuCore)
+    {
+      this.cpuCoreInMicro = cpuCore;
+      return this;
+    }
+
     public Builder withJavaOptsArray(List<String> javaOptsArray)
     {
       this.javaOptsArray = javaOptsArray;
@@ -396,6 +417,7 @@ public class KubernetesTaskRunnerConfig
       this.annotations = annotations;
       return this;
     }
+
 
     public Builder withCapacity(@Min(0) @Max(Integer.MAX_VALUE) Integer capacity)
     {
@@ -419,6 +441,7 @@ public class KubernetesTaskRunnerConfig
           this.k8sjobLaunchTimeout,
           this.peonMonitors,
           this.javaOptsArray,
+          this.cpuCoreInMicro,
           this.labels,
           this.annotations,
           this.capacity
