@@ -411,7 +411,7 @@ public class MSQTaskSqlEngine implements SqlEngine
           }
 
           messageBuilder.append(". See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode "
-                                + "for more details.");
+                                + "for more details about this check and how to override it if needed.");
 
           throw InvalidSqlInput.exception(StringUtils.encodeForFormat(messageBuilder.toString()));
         }
