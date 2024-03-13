@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -45,6 +46,9 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * This class has copied a subset of the tests in {@link CalciteQueryTest} and
@@ -586,32 +590,40 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMissingParameter()
   {
-    expectedException.expect(
-        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT COUNT(*)\n"
+                + "FROM druid.numfoo\n"
+                + "WHERE l1 > ?",
+            ImmutableList.of(),
+            ImmutableList.of(new Object[] {3L}),
+            ImmutableList.of()
+        )
     );
-    testQuery(
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE l1 > ?",
-        ImmutableList.of(),
-        ImmutableList.of(new Object[]{3L}),
-        ImmutableList.of()
+    assertThat(
+        exception,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
   }
 
   @Test
   public void testPartiallyMissingParameter()
   {
-    expectedException.expect(
-        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT COUNT(*)\n"
+                + "FROM druid.numfoo\n"
+                + "WHERE l1 > ? AND f1 = ?",
+            ImmutableList.of(),
+            ImmutableList.of(new Object[] {3L}),
+            ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
+        )
     );
-    testQuery(
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE l1 > ? AND f1 = ?",
-        ImmutableList.of(),
-        ImmutableList.of(new Object[]{3L}),
-        ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
+    assertThat(
+        exception,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
     );
   }
 
@@ -621,14 +633,19 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     List<SqlParameter> params = new ArrayList<>();
     params.add(null);
     params.add(new SqlParameter(SqlType.INTEGER, 1));
-    expectedException.expect(
-        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
+    DruidException exception = assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
+            ImmutableList.of(),
+            ImmutableList.of(),
+            params
+        )
     );
-    testQuery(
-        "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
-        ImmutableList.of(),
-        ImmutableList.of(),
-        params
+
+    assertThat(
+        exception,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
   }
 

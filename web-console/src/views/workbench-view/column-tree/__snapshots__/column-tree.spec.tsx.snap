@@ -45,7 +45,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                 icon="tick"
                 multiline={false}
                 onClick={[Function]}
-                popoverProps={Object {}}
+                popoverProps={{}}
                 selected={false}
                 shouldDismissPopover={true}
                 text="Tables and columns"
@@ -56,7 +56,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                 icon="blank"
                 multiline={false}
                 onClick={[Function]}
-                popoverProps={Object {}}
+                popoverProps={{}}
                 selected={false}
                 shouldDismissPopover={true}
                 text="Tables only"
@@ -67,7 +67,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                 icon="blank"
                 multiline={false}
                 onClick={[Function]}
-                popoverProps={Object {}}
+                popoverProps={{}}
                 selected={false}
                 shouldDismissPopover={true}
                 text="Columns only"
@@ -105,10 +105,10 @@ exports[`ColumnTree matches snapshot 1`] = `
   >
     <Blueprint4.Tree
       contents={
-        Array [
-          Object {
-            "childNodes": Array [
-              Object {
+        [
+          {
+            "childNodes": [
+              {
                 "icon": <Blueprint4.Icon
                   aria-hidden={true}
                   className="bp4-tree-node-icon"
@@ -147,7 +147,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   __time
                 </Blueprint4.Popover2>,
               },
-              Object {
+              {
                 "icon": <Blueprint4.Icon
                   aria-hidden={true}
                   className="bp4-tree-node-icon"
@@ -186,7 +186,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   added
                 </Blueprint4.Popover2>,
               },
-              Object {
+              {
                 "icon": <Blueprint4.Icon
                   aria-hidden={true}
                   className="bp4-tree-node-icon"

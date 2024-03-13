@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -315,28 +314,24 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionEquivalentToNaN()
   {
-    expectedException.expect(invalidSqlIs(
-        "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
-        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
-    ));
-    testQuery(
+    testQueryThrows(
         "SELECT log10(0) - log10(0), dim1 FROM foo LIMIT 1",
-        ImmutableList.of(),
-        ImmutableList.of()
+        invalidSqlIs(
+            "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
+                + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+        )
     );
   }
 
   @Test
   public void testSelectConstantExpressionEquivalentToInfinity()
   {
-    expectedException.expect(invalidSqlIs(
-        "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
-        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
-    ));
-    testQuery(
+    testQueryThrows(
         "SELECT log10(0), dim1 FROM foo LIMIT 1",
-        ImmutableList.of(),
-        ImmutableList.of()
+        invalidSqlIs(
+            "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
+                + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+        )
     );
   }
 
@@ -1031,12 +1026,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQueryThrows(
         "SELECT CURRENT_TIMESTAMP(4)",
-        expectedException -> {
-          expectedException.expect(DruidException.class);
-          expectedException.expectMessage(
-              "Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'"
-          );
-        }
+        invalidSqlContains("Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'")
     );
   }
 
