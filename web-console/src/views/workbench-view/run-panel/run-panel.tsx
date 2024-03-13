@@ -25,6 +25,7 @@ import {
   MenuDivider,
   MenuItem,
   Position,
+  Tag,
   useHotkeys,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -95,6 +96,20 @@ const NAMED_TIMEZONES: string[] = [
   'Pacific/Guam', // +10.0
   'Australia/Sydney', // +11.0
 ];
+
+const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
+  array: (
+    <>
+      array: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid{' '}
+      <Tag minimal>ARRAY&lt;string&gt;</Tag>
+    </>
+  ),
+  mvd: (
+    <>
+      mvd: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid <Tag minimal>multi-value STRING</Tag>
+    </>
+  ),
+};
 
 export interface RunPanelProps {
   query: WorkbenchQuery;
@@ -491,7 +506,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuItem
                       key={i}
                       icon={tickIcon(m === arrayIngestMode)}
-                      text={m ?? '(server default)'}
+                      text={m ? ARRAY_INGEST_MODE_DESCRIPTION[m] : '(server default)'}
                       onClick={() => changeQueryContext(changeArrayIngestMode(queryContext, m))}
                     />
                   ))}
@@ -499,9 +514,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   <MenuItem
                     icon={IconNames.HELP}
                     text="Documentation"
-                    href={`${getLink(
-                      'DOCS',
-                    )}/querying/arrays#differences-between-arrays-and-multi-value-dimensions`}
+                    href={`${getLink('DOCS')}/querying/arrays#arrayingestmode`}
                     target="_blank"
                   />
                 </Menu>
