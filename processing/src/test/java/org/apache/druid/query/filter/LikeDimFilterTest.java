@@ -151,23 +151,25 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testPatternCompilation()
   {
-    assertCompilation("", ":");
-    assertCompilation("a", "a:a");
-    assertCompilation("abc", "abc:abc");
-    assertCompilation("a%", "a:a|%");
-    assertCompilation("%a", ":%a");
-    assertCompilation("%_a", ":_%a");
-    assertCompilation("_%a", ":_%a");
-    assertCompilation("_%_a", ":__%a");
-    assertCompilation("abc%", "abc:abc|%");
-    assertCompilation("a%b", "a:a|%b");
-    assertCompilation("abc%x", "abc:abc|%x");
-    assertCompilation("abc%xyz", "abc:abc|%xyz");
-    assertCompilation("____", ":____");
-    assertCompilation("%%%%", ":%");
-    assertCompilation("%_%_%%__", ":____%");
-    assertCompilation("%_%a_%bc%_d_", ":_%a|_%bc|_%d|_");
-    assertCompilation("\\%_%a_\\%b\\\\c\\___%_%_d_w%x_y_z", "%:\\%|_%a|_\\%b\\\\c\\_|____%d|_w|%x|_y|_z");
+    assertCompilation("", ":[^$]");
+    assertCompilation("a", "a:[^a$]");
+    assertCompilation("abc", "abc:[^abc$]");
+    assertCompilation("a%", "a:[^a]");
+    assertCompilation("%a", ":[a$]");
+    assertCompilation("%a%", ":[a]");
+    assertCompilation("%_a", ":[.a$]");
+    assertCompilation("_%a", ":[^., a$]");
+    assertCompilation("_%_a", ":[^., .a$]");
+    assertCompilation("abc%", "abc:[^abc]");
+    assertCompilation("a%b", "a:[^a, b$]");
+    assertCompilation("abc%x", "abc:[^abc, x$]");
+    assertCompilation("abc%xyz", "abc:[^abc, xyz$]");
+    assertCompilation("____", ":[^....$]");
+    assertCompilation("%%%%", ":[]");
+    assertCompilation("%_%_%%__", ":[., ., ..$]");
+    assertCompilation("%_%a_%bc%_d_", ":[., a., bc, .d.$]");
+    assertCompilation("%1 _ 5%6", ":[1 . 5, 6$]");
+    assertCompilation("\\%_%a_\\%b\\\\c\\___%_%_d_w%x_y_z", "%:[^\\u0025., a.\\u0025b\\u005Cc_.., ., .d.w, x.y.z$]");
   }
 
   @Test
@@ -212,6 +214,9 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     assertMatch("____", "abc", DruidPredicateMatch.FALSE);
     assertMatch("____", "abcd", DruidPredicateMatch.TRUE);
     assertMatch("____", "abcde", DruidPredicateMatch.FALSE);
+    assertMatch("%____", "abcde", DruidPredicateMatch.TRUE);
+    assertMatch("%____", "abcd", DruidPredicateMatch.TRUE);
+    assertMatch("%____", "abc", DruidPredicateMatch.FALSE);
     assertMatch("__%_%%_", "abc", DruidPredicateMatch.FALSE);
     assertMatch("__%_%%_", "abcd", DruidPredicateMatch.TRUE);
     assertMatch("__%_%%_", "abcdxyz", DruidPredicateMatch.TRUE);
@@ -305,6 +310,17 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     assertMatch("x_c_e_", "abcdef", DruidPredicateMatch.FALSE);
     assertMatch("xa_c_e_", "abcdef", DruidPredicateMatch.FALSE);
     assertMatch("a_c_e_x", "abcde", DruidPredicateMatch.FALSE);
+  }
+
+  @Test
+  public void testPatternFindsCorrectMiddleMatch()
+  {
+    assertMatch("%km%z", "akmz", DruidPredicateMatch.TRUE);
+    assertMatch("%km%z", "akkmz", DruidPredicateMatch.TRUE);
+    assertMatch("%xy%yz", "xyz", DruidPredicateMatch.FALSE);
+    assertMatch("%xy%yz", "xyyz", DruidPredicateMatch.TRUE);
+    assertMatch("%1 _ 5%6", "1 2 3 1 4 5 6", DruidPredicateMatch.TRUE);
+    assertMatch("1 _ 5%6", "1 2 3 1 4 5 6", DruidPredicateMatch.FALSE);
   }
 
   private void assertCompilation(String pattern, String expected)
