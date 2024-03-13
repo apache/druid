@@ -24,13 +24,10 @@ import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPair;
 import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPairTypeStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigInteger;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
 
 public class ConstantExprTest extends InitializedNullHandlingTest
 {
@@ -164,15 +161,17 @@ public class ConstantExprTest extends InitializedNullHandlingTest
   {
     final ObjectBinding bindings = InputBindings.nilBindings();
     if (expr.getLiteralValue() != null) {
-      assertNotSame(expr.eval(bindings), expr.eval(bindings));
+      Assert.assertNotSame(expr.eval(bindings), expr.eval(bindings));
     }
     final Expr singleExpr = Expr.singleThreaded(expr, bindings);
-    assertSame(singleExpr.eval(bindings), singleExpr.eval(bindings));
-    assertEquals(expectedToString, expr.toString());
-    assertEquals(expectedStringify, expr.stringify());
-    assertEquals(expectedToString, singleExpr.toString());
+    Assert.assertArrayEquals(expr.getCacheKey(), singleExpr.getCacheKey());
+    Assert.assertSame(singleExpr.eval(bindings), singleExpr.eval(bindings));
+    Assert.assertEquals(expectedToString, expr.toString());
+    Assert.assertEquals(expectedStringify, expr.stringify());
+    Assert.assertEquals(expectedToString, singleExpr.toString());
     final String stringify = singleExpr.stringify();
     final Expr reParsedExpr = Parser.parse(stringify, ExprMacroTable.nil());
-    assertEquals(expectedReparsedExpr, reParsedExpr);
+    Assert.assertEquals(expectedReparsedExpr, reParsedExpr);
+    Assert.assertArrayEquals(expr.getCacheKey(), expectedReparsedExpr.getCacheKey());
   }
 }
