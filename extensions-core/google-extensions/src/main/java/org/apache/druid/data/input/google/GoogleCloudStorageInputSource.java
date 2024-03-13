@@ -50,7 +50,7 @@ import java.util.Set;
 
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 {
-  static final String TYPE_KEY = GoogleStorageDruidModule.SCHEME;
+  public static final String TYPE_KEY = GoogleStorageDruidModule.SCHEME;
   private static final Logger LOG = new Logger(GoogleCloudStorageInputSource.class);
 
   private final GoogleStorage storage;

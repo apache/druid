@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
@@ -42,7 +43,7 @@ import java.util.List;
 @JsonTypeName(GoogleExportStorageProvider.TYPE_NAME)
 public class GoogleExportStorageProvider implements ExportStorageProvider
 {
-  public static final String TYPE_NAME = GoogleStorageDruidModule.SCHEME;
+  public static final String TYPE_NAME = GoogleCloudStorageInputSource.TYPE_KEY;
   @JsonProperty
   private final String bucket;
   @JsonProperty
