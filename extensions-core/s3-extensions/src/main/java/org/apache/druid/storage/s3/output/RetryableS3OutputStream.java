@@ -269,7 +269,12 @@ public class RetryableS3OutputStream extends OutputStream
     // Closeables are closed in LIFO order
     closer.register(() -> {
       // This should be emitted as a metric
-      LOG.info("Total push time: [%d] ms", pushStopwatch.elapsed(TimeUnit.MILLISECONDS));
+      LOG.info(
+          "Total: %d parts has a push time: %d ms with cumulative size: %d bytes ",
+          numChunksPushed,
+          pushStopwatch.elapsed(TimeUnit.MILLISECONDS),
+          resultsSize
+      );
     });
 
     closer.register(() -> org.apache.commons.io.FileUtils.forceDelete(chunkStorePath));
