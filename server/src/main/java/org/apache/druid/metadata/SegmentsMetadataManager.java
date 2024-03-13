@@ -55,8 +55,17 @@ public interface SegmentsMetadataManager
 
   int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval);
 
-  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
-      throws UnknownSegmentIdsException;
+  /**
+   * Marks the given segment IDs as "used" only if there are not already overshadowed
+   * by other used segments. Qualifying segment IDs that are already marked as
+   * "used" are not updated.
+   *
+   * @return Number of segments updated
+   * @throws org.apache.druid.error.DruidException of category INVALID_INPUT if
+   *                                               any of the given segment IDs
+   *                                               do not exist in the metadata store.
+   */
+  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
