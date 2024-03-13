@@ -101,12 +101,12 @@ const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
   array: (
     <>
       array: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid{' '}
-      <Tag minimal>ARRAY&lt;string&gt;</Tag>
+      <Tag minimal>ARRAY&lt;STRING&gt;</Tag>
     </>
   ),
   mvd: (
     <>
-      mvd: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid <Tag minimal>multi-value STRING</Tag>
+      mvd: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid multi-value <Tag minimal>STRING</Tag>
     </>
   ),
 };
