@@ -22,27 +22,23 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.DataSource;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
-import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -63,37 +59,20 @@ import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
-import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.InlineSegmentWrangler;
-import org.apache.druid.segment.LookupSegmentWrangler;
-import org.apache.druid.segment.MapSegmentWrangler;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.TestDataBuilder;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -109,9 +88,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .build();
-
-
-  public static final String DATA_SOURCE_ARRAYS = "arrays";
 
   public static void assertResultsDeepEquals(String sql, List<Object[]> expected, List<Object[]> results)
   {
@@ -142,120 +118,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     super.configureGuice(builder);
     builder.addModule(new NestedDataModule());
-  }
-
-  @SuppressWarnings("resource")
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  ) throws IOException
-  {
-    NestedDataModule.registerHandlersAndSerde();
-
-    final QueryableIndex foo = IndexBuilder
-        .create()
-        .tmpDir(temporaryFolder.newFolder())
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(TestDataBuilder.INDEX_SCHEMA)
-        .rows(TestDataBuilder.ROWS1)
-        .buildMMappedIndex();
-
-    final QueryableIndex numfoo = IndexBuilder
-        .create()
-        .tmpDir(temporaryFolder.newFolder())
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS)
-        .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
-        .buildMMappedIndex();
-
-    final QueryableIndex indexLotsOfColumns = IndexBuilder
-        .create()
-        .tmpDir(temporaryFolder.newFolder())
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(TestDataBuilder.INDEX_SCHEMA_LOTS_O_COLUMNS)
-        .rows(TestDataBuilder.ROWS_LOTS_OF_COLUMNS)
-        .buildMMappedIndex();
-
-    final QueryableIndex indexArrays =
-        IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
-                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withRollup(false)
-                            .build()
-                    )
-                    .inputSource(
-                        ResourceInputSource.of(
-                            NestedDataTestUtils.class.getClassLoader(),
-                            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-                        )
-                    )
-                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
-                    .buildMMappedIndex();
-
-    SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(
-        conglomerate,
-        new MapSegmentWrangler(
-            ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-                        .put(InlineDataSource.class, new InlineSegmentWrangler())
-                        .put(FrameBasedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
-                        .put(
-                            LookupDataSource.class,
-                            new LookupSegmentWrangler(injector.getInstance(LookupExtractorFactoryContainerProvider.class))
-                        )
-                        .build()
-        ),
-        joinableFactory,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
-    );
-    walker.add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(foo.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        foo
-    ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE3)
-                   .interval(numfoo.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        numfoo
-    ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE5)
-                   .interval(indexLotsOfColumns.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        indexLotsOfColumns
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_ARRAYS)
-                   .version("1")
-                   .interval(indexArrays.getDataInterval())
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexArrays
-    );
-
-    return walker;
   }
 
   // test some query stuffs, sort of limited since no native array column types so either need to use constructor or
@@ -320,7 +182,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
+                        .setDataSource(CalciteTests.ARRAYS_DATASOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
@@ -645,7 +507,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + " FROM druid.arrays",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
                     // these report as strings even though they are not, someday this will not be so
@@ -861,7 +723,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayStringNulls FROM druid.arrays WHERE ARRAY_OVERLAP(arrayStringNulls, ARRAY['a','b']) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
@@ -892,7 +754,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayLongNulls FROM druid.arrays WHERE ARRAY_OVERLAP(arrayLongNulls, ARRAY[1, 2]) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
@@ -923,7 +785,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayDoubleNulls FROM druid.arrays WHERE ARRAY_OVERLAP(arrayDoubleNulls, ARRAY[1.1, 2.2]) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
@@ -1001,7 +863,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayStringNulls, arrayString FROM druid.arrays WHERE ARRAY_OVERLAP(arrayStringNulls, arrayString) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(expressionFilter("array_overlap(\"arrayStringNulls\",\"arrayString\")"))
                 .columns("arrayString", "arrayStringNulls")
@@ -1027,7 +889,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayLongNulls, arrayLong FROM druid.arrays WHERE ARRAY_OVERLAP(arrayLongNulls, arrayLong) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(expressionFilter("array_overlap(\"arrayLongNulls\",\"arrayLong\")"))
                 .columns("arrayLong", "arrayLongNulls")
@@ -1053,7 +915,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayDoubleNulls, arrayDouble FROM druid.arrays WHERE ARRAY_OVERLAP(arrayDoubleNulls, arrayDouble) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(expressionFilter("array_overlap(\"arrayDoubleNulls\",\"arrayDouble\")"))
                 .columns("arrayDouble", "arrayDoubleNulls")
@@ -1105,7 +967,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayStringNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayStringNulls, ARRAY['a','b']) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     and(
@@ -1135,7 +997,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayLongNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayLongNulls, ARRAY[1, null]) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     and(
@@ -1163,7 +1025,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayDoubleNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayDoubleNulls, ARRAY[1.1, null]) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     and(
@@ -1273,7 +1135,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayStringNulls, arrayString FROM druid.arrays WHERE ARRAY_CONTAINS(arrayStringNulls, arrayString) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     expressionFilter("array_contains(\"arrayStringNulls\",\"arrayString\")")
@@ -1297,7 +1159,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayLong, arrayLongNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayLong, arrayLongNulls) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     expressionFilter("array_contains(\"arrayLong\",\"arrayLongNulls\")")
@@ -1324,7 +1186,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayDoubleNulls, arrayDouble FROM druid.arrays WHERE ARRAY_CONTAINS(arrayDoubleNulls, arrayDouble) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     expressionFilter("array_contains(\"arrayDoubleNulls\",\"arrayDouble\")")
@@ -1375,7 +1237,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             new Druids.ScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
                     expressionVirtualColumn("v0", "array_slice(\"arrayString\",1)", ColumnType.STRING_ARRAY),
@@ -1460,7 +1322,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT arrayStringNulls, ARRAY_LENGTH(arrayStringNulls), SUM(cnt) FROM druid.arrays GROUP BY 1, 2 ORDER BY 2 DESC",
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
+                        .setDataSource(CalciteTests.ARRAYS_DATASOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "array_length(\"arrayStringNulls\")", ColumnType.LONG))
@@ -1840,7 +1702,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
+                        .setDataSource(CalciteTests.ARRAYS_DATASOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(
@@ -1937,7 +1799,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(DATA_SOURCE_ARRAYS)
+                        .setDataSource(CalciteTests.ARRAYS_DATASOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(
@@ -2981,7 +2843,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT ARRAY_AGG(arrayLongNulls), ARRAY_AGG(DISTINCT arrayDouble), ARRAY_AGG(DISTINCT arrayStringNulls) FILTER(WHERE arrayLong = ARRAY[2,3]) FROM arrays WHERE arrayDoubleNulls is not null",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(DATA_SOURCE_ARRAYS)
+                  .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(notNull("arrayDoubleNulls"))
@@ -3065,7 +2927,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT ARRAY_CONCAT_AGG(arrayLongNulls), ARRAY_CONCAT_AGG(DISTINCT arrayDouble), ARRAY_CONCAT_AGG(DISTINCT arrayStringNulls) FILTER(WHERE arrayLong = ARRAY[2,3]) FROM arrays WHERE arrayDoubleNulls is not null",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(DATA_SOURCE_ARRAYS)
+                  .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(notNull("arrayDoubleNulls"))
@@ -3923,7 +3785,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayString\"", ColumnType.STRING_ARRAY),
                       null
                   ))
@@ -3971,7 +3833,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
                       null
                   ))
@@ -4018,7 +3880,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayLong\"", ColumnType.LONG_ARRAY),
                       null
                   ))
@@ -4072,7 +3934,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
                       null
                   ))
@@ -4122,7 +3984,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayDouble\"", ColumnType.DOUBLE_ARRAY),
                       null
                   ))
@@ -4176,7 +4038,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayDoubleNulls\"", ColumnType.DOUBLE_ARRAY),
                       null
                   ))
@@ -4312,7 +4174,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       UnnestDataSource.create(
                           UnnestDataSource.create(
-                              new TableDataSource(DATA_SOURCE_ARRAYS),
+                              new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                               expressionVirtualColumn(
                                   "j0.unnest",
                                   "\"arrayStringNulls\"",
@@ -4629,7 +4491,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       UnnestDataSource.create(
                           FilteredDataSource.create(
                               UnnestDataSource.create(
-                                  new TableDataSource(DATA_SOURCE_ARRAYS),
+                                  new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                                   expressionVirtualColumn(
                                       "j0.unnest",
                                       "\"arrayLongNulls\"",
@@ -4779,7 +4641,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         UnnestDataSource.create(
                             FilteredDataSource.create(
                                 UnnestDataSource.create(
-                                    new TableDataSource(DATA_SOURCE_ARRAYS),
+                                    new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                                     expressionVirtualColumn(
                                         "j0.unnest",
                                         "\"arrayLongNulls\"",
@@ -4890,7 +4752,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(UnnestDataSource.create(
-                            new TableDataSource(DATA_SOURCE_ARRAYS),
+                            new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                             expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
                             null
                         ))
@@ -6494,7 +6356,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ARRAYS),
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                       expressionVirtualColumn("j0.unnest", "\"arrayDoubleNulls\"", ColumnType.DOUBLE_ARRAY),
                       null
                   ))
@@ -6581,7 +6443,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(UnnestDataSource.create(
-                            new TableDataSource(DATA_SOURCE_ARRAYS),
+                            new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                             expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
                             NullHandling.sqlCompatible()
                             ? or(
@@ -6618,7 +6480,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(UnnestDataSource.create(
-                            new TableDataSource(DATA_SOURCE_ARRAYS),
+                            new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                             expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
                             NullHandling.sqlCompatible()
                             ? or(
@@ -6736,7 +6598,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
                       FilteredDataSource.create(
-                          new TableDataSource(DATA_SOURCE_ARRAYS),
+                          new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                           range("__time", ColumnType.LONG, 1672617600000L, 1672704600000L, false, false)
                       ),
                       expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
@@ -6995,7 +6857,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               .dataSource(
                                   UnnestDataSource.create(
                                       FilteredDataSource.create(
-                                          new TableDataSource(DATA_SOURCE_ARRAYS),
+                                          new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                                           range("__time", ColumnType.LONG, 1672617600000L, 1672704600000L, false, false)
                                       ),
                                       expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
@@ -7365,6 +7227,34 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"b"},
             new Object[]{"c"},
             new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testBooleanConstExprArray()
+  {
+    ExprEval exprEval = ExprEval.ofArray(ExpressionType.LONG_ARRAY, new Long[]{1L, 0L, null});
+    testQuery(
+        "SELECT ARRAY[true, false, null] FROM druid.numfoo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "array(1,0,null)",
+                    exprEval.toExpr(),
+                    ColumnType.LONG_ARRAY
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[1,0,null]"}
         )
     );
   }
