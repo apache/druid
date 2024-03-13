@@ -31,7 +31,9 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
@@ -7435,6 +7437,34 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"b"},
             new Object[]{"c"},
             new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testBooleanConstExprArray()
+  {
+    ExprEval exprEval = ExprEval.ofArray(ExpressionType.LONG_ARRAY, new Long[]{1L, 0L, null});
+    testQuery(
+        "SELECT ARRAY[true, false, null] FROM druid.numfoo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "array(1,0,null)",
+                    exprEval.toExpr(),
+                    ColumnType.LONG_ARRAY
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[1,0,null]"}
         )
     );
   }

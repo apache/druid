@@ -202,7 +202,6 @@ public class IndexMergerV9 implements IndexMerger
         mergers.add(
             handler.makeMerger(
                 indexSpec,
-
                 segmentWriteOutMedium,
                 dimFormats.get(i).toColumnCapabilities(),
                 progress,

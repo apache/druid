@@ -31,10 +31,14 @@ import java.util.Objects;
 
 /**
  * Encapsulates a {@link DataSegment} and additional metadata about it:
- * {@link DataSegmentPlus#createdDate}:               The time when the segment was created </li>
- * {@link DataSegmentPlus#usedStatusLastUpdatedDate}: The time when the segments used status was last updated </li>
+ * <ul>
+ * <li>{@link DataSegmentPlus#used} - Boolean flag representing if the segment is used.</li>
+ * <li>{@link DataSegmentPlus#createdDate} - The time when the segment was created.</li>
+ * <li>{@link DataSegmentPlus#usedStatusLastUpdatedDate} - The time when the segments
+ * used status was last updated.</li>
+ * </ul>
  * <p>
- * The class closesly resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}
+ * This class closely resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}.
  * </p>
  */
 @UnstableApi
@@ -44,19 +48,23 @@ public class DataSegmentPlus
   private final DateTime createdDate;
   @Nullable
   private final DateTime usedStatusLastUpdatedDate;
+  private final Boolean used;
 
   @JsonCreator
   public DataSegmentPlus(
       @JsonProperty("dataSegment") final DataSegment dataSegment,
-      @JsonProperty("createdDate") final DateTime createdDate,
-      @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate
+      @JsonProperty("createdDate") @Nullable final DateTime createdDate,
+      @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate,
+      @JsonProperty("used") @Nullable final Boolean used
   )
   {
     this.dataSegment = dataSegment;
     this.createdDate = createdDate;
     this.usedStatusLastUpdatedDate = usedStatusLastUpdatedDate;
+    this.used = used;
   }
 
+  @Nullable
   @JsonProperty
   public DateTime getCreatedDate()
   {
@@ -76,6 +84,13 @@ public class DataSegmentPlus
     return dataSegment;
   }
 
+  @Nullable
+  @JsonProperty
+  public Boolean getUsed()
+  {
+    return used;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -88,7 +103,8 @@ public class DataSegmentPlus
     DataSegmentPlus that = (DataSegmentPlus) o;
     return Objects.equals(dataSegment, that.getDataSegment())
            && Objects.equals(createdDate, that.getCreatedDate())
-           && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate());
+           && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate())
+           && Objects.equals(used, that.getUsed());
   }
 
   @Override
@@ -97,7 +113,8 @@ public class DataSegmentPlus
     return Objects.hash(
         dataSegment,
         createdDate,
-        usedStatusLastUpdatedDate
+        usedStatusLastUpdatedDate,
+        used
     );
   }
 
@@ -108,6 +125,7 @@ public class DataSegmentPlus
            "createdDate=" + getCreatedDate() +
            ", usedStatusLastUpdatedDate=" + getUsedStatusLastUpdatedDate() +
            ", dataSegment=" + getDataSegment() +
+           ", used=" + getUsed() +
            '}';
   }
 }

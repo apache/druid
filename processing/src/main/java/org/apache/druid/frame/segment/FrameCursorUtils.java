@@ -26,6 +26,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
@@ -42,6 +43,25 @@ import java.util.NoSuchElementException;
 
 public class FrameCursorUtils
 {
+
+  /**
+   * Exception to be thrown when the subquery's rows are too wide to fit in a single frame. In such case, byte based
+   * limiting should be disabled or the user should modify the query.
+   * <p>
+   * NOTE: This error message is not appropriate when a similar exception is hit in MSQ, since this workaround
+   * is not applicable in that scenario
+   */
+  public static final DruidException SUBQUERY_ROW_TOO_LARGE_EXCEPTION =
+      DruidException
+          .forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+          .build(
+              "Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
+              + "row to the frame. Either modify the subqueries to materialize smaller rows by removing wide columns, "
+              + "or disable byte based limiting by setting '%s' to 'disabled'",
+              QueryContexts.MAX_SUBQUERY_BYTES_KEY
+          );
+
   private FrameCursorUtils()
   {
     // No instantiation.
@@ -79,60 +99,66 @@ public class FrameCursorUtils
 
   /**
    * Writes a {@link Cursor} to a sequence of {@link Frame}. This method iterates over the rows of the cursor,
+   * and writes the columns to the frames. The iterable is lazy, and it traverses the required portion of the cursor
+   * as required
+   */
+  public static Iterable<Frame> cursorToFramesIterable(
+      final Cursor cursor,
+      final FrameWriterFactory frameWriterFactory
+  )
+  {
+    return () -> new Iterator<Frame>()
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return !cursor.isDone();
+      }
+
+      @Override
+      public Frame next()
+      {
+        // Makes sure that cursor contains some elements prior. This ensures if no row is written, then the row size
+        // is larger than the MemoryAllocators returned by the provided factory
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        boolean firstRowWritten = false;
+        Frame frame;
+        try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+          while (!cursor.isDone()) {
+            if (!frameWriter.addSelection()) {
+              break;
+            }
+            firstRowWritten = true;
+            cursor.advance();
+          }
+
+          if (!firstRowWritten) {
+            throw SUBQUERY_ROW_TOO_LARGE_EXCEPTION;
+          }
+
+          frame = Frame.wrap(frameWriter.toByteArray());
+        }
+        return frame;
+      }
+    };
+  }
+
+  /**
+   * Writes a {@link Cursor} to a sequence of {@link Frame}. This method iterates over the rows of the cursor,
    * and writes the columns to the frames
    *
-   * @param cursor                 Cursor to write to the frame
-   * @param frameWriterFactory     Frame writer factory to write to the frame.
-   *                               Determines the signature of the rows that are written to the frames
+   * @param cursor             Cursor to write to the frame
+   * @param frameWriterFactory Frame writer factory to write to the frame.
+   *                           It also determines the signature of the rows that are written to the frames
    */
-  public static Sequence<Frame> cursorToFrames(
-      Cursor cursor,
-      FrameWriterFactory frameWriterFactory
+  public static Sequence<Frame> cursorToFramesSequence(
+      final Cursor cursor,
+      final FrameWriterFactory frameWriterFactory
   )
   {
 
-    return Sequences.simple(
-        () -> new Iterator<Frame>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return !cursor.isDone();
-          }
-
-          @Override
-          public Frame next()
-          {
-            // Makes sure that cursor contains some elements prior. This ensures if no row is written, then the row size
-            // is larger than the MemoryAllocators returned by the provided factory
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-            boolean firstRowWritten = false;
-            Frame frame;
-            try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-              while (!cursor.isDone()) {
-                if (!frameWriter.addSelection()) {
-                  break;
-                }
-                firstRowWritten = true;
-                cursor.advance();
-              }
-
-              if (!firstRowWritten) {
-                throw DruidException
-                    .forPersona(DruidException.Persona.DEVELOPER)
-                    .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
-                    .build("Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
-                           + "row to the frame. This is a non-configurable static limit that can only be modified by the "
-                           + "developer.");
-              }
-
-              frame = Frame.wrap(frameWriter.toByteArray());
-            }
-            return frame;
-          }
-        }
-    );
+    return Sequences.simple(cursorToFramesIterable(cursor, frameWriterFactory));
   }
 }
