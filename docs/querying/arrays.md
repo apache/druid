@@ -79,7 +79,7 @@ parameter `arrayIngestMode: array`.
 When `arrayIngestMode` is `array`, SQL ARRAY types are stored using Druid array columns. This is recommended for new
 tables.
 
-When `arrayIngestMode` is `mvd`, SQL `VARCHAR ARRAY` are implicitly wrapped in [`ARRAY_TO_MV`](sql-functions.md#array-to-mv).
+When `arrayIngestMode` is `mvd`, SQL `VARCHAR ARRAY` are implicitly wrapped in [`ARRAY_TO_MV`](sql-functions.md#array_to_mv).
 This causes them to be stored as [multi-value strings](multi-value-dimensions.md), using the same `STRING` column type
 as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`. This
 is the default behavior when `arrayIngestMode` is not provided in your query context, although the default behavior
@@ -109,7 +109,7 @@ mixing arrays and multi-value strings in the same column.
 
 #### Examples
 
-Set [`arrayIngestMode: array`](#arrayIngestMode) in your query context to run the following examples.
+Set [`arrayIngestMode: array`](#arrayingestmode) in your query context to run the following examples.
 
 ```sql
 REPLACE INTO "array_example" OVERWRITE ALL

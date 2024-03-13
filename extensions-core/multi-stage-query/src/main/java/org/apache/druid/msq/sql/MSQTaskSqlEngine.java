@@ -410,11 +410,7 @@ public class MSQTaskSqlEngine implements SqlEngine
             messageBuilder.append(" adjusting your query to make this column an ARRAY instead of VARCHAR");
           }
 
-          messageBuilder.append(". You can override this check by setting the context parameter '")
-                        .append(MultiStageQueryContext.CTX_SKIP_TYPE_VERIFICATION)
-                        .append("' to[")
-                        .append(columnName)
-                        .append("]. See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode "
+          messageBuilder.append(". See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode "
                                 + "for more details.");
 
           throw InvalidSqlInput.exception(StringUtils.encodeForFormat(messageBuilder.toString()));
