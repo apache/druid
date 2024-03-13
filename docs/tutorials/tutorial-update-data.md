@@ -2,6 +2,7 @@
 id: tutorial-update-data
 title: Update data
 sidebar_label: Update data
+description: Learn how to update data in Apache Druid.
 ---
 
 <!--
@@ -24,11 +25,10 @@ sidebar_label: Update data
   -->
 
 Apache Druid stores data and indexes in [segment files](../design/segments.md) partitioned by time.
-Once segments are created, they cannot be modified.
-In general, you update data by overwriting the segment you want to change.
-In some cases, you can overshadow a portion of a segment using a smaller segment granularity than the original segment.
+After Druid creates a segment, its contents can't be modified.
+You can either replace data for the whole segment, or, in some cases, overshadow a portion of the segment data.
 
-In Druid, use time ranges to specify the data you want to update, as opposed to a primary key or dimensions often used in transactional databases. Data outside the specified replacement time range is not touched.
+In Druid, use time ranges to specify the data you want to update, as opposed to a primary key or dimensions often used in transactional databases. Data outside the specified replacement time range remains unaffected.
 You can use this Druid functionality to perform data updates, inserts, and deletes, similar to UPSERT functionality for transactional databases.
 
 This tutorial shows you how to use the Druid SQL [REPLACE](../multi-stage-query/reference.md#replace) function with the OVERWRITE clause to update existing data.
@@ -237,7 +237,7 @@ PARTITIONED BY FLOOR(__time TO HOUR)
 
 Note that the `number` for `polecat` has changed from 626 to 486.
 
-When you perform partial segment overshadowing multiple times, you can create fragmentation. Use [compaction](../data-management/compaction.md) to consolidate fragmented segments and remove the overshadowed areas of the earlier granularity segment.
+When you perform partial segment overshadowing multiple times, you can create segment fragmentation that could affect query performance. Use [compaction](../data-management/compaction.md) to correct any fragmentation.
 
 ## Learn more
 

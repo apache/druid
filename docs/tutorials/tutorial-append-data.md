@@ -2,6 +2,7 @@
 id: tutorial-append-data
 title: Append data
 sidebar_label: Append data
+description: Learn how to append data to a datasource without changing the existing data in Apache Druid.
 ---
 
 <!--
@@ -53,8 +54,7 @@ FROM TABLE(
 PARTITIONED BY DAY
 ```
 
-In the resulting `append_tutorial` datasource, individual rows are uniquely identified by `__time`, `animal`, and `number`.
-The results contain records for eight animals over two days.
+The resulting `append_tutorial` datasource contains records for eight animals over two days.
 To view the results, open a new tab and run the following query:
 
 ```sql
@@ -97,7 +97,7 @@ FROM TABLE(
 PARTITIONED BY DAY
 ```
 
-Druid adds five additional rows after `seahorse`.
+Druid adds rows for the subsequent days after `seahorse`.
 When the task completes, open a new tab and run the following query to view the results:
 
 ```sql
