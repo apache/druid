@@ -97,7 +97,8 @@ public class DataSegmentPlusTest
             1
         ),
         createdDate,
-        usedStatusLastUpdatedDate
+        usedStatusLastUpdatedDate,
+        null
     );
 
     final Map<String, Object> objectMap = MAPPER.readValue(

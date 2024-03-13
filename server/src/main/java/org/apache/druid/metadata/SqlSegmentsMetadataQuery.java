@@ -43,13 +43,13 @@ import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -217,6 +217,49 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
+  public List<DataSegmentPlus> retrieveSegmentsById(String datasource, Set<String> segmentIds)
+  {
+    final List<List<String>> partitionedSegmentIds
+        = Lists.partition(new ArrayList<>(segmentIds), 100);
+
+    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    for (List<String> partition : partitionedSegmentIds) {
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition));
+    }
+    return fetchedSegments;
+  }
+
+  private List<DataSegmentPlus> retrieveSegmentBatchById(String datasource, List<String> segmentIds)
+  {
+    if (segmentIds.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    final String segmentIdCsv = segmentIds.stream()
+                                          .map(id -> "'" + id + "'")
+                                          .collect(Collectors.joining(","));
+    ResultIterator<DataSegmentPlus> resultIterator = handle
+        .createQuery(
+            StringUtils.format(
+                "SELECT payload, used FROM %s WHERE dataSource = :dataSource AND id IN (%s)",
+                dbTables.getSegmentsTable(), segmentIdCsv
+            )
+        )
+        .bind("dataSource", datasource)
+        .setFetchSize(connector.getStreamingFetchSize())
+        .map(
+            (index, r, ctx) -> new DataSegmentPlus(
+                JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                null,
+                null,
+                r.getBoolean(2)
+            )
+        )
+        .iterator();
+
+    return Lists.newArrayList(resultIterator);
+  }
+
   /**
    * Marks the provided segments as either used or unused.
    *
@@ -324,7 +367,6 @@ public class SqlSegmentsMetadataQuery
    */
   public DataSegment retrieveUsedSegmentForId(String id)
   {
-
     final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
 
     final Query<Map<String, Object>> sql = handle
@@ -347,7 +389,6 @@ public class SqlSegmentsMetadataQuery
    */
   public DataSegment retrieveSegmentForId(String id)
   {
-
     final String query = "SELECT payload FROM %s WHERE id = :id";
 
     final Query<Map<String, Object>> sql = handle
@@ -680,7 +721,8 @@ public class SqlSegmentsMetadataQuery
     return sql.map((index, r, ctx) -> new DataSegmentPlus(
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
             DateTimes.of(r.getString(2)),
-            DateTimes.of(r.getString(3))
+            DateTimes.of(r.getString(3)),
+            null
         ))
         .iterator();
   }
