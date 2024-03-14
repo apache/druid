@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -362,6 +363,50 @@ public class GeneratorBasicSchemas
     );
 
     SCHEMA_INFO_BUILDER.put("expression-testbench", expressionsTestsSchema);
+  }
+
+  static {
+    // schema for benchmarking group-by
+    List<GeneratorColumnSchema> expressionsTestsSchemaColumns = ImmutableList.of(
+        // string dims
+        GeneratorColumnSchema.makeSequential("string-Sequential-100_000", ValueType.STRING, false, 1, null, 0, 100_000),
+        GeneratorColumnSchema.makeSequential("string-Sequential-10_000_000", ValueType.STRING, false, 1, null, 0, 10_000_000),
+        // GeneratorColumnSchema.makeSequential("string-Sequential-1_000_000_000", ValueType.STRING, false, 1, null, 0, 1_000_000_000),
+        GeneratorColumnSchema.makeLazyZipf("string-ZipF-1_000_000", ValueType.STRING, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("string-Uniform-1_000_000", ValueType.STRING, false, 1, 0.3, 0, 1_000_000),
+
+        // multi string dims
+        GeneratorColumnSchema.makeSequential("multi-string-Sequential-100_000", ValueType.STRING, false, 8, null, 0, 100_000),
+        GeneratorColumnSchema.makeSequential("multi-string-Sequential-10_000_000", ValueType.STRING, false, 8, null, 0, 10_000_000),
+        // GeneratorColumnSchema.makeSequential("multi-string-Sequential-1_000_000_000", ValueType.STRING, false, 8, null, 0, 1_000_000_000),
+        GeneratorColumnSchema.makeLazyZipf("multi-string-ZipF-1_000_000", ValueType.STRING, false, 16, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("multi-string-Uniform-1_000_000", ValueType.STRING, false, 4, null, 0, 1_000_000),
+
+        // numeric dims
+        GeneratorColumnSchema.makeSequential("long-Sequential-100_000", ValueType.LONG, false, 1, null, 0, 100_000),
+        GeneratorColumnSchema.makeSequential("long-Sequential-10_000_000", ValueType.LONG, false, 1, null, 0, 10_000_000),
+        // GeneratorColumnSchema.makeSequential("long-Sequential-1_000_000_000", ValueType.LONG, false, 1, null, 0, 1_000_000_000),
+        GeneratorColumnSchema.makeLazyZipf("long-ZipF-1_000_000", ValueType.LONG, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("long-Uniform-1_000_000", ValueType.LONG, false, 1, 0.3, 0, 1_000_000),
+
+        GeneratorColumnSchema.makeLazyZipf("double-ZipF-1_000_000", ValueType.DOUBLE, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeContinuousUniform("double-Uniform-1_000_000", ValueType.DOUBLE, false, 1, null, 0.0, 1_000_000.0),
+
+        GeneratorColumnSchema.makeLazyZipf("float-ZipF-1_000_000", ValueType.FLOAT, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeContinuousUniform("float-Uniform-1_000_000", ValueType.FLOAT, false, 1, null, 0.0, 1_000_000.0)
+        // Generate the array dims, and the complex value dims by wrapping the pre-existing primitive dims within simple expressions
+    );
+
+    Interval interval = Intervals.of("2000-01-01/P1D");
+
+    GeneratorSchemaInfo groupByTestsSchema = new GeneratorSchemaInfo(
+        expressionsTestsSchemaColumns,
+        Collections.emptyList(),
+        interval,
+        false
+    );
+
+    SCHEMA_INFO_BUILDER.put("groupBy-testbench", groupByTestsSchema);
   }
 
   static {
