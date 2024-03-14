@@ -42,6 +42,18 @@ Apache Druid 29.0.1 is a patch release that fixes some issues in the Druid 29.0.
 * Web console-generated queries now only set the context parameter `arrayIngestMode` to `array` when you explicitly opt in to use arrays [#15927](https://github.com/apache/druid/pull/15927)
 * The web console now displays the results of an MSQ query that writes to an external destination through the [`EXTERN`](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function) function [#15969](https://github.com/apache/druid/pull/15969)
 
+### Incompatible changes
+
+#### Changes to `targetDataSource` in EXPLAIN queries
+
+Druid 29.0.1 includes a breaking change that restores the behavior for `targetDataSource` to its 28.0.0 and earlier state, different from Druid 29.0.0 and only 29.0.0. In 29.0.0, `targetDataSource` returns a JSON object that includes the datasource name. In all other versions, `targetDataSource` returns a string containing the name of the datasource.
+
+If you're upgrading from any version other than 29.0.0, there is no change in behavior.
+
+If you are upgrading from 29.0.0, this is an incompatible change.
+
+[#16004](https://github.com/apache/druid/pull/16004)
+
 ### Dependency updates
 
 * Updated PostgreSQL JDBC Driver version to 42.7.2 [#15931](https://github.com/apache/druid/pull/15931)
