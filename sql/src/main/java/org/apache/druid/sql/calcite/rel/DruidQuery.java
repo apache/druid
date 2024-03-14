@@ -590,10 +590,9 @@ public class DruidQuery
           virtualColumnRegistry,
           rexBuilder,
           InputAccessor.buildFor(
-              rexBuilder,
-              rowSignature,
+              aggregate,
               partialQuery.getSelectProject(),
-              null),
+              rowSignature),
           aggregations,
           aggName,
           aggCall,

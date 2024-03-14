@@ -21,7 +21,6 @@ on:
       - 'dev/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
-      - 'helm/**'
       - 'web-console/**'
       - 'website/**'
     branches:
@@ -34,7 +33,6 @@ on:
       - 'dev/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
-      - 'helm/**'
       - 'web-console/**'
       - 'website/**'
     branches:
@@ -60,11 +58,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # skip the "cache: maven" step from setup-java. We explicitly use a
       # different cache key since we cannot reuse it across commits.
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.jdk }}
@@ -73,7 +71,7 @@ jobs:
       # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Cache Maven m2 repository
         id: maven
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
@@ -81,7 +79,7 @@ jobs:
 
       - name: Cache targets
         id: target
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ./**/target
@@ -89,7 +87,7 @@ jobs:
 
       - name: Cache image
         id: docker_container
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
           path: |

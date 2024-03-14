@@ -105,7 +105,8 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
         StringUtils.format("%s.long_column", filenameBase),
         byteOrder,
         encoding,
-        compression
+        compression,
+        segmentWriteOutMedium.getCloser()
     );
     writer.open();
     nullValueBitmapWriter = new ByteBufferWriter<>(

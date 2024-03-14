@@ -29,7 +29,7 @@ import java.util.Collections;
 public abstract class SimpleImmutableBitmapDelegatingIterableIndex extends SimpleBitmapColumnIndex
 {
   @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
+  public final <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     if (includeUnknown) {
       final ImmutableBitmap unknownsBitmap = getUnknownsBitmap();

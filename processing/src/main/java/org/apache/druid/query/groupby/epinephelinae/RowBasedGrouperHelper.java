@@ -1389,6 +1389,14 @@ public class RowBasedGrouperHelper
       if (enableRuntimeDictionaryGeneration) {
         dictionary.clear();
         reverseDictionary.clear();
+        stringArrayDictionary.clear();
+        reverseStringArrayDictionary.clear();
+        doubleArrayDictionary.clear();
+        reverseDoubleArrayDictionary.clear();
+        floatArrayDictionary.clear();
+        reverseFloatArrayDictionary.clear();
+        longArrayDictionary.clear();
+        reverseLongArrayDictionary.clear();
         rankOfDictionaryIds = null;
         currentEstimatedSize = 0;
       }

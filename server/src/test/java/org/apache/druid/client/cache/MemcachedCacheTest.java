@@ -254,6 +254,8 @@ public class MemcachedCacheTest
     Assert.assertEquals(connectionFactoryDynamic.getClientMode(), ClientMode.Dynamic);
     //enableTls is true so sslContext is not null
     Assert.assertNotNull(connectionFactoryDynamic.getSSLContext());
+    // Ensure Protocol is TLSv1.2
+    Assert.assertEquals("TLSv1.2", connectionFactoryDynamic.getSSLContext().getProtocol());
   }
 
   @Test

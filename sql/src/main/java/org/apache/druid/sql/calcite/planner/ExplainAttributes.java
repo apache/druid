@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.sql.destination.IngestDestination;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,7 +34,7 @@ public final class ExplainAttributes
   private final String statementType;
 
   @Nullable
-  private final IngestDestination targetDataSource;
+  private final String targetDataSource;
 
   @Nullable
   private final Granularity partitionedBy;
@@ -48,7 +47,7 @@ public final class ExplainAttributes
 
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
-      @JsonProperty("targetDataSource") @Nullable final IngestDestination targetDataSource,
+      @JsonProperty("targetDataSource") @Nullable final String targetDataSource,
       @JsonProperty("partitionedBy") @Nullable final Granularity partitionedBy,
       @JsonProperty("clusteredBy") @Nullable final List<String> clusteredBy,
       @JsonProperty("replaceTimeChunks") @Nullable final String replaceTimeChunks
@@ -77,7 +76,7 @@ public final class ExplainAttributes
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public IngestDestination getTargetDataSource()
+  public String getTargetDataSource()
   {
     return targetDataSource;
   }

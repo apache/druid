@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -63,6 +64,14 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unused")
 public interface Function extends NamedFunction
 {
+  /**
+   * Possibly convert a {@link Function} into an optimized, possibly not thread-safe {@link Function}.
+   */
+  default Function asSingleThreaded(List<Expr> args, Expr.InputBindingInspector inspector)
+  {
+    return this;
+  }
+
   /**
    * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
    */
@@ -3243,6 +3252,67 @@ public interface Function extends NamedFunction
     }
   }
 
+  /**
+   * Primarily internal helper function used to coerce null, [], and [null] into [null], similar to the logic done
+   * by {@link org.apache.druid.segment.virtual.ExpressionSelectors#supplierFromDimensionSelector} when the 3rd
+   * argument is true, which is done when implicitly mapping scalar functions over mvd values.
+   */
+  class MultiValueStringHarmonizeNullsFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "mv_harmonize_nulls";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval eval = args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
+      if (eval.value() == null || eval.asArray().length == 0) {
+        return ExprEval.ofArray(ExpressionType.STRING_ARRAY, new Object[]{null});
+      }
+      return eval;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
   class ArrayToMultiValueStringFunction implements Function
   {
     @Override
@@ -3757,7 +3827,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArrayContainsFunction extends ArraysFunction
+  class ArrayContainsFunction implements Function
   {
     @Override
     public String name()
@@ -3779,15 +3849,124 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      final ExprEval lhsExpr = args.get(0).eval(bindings);
+      final ExprEval rhsExpr = args.get(1).eval(bindings);
+
       final Object[] array1 = lhsExpr.asArray();
-      final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+      if (array1 == null) {
+        return ExprEval.ofLong(null);
+      }
+      ExpressionType array1Type = lhsExpr.asArrayType();
+
+      if (rhsExpr.isArray()) {
+        final Object[] array2 = rhsExpr.castTo(array1Type).asArray();
+        if (array2 == null) {
+          return ExprEval.ofLongBoolean(false);
+        }
+        return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+      } else {
+        final Object elem = rhsExpr.castTo((ExpressionType) array1Type.getElementType()).value();
+        return ExprEval.ofLongBoolean(Arrays.asList(array1).contains(elem));
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public Function asSingleThreaded(List<Expr> args, Expr.InputBindingInspector inspector)
+    {
+      if (args.get(1).isLiteral()) {
+        final ExpressionType lhsType = args.get(0).getOutputType(inspector);
+        if (lhsType == null) {
+          return this;
+        }
+        final ExpressionType lhsArrayType = ExpressionType.asArrayType(lhsType);
+        final ExprEval<?> rhsEval = args.get(1).eval(InputBindings.nilBindings());
+        if (rhsEval.isArray()) {
+          final Object[] rhsArray = rhsEval.castTo(lhsArrayType).asArray();
+          return new ContainsConstantArray(rhsArray);
+        } else {
+          final Object val = rhsEval.castTo((ExpressionType) lhsArrayType.getElementType()).value();
+          return new ContainsConstantScalar(val);
+        }
+      }
+      return this;
+    }
+
+    private static final class ContainsConstantArray extends ArrayContainsFunction
+    {
+      @Nullable
+      final Object[] rhsArray;
+
+      public ContainsConstantArray(@Nullable Object[] rhsArray)
+      {
+        this.rhsArray = rhsArray;
+      }
+
+      @Override
+      public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+      {
+        final ExprEval<?> lhsExpr = args.get(0).eval(bindings);
+        final Object[] array1 = lhsExpr.asArray();
+        if (array1 == null) {
+          return ExprEval.ofLong(null);
+        }
+        if (rhsArray == null) {
+          return ExprEval.ofLongBoolean(false);
+        }
+        return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(rhsArray)));
+      }
+    }
+
+    private static final class ContainsConstantScalar extends ArrayContainsFunction
+    {
+      @Nullable
+      final Object val;
+
+      public ContainsConstantScalar(@Nullable Object val)
+      {
+        this.val = val;
+      }
+
+      @Override
+      public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+      {
+        final ExprEval<?> lhsExpr = args.get(0).eval(bindings);
+
+        final Object[] array1 = lhsExpr.asArray();
+        if (array1 == null) {
+          return ExprEval.ofLong(null);
+        }
+        return ExprEval.ofLongBoolean(Arrays.asList(array1).contains(val));
+      }
     }
   }
 
-  class ArrayOverlapFunction extends ArraysFunction
+  class ArrayOverlapFunction implements Function
   {
     @Override
     public String name()
@@ -3803,15 +3982,110 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final Object[] array1 = lhsExpr.asArray();
-      final List<Object> array2 = Arrays.asList(rhsExpr.asArray());
-      boolean any = false;
-      for (Object check : array1) {
-        any |= array2.contains(check);
+      final ExprEval arrayExpr1 = args.get(0).eval(bindings);
+      final ExprEval arrayExpr2 = args.get(1).eval(bindings);
+
+      final Object[] array1 = arrayExpr1.asArray();
+      if (array1 == null) {
+        return ExprEval.ofLong(null);
       }
-      return ExprEval.ofLongBoolean(any);
+      ExpressionType array1Type = arrayExpr1.asArrayType();
+      final Object[] array2 = arrayExpr2.castTo(array1Type).asArray();
+      if (array2 == null) {
+        return ExprEval.ofLongBoolean(false);
+      }
+      List<Object> asList = Arrays.asList(array2);
+      for (Object check : array1) {
+        if (asList.contains(check)) {
+          return ExprEval.ofLongBoolean(true);
+        }
+      }
+      return ExprEval.ofLongBoolean(false);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public Function asSingleThreaded(List<Expr> args, Expr.InputBindingInspector inspector)
+    {
+      if (args.get(1).isLiteral()) {
+        final ExpressionType lhsType = args.get(0).getOutputType(inspector);
+        if (lhsType == null) {
+          return this;
+        }
+        final ExpressionType lhsArrayType = ExpressionType.asArrayType(lhsType);
+        final ExprEval<?> rhsEval = args.get(1).eval(InputBindings.nilBindings());
+        final Object[] rhsArray = rhsEval.castTo(lhsArrayType).asArray();
+        if (rhsArray == null) {
+          return new ArrayOverlapFunction()
+          {
+            @Override
+            public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+            {
+              final ExprEval arrayExpr1 = args.get(0).eval(bindings);
+              final Object[] array1 = arrayExpr1.asArray();
+              if (array1 == null) {
+                return ExprEval.ofLong(null);
+              }
+              return ExprEval.ofLongBoolean(false);
+            }
+          };
+        }
+        final Set<Object> set = new ObjectAVLTreeSet<>(lhsArrayType.getElementType().getNullableStrategy());
+        set.addAll(Arrays.asList(rhsArray));
+        return new OverlapConstantArray(set);
+      }
+      return this;
+    }
+
+    private static final class OverlapConstantArray extends ArrayContainsFunction
+    {
+      final Set<Object> set;
+
+      public OverlapConstantArray(Set<Object> set)
+      {
+        this.set = set;
+      }
+
+      @Override
+      public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+      {
+        final ExprEval<?> lhsExpr = args.get(0).eval(bindings);
+        final Object[] array1 = lhsExpr.asArray();
+        if (array1 == null) {
+          return ExprEval.ofLong(null);
+        }
+        for (Object check : array1) {
+          if (set.contains(check)) {
+            return ExprEval.ofLongBoolean(true);
+          }
+        }
+        return ExprEval.ofLongBoolean(false);
+      }
     }
   }
 

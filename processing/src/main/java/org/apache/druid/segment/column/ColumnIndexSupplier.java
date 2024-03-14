@@ -44,14 +44,4 @@ public interface ColumnIndexSupplier
    */
   @Nullable
   <T> T as(Class<T> clazz);
-
-  static boolean skipComputingRangeIndexes(ColumnConfig columnConfig, int numRows, int rangeSize)
-  {
-    return rangeSize > (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
-  }
-
-  static boolean skipComputingPredicateIndexes(ColumnConfig columnConfig, int numRowsToScan, int dictionaryCardinality)
-  {
-    return dictionaryCardinality > (int) Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRowsToScan);
-  }
 }

@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
+
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -66,7 +67,8 @@ public abstract class RowsAndColumnsTestBase
         new Object[]{ArrayListRowsAndColumns.class, ArrayListRowsAndColumnsTest.MAKER},
         new Object[]{ConcatRowsAndColumns.class, ConcatRowsAndColumnsTest.MAKER},
         new Object[]{RearrangedRowsAndColumns.class, RearrangedRowsAndColumnsTest.MAKER},
-        new Object[]{FrameRowsAndColumns.class, FrameRowsAndColumnsTest.MAKER}
+        new Object[]{FrameRowsAndColumns.class, FrameRowsAndColumnsTest.MAKER},
+        new Object[]{StorageAdapterRowsAndColumns.class, StorageAdapterRowsAndColumnsTest.MAKER}
     );
   }
 

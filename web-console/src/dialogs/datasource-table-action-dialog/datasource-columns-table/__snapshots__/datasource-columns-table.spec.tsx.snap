@@ -28,7 +28,7 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -44,30 +44,30 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Header": "Column name",
           "accessor": "COLUMN_NAME",
           "className": "padded",
           "width": 300,
         },
-        Object {
+        {
           "Header": "Data type",
           "accessor": "DATA_TYPE",
           "className": "padded",
@@ -75,18 +75,18 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
         },
       ]
     }
-    data={Array []}
-    defaultExpanded={Object {}}
+    data={[]}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={25}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={[]}
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -130,14 +130,14 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         25,
         50,
         100,
       ]
     }
     pageText="Page"
-    pivotDefaults={Object {}}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -151,7 +151,7 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
 </div>
@@ -185,7 +185,7 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -201,30 +201,30 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Header": "Column name",
           "accessor": "COLUMN_NAME",
           "className": "padded",
           "width": 300,
         },
-        Object {
+        {
           "Header": "Data type",
           "accessor": "DATA_TYPE",
           "className": "padded",
@@ -232,18 +232,18 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
         },
       ]
     }
-    data={Array []}
-    defaultExpanded={Object {}}
+    data={[]}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={25}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={[]}
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -287,14 +287,14 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         25,
         50,
         100,
       ]
     }
     pageText="Page"
-    pivotDefaults={Object {}}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -308,7 +308,7 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
 </div>
@@ -350,7 +350,7 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -366,30 +366,30 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Header": "Column name",
           "accessor": "COLUMN_NAME",
           "className": "padded",
           "width": 300,
         },
-        Object {
+        {
           "Header": "Data type",
           "accessor": "DATA_TYPE",
           "className": "padded",
@@ -397,18 +397,18 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
         },
       ]
     }
-    data={Array []}
-    defaultExpanded={Object {}}
+    data={[]}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={25}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={[]}
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -452,14 +452,14 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         25,
         50,
         100,
       ]
     }
     pageText="Page"
-    pivotDefaults={Object {}}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -473,7 +473,7 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
 </div>
@@ -507,7 +507,7 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -523,30 +523,30 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Header": "Column name",
           "accessor": "COLUMN_NAME",
           "className": "padded",
           "width": 300,
         },
-        Object {
+        {
           "Header": "Data type",
           "accessor": "DATA_TYPE",
           "className": "padded",
@@ -555,28 +555,28 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
       ]
     }
     data={
-      Array [
-        Object {
+      [
+        {
           "COLUMN_NAME": "channel",
           "DATA_TYPE": "VARCHAR",
         },
-        Object {
+        {
           "COLUMN_NAME": "page",
           "DATA_TYPE": "VARCHAR",
         },
       ]
     }
-    defaultExpanded={Object {}}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={25}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={[]}
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -620,14 +620,14 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         25,
         50,
         100,
       ]
     }
     pageText="Page"
-    pivotDefaults={Object {}}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -641,7 +641,7 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
 </div>

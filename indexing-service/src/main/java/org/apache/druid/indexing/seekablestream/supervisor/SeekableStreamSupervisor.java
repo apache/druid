@@ -1155,14 +1155,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     Instant handleNoticeEndTime = Instant.now();
                     Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
                     String noticeType = notice.getType();
-                    log.debug(
-                        "Handled notice [%s] from notices queue in [%d] ms, "
-                        + "current notices queue size [%d] for datasource [%s]",
-                        noticeType,
-                        timeElapsed.toMillis(),
-                        getNoticesQueueSize(),
-                        dataSource
-                    );
+                    if (log.isDebugEnabled()) {
+                      log.debug(
+                          "Handled notice [%s] from notices queue in [%d] ms, "
+                              + "current notices queue size [%d] for datasource [%s]",
+                          noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource
+                      );
+                    }
                     emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {

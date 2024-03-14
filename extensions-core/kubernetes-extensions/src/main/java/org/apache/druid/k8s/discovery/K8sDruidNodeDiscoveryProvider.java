@@ -43,6 +43,7 @@ import java.net.SocketTimeoutException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -57,7 +58,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
 
   private final K8sApiClient k8sApiClient;
 
-  private ExecutorService listenerExecutor;
+  private ScheduledExecutorService listenerExecutor;
 
   private final ConcurrentHashMap<NodeRole, NodeRoleWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
 
@@ -145,7 +146,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
 
       // This is single-threaded to ensure that all listener calls are executed precisely in the oder of add/remove
       // event occurences.
-      listenerExecutor = Execs.singleThreaded("K8sDruidNodeDiscoveryProvider-ListenerExecutor");
+      listenerExecutor = Execs.scheduledSingleThreaded("K8sDruidNodeDiscoveryProvider-ListenerExecutor");
 
       LOGGER.info("started");
 
@@ -196,7 +197,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     private final long watcherErrorRetryWaitMS;
 
     NodeRoleWatcher(
-        ExecutorService listenerExecutor,
+        ScheduledExecutorService listenerExecutor,
         NodeRole nodeRole,
         PodInfo podInfo,
         K8sDiscoveryConfig discoveryConfig,
@@ -209,7 +210,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
       this.k8sApiClient = k8sApiClient;
 
       this.nodeRole = nodeRole;
-      this.baseNodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
+      this.baseNodeRoleWatcher = BaseNodeRoleWatcher.create(listenerExecutor, nodeRole);
 
       this.watcherErrorRetryWaitMS = watcherErrorRetryWaitMS;
     }
