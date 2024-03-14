@@ -31,6 +31,7 @@ import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
 import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
 import org.pac4j.core.profile.UserProfile;
+import org.pac4j.oidc.profile.OidcProfile;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -96,7 +97,7 @@ public class Pac4jFilter implements Filter
           "/",
           true, false, false, null);
     } else {
-      Object uid = securityLogic.perform(
+      OidcProfile profile = (OidcProfile) securityLogic.perform(
           context,
           pac4jConfig,
           (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
@@ -104,7 +105,7 @@ public class Pac4jFilter implements Filter
               LOGGER.warn("No profiles found after OIDC auth.");
               return null;
             } else {
-              return profiles.iterator().next().getId();
+              return profiles.iterator().next();
             }
           },
           JEEHttpActionAdapter.INSTANCE,
@@ -112,8 +113,8 @@ public class Pac4jFilter implements Filter
       // Changed the Authorizer from null to "none".
       // In the older version, if it is null, it simply grant access and returns authorized.
       // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
-      if (uid != null) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(uid.toString(), authorizerName, name, null);
+      if (profile != null) {
+        AuthenticationResult authenticationResult = new AuthenticationResult(profile.getId(), authorizerName, name, profile.getAttributes());
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       }
