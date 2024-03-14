@@ -156,6 +156,7 @@ public class SegmentSchemaCache
     if (inTransitSMQResults.containsKey(segmentId)) {
       return Optional.of(inTransitSMQResults.get(segmentId));
     }
+
     // segment schema has been fetched via SMQ and the schema has been published to the DB
     if (inTransitSMQPublishedResults.containsKey(segmentId)) {
       return Optional.of(inTransitSMQPublishedResults.get(segmentId));
@@ -165,12 +166,21 @@ public class SegmentSchemaCache
     if (finalizedSegmentStats.containsKey(segmentId)) {
       SegmentStats segmentStats = finalizedSegmentStats.get(segmentId);
       Long schemaId = segmentStats.getSchemaId();
+      if (schemaId == null) {
+        log.error("SchemaId for segment [%s] is null.", segmentId);
+      }
+
+      if (segmentStats.getNumRows() == null) {
+        log.error("NumRows for segment [%s] is null.", segmentId);
+      }
+
       if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {
         return Optional.of(
             new SegmentSchemaMetadata(
                 finalizedSegmentSchema.get(schemaId),
                 segmentStats.getNumRows() == null ? 0 : segmentStats.getNumRows()
-            ));
+            )
+        );
       }
     }
 

@@ -190,9 +190,11 @@ public class SegmentSchemaManager
     Set<String> updatedSegments =
         segmentUpdatedBatch(handle, batch.stream().map(plus -> plus.getSegmentId().toString()).collect(Collectors.toSet()));
 
+    log.debug("Already updated segments: [%s].", updatedSegments);
+
     List<SegmentSchemaMetadataPlus> segmentsToUpdate =
         batch.stream()
-             .filter(v -> !updatedSegments.contains(v.getSegmentId().toString()))
+             .filter(id -> !updatedSegments.contains(id.getSegmentId().toString()))
              .collect(Collectors.toList());
 
     // fetch schemaId
@@ -205,7 +207,7 @@ public class SegmentSchemaManager
                 .collect(Collectors.toSet())
         );
 
-    log.debug("FingerprintSchemaIdMap is [%s].", fingerprintSchemaIdMap);
+    log.debug("FingerprintSchemaIdMap: [%s].", fingerprintSchemaIdMap);
 
     // update schemaId and numRows in segments table
     String updateSql =
@@ -226,7 +228,7 @@ public class SegmentSchemaManager
       for (SegmentSchemaMetadataPlus segmentSchema : segmentsToUpdate) {
         String fingerprint = segmentSchema.getFingerprint();
         if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
-          log.error("Fingerprint [%s] is not associated with any schemaId.", fingerprint);
+          log.error("Fingerprint [%s] for segmentId [%s] is not associated with any schemaId.", fingerprint, segmentSchema.getSegmentId());
           continue;
         }
 
