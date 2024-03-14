@@ -574,13 +574,11 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    // Capture the last updated time cutoff
-    final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
+    final DateTime lastUpdatedTime1 = DateTimes.nowUtc();
+    updateUsedStatusLastUpdated(segment1, lastUpdatedTime1);
+    updateUsedStatusLastUpdated(segment4, lastUpdatedTime1);
 
-    // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
-    Thread.sleep(1000);
-
-    // now mark the third segment as unused
+    // Now mark the third segment as unused
     Assert.assertEquals(
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
@@ -589,8 +587,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
-
+    final DateTime lastUpdatedTime2 = DateTimes.nowUtc();
+    updateUsedStatusLastUpdated(segment3, lastUpdatedTime2);
 
     final List<Interval> segmentIntervals = segments.stream()
                                                     .map(DataSegment::getInterval)
@@ -607,7 +605,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         false,
         1,
         10,
-        maxUsedStatusLastUpdatedTime1
+        lastUpdatedTime1
     );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
@@ -632,7 +630,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         false,
         1,
         10,
-        maxUsedStatusLastUpdatedTime2
+        lastUpdatedTime2
     );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
@@ -686,10 +684,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
-
-    // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
-    Thread.sleep(1000);
+    final DateTime lastUpdatedTime1 = DateTimes.nowUtc();
+    updateUsedStatusLastUpdated(segment1, lastUpdatedTime1);
+    updateUsedStatusLastUpdated(segment4, lastUpdatedTime1);
 
     Assert.assertEquals(
         2,
@@ -701,8 +698,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
-
+    final DateTime lastUpdatedTime2 = DateTimes.nowUtc();
+    updateUsedStatusLastUpdated(segment2, lastUpdatedTime2);
+    updateUsedStatusLastUpdated(segment3, lastUpdatedTime2);
 
     final List<Interval> segmentIntervals = segments.stream()
                                                     .map(DataSegment::getInterval)
@@ -719,20 +717,20 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         false,
         1,
         10,
-        maxUsedStatusLastUpdatedTime1
+        lastUpdatedTime1
     );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
 
-    final List<DataSegment> unusedSegments =
+    final List<DataSegment> observedUnusedSegments1 =
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
             DATA_SOURCE,
             umbrellaInterval,
             null,
             null
-            );
+        );
 
-    Assert.assertEquals(ImmutableList.of(segment2, segment3), unusedSegments);
+    Assert.assertEquals(ImmutableList.of(segment2, segment3), observedUnusedSegments1);
     Assert.assertEquals(new KillTaskReport.Stats(2, 3, 0), getReportedStats());
 
     final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTask(
@@ -744,19 +742,19 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         false,
         1,
         10,
-        maxUsedStatusLastUpdatedTime2
+        lastUpdatedTime2
     );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
 
-    final List<DataSegment> unusedSegments2 = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
-        DATA_SOURCE,
-        umbrellaInterval,
-        null,
-        null
-    );
+    final List<DataSegment> observedUnusedSegments2 =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE, umbrellaInterval,
+            null,
+            null
+        );
 
-    Assert.assertEquals(ImmutableList.of(), unusedSegments2);
+    Assert.assertEquals(ImmutableList.of(), observedUnusedSegments2);
     Assert.assertEquals(new KillTaskReport.Stats(2, 3, 0), getReportedStats());
   }
 
@@ -780,11 +778,10 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    // Capture the last updated time cutoff
-    final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
-
-    // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
-    Thread.sleep(1000);
+    final DateTime lastUpdatedTime1 = DateTimes.nowUtc();
+    updateUsedStatusLastUpdated(segment1, lastUpdatedTime1);
+    updateUsedStatusLastUpdated(segment2, lastUpdatedTime1);
+    updateUsedStatusLastUpdated(segment4, lastUpdatedTime1);
 
     Assert.assertEquals(
         2,
@@ -792,7 +789,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             ImmutableSet.of(segment3.getId(), segment5.getId())
         )
     );
-    final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
+
+    final DateTime lastUpdatedTime2 = DateTimes.nowUtc();
+    updateUsedStatusLastUpdated(segment4, lastUpdatedTime2);
 
     final List<Interval> segmentIntervals = segments.stream()
                                                     .map(DataSegment::getInterval)
@@ -809,7 +808,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         false,
         1,
         10,
-        maxUsedStatusLastUpdatedTime1
+        lastUpdatedTime1
     );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
@@ -837,7 +836,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         false,
         1,
         10,
-        maxUsedStatusLastUpdatedTime2
+        lastUpdatedTime2
     );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
@@ -1175,6 +1174,15 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         9,
         10L
+    );
+  }
+
+  private void updateUsedStatusLastUpdated(DataSegment segment, DateTime newValue)
+  {
+    derbyConnectorRule.updateSegmentsTable(
+        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
+        newValue.toString(),
+        segment.getId().toString()
     );
   }
 }
