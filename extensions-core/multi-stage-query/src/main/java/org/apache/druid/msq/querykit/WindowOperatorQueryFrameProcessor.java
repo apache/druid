@@ -80,7 +80,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final FrameWriterFactory frameWriterFactory;
   private final FrameReader frameReader;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
-  ArrayList<ResultRow> objectsOfASingleRac;
+  private final ArrayList<ResultRow> objectsOfASingleRac;
   List<Integer> partitionColsIndex;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
@@ -192,14 +192,14 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      *    write to output channel
      *
      *
-     *  Future thoughts:
+     *  Future thoughts: {@link https://github.com/apache/druid/issues/16126}
      *
-     *  1. We are writing 1 partition to each frame in this way. In case of high cardinality data
+     *  1. We are writing 1 partition to each frame in this way. In case of low cardinality data
      *      we will me making a large number of small frames. We can have a check to keep size of frame to a value
      *      say 20k rows and keep on adding to the same pending frame and not create a new frame
      *
      *  2. Current approach with R&C and operators materialize a single R&C for processing. In case of data
-     *     with low cardinality a single R&C might be too big to consume. Same for the case of empty OVER() clause
+     *     with high cardinality a single R&C might be too big to consume. Same for the case of empty OVER() clause
      *     Most of the window operations like SUM(), RANK(), RANGE() etc. can be made with 2 passes of the data.
      *     We might think to reimplement them in the MSQ way so that we do not have to materialize so much data
      */
@@ -272,7 +272,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       while (!frameCursor.isDone()) {
         final ResultRow currentRow = rowSupplierFromFrameCursor.get();
         if (outputRow == null) {
-          outputRow = currentRow.copy();
+          outputRow = currentRow;
           objectsOfASingleRac.add(currentRow);
         } else if (comparePartitionKeys(outputRow, currentRow, partitionColsIndex)) {
           // if they have the same partition key
