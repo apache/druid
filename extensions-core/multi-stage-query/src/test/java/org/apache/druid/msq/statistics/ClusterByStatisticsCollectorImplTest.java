@@ -452,6 +452,24 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   }
 
   @Test
+  public void testDownsample()
+  {
+    ClusterByStatisticsCollectorImpl clusterByStatisticsCollector =
+        (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(
+            CLUSTER_BY_XYZ_BUCKET_BY_X,
+            SIGNATURE,
+            500,
+            500,
+            false,
+            false
+        );
+
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 1, 1, "Extremely long key string for unit test; Extremely long key string for unit test;"), 500);
+
+    Assert.assertTrue(clusterByStatisticsCollector.estimatedRetainedBytes() <= 500);
+  }
+
+  @Test
   public void testBucketDownsampledToSingleKeyFinishesCorrectly()
   {
     ClusterByStatisticsCollectorImpl clusterByStatisticsCollector = makeCollector(CLUSTER_BY_XYZ_BUCKET_BY_X, false);
