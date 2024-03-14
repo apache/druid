@@ -588,6 +588,10 @@ public class SqlSegmentsMetadataManagerTest
     );
   }
 
+  // TODO: add mark as unused by versions:
+  // 1. Eternity
+  // 2. Sane intervals
+  // 3. Weird/insance intervals
   @Test
   public void testMarkAsUsedNonOvershadowedSegments2() throws Exception
   {

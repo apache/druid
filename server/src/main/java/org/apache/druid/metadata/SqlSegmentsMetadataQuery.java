@@ -330,7 +330,7 @@ public class SqlSegmentsMetadataQuery
   /**
    * Marks all used segments that are *fully contained by* a particular interval as unused.
    *
-   * @return the number of segments actually modified.
+   * @return Number of segments updated.
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval)
   {
@@ -338,10 +338,10 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * TODO: update javadocs
-   * Marks all used segments that are *fully contained by* a particular interval as unused.
+   * Marks all used segments that are *fully contained by* a particular interval filtered by an optional list of versions
+   * as unused.
    *
-   * @return the number of segments actually modified.
+   * @return Number of segments updated.
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval, @Nullable final List<String> versions)
   {
@@ -355,6 +355,7 @@ public class SqlSegmentsMetadataQuery
           )
       );
       appendConditionForVersions(sb, versions);
+
       return handle
           .createStatement(sb.toString())
           .bind("dataSource", dataSource)
@@ -375,9 +376,8 @@ public class SqlSegmentsMetadataQuery
               IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
           )
       );
-
       appendConditionForVersions(sb, versions);
-      log.info("Query[%s]", sb.toString());
+
       return handle
           .createStatement(sb.toString())
           .bind("dataSource", dataSource)
@@ -507,20 +507,6 @@ public class SqlSegmentsMetadataQuery
       ));
     }
     sb.append(")");
-  }
-
-  private static void appendConditionForVersions(
-      final StringBuilder sb,
-      final List<String> versions
-  ) {
-    if (CollectionUtils.isNullOrEmpty(versions)) {
-      return;
-    }
-
-    final String versionsCsv = versions.stream()
-                                       .map(version -> "'" + version + "'")
-                                       .collect(Collectors.joining(","));
-    sb.append(StringUtils.format(" AND version IN (%s)", versionsCsv));
   }
 
   /**
@@ -876,6 +862,20 @@ public class SqlSegmentsMetadataQuery
       }
     }
     return numChangedSegments;
+  }
+
+  private static void appendConditionForVersions(
+      final StringBuilder sb,
+      final List<String> versions
+  ) {
+    if (CollectionUtils.isNullOrEmpty(versions)) {
+      return;
+    }
+
+    final String versionsCsv = versions.stream()
+                                       .map(version -> "'" + version + "'")
+                                       .collect(Collectors.joining(","));
+    sb.append(StringUtils.format(" AND version IN (%s)", versionsCsv));
   }
 
   enum IntervalMode

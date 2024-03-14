@@ -83,14 +83,17 @@ public interface SegmentsMetadataManager
    */
   int markAsUnusedAllSegmentsInDataSource(String dataSource);
 
+  /**
+   * Marks segments as unused that are fully contained in the specified interval. Segments that are already marked as
+   * unused are not updated.
+   * @return Number of segments updated.
+   */
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
 
   /**
-   * TODO fill in javadocs.
-   * @param dataSource
-   * @param interval
-   * @param versions List of versions
-   * @return
+   * Marks segments as unused that are fully contained in the specified interval with an optional list of versions.
+   * Segments that are already marked as unused are not updated.
+   * @return The number of segments updated.
    */
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, List<String> versions);
 
