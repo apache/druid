@@ -21,8 +21,8 @@ package org.apache.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import org.apache.druid.indexing.common.task.DefaultTaskLabelsProvider;
-import org.apache.druid.indexing.common.task.TaskLabelsProvider;
+import org.apache.druid.indexing.common.task.DefaultTaskIdentitiesProvider;
+import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
@@ -46,16 +46,16 @@ public class IndexingServiceModuleHelper
 
   public static void configureTaskLabelsProvider(Binder binder)
   {
-    PolyBind.optionBinder(binder, Key.get(TaskLabelsProvider.class))
-            .addBinding(DefaultTaskLabelsProvider.TYPE)
-            .to(DefaultTaskLabelsProvider.class)
+    PolyBind.optionBinder(binder, Key.get(TaskIdentitiesProvider.class))
+            .addBinding(DefaultTaskIdentitiesProvider.TYPE)
+            .to(DefaultTaskIdentitiesProvider.class)
             .in(LazySingleton.class);
 
     PolyBind.createChoiceWithDefault(
         binder,
         "druid.indexer.task.labelsprovider.type",
-        Key.get(TaskLabelsProvider.class),
-        DefaultTaskLabelsProvider.TYPE
+        Key.get(TaskIdentitiesProvider.class),
+        DefaultTaskIdentitiesProvider.TYPE
     );
   }
 }

@@ -27,52 +27,56 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(MockitoJUnitRunner.class)
-public class DefaultTaskLabelsProviderTest
+public class DefaultTaskIdentitiesProviderTest
 {
   private Task task;
-  private DefaultTaskLabelsProvider provider;
+  private DefaultTaskIdentitiesProvider provider;
 
   @Before
   public void setup()
   {
-    provider = new DefaultTaskLabelsProvider();
+    provider = new DefaultTaskIdentitiesProvider();
   }
 
   @Test
-  public void testGetTaskLabels()
+  public void shouldReturnDefaultTaskIdentifierWhenGroupIdIsNull()
   {
-    List<String> inputLabels = Arrays.asList("label1", "label2");
-    TaskLabel taskLabel = new TaskLabel(inputLabels);
-    task = new NoopTask("id", null, "datasource", 0, 0, ImmutableMap.of(Tasks.TASK_LABEL, taskLabel));
-
-    List<String> taskLabels = provider.getTaskLabels(task);
-
-    assertEquals(inputLabels, taskLabels);
-
-    // Test case where no specific task labels are defined within task's context
-    task = NoopTask.create();
-    taskLabels = provider.getTaskLabels(task);
-
-    assertTrue(taskLabels.size() == 1);
-    assertEquals(task.getType(), taskLabels.get(0));
+    task = new NoopTask("id", null, "datasource", 0, 0, null);
+    Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
+    assertEquals(task.getType(), taskMetricTags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
   }
 
   @Test
-  public void testGetTaskMetricTags()
+  public void shouldReturnCompactTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedCompact()
+  {
+    task = new NoopTask("id", "coordinator-issued_compact_random_id", "datasource", 0, 0, null);
+    Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
+    assertEquals("compact", taskMetricTags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
+  }
+
+  @Test
+  public void shouldReturnKillTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedKill()
+  {
+    task = new NoopTask("id", "coordinator-issued_kill_random_id", "datasource", 0, 0, null);
+    Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
+    assertEquals("kill", taskMetricTags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
+  }
+
+  @Test
+  public void shouldAppendTaskIdentifierGetTaskMetricTags()
   {
     Map<String, Object> inputTags = ImmutableMap.of("tag1", "value1", "tag2", "value2");
     task = new NoopTask("id", null, "datasource", 0, 0, ImmutableMap.of(DruidMetrics.TAGS, inputTags));
 
     Map<String, Object> tags = provider.getTaskMetricTags(task);
 
-    assertEquals(inputTags, tags);
+    assertEquals(3, tags.size());
+    assertTrue(tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER) == "noop");
   }
 }
