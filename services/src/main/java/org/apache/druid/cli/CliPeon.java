@@ -313,9 +313,8 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(
               Task task,
-              TaskLabelsProvider taskLabelsProvider,
-              @Json ObjectMapper mapper
-          ) throws JsonProcessingException
+              TaskLabelsProvider taskLabelsProvider
+          )
           {
             ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
             builder.put(DruidMetrics.TASK_ID, task.getId());
@@ -324,7 +323,7 @@ public class CliPeon extends GuiceRunnable
             builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
             Map<String, Object> taskMetricTags = taskLabelsProvider.getTaskMetricTags(task);
             if (!taskMetricTags.isEmpty()) {
-              builder.put(DruidMetrics.TAGS, mapper.writeValueAsString(taskMetricTags));
+              builder.put(DruidMetrics.TAGS, taskMetricTags);
             }
 
             return Suppliers.ofInstance(

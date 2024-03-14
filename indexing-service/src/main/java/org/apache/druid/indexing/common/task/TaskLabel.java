@@ -21,17 +21,28 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Represents a container for labels associated with a task. These labels are intended to categorize
+ * tasks based on various characteristics or operational roles within the system. This class provides
+ * a structured way to manage and access these labels, facilitating task management and scheduling
+ * processes.
+ *
+ * Labels are used to enrich tasks with metadata that can influence scheduling decisions, resource allocation,
+ * and more, depending on their interpretation by the system.
+ */
 public class TaskLabel
 {
   @JsonProperty
   private final List<String> labels;
 
   @JsonCreator
+  @VisibleForTesting
   public TaskLabel(
       @JsonProperty("labels") List<String> labels
   )
