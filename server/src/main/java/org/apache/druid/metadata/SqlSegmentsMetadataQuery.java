@@ -227,19 +227,27 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public List<DataSegmentPlus> retrieveSegmentsById(String datasource, Set<String> segmentIds)
+  public List<DataSegmentPlus> retrieveSegmentsById(
+      String datasource,
+      Set<String> segmentIds,
+      boolean includeSchemaInfo
+  )
   {
     final List<List<String>> partitionedSegmentIds
         = Lists.partition(new ArrayList<>(segmentIds), 100);
 
     final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
     for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition));
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, includeSchemaInfo));
     }
     return fetchedSegments;
   }
 
-  private List<DataSegmentPlus> retrieveSegmentBatchById(String datasource, List<String> segmentIds)
+  private List<DataSegmentPlus> retrieveSegmentBatchById(
+      String datasource,
+      List<String> segmentIds,
+      boolean includeSchemaInfo
+  )
   {
     if (segmentIds.isEmpty()) {
       return Collections.emptyList();
@@ -248,24 +256,55 @@ public class SqlSegmentsMetadataQuery
     final String segmentIdCsv = segmentIds.stream()
                                           .map(id -> "'" + id + "'")
                                           .collect(Collectors.joining(","));
-    ResultIterator<DataSegmentPlus> resultIterator = handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT payload, used FROM %s WHERE dataSource = :dataSource AND id IN (%s)",
-                dbTables.getSegmentsTable(), segmentIdCsv
-            )
-        )
-        .bind("dataSource", datasource)
-        .setFetchSize(connector.getStreamingFetchSize())
-        .map(
-            (index, r, ctx) -> new DataSegmentPlus(
-                JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-                null,
-                null,
-                r.getBoolean(2)
-            )
-        )
-        .iterator();
+
+    ResultIterator<DataSegmentPlus> resultIterator;
+    if (includeSchemaInfo) {
+      resultIterator = handle
+          .createQuery(
+              StringUtils.format(
+                  "SELECT payload, used, schema_id, num_rows FROM %s WHERE dataSource = :dataSource AND id IN (%s)",
+                  dbTables.getSegmentsTable(), segmentIdCsv
+              )
+          )
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> {
+                Long schemaId = (Long) r.getObject(3);
+                Long numRows = (Long) r.getObject(4);
+                return new DataSegmentPlus(
+                    JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                    null,
+                    null,
+                    r.getBoolean(2),
+                    schemaId,
+                    numRows
+                );
+              }
+          )
+          .iterator();
+    } else {
+      resultIterator = handle
+          .createQuery(
+              StringUtils.format(
+                  "SELECT payload, used FROM %s WHERE dataSource = :dataSource AND id IN (%s)",
+                  dbTables.getSegmentsTable(), segmentIdCsv
+              )
+          )
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> new DataSegmentPlus(
+                  JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                  null,
+                  null,
+                  r.getBoolean(2),
+                  null,
+                  null
+              )
+          )
+          .iterator();
+    }
 
     return Lists.newArrayList(resultIterator);
   }
@@ -749,6 +788,8 @@ public class SqlSegmentsMetadataQuery
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
             DateTimes.of(r.getString(2)),
             DateTimes.of(r.getString(3)),
+            null,
+            null,
             null
         ))
         .iterator();

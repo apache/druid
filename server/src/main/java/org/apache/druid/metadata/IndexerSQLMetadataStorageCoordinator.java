@@ -53,6 +53,7 @@ import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -2381,50 +2382,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyList();
     }
 
-    final String segmentIdCsv = segmentIds.stream()
-                                          .map(id -> "'" + id + "'")
-                                          .collect(Collectors.joining(","));
-
-    ResultIterator<DataSegmentWithSchemaInformation> resultIterator;
-    if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      resultIterator = handle
-          .createQuery(
-              StringUtils.format(
-                  "SELECT payload, schema_id, num_rows FROM %s WHERE dataSource = :dataSource AND id in (%s)",
-                  dbTables.getSegmentsTable(), segmentIdCsv
-              )
-          )
-          .bind("dataSource", datasource)
-          .setFetchSize(connector.getStreamingFetchSize())
-          .map(
-              (index, r, ctx) -> {
-                DataSegment segment = JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class);
-                Long schemaId = (Long) r.getObject(2);
-                Long numRows = (Long) r.getObject(3);
-                return new DataSegmentWithSchemaInformation(segment, schemaId, numRows);
-              }
-          )
-          .iterator();
-    } else {
-      resultIterator = handle
-          .createQuery(
-              StringUtils.format(
-                  "SELECT payload FROM %s WHERE WHERE dataSource = :dataSource AND id in (%s)",
-                  dbTables.getSegmentsTable(), segmentIdCsv
-              )
-          )
-          .bind("dataSource", datasource)
-          .setFetchSize(connector.getStreamingFetchSize())
-          .map(
-              (index, r, ctx) -> {
-                DataSegment segment = JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class);
-                return new DataSegmentWithSchemaInformation(segment, null, null);
-              }
-          )
-          .iterator();
-    }
-
-    return Lists.newArrayList(resultIterator);
+    return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                   .retrieveSegmentsById(datasource, segmentIds, centralizedDatasourceSchemaConfig.isEnabled())
+                                   .stream()
+                                   .map(DataSegmentPlus::getDataSegment)
+        .map(v -> new DataSegmentWithSchemaInformation(v, null, null))
+                                   .collect(Collectors.toList());
   }
 
   private String buildSqlToInsertSegments()

@@ -77,7 +77,7 @@ public class MetadataResourceTest
           .toArray(new DataSegment[0]);
 
   private final List<DataSegmentPlus> segmentsPlus = Arrays.stream(segments)
-          .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc(), null))
+          .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc(), null, null, null))
           .collect(Collectors.toList());
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
