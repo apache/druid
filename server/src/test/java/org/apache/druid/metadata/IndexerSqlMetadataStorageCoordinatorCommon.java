@@ -363,7 +363,7 @@ public class IndexerSqlMetadataStorageCoordinatorCommon
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegments(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -388,7 +388,7 @@ public class IndexerSqlMetadataStorageCoordinatorCommon
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -448,7 +448,11 @@ public class IndexerSqlMetadataStorageCoordinatorCommon
     markAllSegmentsUnused(SEGMENTS, DateTimes.nowUtc(), tablesConfig);
   }
 
-  protected void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime, MetadataStorageTablesConfig tablesConfig)
+  protected void markAllSegmentsUnused(
+      Set<DataSegment> segments,
+      DateTime usedStatusLastUpdatedTime,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     for (final DataSegment segment : segments) {
       Assert.assertEquals(

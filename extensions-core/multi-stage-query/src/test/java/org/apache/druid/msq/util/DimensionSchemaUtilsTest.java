@@ -179,19 +179,19 @@ public class DimensionSchemaUtilsTest
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.LONG_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array' in the MSQ query's context. Current value of the parameter [mvd]", t.getMessage());
+    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]", t.getMessage());
 
     t = Assert.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.DOUBLE_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array' in the MSQ query's context. Current value of the parameter [mvd]", t.getMessage());
+    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]", t.getMessage());
 
     t = Assert.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.FLOAT_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array' in the MSQ query's context. Current value of the parameter [mvd]", t.getMessage());
+    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]", t.getMessage());
   }
 
   @Test

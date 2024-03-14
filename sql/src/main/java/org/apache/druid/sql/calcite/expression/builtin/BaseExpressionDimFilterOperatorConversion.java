@@ -40,13 +40,17 @@ public abstract class BaseExpressionDimFilterOperatorConversion extends DirectOp
     super(operator, druidFunctionName);
   }
 
-  protected static DimFilter toExpressionFilter(
+  protected String getFilterExpression(List<DruidExpression> druidExpressions)
+  {
+    return DruidExpression.functionCall(getDruidFunctionName()).compile(druidExpressions);
+  }
+
+  protected DimFilter toExpressionFilter(
       PlannerContext plannerContext,
-      String druidFunctionName,
       List<DruidExpression> druidExpressions
   )
   {
-    final String filterExpr = DruidExpression.functionCall(druidFunctionName, druidExpressions);
+    final String filterExpr = getFilterExpression(druidExpressions);
 
     return new ExpressionDimFilter(
         filterExpr,

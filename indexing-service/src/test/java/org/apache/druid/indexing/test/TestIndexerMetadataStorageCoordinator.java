@@ -113,6 +113,18 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null, limit, maxUsedStatusLastUpdatedTime);
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable List<String> versions,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
+  )
+  {
     synchronized (unusedSegments) {
       return ImmutableList.copyOf(
           unusedSegments.stream()
