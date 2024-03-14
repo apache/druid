@@ -23,7 +23,8 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
@@ -42,13 +43,13 @@ import java.util.function.Consumer;
 public class SegmentsInputSliceReader implements InputSliceReader
 {
   private final DataSegmentProvider dataSegmentProvider;
-  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final boolean isReindex;
 
   public SegmentsInputSliceReader(final FrameContext frameContext, final boolean isReindex)
   {
     this.dataSegmentProvider = frameContext.dataSegmentProvider();
-    this.loadedSegmentDataProviderFactory = frameContext.loadedSegmentDataProviderFactory();
+    this.dataServerQueryHandlerFactory = frameContext.dataServerQueryHandlerFactory();
     this.isReindex = isReindex;
   }
 
@@ -56,7 +57,8 @@ public class SegmentsInputSliceReader implements InputSliceReader
   public int numReadableInputs(InputSlice slice)
   {
     final SegmentsInputSlice segmentsInputSlice = (SegmentsInputSlice) slice;
-    return segmentsInputSlice.getDescriptors().size();
+    final int servedSegmentsSize = segmentsInputSlice.getServedSegments() == null ? 0 : segmentsInputSlice.getServedSegments().size();
+    return segmentsInputSlice.getDescriptors().size() + servedSegmentsSize;
   }
 
   @Override
@@ -69,16 +71,27 @@ public class SegmentsInputSliceReader implements InputSliceReader
   {
     final SegmentsInputSlice segmentsInputSlice = (SegmentsInputSlice) slice;
 
-    return ReadableInputs.segments(
-        () -> Iterators.transform(
+    Iterator<ReadableInput> segmentIterator =
+        Iterators.transform(
             dataSegmentIterator(
                 segmentsInputSlice.getDataSource(),
                 segmentsInputSlice.getDescriptors(),
                 counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
-            ),
-            ReadableInput::segment
-        )
-    );
+            ), ReadableInput::segment);
+
+    if (segmentsInputSlice.getServedSegments() == null) {
+      return ReadableInputs.segments(() -> segmentIterator);
+    } else {
+      Iterator<ReadableInput> dataServerIterator =
+          Iterators.transform(
+              dataServerIterator(
+                  segmentsInputSlice.getDataSource(),
+                  segmentsInputSlice.getServedSegments(),
+                  counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
+              ), ReadableInput::dataServerQuery);
+
+      return ReadableInputs.segments(() -> Iterators.concat(dataServerIterator, segmentIterator));
+    }
   }
 
   private Iterator<SegmentWithDescriptor> dataSegmentIterator(
@@ -98,10 +111,24 @@ public class SegmentsInputSliceReader implements InputSliceReader
 
           return new SegmentWithDescriptor(
               dataSegmentProvider.fetchSegment(segmentId, channelCounters, isReindex),
-              descriptor.isLoadedOnServer() ? loadedSegmentDataProviderFactory.createLoadedSegmentDataProvider(dataSource, channelCounters) : null,
               descriptor
           );
         }
+    ).iterator();
+  }
+
+  private Iterator<DataServerQueryHandler> dataServerIterator(
+      final String dataSource,
+      final List<DataServerRequestDescriptor> servedSegments,
+      final ChannelCounters channelCounters
+  )
+  {
+    return servedSegments.stream().map(
+        dataServerRequestDescriptor -> dataServerQueryHandlerFactory.createDataServerQueryHandler(
+            dataSource,
+            channelCounters,
+            dataServerRequestDescriptor
+        )
     ).iterator();
   }
 }

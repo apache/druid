@@ -23,6 +23,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
+import javax.annotation.Nullable;
+
 /**
  * Common interface for bitmap indexes for use by {@link org.apache.druid.query.filter.Filter} for cursor creation, to
  * allow fast row skipping during query processing.
@@ -33,6 +35,7 @@ public interface BitmapColumnIndex
 
   /**
    * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index.
+   * If building a cursor, use {@link #computeBitmapResult(BitmapResultFactory, int, int, boolean)} instead.
    *
    * @param bitmapResultFactory helper to format the {@link org.apache.druid.collections.bitmap.ImmutableBitmap} in a
    *                            form ready for consumption by callers
@@ -43,5 +46,34 @@ public interface BitmapColumnIndex
    *
    * @return bitmap result representing rows matched by this index
    */
-  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown);
+  <T> T computeBitmapResult(
+      BitmapResultFactory<T> bitmapResultFactory,
+      boolean includeUnknown
+  );
+
+  /**
+   * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index,
+   * or null if the index cannot (or should not) be computed.
+   *
+   * @param bitmapResultFactory helper to format the {@link org.apache.druid.collections.bitmap.ImmutableBitmap} in a
+   *                            form ready for consumption by callers
+   * @param selectionRowCount   number of rows selected so far by any previous index computations
+   * @param totalRowCount       total number of rows to be scanned if no indexes are used
+   * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If
+   *                            set to true, bitmaps returned by this method should include true bits for any rows where
+   *                            the matching result is 'unknown', such as from the input being null valued.
+   *                            See {@link NullHandling#useThreeValueLogic()}.
+   *
+   * @return bitmap result representing rows matched by this index
+   */
+  @Nullable
+  default <T> T computeBitmapResult(
+      BitmapResultFactory<T> bitmapResultFactory,
+      int selectionRowCount,
+      int totalRowCount,
+      boolean includeUnknown
+  )
+  {
+    return computeBitmapResult(bitmapResultFactory, includeUnknown);
+  }
 }

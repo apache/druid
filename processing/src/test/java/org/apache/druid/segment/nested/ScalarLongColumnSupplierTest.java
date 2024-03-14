@@ -41,6 +41,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -191,7 +192,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+        ColumnConfig.SELECTION_SIZE
     );
     try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -209,7 +210,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+        ColumnConfig.SELECTION_SIZE
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

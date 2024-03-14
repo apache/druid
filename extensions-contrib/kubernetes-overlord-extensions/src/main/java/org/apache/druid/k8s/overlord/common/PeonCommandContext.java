@@ -31,17 +31,25 @@ public class PeonCommandContext
   private final List<String> javaOpts;
   private final File taskDir;
   private final boolean enableTls;
+  private final int cpuMicroCore;
 
-  public PeonCommandContext(List<String> comamnd, List<String> javaOpts, File taskDir)
+  public PeonCommandContext(List<String> comamnd, List<String> javaOpts, File taskDir, int cpuMicroCore)
   {
-    this(comamnd, javaOpts, taskDir, false);
+    this(comamnd, javaOpts, taskDir, cpuMicroCore, false);
   }
 
-  public PeonCommandContext(List<String> comamnd, List<String> javaOpts, File taskDir, boolean enableTls)
+  public PeonCommandContext(
+      List<String> comamnd,
+      List<String> javaOpts,
+      File taskDir,
+      int cpuMicroCore,
+      boolean enableTls
+  )
   {
     this.comamnd = comamnd;
     this.javaOpts = javaOpts;
     this.taskDir = taskDir;
+    this.cpuMicroCore = cpuMicroCore;
     this.enableTls = enableTls;
   }
 
@@ -64,6 +72,11 @@ public class PeonCommandContext
   public File getTaskDir()
   {
     return taskDir;
+  }
+
+  public int getCpuMicroCore()
+  {
+    return cpuMicroCore;
   }
 
   public boolean isEnableTls()

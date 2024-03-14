@@ -72,7 +72,8 @@ public class FloatColumnSerializer implements GenericColumnSerializer<Object>
         segmentWriteOutMedium,
         StringUtils.format("%s.float_column", filenameBase),
         byteOrder,
-        compression
+        compression,
+        segmentWriteOutMedium.getCloser()
     );
     writer.open();
   }
