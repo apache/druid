@@ -6627,6 +6627,46 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJsonQueryArrayNullArray()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$.') FROM druid.arrays where arrayObject is null limit 1")
+        .queryContext(QUERY_CONTEXT_DEFAULT)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ARRAYS)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .virtualColumns(
+                          expressionVirtualColumn(
+                              "v0",
+                              "null",
+                              ColumnType.ofArray(ColumnType.NESTED_DATA)
+                          )
+                      )
+                      .filters(isNull("arrayObject"))
+                      .columns("v0")
+                      .limit(1)
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            NullHandling.replaceWithDefault() ?
+            ImmutableList.of(new Object[]{null}) : ImmutableList.of()
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.ofArray(ColumnType.NESTED_DATA))
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
   public void testUnnestJsonQueryArrays()
   {
     cannotVectorize();
