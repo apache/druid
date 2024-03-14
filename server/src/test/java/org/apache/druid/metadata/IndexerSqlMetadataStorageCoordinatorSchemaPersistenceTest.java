@@ -31,6 +31,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -47,6 +48,7 @@ import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -245,6 +247,76 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
           schemaPayload
       );
     }
+
+    coordinator.commitSegments(segments, minimalSegmentSchemas);
+    for (DataSegment segment : segments) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getId().toString()
+          )
+      );
+    }
+
+    List<String> segmentIds = segments.stream()
+                                      .map(segment -> segment.getId().toString())
+                                      .sorted(Comparator.naturalOrder())
+                                      .collect(Collectors.toList());
+
+    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
+
+    segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
+  }
+
+  @Test
+  public void testAnnounceHistoricalSegments_schemaExists() throws IOException
+  {
+    Set<DataSegment> segments = new HashSet<>();
+    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    Random random = ThreadLocalRandom.current();
+    Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+
+    Map<String, SchemaPayload> schemaPayloadMapToPerist = new HashMap<>();
+
+    for (int i = 0; i < 105; i++) {
+      DataSegment segment = new DataSegment(
+          "fooDataSource",
+          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+          "version",
+          ImmutableMap.of(),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(i),
+          9,
+          100
+      );
+      segments.add(segment);
+
+      int randomNum = random.nextInt();
+      RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
+
+      SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
+      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      minimalSegmentSchemas.addSchema(
+          segment.getId().toString(),
+          fingerprintGenerator.generateFingerprint(schemaPayload),
+          randomNum,
+          schemaPayload
+      );
+
+      schemaPayloadMapToPerist.put(fingerprintGenerator.generateFingerprint(schemaPayload), schemaPayload);
+    }
+
+    derbyConnector.retryWithHandle(handle -> {
+      segmentSchemaManager.persistSegmentSchema(handle, schemaPayloadMapToPerist);
+      return null;
+    });
 
     coordinator.commitSegments(segments, minimalSegmentSchemas);
     for (DataSegment segment : segments) {

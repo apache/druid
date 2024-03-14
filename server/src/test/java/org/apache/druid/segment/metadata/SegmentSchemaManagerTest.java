@@ -36,6 +36,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
@@ -127,6 +128,42 @@ public class SegmentSchemaManagerTest
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
+
+    segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
+
+    // associate a new segment with existing schema
+    DataSegment segment = segments.stream().findAny().get();
+    Pair<SchemaPayload, Integer> schemaPayloadIntegerPair = segmentIdSchemaMap.get(segment.getId().toString());
+
+    final DataSegment newSegment = new DataSegment(
+        "foo",
+        Intervals.of("2024-01-01/2024-01-02"),
+        "2023-01-01",
+        ImmutableMap.of("path", "a-1"),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(0),
+        9,
+        100
+    );
+
+    SegmentSchemaMetadata schemaMetadata =
+        new SegmentSchemaMetadata(
+            schemaPayloadIntegerPair.lhs,
+            500L
+        );
+    SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            newSegment.getId(),
+            fingerprintGenerator.generateFingerprint(schemaPayloadIntegerPair.lhs),
+            schemaMetadata
+        );
+
+    segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(newSegment), Collections.emptyMap());
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(Collections.singletonList(plus));
+
+    segmentIdSchemaMap.clear();
+    segmentIdSchemaMap.put(newSegment.getId().toString(), Pair.of(schemaPayloadIntegerPair.lhs, 500));
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }

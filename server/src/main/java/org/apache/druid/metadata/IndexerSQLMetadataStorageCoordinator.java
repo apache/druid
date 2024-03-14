@@ -2012,7 +2012,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         fingerprintSchemaIdMap =
             segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
-        log.info("FingerprintSchemaId map: [%s].", fingerprintSchemaIdMap);
+        log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
       }
 
       Set<String> existedSegments = segmentExistsBatch(handle, segments);
@@ -2225,14 +2225,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     if (minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
       schemaPresent = true;
-      log.info("Inserting schema in db table.");
+      log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
       segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
 
       // fetch schemaId
       fingerprintSchemaIdMap =
           segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
-      log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
+      log.info("Fingerprint schema map is [%s].", fingerprintSchemaIdMap);
     }
 
     Map<SegmentId, Pair<Long, Long>> upgradeSegmentMetadata = new HashMap<>();

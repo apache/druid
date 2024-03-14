@@ -117,23 +117,29 @@ public class SegmentSchemaManager
   /**
    * Persist unique segment schema in the DB.
    */
-  public void persistSegmentSchema(Handle handle, Map<String, SchemaPayload> schemaPayloadMap)
+  public void persistSegmentSchema(Handle handle, Map<String, SchemaPayload> fingerprintSchemaPayloadMap)
       throws JsonProcessingException
   {
     try {
       // Filter already existing schema
-      Set<String> existingSchemas = schemaExistBatch(handle, schemaPayloadMap.keySet());
-      log.info("Found already existing schema in the DB: %s", existingSchemas);
+      Set<String> existingFingerprint = fingerprintExistBatch(handle, fingerprintSchemaPayloadMap.keySet());
+      log.info("Found already existing schema in the DB: %s", existingFingerprint);
 
-      // clear existing schema from the map.
-      schemaPayloadMap.keySet().removeAll(existingSchemas);
+      Map<String, SchemaPayload> filteredSchemaPayloadMap = new HashMap<>();
 
-      if (schemaPayloadMap.isEmpty()) {
+      for (Map.Entry<String, SchemaPayload> entry : fingerprintSchemaPayloadMap.entrySet()) {
+        if (!existingFingerprint.contains(entry.getKey())) {
+          filteredSchemaPayloadMap.put(entry.getKey(), entry.getValue());
+        }
+      }
+
+      if (filteredSchemaPayloadMap.isEmpty()) {
         log.info("No schema to persist.");
         return;
       }
+
       final List<List<String>> partitionedFingerprints = Lists.partition(
-          new ArrayList<>(schemaPayloadMap.keySet()),
+          new ArrayList<>(filteredSchemaPayloadMap.keySet()),
           DB_ACTION_PARTITION_SIZE
       );
 
@@ -151,7 +157,7 @@ public class SegmentSchemaManager
           schemaInsertBatch.add()
                            .bind("created_date", now)
                            .bind("fingerprint", fingerprint)
-                           .bind("payload", jsonMapper.writeValueAsBytes(schemaPayloadMap.get(fingerprint)));
+                           .bind("payload", jsonMapper.writeValueAsBytes(fingerprintSchemaPayloadMap.get(fingerprint)));
         }
         final int[] affectedRows = schemaInsertBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
@@ -168,7 +174,7 @@ public class SegmentSchemaManager
       }
     }
     catch (Exception e) {
-      log.error("Exception inserting schemas to DB: %s", schemaPayloadMap);
+      log.error("Exception inserting schemas to DB: %s", fingerprintSchemaPayloadMap);
       throw e;
     }
   }
@@ -220,7 +226,7 @@ public class SegmentSchemaManager
       for (SegmentSchemaMetadataPlus segmentSchema : segmentsToUpdate) {
         String fingerprint = segmentSchema.getFingerprint();
         if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
-          // this should not happen
+          log.error("Fingerprint [%s] is not associated with any schemaId.", fingerprint);
           continue;
         }
 
@@ -247,7 +253,7 @@ public class SegmentSchemaManager
     }
   }
 
-  private Set<String> schemaExistBatch(Handle handle, Set<String> fingerprintsToInsert)
+  private Set<String> fingerprintExistBatch(Handle handle, Set<String> fingerprintsToInsert)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToInsert),
