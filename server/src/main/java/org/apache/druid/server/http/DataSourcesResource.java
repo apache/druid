@@ -166,12 +166,12 @@ public class DataSourcesResource
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getDataSource(
+  public Response getQueryableDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("full") final String full
   )
   {
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
 
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
@@ -233,7 +233,13 @@ public class DataSourcesResource
         return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
       }
     };
-    return performSegmentUpdate(dataSourceName, payload, operation);
+
+    return performSegmentUpdate(
+        dataSourceName,
+        payload,
+        operation,
+        false // datasource may have previously had all segments marked unused, in which case it is not queryable
+    );
   }
 
   @POST
@@ -278,13 +284,14 @@ public class DataSourcesResource
       );
       return numUpdatedSegments;
     };
-    return performSegmentUpdate(dataSourceName, payload, operation);
+    return performSegmentUpdate(dataSourceName, payload, operation, true);
   }
 
   private Response performSegmentUpdate(
       String dataSourceName,
       MarkDataSourceSegmentsPayload payload,
-      SegmentUpdateOperation operation
+      SegmentUpdateOperation operation,
+      boolean validateDatasourceIsQueryable
   )
   {
     if (payload == null || !payload.isValid()) {
@@ -295,9 +302,11 @@ public class DataSourcesResource
           .build();
     }
 
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    if (dataSource == null) {
-      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+    if (validateDatasourceIsQueryable) {
+      final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
+      if (dataSource == null) {
+        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+      }
     }
 
     return performSegmentUpdate(dataSourceName, operation);
@@ -434,7 +443,7 @@ public class DataSourcesResource
   )
   {
     if (simple == null && full == null) {
-      final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+      final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
       if (dataSource == null) {
         return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
@@ -460,7 +469,7 @@ public class DataSourcesResource
   {
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (simple == null && full == null) {
-      final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+      final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
       if (dataSource == null) {
         return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
@@ -617,7 +626,7 @@ public class DataSourcesResource
       Predicate<Interval> intervalFilter
   )
   {
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
 
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
@@ -667,7 +676,7 @@ public class DataSourcesResource
       @QueryParam("full") String full
   )
   {
-    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
@@ -689,7 +698,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
@@ -747,7 +756,7 @@ public class DataSourcesResource
   }
 
   @Nullable
-  private ImmutableDruidDataSource getDataSource(final String dataSourceName)
+  private ImmutableDruidDataSource getQueryableDataSource(final String dataSourceName)
   {
     List<DruidDataSource> dataSources = serverInventoryView
         .getInventory()
