@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.junit.jupiter.api.Nested;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
@@ -45,6 +46,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
+  @Nested
   public static class BroadcastTest extends Base
   {
     public BroadcastTest()
@@ -63,6 +65,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
+  @Nested
   public static class SortMergeTest extends Base
   {
     public SortMergeTest()
