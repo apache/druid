@@ -1222,20 +1222,26 @@ public class RowBasedGrouperHelper
       this.valueTypes = valueTypes;
       this.limitSpec = limitSpec;
       this.enableRuntimeDictionaryGeneration = dictionary == null;
+
       this.dictionary = enableRuntimeDictionaryGeneration ? DictionaryBuilding.createDictionary() : dictionary;
-      this.reverseDictionary = DictionaryBuilding.createReverseDictionary();
+      // this.reverseDictionary = DictionaryBuilding.createReverseDictionary();
+      this.reverseDictionary = DictionaryBuilding.createTreeSortedReverseDictionary(ColumnType.STRING.getNullableStrategy());
 
       this.stringArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseStringArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.STRING_ARRAY);
+      // this.reverseStringArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.STRING_ARRAY);
+      this.reverseStringArrayDictionary = DictionaryBuilding.createTreeSortedReverseDictionary(ColumnType.STRING_ARRAY.getNullableStrategy());
 
       this.longArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseLongArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.LONG_ARRAY);
+      // this.reverseLongArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.LONG_ARRAY);
+      this.reverseLongArrayDictionary = DictionaryBuilding.createTreeSortedReverseDictionary(ColumnType.LONG_ARRAY.getNullableStrategy());
 
       this.floatArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseFloatArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.FLOAT_ARRAY);
+      // this.reverseFloatArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.FLOAT_ARRAY);
+      this.reverseFloatArrayDictionary = DictionaryBuilding.createTreeSortedReverseDictionary(ColumnType.FLOAT_ARRAY.getNullableStrategy());
 
       this.doubleArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseDoubleArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.DOUBLE_ARRAY);
+      // this.reverseDoubleArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.DOUBLE_ARRAY);
+      this.reverseDoubleArrayDictionary = DictionaryBuilding.createTreeSortedReverseDictionary(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
 
       this.maxDictionarySize = maxDictionarySize;
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
