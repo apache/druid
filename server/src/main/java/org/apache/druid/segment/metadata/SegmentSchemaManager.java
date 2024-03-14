@@ -81,10 +81,13 @@ public class SegmentSchemaManager
   {
     return connector.retryTransaction(
         (handle, transactionStatus) -> {
-          Update deleteStatement = handle.createStatement(
-              StringUtils.format("DELETE FROM %1$s WHERE id NOT IN (SELECT schema_id FROM %2$s)",
-                                 dbTables.getSegmentSchemaTable(), dbTables.getSegmentsTable()
-              ));
+          Update deleteStatement =
+              handle.createStatement(
+                  StringUtils.format(
+                      "DELETE FROM %1$s WHERE id NOT IN (SELECT distinct(schema_id) FROM %2$s where schema_id is not null)",
+                      dbTables.getSegmentSchemaTable(),
+                      dbTables.getSegmentsTable()
+                  ));
           return deleteStatement.execute();
         }, 1, 3
     );
@@ -122,9 +125,13 @@ public class SegmentSchemaManager
       Set<String> existingSchemas = schemaExistBatch(handle, schemaPayloadMap.keySet());
       log.info("Found already existing schema in the DB: %s", existingSchemas);
 
-      // clear existing schema from the DB.
+      // clear existing schema from the map.
       schemaPayloadMap.keySet().removeAll(existingSchemas);
 
+      if (schemaPayloadMap.isEmpty()) {
+        log.info("No schema to persist.");
+        return;
+      }
       final List<List<String>> partitionedFingerprints = Lists.partition(
           new ArrayList<>(schemaPayloadMap.keySet()),
           DB_ACTION_PARTITION_SIZE
@@ -171,6 +178,8 @@ public class SegmentSchemaManager
    */
   public void updateSegmentWithSchemaInformation(Handle handle, List<SegmentSchemaMetadataPlus> batch)
   {
+    log.debug("Updating segment with schema and numRows information: [%s].", batch);
+
     // segments which are already updated with the schema information.
     Set<String> updatedSegments =
         segmentUpdatedBatch(handle, batch.stream().map(plus -> plus.getSegmentId().toString()).collect(Collectors.toSet()));
@@ -184,9 +193,13 @@ public class SegmentSchemaManager
     Map<String, Long> fingerprintSchemaIdMap =
         schemaIdFetchBatch(
             handle,
-            segmentsToUpdate.stream().map(SegmentSchemaMetadataPlus::getFingerprint)
-                            .collect(Collectors.toSet())
+            segmentsToUpdate
+                .stream()
+                .map(SegmentSchemaMetadataPlus::getFingerprint)
+                .collect(Collectors.toSet())
         );
+
+    log.debug("FingerprintSchemaIdMap is [%s].", fingerprintSchemaIdMap);
 
     // update schemaId and numRows in segments table
     String updateSql =
