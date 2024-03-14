@@ -30,7 +30,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultTaskIdentitiesProviderTest
@@ -45,7 +44,7 @@ public class DefaultTaskIdentitiesProviderTest
   }
 
   @Test
-  public void shouldReturnDefaultTaskIdentifierWhenGroupIdIsNull()
+  public void testReturnDefaultTaskIdentifierWhenGroupIdIsNull()
   {
     task = new NoopTask("id", null, "datasource", 0, 0, null);
     Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
@@ -53,7 +52,7 @@ public class DefaultTaskIdentitiesProviderTest
   }
 
   @Test
-  public void shouldReturnCompactTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedCompact()
+  public void testReturnCompactTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedCompact()
   {
     task = new NoopTask("id", "coordinator-issued_compact_random_id", "datasource", 0, 0, null);
     Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
@@ -61,7 +60,7 @@ public class DefaultTaskIdentitiesProviderTest
   }
 
   @Test
-  public void shouldReturnKillTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedKill()
+  public void testReturnKillTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedKill()
   {
     task = new NoopTask("id", "coordinator-issued_kill_random_id", "datasource", 0, 0, null);
     Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
@@ -69,7 +68,7 @@ public class DefaultTaskIdentitiesProviderTest
   }
 
   @Test
-  public void shouldAppendTaskIdentifierGetTaskMetricTags()
+  public void testAppendTaskIdentifierGetTaskMetricTags()
   {
     Map<String, Object> inputTags = ImmutableMap.of("tag1", "value1", "tag2", "value2");
     task = new NoopTask("id", null, "datasource", 0, 0, ImmutableMap.of(DruidMetrics.TAGS, inputTags));
@@ -77,6 +76,6 @@ public class DefaultTaskIdentitiesProviderTest
     Map<String, Object> tags = provider.getTaskMetricTags(task);
 
     assertEquals(3, tags.size());
-    assertTrue(tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER) == "noop");
+    assertEquals("noop", tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
   }
 }
