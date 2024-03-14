@@ -93,6 +93,12 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
+  public int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, List<String> versions)
+  {
+    return 0;
+  }
+
+  @Override
   public int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
   {
     return 0;
@@ -117,6 +123,12 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 
   @Override
   public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval)
+  {
+    return 0;
+  }
+
+  @Override
+  public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, List<String> versions)
   {
     return 0;
   }

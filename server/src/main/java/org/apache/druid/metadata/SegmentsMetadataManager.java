@@ -55,6 +55,8 @@ public interface SegmentsMetadataManager
 
   int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval);
 
+  int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, List<String> versions);
+
   /**
    * Marks the given segment IDs as "used" only if there are not already overshadowed
    * by other used segments. Qualifying segment IDs that are already marked as
@@ -82,6 +84,15 @@ public interface SegmentsMetadataManager
   int markAsUnusedAllSegmentsInDataSource(String dataSource);
 
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
+
+  /**
+   * TODO fill in javadocs.
+   * @param dataSource
+   * @param interval
+   * @param versions List of versions
+   * @return
+   */
+  int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, List<String> versions);
 
   int markSegmentsAsUnused(Set<SegmentId> segmentIds);
 

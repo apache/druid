@@ -68,6 +68,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -212,7 +213,11 @@ public class DataSourcesResource
     SegmentUpdateOperation operation = () -> {
       final Interval interval = payload.getInterval();
       if (interval != null) {
-        return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+        if (payload.getVersions() != null) {
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval, payload.getVersions());
+        } else {
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+        }
       } else {
         final Set<String> segmentIds = payload.getSegmentIds();
         if (segmentIds == null || segmentIds.isEmpty()) {
@@ -250,8 +255,15 @@ public class DataSourcesResource
     SegmentUpdateOperation operation = () -> {
       final Interval interval = payload.getInterval();
       final int numUpdatedSegments;
+      // versions by itself or in the presence of an interval
+      // or make interval optional?
       if (interval != null) {
-        numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        if (!CollectionUtils.isNullOrEmpty(payload.getVersions())) {
+          // maybe we should just consolidate into a single function; only tests use this variation.
+          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, payload.getVersions());
+        } else {
+          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        }
       } else {
         final Set<SegmentId> segmentIds =
             payload.getSegmentIds()
@@ -297,7 +309,8 @@ public class DataSourcesResource
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+      log.info("Datasource[%s] not found, but perhaps there are no used segments.", dataSourceName);
+//      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     return performSegmentUpdate(dataSourceName, operation);
@@ -999,15 +1012,18 @@ public class DataSourcesResource
   {
     private final Interval interval;
     private final Set<String> segmentIds;
+    private final List<String> versions;
 
     @JsonCreator
     public MarkDataSourceSegmentsPayload(
         @JsonProperty("interval") Interval interval,
-        @JsonProperty("segmentIds") Set<String> segmentIds
+        @JsonProperty("segmentIds") Set<String> segmentIds,
+        @JsonProperty("versions") List<String> versions
     )
     {
       this.interval = interval;
       this.segmentIds = segmentIds;
+      this.versions = versions;
     }
 
     @JsonProperty
@@ -1022,9 +1038,15 @@ public class DataSourcesResource
       return segmentIds;
     }
 
+    @JsonProperty
+    public List<String> getVersions()
+    {
+      return versions;
+    }
+
     public boolean isValid()
     {
-      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty()); // fixme
     }
   }
 }
