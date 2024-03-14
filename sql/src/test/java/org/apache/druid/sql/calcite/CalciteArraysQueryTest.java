@@ -1250,7 +1250,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT ARRAY_CONTAINS(arrayStringNulls, ARRAY['a', 'b']), ARRAY_CONTAINS(arrayStringNulls, arrayString) FROM druid.arrays LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0", "v1")
                 .virtualColumns(
