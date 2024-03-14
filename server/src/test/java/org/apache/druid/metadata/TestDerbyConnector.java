@@ -137,7 +137,6 @@ public class TestDerbyConnector extends DerbyConnector
       return dbTables;
     }
 
-
     public Integer updateSegmentsTable(String sqlFormat, Object... args)
     {
       return this.getConnector().retryWithHandle(

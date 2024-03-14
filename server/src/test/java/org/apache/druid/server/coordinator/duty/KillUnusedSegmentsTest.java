@@ -934,25 +934,4 @@ public class KillUnusedSegmentsTest
         segment.getId().toString()
     );
   }
-
-  private void updateUsedStatusLastUpdatedBoilerPlate(DataSegment segment, DateTime lastUpdatedTime)
-  {
-    derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format(
-                "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?", getSegmentsTable()
-            ),
-            lastUpdatedTime.toString(),
-            segment.getId().toString()
-        )
-    );
-  }
-
-  private String getSegmentsTable()
-  {
-    return derbyConnectorRule.metadataTablesConfigSupplier()
-                             .get()
-                             .getSegmentsTable()
-                             .toUpperCase(Locale.ENGLISH);
-  }
 }
