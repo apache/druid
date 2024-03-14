@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.lookup;
 
+import com.amazonaws.transform.MapEntry;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
@@ -30,8 +31,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -132,13 +132,38 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   @Test
   public void testCanGetKeySet()
   {
-    Assert.assertFalse(loadingLookup.canGetKeySet());
+    Assert.assertTrue(loadingLookup.canGetKeySet());
+  }
+
+  @Test
+  public void testCanIterate()
+  {
+    Assert.assertTrue(loadingLookup.canIterate());
   }
 
   @Test
   public void testKeySet()
   {
-    expectedException.expect(UnsupportedOperationException.class);
-    loadingLookup.keySet();
+    Map.Entry<String, String> fetchedData = new AbstractMap.SimpleEntry<>("dummy", "test");
+    EasyMock.expect(dataFetcher.fetchAll()).andReturn(Arrays.asList(fetchedData));
+    EasyMock.replay(dataFetcher);
+    Assert.assertEquals(loadingLookup.keySet().size(), 1);
+    EasyMock.verify(dataFetcher);
+  }
+
+  @Test
+  public void testFetchAll()
+  {
+    Map.Entry<String, String> fetchedData = new AbstractMap.SimpleEntry<>("dummy", "test");
+    EasyMock.expect(dataFetcher.fetchAll()).andReturn(Arrays.asList(fetchedData));
+    EasyMock.replay(dataFetcher);
+    Assert.assertEquals(getIteratorSize(loadingLookup.iterable().iterator()), 1);
+    EasyMock.verify(dataFetcher);
+  }
+
+  public int getIteratorSize(Iterator<Map.Entry<String, String>> it) {
+    int i = 0;
+    for ( ; it.hasNext() ; ++i ) it.next();
+    return i;
   }
 }

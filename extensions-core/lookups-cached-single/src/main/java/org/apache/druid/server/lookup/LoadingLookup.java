@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,25 +110,32 @@ public class LoadingLookup extends LookupExtractor
   @Override
   public boolean canIterate()
   {
-    return false;
+    return true;
   }
 
   @Override
   public boolean canGetKeySet()
   {
-    return false;
+    return true;
   }
 
   @Override
   public Iterable<Map.Entry<String, String>> iterable()
   {
-    throw new UnsupportedOperationException("Cannot iterate");
+    return this.dataFetcher.fetchAll();
   }
 
   @Override
   public Set<String> keySet()
   {
-    throw new UnsupportedOperationException("Cannot get key set");
+    Iterable<Map.Entry<String, String>> data = this.dataFetcher.fetchAll();
+    Set<String> set = new HashSet<>();
+    if (data != null) {
+      data.forEach(each -> {
+        set.add(each.getKey());
+      });
+    }
+    return set;
   }
 
   @Override
