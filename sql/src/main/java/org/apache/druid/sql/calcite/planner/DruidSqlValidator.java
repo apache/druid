@@ -489,11 +489,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       final SqlNode query
   )
   {
-    if (SqlTypeUtil.equalAsStructSansNullability(typeFactory,
-        sourceRowType, targetRowType, null)) {
-      // Returns early if source and target row type equals sans nullability.
-      return;
-    }
     final List<RelDataTypeField> sourceFields = sourceRowType.getFieldList();
     List<RelDataTypeField> targetFields = targetRowType.getFieldList();
     final int sourceCount = sourceFields.size();
