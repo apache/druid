@@ -210,7 +210,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   }
 
   @VisibleForTesting
-  long estimatedRetainedBytes()
+  long getTotalRetainedBytes()
   {
     return totalRetainedBytes;
   }

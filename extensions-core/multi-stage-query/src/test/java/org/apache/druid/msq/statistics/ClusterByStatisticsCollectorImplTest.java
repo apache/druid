@@ -466,7 +466,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
 
     clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 1, 1, "Extremely long key string for unit test; Extremely long key string for unit test;"), 500);
 
-    Assert.assertTrue(clusterByStatisticsCollector.estimatedRetainedBytes() <= 500);
+    Assert.assertTrue(clusterByStatisticsCollector.getTotalRetainedBytes() <= 500);
   }
 
   @Test
