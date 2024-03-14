@@ -25,7 +25,6 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.data.ComparableList;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -282,8 +281,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       unnestListForCurrentRow = (List<Object>) currentVal;
     } else if (currentVal instanceof Object[]) {
       unnestListForCurrentRow = Arrays.asList((Object[]) currentVal);
-    } else if (currentVal instanceof ComparableList) {
-      unnestListForCurrentRow = (List<Object>) ((ComparableList<?>) currentVal).getDelegate();
     } else {
       unnestListForCurrentRow = Collections.singletonList(currentVal);
     }

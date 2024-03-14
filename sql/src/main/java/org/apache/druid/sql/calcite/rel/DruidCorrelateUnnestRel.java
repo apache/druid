@@ -328,6 +328,13 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
             break;
           }
         }
+      } else {
+        unnestCol = new ExpressionVirtualColumn(
+            correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
+            column,
+            Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
+            ExprMacroTable.nil()
+        );
       }
     }
     leftDataSource = leftDataSource1;

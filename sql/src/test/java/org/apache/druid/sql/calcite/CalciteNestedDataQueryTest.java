@@ -6932,7 +6932,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of(
-            new Object[]{"[\"array\",\"n\"]"}
+            new Object[]{"array"},
+            new Object[]{"n"}
         ),
         RowSignature.builder()
                     .add("key", ColumnType.STRING)

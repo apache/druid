@@ -7327,4 +7327,72 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestWithInnerScanOnExpression()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "WITH a AS (\n"
+        + "  SELECT \n"
+        + "    dim2,\n"
+        + "    CASE dim2 WHEN 'a' THEN MV_TO_ARRAY(dim3) ELSE MV_TO_ARRAY(dim1) END AS lang,\n"
+        + "    m1\n"
+        + "  FROM foo\n"
+        + "  LIMIT 5\n"
+        + ")\n"
+        + "SELECT elem FROM a CROSS JOIN unnest(lang) AS t(elem)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                                  new QueryDataSource(
+                                      newScanQueryBuilder()
+                                          .dataSource(CalciteTests.DATASOURCE1)
+                                          .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                              Filtration.eternity())))
+                                          .virtualColumns(expressionVirtualColumn(
+                                              "v0",
+                                              "case_searched((\"dim2\" == 'a'),mv_to_array(\"dim3\"),mv_to_array(\"dim1\"))",
+                                              ColumnType.STRING_ARRAY
+                                          ))
+                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                          .limit(5)
+                                          .columns("v0")
+                                          .context(QUERY_CONTEXT_DEFAULT)
+                                          .build()),
+                                  expressionVirtualColumn(
+                                      "j0.unnest",
+                                      "v0",
+                                      ColumnType.STRING_ARRAY
+                                  ),
+                                  null
+                              )
+                  )
+                  .eternityInterval()
+                  .columns("j0.unnest")
+                  .legacy(false)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"10.1"},
+            new Object[]{"2"},
+            new Object[]{"def"}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"10.1"},
+            new Object[]{"2"},
+            new Object[]{""},
+            new Object[]{"def"}
+        )
+    );
+  }
 }
