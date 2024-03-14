@@ -19,9 +19,8 @@
 
 package org.apache.druid.error;
 
-public class Forbidden extends DruidException.Failure
+public class Forbidden extends BaseFailure
 {
-
   public static DruidException exception()
   {
     return exception("Unauthorized");
@@ -37,32 +36,18 @@ public class Forbidden extends DruidException.Failure
     return DruidException.fromFailure(new Forbidden(t, msg, args));
   }
 
-  private final Throwable t;
-  private final String msg;
-  private final Object[] args;
-
   private Forbidden(
       Throwable t,
       String msg,
       Object... args
   )
   {
-    super("forbidden");
-    this.t = t;
-    this.msg = msg;
-    this.args = args;
+    super(
+        "forbidden",
+        DruidException.Persona.USER,
+        DruidException.Category.FORBIDDEN,
+        t, msg, args
+    );
   }
 
-  @Override
-  public DruidException makeException(DruidException.DruidExceptionBuilder bob)
-  {
-    bob = bob.forPersona(DruidException.Persona.USER)
-             .ofCategory(DruidException.Category.FORBIDDEN);
-
-    if (t == null) {
-      return bob.build(msg, args);
-    } else {
-      return bob.build(t, msg, args);
-    }
-  }
 }

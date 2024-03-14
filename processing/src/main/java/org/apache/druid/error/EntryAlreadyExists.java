@@ -21,9 +21,10 @@ package org.apache.druid.error;
 
 /**
  * A failure type used to make {@link DruidException}s of category
- * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER}.
+ * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER},
+ * denoting that a certain entry already exists.
  */
-public class EntryAlreadyExists extends DruidException.Failure
+public class EntryAlreadyExists extends BaseFailure
 {
   public static final String ERROR_CODE = "entryAlreadyExists";
 
@@ -37,32 +38,17 @@ public class EntryAlreadyExists extends DruidException.Failure
     return DruidException.fromFailure(new EntryAlreadyExists(t, msg, args));
   }
 
-  private final Throwable t;
-  private final String msg;
-  private final Object[] args;
-
   public EntryAlreadyExists(
       Throwable t,
       String msg,
       Object... args
   )
   {
-    super(ERROR_CODE);
-    this.t = t;
-    this.msg = msg;
-    this.args = args;
-  }
-
-  @Override
-  protected DruidException makeException(DruidException.DruidExceptionBuilder bob)
-  {
-    bob = bob.forPersona(DruidException.Persona.USER)
-             .ofCategory(DruidException.Category.INVALID_INPUT);
-
-    if (t == null) {
-      return bob.build(msg, args);
-    } else {
-      return bob.build(t, msg, args);
-    }
+    super(
+        ERROR_CODE,
+        DruidException.Persona.USER,
+        DruidException.Category.INVALID_INPUT,
+        t, msg, args
+    );
   }
 }
