@@ -130,7 +130,10 @@ public class DruidQuery
 {
   /**
    * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   public static final String CTX_SCAN_SIGNATURE = "scanSignature";
 
   /**
@@ -589,10 +592,9 @@ public class DruidQuery
           virtualColumnRegistry,
           rexBuilder,
           InputAccessor.buildFor(
-              rexBuilder,
-              rowSignature,
+              aggregate,
               partialQuery.getSelectProject(),
-              null),
+              rowSignature),
           aggregations,
           aggName,
           aggCall,
@@ -1675,14 +1677,18 @@ public class DruidQuery
             virtualColumns,
             scanColumnsList,
             plannerContext.queryContextMap()
-        )
+        ),
+        outputRowSignature.buildSafeSignature(scanColumnsList).getColumnTypes()
     );
   }
 
   /**
    * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
    * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   private Map<String, Object> withScanSignatureIfNeeded(
       final VirtualColumns virtualColumns,
       final List<String> scanColumns,
@@ -1692,22 +1698,7 @@ public class DruidQuery
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
       return queryContext;
     }
-    // Compute the signature of the columns that we are selecting.
-    final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
-
-    for (final String columnName : scanColumns) {
-      final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
-      if (capabilities == null) {
-        // No type for this column. This is a planner bug.
-        throw new ISE("No type for column [%s]", columnName);
-      }
-
-      scanSignatureBuilder.add(columnName, capabilities.toColumnType());
-    }
-
-    final RowSignature signature = scanSignatureBuilder.build();
+    final RowSignature signature = buildRowSignature(virtualColumns, scanColumns);
 
     try {
       Map<String, Object> revised = new HashMap<>(queryContext);
@@ -1720,5 +1711,23 @@ public class DruidQuery
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private RowSignature buildRowSignature(final VirtualColumns virtualColumns, final List<String> columns)
+  {
+    // Compute the signature of the columns that we are selecting.
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (final String columnName : columns) {
+      final ColumnCapabilities capabilities =
+          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
+
+      if (capabilities == null) {
+        // No type for this column. This is a planner bug.
+        throw new ISE("No type for column [%s]", columnName);
+      }
+      builder.add(columnName, capabilities.toColumnType());
+    }
+    return builder.build();
   }
 }

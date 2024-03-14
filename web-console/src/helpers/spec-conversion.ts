@@ -32,11 +32,18 @@ import type {
   DimensionSpec,
   IngestionSpec,
   MetricSpec,
+  QueryContext,
   QueryWithContext,
   TimestampSpec,
   Transform,
 } from '../druid-models';
-import { inflateDimensionSpec, NO_SUCH_COLUMN, TIME_COLUMN, upgradeSpec } from '../druid-models';
+import {
+  getArrayMode,
+  inflateDimensionSpec,
+  NO_SUCH_COLUMN,
+  TIME_COLUMN,
+  upgradeSpec,
+} from '../druid-models';
 import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
 export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string {
@@ -73,11 +80,11 @@ export function convertSpecToSql(spec: any): QueryWithContext {
   }
   spec = upgradeSpec(spec, true);
 
-  const context: Record<string, any> = {
-    finalizeAggregations: false,
-    groupByEnableMultiValueUnnesting: false,
-    arrayIngestMode: 'array',
-  };
+  const context: QueryContext = {};
+
+  if (getArrayMode(spec, 'multi-values') === 'arrays') {
+    context.arrayIngestMode = 'array';
+  }
 
   const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
   if (indexSpec) {

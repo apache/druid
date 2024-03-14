@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.IngestionState;
 
@@ -47,13 +48,24 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private long segmentAvailabilityWaitTimeMs;
 
+  @JsonProperty
+  private Map<String, Long> recordsProcessed;
+
+  @JsonProperty
+  private Long segmentsRead;
+  @JsonProperty
+  private Long segmentsPublished;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
       @JsonProperty("errorMsg") @Nullable String errorMsg,
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
-      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs
+      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
+      @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed,
+      @Nullable @JsonProperty("segmentsRead") Long segmentsRead,
+      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished
   )
   {
     this.ingestionState = ingestionState;
@@ -62,6 +74,9 @@ public class IngestionStatsAndErrorsTaskReportData
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
     this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
+    this.recordsProcessed = recordsProcessed;
+    this.segmentsRead = segmentsRead;
+    this.segmentsPublished = segmentsPublished;
   }
 
   @JsonProperty
@@ -101,6 +116,29 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentAvailabilityWaitTimeMs;
   }
 
+  @JsonProperty
+  @Nullable
+  public Map<String, Long> getRecordsProcessed()
+  {
+    return recordsProcessed;
+  }
+
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Long getSegmentsRead()
+  {
+    return segmentsRead;
+  }
+
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Long getSegmentsPublished()
+  {
+    return segmentsPublished;
+  }
+
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -124,7 +162,10 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getRowStats(), that.getRowStats()) &&
            Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
            Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
-           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs());
+           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
+           Objects.equals(getRecordsProcessed(), that.getRecordsProcessed()) &&
+           Objects.equals(getSegmentsRead(), that.getSegmentsRead()) &&
+           Objects.equals(getSegmentsPublished(), that.getSegmentsPublished());
   }
 
   @Override
@@ -136,7 +177,10 @@ public class IngestionStatsAndErrorsTaskReportData
         getRowStats(),
         getErrorMsg(),
         isSegmentAvailabilityConfirmed(),
-        getSegmentAvailabilityWaitTimeMs()
+        getSegmentAvailabilityWaitTimeMs(),
+        getRecordsProcessed(),
+        getSegmentsRead(),
+        getSegmentsPublished()
     );
   }
 
@@ -150,6 +194,9 @@ public class IngestionStatsAndErrorsTaskReportData
            ", errorMsg='" + errorMsg + '\'' +
            ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
            ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
+           ", recordsProcessed=" + recordsProcessed +
+           ", segmentsRead=" + segmentsRead +
+           ", segmentsPublished=" + segmentsPublished +
            '}';
   }
 }

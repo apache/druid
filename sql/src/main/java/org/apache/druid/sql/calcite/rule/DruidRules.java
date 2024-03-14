@@ -200,7 +200,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withAggregate(aggregate)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -223,7 +223,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withWhereFilter(filter)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -246,7 +246,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withSelectProject(filter)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -269,7 +269,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withSort(sort)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -292,7 +292,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withWindow(window)
         );
         if (outerQueryRel.isValidDruidQuery()) {

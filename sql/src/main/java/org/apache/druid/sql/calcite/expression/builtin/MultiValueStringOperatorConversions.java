@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
@@ -39,11 +40,13 @@ import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -156,13 +159,60 @@ public class MultiValueStringOperatorConversions
                 )
             )
         )
-        .returnTypeInference(ReturnTypes.BOOLEAN)
+        .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
         .build();
 
     @Override
     public SqlOperator calciteOperator()
     {
       return SQL_FUNCTION;
+    }
+
+    @Override
+    protected String getFilterExpression(List<DruidExpression> druidExpressions)
+    {
+      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      return OperatorConversions.convertCall(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions -> DruidExpression.ofFunctionCall(
+              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+              getDruidFunctionName(),
+              harmonizeNullsMvdArg0OperandList(druidExpressions)
+          )
+      );
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpressionWithPostAggOperands(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode,
+        PostAggregatorVisitor postAggregatorVisitor
+    )
+    {
+      return OperatorConversions.convertCallWithPostAggOperands(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          operands -> DruidExpression.ofFunctionCall(
+              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+              getDruidFunctionName(),
+              harmonizeNullsMvdArg0OperandList(operands)
+          ),
+          postAggregatorVisitor
+      );
     }
   }
 
@@ -309,11 +359,81 @@ public class MultiValueStringOperatorConversions
   /**
    * Private: use singleton {@link #OVERLAP}.
    */
-  private static class Overlap extends AliasedOperatorConversion
+  private static class Overlap extends ArrayOverlapOperatorConversion
   {
-    public Overlap()
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_OVERLAP")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "'MV_OVERLAP(array, array)'",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING),
+                    OperandTypes.family(SqlTypeFamily.NUMERIC)
+                )
+            )
+        )
+        .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
     {
-      super(new ArrayOverlapOperatorConversion(), "MV_OVERLAP");
+      return SQL_FUNCTION;
+    }
+
+    @Override
+    protected String getFilterExpression(List<DruidExpression> druidExpressions)
+    {
+      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      return OperatorConversions.convertCall(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions -> {
+            final List<DruidExpression> newArgs = harmonizeNullsMvdArg0OperandList(druidExpressions);
+            return DruidExpression.ofFunctionCall(
+                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+                getDruidFunctionName(),
+                newArgs
+            );
+          }
+      );
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpressionWithPostAggOperands(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode,
+        PostAggregatorVisitor postAggregatorVisitor
+    )
+    {
+      return OperatorConversions.convertCallWithPostAggOperands(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          operands -> DruidExpression.ofFunctionCall(
+              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+              getDruidFunctionName(),
+              harmonizeNullsMvdArg0OperandList(operands)
+          ),
+          postAggregatorVisitor
+      );
     }
   }
 
@@ -456,6 +576,28 @@ public class MultiValueStringOperatorConversions
     {
       return false;
     }
+  }
+
+
+  private static List<DruidExpression> harmonizeNullsMvdArg0OperandList(List<DruidExpression> druidExpressions)
+  {
+    final List<DruidExpression> newArgs;
+    if (druidExpressions.get(0).isDirectColumnAccess()) {
+      // rewrite first argument to wrap with mv_harmonize_nulls function
+      newArgs = Lists.newArrayListWithCapacity(2);
+      newArgs.add(
+          0,
+          DruidExpression.ofFunctionCall(
+              druidExpressions.get(0).getDruidType(),
+              "mv_harmonize_nulls",
+              Collections.singletonList(druidExpressions.get(0))
+          )
+      );
+      newArgs.add(1, druidExpressions.get(1));
+    } else {
+      newArgs = druidExpressions;
+    }
+    return newArgs;
   }
 
   private MultiValueStringOperatorConversions()

@@ -20,13 +20,13 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.common.utils.ByteUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -51,7 +51,8 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
-      final CompressionStrategy compression
+      final CompressionStrategy compression,
+      final Closer closer
   )
   {
     return new CompressedVSizeColumnarIntsSerializer(
@@ -61,7 +62,8 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
         maxValue,
         CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
         IndexIO.BYTE_ORDER,
-        compression
+        compression,
+        closer
     );
   }
 
@@ -84,12 +86,12 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,
-      final CompressionStrategy compression
+      final CompressionStrategy compression,
+      final Closer closer
   )
   {
     this(
         columnName,
-        segmentWriteOutMedium,
         maxValue,
         chunkFactor,
         byteOrder,
@@ -98,19 +100,21 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
             segmentWriteOutMedium,
             filenameBase,
             compression,
-            sizePer(maxValue, chunkFactor)
-        )
+            sizePer(maxValue, chunkFactor),
+            closer
+        ),
+        closer
     );
   }
 
   CompressedVSizeColumnarIntsSerializer(
       final String columnName,
-      final SegmentWriteOutMedium segmentWriteOutMedium,
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,
       final CompressionStrategy compression,
-      final GenericIndexedWriter<ByteBuffer> flattener
+      final GenericIndexedWriter<ByteBuffer> flattener,
+      final Closer closer
   )
   {
     this.columnName = columnName;
@@ -122,7 +126,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
     this.flattener = flattener;
     this.intBuffer = ByteBuffer.allocate(Integer.BYTES).order(byteOrder);
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    this.endBuffer = compressor.allocateInBuffer(chunkBytes, segmentWriteOutMedium.getCloser()).order(byteOrder);
+    this.endBuffer = compressor.allocateInBuffer(chunkBytes, closer).order(byteOrder);
     this.numInserted = 0;
   }
 

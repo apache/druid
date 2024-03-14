@@ -20,6 +20,10 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -44,11 +48,6 @@ public @interface DecoupledTestConfig
   {
     NONE,
     /**
-     * Decoupled has moved virtualcolumn to postagg (improved plan)
-     * caused by: {@link CoreRules#AGGREGATE_ANY_PULL_UP_CONSTANTS}
-     */
-    EXPR_POSTAGG,
-    /**
      * Aggregate column order changes.
      *
      * dim1/dim2 exchange
@@ -61,13 +60,48 @@ public @interface DecoupledTestConfig
     /**
      * Improved plan
      *
-     * Seen that it was induced by {@link CoreRules#AGGREGATE_ANY_PULL_UP_CONSTANTS}
+     * Seen that some are induced by {@link CoreRules#AGGREGATE_ANY_PULL_UP_CONSTANTS}
+     * And in some cases decoupled has moved virtualcolumn to postagg
      */
     IMPROVED_PLAN,
     /**
      * Worse plan; may loose vectorization; but no extra queries
      */
-    SLIGHTLY_WORSE_PLAN;
+    SLIGHTLY_WORSE_PLAN,
+    /**
+     * {@link TimeseriesQuery} to {@link ScanQuery} change.
+     *
+     * Not yet sure if this is improvement; or some issue
+     */
+    TS_TO_SCAN,
+    /**
+     * GroupBy doesn't sorted?!
+     */
+    GBY_DOESNT_SORT,
+    /**
+     * Equvivalent plan.
+     *
+     * Renamed variable
+     */
+    EQUIV_PLAN,
+    /**
+     * {@link QueryContexts#SQL_JOIN_LEFT_SCAN_DIRECT} not supported.
+     */
+    JOIN_LEFT_DIRECT_ACCESS,
+    /**
+     * Different filter layout.
+     *
+     * Filter is pushed below join to the left.
+     */
+    JOIN_FILTER_LOCATIONS,
+    /**
+     * New scans / etc.
+     */
+    DEFINETLY_WORSE_PLAN,
+    /**
+     * A new {@link FinalizingFieldAccessPostAggregator} appeared in the plan.
+     */
+    FINALIZING_FIELD_ACCESS;
 
     public boolean isPresent()
     {

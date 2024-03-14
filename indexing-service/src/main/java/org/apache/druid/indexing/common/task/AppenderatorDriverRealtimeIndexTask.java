@@ -620,7 +620,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 getTaskCompletionRowStats(),
                 errorMsg,
                 errorMsg == null,
-                0L
+                0L,
+                Collections.emptyMap(),
+                null,
+                null
             )
         )
     );
