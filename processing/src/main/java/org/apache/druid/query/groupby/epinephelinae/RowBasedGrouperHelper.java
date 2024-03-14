@@ -1174,7 +1174,6 @@ public class RowBasedGrouperHelper
     private final BufferComparator[] serdeHelperComparators;
     private final DefaultLimitSpec limitSpec;
     private final List<ColumnType> valueTypes;
-
     private final boolean enableRuntimeDictionaryGeneration;
 
     private final List<String> dictionary;
@@ -1192,10 +1191,8 @@ public class RowBasedGrouperHelper
     private final List<Object[]> doubleArrayDictionary;
     private final Object2IntMap<Object[]> reverseDoubleArrayDictionary;
 
-    // We can probably use same dictionary for all the complex types, if all of them are done using hash mapping
     private final Map<String, List<Object>> complexTypeDictionaries = new HashMap<>();
     private final Map<String, Object2IntMap<Object>> complexTypeReverseDictionaries = new HashMap<>();
-
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -1535,7 +1532,55 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private class ComplexRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    private abstract class DictionaryBuildingSingleValuedRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      private final int keyBufferPosition;
+
+      public DictionaryBuildingSingleValuedRowBasedKeySerdeHelper(final int keyBufferPosition)
+      {
+        this.keyBufferPosition = keyBufferPosition;
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Integer.BYTES;
+      }
+
+      @Override
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
+      {
+        final Object obj = key.getKey()[idx];
+        int id = getReverseDictionary().getInt(obj);
+        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
+          id = getDictionary().size();
+          getReverseDictionary().put(obj, id);
+          getDictionary().add(obj);
+        }
+        keyBuffer.putInt(id);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
+      {
+        dimValues[dimValIdx] = getDictionary().get(buffer.getInt(initialOffset + keyBufferPosition));
+      }
+
+      /**
+       * Raw type used because arrays and object dictionaries differ
+       */
+      @SuppressWarnings("rawtypes")
+      public abstract List getDictionary();
+
+      /**
+       * Raw types used because arrays and object dictionaries differ
+       */
+      @SuppressWarnings("rawtypes")
+      public abstract Object2IntMap getReverseDictionary();
+    }
+
+    private class ComplexRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
       final BufferComparator bufferComparator;
@@ -1550,6 +1595,7 @@ public class RowBasedGrouperHelper
           ColumnType complexType
       )
       {
+        super(keyBufferPosition);
         this.keyBufferPosition = keyBufferPosition;
         this.complexType = complexType;
         this.complexTypeName = Preconditions.checkNotNull(complexType.getComplexTypeName(), "complex type name expected");
@@ -1569,43 +1615,30 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int getKeyBufferValueSize()
-      {
-        return Integer.BYTES;
-      }
-
-      @Override
-      public boolean putToKeyBuffer(RowBasedKey key, int idx)
-      {
-        final Object obj = key.getKey()[idx];
-        int id = complexTypeReverseDictionary.getInt(obj);
-        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
-          id = complexTypeDictionary.size();
-          complexTypeReverseDictionary.put(obj, id);
-          complexTypeDictionary.add(obj);
-        }
-        keyBuffer.putInt(id);
-        return true;
-      }
-
-      @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
-      {
-        dimValues[dimValIdx] = complexTypeDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
-      }
-
-      @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
       }
+
+      @Override
+      public List<Object> getDictionary()
+      {
+        return complexTypeDictionary;
+      }
+
+      @Override
+      public Object2IntMap<Object> getReverseDictionary()
+      {
+        return complexTypeReverseDictionary;
+      }
     }
 
-    private class ArrayNumericRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+
+    private class ArrayNumericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
-      final int keyBufferPosition;
-      final BufferComparator bufferComparator;
-      final TypeSignature<ValueType> elementType;
+      private final BufferComparator bufferComparator;
+      private final List<Object[]> dictionary;
+      private final Object2IntMap<Object[]> reverseDictionary;
 
       public ArrayNumericRowBasedKeySerdeHelper(
           int keyBufferPosition,
@@ -1613,20 +1646,22 @@ public class RowBasedGrouperHelper
           ColumnType arrayType
       )
       {
-        this.keyBufferPosition = keyBufferPosition;
-        this.elementType = arrayType.getElementType();
+        super(keyBufferPosition);
+        final TypeSignature<ValueType> elementType = arrayType.getElementType();
+        this.dictionary = getDictionaryForType(elementType);
+        this.reverseDictionary = getReverseDictionaryForType(elementType);
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
           if (stringComparator == null
               || StringComparators.NUMERIC.equals(stringComparator)
               || StringComparators.NATURAL.equals(stringComparator)) {
             return arrayType.getNullableStrategy().compare(
-                getDictionaryForType(elementType).get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                getDictionaryForType(elementType).get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+                this.dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                this.dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
           } else {
             return new DimensionComparisonUtils.ArrayComparatorForUnnaturalStringComparator(stringComparator).compare(
-                getDictionaryForType(elementType).get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                getDictionaryForType(elementType).get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+                this.dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                this.dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
           }
         };
@@ -1660,43 +1695,27 @@ public class RowBasedGrouperHelper
         }
       }
 
-
-      @Override
-      public int getKeyBufferValueSize()
-      {
-        return Integer.BYTES;
-      }
-
-      @Override
-      public boolean putToKeyBuffer(RowBasedKey key, int idx)
-      {
-        final Object[] listArray = (Object[]) key.getKey()[idx];
-        int id = getReverseDictionaryForType(elementType).getInt(listArray);
-        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
-          id = getDictionaryForType(elementType).size();
-          getReverseDictionaryForType(elementType).put(listArray, id);
-          getDictionaryForType(elementType).add(listArray);
-        }
-        keyBuffer.putInt(id);
-        return true;
-      }
-
-      @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
-      {
-        dimValues[dimValIdx] = getDictionaryForType(elementType).get(buffer.getInt(initialOffset + keyBufferPosition));
-      }
-
       @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
       }
+
+      @Override
+      public List<Object[]> getDictionary()
+      {
+        return dictionary;
+      }
+
+      @Override
+      public Object2IntMap<Object[]> getReverseDictionary()
+      {
+        return reverseDictionary;
+      }
     }
 
-    private class ArrayStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    private class ArrayStringRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
-      final int keyBufferPosition;
       final BufferComparator bufferComparator;
 
       ArrayStringRowBasedKeySerdeHelper(
@@ -1704,9 +1723,10 @@ public class RowBasedGrouperHelper
           @Nullable StringComparator stringComparator
       )
       {
-        this.keyBufferPosition = keyBufferPosition;
+        super(keyBufferPosition);
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            new DimensionComparisonUtils.ArrayComparator<String>(stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
+            new DimensionComparisonUtils.ArrayComparator<>(
+                stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
                 .compare(
                     stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                     stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
@@ -1720,38 +1740,21 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public boolean putToKeyBuffer(RowBasedKey key, int idx)
-      {
-        Object[] stringArray = (Object[]) key.getKey()[idx];
-        final int id = addToArrayDictionary(stringArray);
-        if (id < 0) {
-          return false;
-        }
-        keyBuffer.putInt(id);
-        return true;
-      }
-
-      @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
-      {
-        dimValues[dimValIdx] = stringArrayDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
-      }
-
-      @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
       }
 
-      private int addToArrayDictionary(final Object[] s)
+      @Override
+      public List<Object[]> getDictionary()
       {
-        int idx = reverseStringArrayDictionary.getInt(s);
-        if (idx == DimensionDictionary.ABSENT_VALUE_ID) {
-          idx = stringArrayDictionary.size();
-          reverseStringArrayDictionary.put(s, idx);
-          stringArrayDictionary.add(s);
-        }
-        return idx;
+        return stringArrayDictionary;
+      }
+
+      @Override
+      public Object2IntMap<Object[]> getReverseDictionary()
+      {
+        return reverseStringArrayDictionary;
       }
     }
 

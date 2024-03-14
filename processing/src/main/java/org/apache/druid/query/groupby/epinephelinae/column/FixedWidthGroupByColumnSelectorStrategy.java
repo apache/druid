@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
@@ -32,35 +33,52 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.nio.ByteBuffer;
 
-// Used only by primitives right now, however specialized complex types can reuse this once we have a way to extract
-// the required info
-// Doesn't work with multi value dimensions, as only strings are multi-valued which are handled elsewhere.
-// Not thread safe because does weird stuff with buffer's position while reading
+/**
+ * Strategy for grouping dimensions which have fixed-width objects. It is only used for numeric primitive types,
+ * however complex types can reuse this strategy if they can hint the engine that they are always fixed width
+ * (for e.g. IP types). Such types donot need to be backed by a dictionary, and hence are faster to group by.
+ *
+ * @param <T> Class of the dimension
+ */
 @NotThreadSafe
 public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumnSelectorStrategy
 {
+  /**
+   * Size of the key when materialized as bytes
+   */
+  final int keySizeBytes;
 
-  final int keySize;
+  /**
+   * Indicates whether the type is primitive or not
+   */
   final boolean isPrimitive;
+
+  /**
+   * Type of the dimension on which the grouping strategy is being used
+   */
   final ColumnType columnType;
+
+  /**
+   * Nullable type strategy of the dimension
+   */
   final NullableTypeStrategy<T> nullableTypeStrategy;
 
   public FixedWidthGroupByColumnSelectorStrategy(
-      int keySize,
+      int keySizeBytes,
       boolean isPrimitive,
       ColumnType columnType
   )
   {
-    this.keySize = keySize;
+    this.keySizeBytes = keySizeBytes;
     this.isPrimitive = isPrimitive;
     this.columnType = columnType;
     this.nullableTypeStrategy = columnType.getNullableStrategy();
   }
 
   @Override
-  public int getGroupingKeySize()
+  public int getGroupingKeySizeBytes()
   {
-    return keySize;
+    return keySizeBytes;
   }
 
   @Override
@@ -80,11 +98,6 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
   @Override
   public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    // It is expected of the primitive selectors to be returning default value of the implementation here. In the
-    // getObject(), if it returns null, it won't
-      // Here the primitive selectors should have returned correct values - float shouldn't return longs and vice versa
-      // Perhaps we'd require a cast as well, which is done implicitly when we call the .getLong/.getFloat/.getDouble
-
     valuess[columnIndex] = getValue(selector);
     return 0;
   }
@@ -98,14 +111,25 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
       int[] stack
   )
   {
+    int written;
     if (rowObj == null) {
-      nullableTypeStrategy.write(keyBuffer, keyBufferPosition, null, keySize);
+      written = nullableTypeStrategy.write(keyBuffer, keyBufferPosition, null, keySizeBytes);
+      stack[dimensionIndex] = 0;
     } else {
-      nullableTypeStrategy.write(keyBuffer, keyBufferPosition, (T) rowObj, keySize);
+      written = nullableTypeStrategy.write(keyBuffer, keyBufferPosition, (T) rowObj, keySizeBytes);
       stack[dimensionIndex] = 1;
+    }
+    // Since this is a fixed width strategy, the caller should already have allocated enough space to materialize the
+    // key object, and the type strategy should always be able to write to the buffer
+    if (written < 0) {
+      throw DruidException.defensive("Unable to serialize the value [%s] to buffer", rowObj);
     }
   }
 
+  /**
+   * This is used for multi-valued dimensions, for values after the first one. None of the current types supported by
+   * this strategy handle multi-valued dimensions, therefore this short circuits and returns false
+   */
   @Override
   public boolean checkRowIndexAndAddValueToGroupingKey(
       int keyBufferPosition,
@@ -124,7 +148,12 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
       ByteBuffer keyBuffer
   )
   {
-    nullableTypeStrategy.write(keyBuffer, keyBufferPosition, getValue(selector), keySize);
+    T value = getValue(selector);
+    int written = nullableTypeStrategy.write(keyBuffer, keyBufferPosition, value, keySizeBytes);
+    if (written < 0) {
+      throw DruidException.defensive("Unable to serialize the value [%s] to buffer", value);
+    }
+    // This strategy doesn't use dictionary building and doesn't hold any internal state, therefore size increase is nil.
     return 0;
   }
 
@@ -142,6 +171,7 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
         return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
       }
       // Nulls are allowed while comparing
+      //noinspection ConstantConditions
       return nullableTypeStrategy.compare(lhs, rhs);
     };
   }
@@ -153,7 +183,10 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
     // Nothing to reset
   }
 
-  // unifies the primitive and th
+  /**
+   * Returns true if the value at the selector is null. It unifies the null handling of primitive numeric types and the
+   * other types
+   */
   private boolean selectorIsNull(ColumnValueSelector columnValueSelector)
   {
     if (isPrimitive && columnValueSelector.isNull()) {
@@ -162,15 +195,20 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
     return !isPrimitive && (columnValueSelector.getObject() == null);
   }
 
-  // Handles primitives as well, also objercts case
+  /**
+   * Returns the value of the selector. It handles nullity of the value and casts it to the proper type so that the
+   * upstream callers donot need to worry about handling incorrect types (for example, if a double column value selector
+   * returns a long)
+   */
   @Nullable
   private T getValue(ColumnValueSelector columnValueSelector)
   {
     if (selectorIsNull(columnValueSelector)) {
       return null;
     }
-    // cast is safe
+    // TODO(laksh): Check if calling .getObject() on primitive selectors be problematic??
+    // Convert the object to the desired type
+    //noinspection unchecked
     return (T) DimensionHandlerUtils.convertObjectToType(columnValueSelector.getObject(), columnType);
   }
-
 }

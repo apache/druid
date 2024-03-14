@@ -136,7 +136,7 @@ public class GroupByQueryEngine
                       curPos,
                       query.getResultRowDimensionStart() + i
                   );
-                  curPos += dims[i].getColumnSelectorStrategy().getGroupingKeySize();
+                  curPos += dims[i].getColumnSelectorStrategy().getGroupingKeySizeBytes();
                 }
 
                 final int cardinalityForArrayAggregation = GroupingEngine.getCardinalityForArrayAggregation(
@@ -844,7 +844,7 @@ public class GroupByQueryEngine
       this.dims = dims;
       int keySize = 0;
       for (GroupByColumnSelectorPlus selectorPlus : dims) {
-        keySize += selectorPlus.getColumnSelectorStrategy().getGroupingKeySize();
+        keySize += selectorPlus.getColumnSelectorStrategy().getGroupingKeySizeBytes();
       }
       this.keySize = keySize;
 

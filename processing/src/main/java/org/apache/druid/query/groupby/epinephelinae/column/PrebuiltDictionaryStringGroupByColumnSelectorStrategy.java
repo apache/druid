@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -30,11 +29,18 @@ import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 
-// Note: Avoiding anonymous classes
-// This is more of a helper class, as it just creates an instance of the KeyMappingGroupingColumnSelectorStrategy
+/**
+ * Implementation of {@link KeyMappingGroupByColumnSelectorStrategy} that relies on a prebuilt dictionary to map the
+ * dimension to the dictionaryId. It is more like a helper class, that handles the different ways that dictionaries can be
+ * provided for different types. Currently, it only handles String dimensions. Array dimensions are also backed by dictionaries,
+ * but not exposed via the ColumnValueSelector interface, hence this strategy cannot handle array dimensions.
+ */
 public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy
 {
 
+  /**
+   * Create the strategy for the provided column type
+   */
   public static GroupByColumnSelectorStrategy forType(
       final ColumnType columnType,
       final ColumnValueSelector columnValueSelector,
@@ -44,7 +50,7 @@ public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy
     if (columnType.equals(ColumnType.STRING)) {
       return forString(columnValueSelector, columnCapabilities);
     } else {
-      // This can change with array columns
+      // This will change with array columns
       throw DruidException.defensive("Only string columns expose prebuilt dictionaries");
     }
   }
@@ -63,15 +69,20 @@ public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy
     );
   }
 
+  /**
+   * Dimension to id converter for string dimensions and {@link DimensionSelector}, where the dictionaries are prebuilt.
+   * The callers must ensure that's the case by checking that {@link DimensionSelector#getValueCardinality()} is known
+   * and {@link DimensionSelector#nameLookupPossibleInAdvance()} is true.
+   */
   private static class StringDimensionToIdConverter implements DimensionToIdConverter<IndexedInts>
   {
     @Override
-    public Pair<IndexedInts, Integer> getMultiValueHolder(
+    public MemoryEstimate<IndexedInts> getMultiValueHolder(
         final ColumnValueSelector selector,
         final IndexedInts reusableValue
     )
     {
-      return Pair.of(((DimensionSelector) selector).getRow(), 0);
+      return new MemoryEstimate<>(((DimensionSelector) selector).getRow(), 0);
     }
 
     @Override
@@ -81,16 +92,21 @@ public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy
     }
 
     @Override
-    public Pair<Integer, Integer> getIndividualValueDictId(IndexedInts multiValueHolder, int index)
+    public MemoryEstimate<Integer> getIndividualValueDictId(IndexedInts multiValueHolder, int index)
     {
-      return Pair.of(multiValueHolder.get(index), 0);
+      // dictId is already encoded in the indexedInt supplied by the column value selector
+      return new MemoryEstimate<>(multiValueHolder.get(index), 0);
     }
   }
 
+  /**
+   * ID to dimension converter for {@link DimensionSelector} with prebuilt dictionary
+   */
   private static class StringIdToDimensionConverter implements IdToDimensionConverter<String>
   {
 
     final DimensionSelector dimensionSelector;
+
     @Nullable
     final ColumnCapabilities columnCapabilities;
 
@@ -106,6 +122,7 @@ public class PrebuiltDictionaryStringGroupByColumnSelectorStrategy
     @Override
     public String idToKey(int id)
     {
+      // Converting back to the value is as simple as looking up the value in the prebuilt dictionary
       return dimensionSelector.lookupName(id);
     }
 

@@ -205,7 +205,6 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       }
 
       // Sort offsets in-place.
-      // TODO(laksh): Perhaps this can utilise the MSQ's way of using byte comparisons
       Collections.sort(
           wrappedOffsets,
           (lhs, rhs) -> {

@@ -72,6 +72,12 @@ public class DictionaryBuilding
     return m;
   }
 
+  /**
+   * Creates a reverse dictionary which stores the keys in a sorted map. The sorting is decided based on the given
+   * comparator
+   *
+   * TODO(laksh): This function might be removed, if we decide ot go with hash based dictionaries. Also RB v/s AVL tree
+   */
   public static <T> Object2IntRBTreeMap<T> createTreeSortedReverseDictionary(Comparator<T> comparator)
   {
     final Object2IntRBTreeMap<T> m = new Object2IntRBTreeMap<>(comparator);
