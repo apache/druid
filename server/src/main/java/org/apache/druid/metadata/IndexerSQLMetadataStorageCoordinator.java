@@ -425,6 +425,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
     }
 
+    final String dataSource = segments.iterator().next().getDataSource();
+
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = new HashSet<>();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
