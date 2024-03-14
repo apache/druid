@@ -1153,6 +1153,36 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayContainsArrayStringColumns()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_CONTAINS(arrayStringNulls, ARRAY['a', 'b']), ARRAY_CONTAINS(arrayStringNulls, arrayString) FROM druid.arrays LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE_ARRAYS)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "array_contains(\"arrayStringNulls\",array('a','b'))", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "array_contains(\"arrayStringNulls\",\"arrayString\")", ColumnType.LONG)
+                )
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? null : false, NullHandling.sqlCompatible() ? null : false},
+            new Object[]{true, false},
+            new Object[]{false, false},
+            new Object[]{NullHandling.sqlCompatible() ? null : false, NullHandling.sqlCompatible() ? null : false},
+            new Object[]{true, true}
+        )
+    );
+  }
+
+  @Test
   public void testArrayContainsFilterArrayLongColumns()
   {
     testQuery(
@@ -1198,6 +1228,45 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testArrayContainsConstantNull()
+  {
+    testQuery(
+        "SELECT ARRAY_CONTAINS(null, ARRAY['a','b'])",
+        ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{NullHandling.defaultLongValue()}),
+                        RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+            : newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{0L}),
+                        RowSignature.builder().add("ZERO", ColumnType.LONG).build()
+                    )
+                )
+                .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? null : false}
+        )
     );
   }
 
