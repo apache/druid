@@ -33,7 +33,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.DefaultTaskLabelsProvider;
+import org.apache.druid.indexing.common.task.DefaultTaskIdentitiesProvider;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.Controller;
@@ -97,7 +97,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
       inMemoryControllerTask.put(cTask.getId(), cTask);
 
-      controller = new ControllerImpl(cTask, msqTestControllerContext, new DefaultTaskLabelsProvider());
+      controller = new ControllerImpl(cTask, msqTestControllerContext, new DefaultTaskIdentitiesProvider());
 
       inMemoryControllers.put(controller.id(), controller);
 

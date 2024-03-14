@@ -40,7 +40,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
-import org.apache.druid.indexing.common.task.TaskLabelsProvider;
+import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -241,14 +241,14 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
-    final TaskLabelsProvider taskLabelsProvider = injector.getInstance(TaskLabelsProvider.class);
+    final TaskIdentitiesProvider taskIdentitiesProvider = injector.getInstance(TaskIdentitiesProvider.class);
     final ControllerContext context = new IndexerControllerContext(
         toolbox,
         injector,
         clientFactory,
         overlordClient
     );
-    controller = new ControllerImpl(this, context, taskLabelsProvider);
+    controller = new ControllerImpl(this, context, taskIdentitiesProvider);
     return controller.run();
   }
 

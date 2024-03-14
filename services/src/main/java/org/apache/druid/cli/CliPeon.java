@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
@@ -87,7 +86,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskLabelsProvider;
+import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -313,7 +312,7 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(
               Task task,
-              TaskLabelsProvider taskLabelsProvider
+              TaskIdentitiesProvider taskIdentitiesProvider
           )
           {
             ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -321,7 +320,7 @@ public class CliPeon extends GuiceRunnable
             builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
             builder.put(DruidMetrics.TASK_TYPE, task.getType());
             builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
-            Map<String, Object> taskMetricTags = taskLabelsProvider.getTaskMetricTags(task);
+            Map<String, Object> taskMetricTags = taskIdentitiesProvider.getTaskMetricTags(task);
             if (!taskMetricTags.isEmpty()) {
               builder.put(DruidMetrics.TAGS, taskMetricTags);
             }
