@@ -14947,6 +14947,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNtileNotSupportedWithFrame()
   {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
     DruidException e = assertThrows(
         DruidException.class,
         () -> testBuilder()
