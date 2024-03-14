@@ -233,7 +233,7 @@ public class DataSourcesResource
         return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
       }
     };
-    return performSegmentUpdate(dataSourceName, payload, operation);
+    return performSegmentUpdate(dataSourceName, payload, operation, true);
   }
 
   @POST
@@ -278,13 +278,14 @@ public class DataSourcesResource
       );
       return numUpdatedSegments;
     };
-    return performSegmentUpdate(dataSourceName, payload, operation);
+    return performSegmentUpdate(dataSourceName, payload, operation, false);
   }
 
   private Response performSegmentUpdate(
       String dataSourceName,
       MarkDataSourceSegmentsPayload payload,
-      SegmentUpdateOperation operation
+      SegmentUpdateOperation operation,
+      boolean isMarkUsed
   )
   {
     if (payload == null || !payload.isValid()) {
@@ -296,7 +297,9 @@ public class DataSourcesResource
     }
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    if (dataSource == null) {
+    // We can skip the markUnused operation when there are no used segments for this datasource.
+    // However, for markUsed operation, we should still continue as we want to mark a portion of the unused segments as used.
+    if (dataSource == null && !isMarkUsed) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
