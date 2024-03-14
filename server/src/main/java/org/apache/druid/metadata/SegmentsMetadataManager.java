@@ -55,8 +55,17 @@ public interface SegmentsMetadataManager
 
   int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval);
 
-  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
-      throws UnknownSegmentIdsException;
+  /**
+   * Marks the given segment IDs as "used" only if there are not already overshadowed
+   * by other used segments. Qualifying segment IDs that are already marked as
+   * "used" are not updated.
+   *
+   * @return Number of segments updated
+   * @throws org.apache.druid.error.DruidException of category INVALID_INPUT if
+   *                                               any of the given segment IDs
+   *                                               do not exist in the metadata store.
+   */
+  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
@@ -164,7 +173,8 @@ public interface SegmentsMetadataManager
   Set<String> retrieveAllDataSourceNames();
 
   /**
-   * Returns a list of up to {@code limit} unused segment intervals for the specified datasource. Segments are filtered based on the following criteria:
+   * Returns a list of up to {@code limit} unused segment intervals for the specified datasource. Segments are filtered
+   * based on the following criteria:
    *
    * <li> The start time of the segment must be no earlier than the specified {@code minStartTime} (if not null). </li>
    * <li> The end time of the segment must be no later than the specified {@code maxEndTime}. </li>
@@ -172,9 +182,9 @@ public interface SegmentsMetadataManager
    *      Segments that have no {@code used_status_last_updated} time (due to an upgrade from legacy Druid) will
    *      have {@code maxUsedStatusLastUpdatedTime} ignored. </li>
    *
-   * <p>
-   * The list of intervals is ordered by segment start time and then by end time.
-   * </p>
+   * @return list of intervals ordered by segment start time and then by end time. Note that the list may contain
+   * duplicate intervals.
+   *
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,

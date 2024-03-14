@@ -45,13 +45,18 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests the input-source-specific table functions: http, inline and localfiles.
@@ -318,7 +323,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"," +
         "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\"," +
         "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}," +
-        "\"granularity\":{\"type\":\"all\"}}," +
+        "\"columnTypes\":[\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"}}," +
         "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]," +
         "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
@@ -349,16 +354,17 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
         "PARTITIONED BY ALL TIME";
     didTest = true; // Else the framework will complain
-    testBuilder()
-        .plannerConfig(PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN)
-        .sql(query)
-        // Regular user does not have permission on extern or other table functions
-        .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
-        .expectedException(expected -> {
-          expected.expect(ForbiddenException.class);
-          expected.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
-        })
-        .run();
+    ForbiddenException e = assertThrows(
+        ForbiddenException.class,
+        () -> testBuilder()
+            .plannerConfig(PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN)
+            .sql(query)
+            // Regular user does not have permission on extern or other table functions
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .run()
+    );
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(Access.DEFAULT_ERROR_MESSAGE)));
+
   }
 
   @Test

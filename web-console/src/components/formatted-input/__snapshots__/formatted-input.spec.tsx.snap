@@ -26,7 +26,7 @@ exports[`FormattedInput matches snapshot with escaped value 1`] = `
     <input
       class="bp4-input"
       type="text"
-      value="Here are some chars \\\\t\\\\r\\\\n lol"
+      value="Here are some chars \\t\\r\\n lol"
     />
   </div>
 </div>

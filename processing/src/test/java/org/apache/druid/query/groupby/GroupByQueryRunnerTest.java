@@ -130,8 +130,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.BaseMatcher;
@@ -1346,14 +1344,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("a", "preferred"), "rows", 2L, "idx", 282L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("b", "preferred"), "rows", 2L, "idx", 230L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("e", "preferred"), "rows", 2L, "idx", 324L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("h", "preferred"), "rows", 2L, "idx", 233L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("m", "preferred"), "rows", 6L, "idx", 5317L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("n", "preferred"), "rows", 2L, "idx", 235L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("p", "preferred"), "rows", 6L, "idx", 5405L),
-        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("preferred", "t"), "rows", 4L, "idx", 420L)
+        makeRow(query, "2011-04-01", "alias", new Object[]{"a", "preferred"}, "rows", 2L, "idx", 282L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"b", "preferred"}, "rows", 2L, "idx", 230L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"e", "preferred"}, "rows", 2L, "idx", 324L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"h", "preferred"}, "rows", 2L, "idx", 233L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"m", "preferred"}, "rows", 6L, "idx", 5317L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"n", "preferred"}, "rows", 2L, "idx", 235L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"p", "preferred"}, "rows", 6L, "idx", 5405L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"preferred", "t"}, "rows", 4L, "idx", 420L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -1386,7 +1384,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     List<ResultRow> expectedResults = ImmutableList.of(
         makeRow(query, "2011-04-01", "alias",
-                ComparableStringArray.of("preferred"), "rows", 26L, "idx", 12446L
+                new Object[]{"preferred"}, "rows", 26L, "idx", 12446L
         )
     );
 
@@ -1434,7 +1432,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("a", "preferred"),
+            new Object[]{"a", "preferred"},
             "quality",
             "automotive",
             "rows",
@@ -1446,7 +1444,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("b", "preferred"),
+            new Object[]{"b", "preferred"},
             "quality",
             "business",
             "rows",
@@ -1458,7 +1456,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("e", "preferred"),
+            new Object[]{"e", "preferred"},
             "quality",
             "entertainment",
             "rows",
@@ -1470,7 +1468,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("h", "preferred"),
+            new Object[]{"h", "preferred"},
             "quality",
             "health",
             "rows",
@@ -1482,7 +1480,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("m", "preferred"),
+            new Object[]{"m", "preferred"},
             "quality",
             "mezzanine",
             "rows",
@@ -1494,7 +1492,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("n", "preferred"),
+            new Object[]{"n", "preferred"},
             "quality",
             "news",
             "rows",
@@ -1506,7 +1504,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("p", "preferred"),
+            new Object[]{"p", "preferred"},
             "quality",
             "premium",
             "rows",
@@ -1518,7 +1516,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("preferred", "t"),
+            new Object[]{"preferred", "t"},
             "quality",
             "technology",
             "rows",
@@ -1530,7 +1528,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("preferred", "t"),
+            new Object[]{"preferred", "t"},
             "quality",
             "travel",
             "rows",
@@ -1628,7 +1626,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             query,
             "2011-04-01",
             "alias",
-            ComparableStringArray.of("preferred"),
+            new Object[]{"preferred"},
             "rows",
             26L,
             "idx",
@@ -1788,11 +1786,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testVirtualColumnNumericTypeAsStringArray()
   {
-    if (!vectorize) {
-      // cannot add exact class cast message due to discrepancies between various JDK versions
-      expectedException.expect(RuntimeException.class);
-    }
-
     cannotVectorize();
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -1807,12 +1800,44 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY
             )
         )
-
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1049.738585"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"109.705815"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"110.931934"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"112.987027"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"113.446008"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"114.290141"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1144.342401"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"118.57034"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"119.922742"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1193.556278"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"120.134704"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"121.583581"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1234.247546"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"126.411364"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1314.839715"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1321.375057"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"135.301506"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"135.885094"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"144.507368"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1447.34116"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"147.425935"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1522.043733"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"158.747224"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"166.016049"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"78.622547"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"97.387433"}, "rows", 1L)
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        results,
+        "virtual-column-numeric-type-as-string-array"
+    );
   }
 
   @Test
@@ -1847,14 +1872,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("a", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("b", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("e", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("h", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("m", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("n", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("p", "preferred"), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("preferred", "t"), "rows", 1L)
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"a", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"b", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"e", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"h", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"m", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"n", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"p", "preferred"}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{"preferred", "t"}, "rows", 1L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
@@ -1893,7 +1918,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = ImmutableList.of(
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1L, 2L)),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1L, 2L},
                 "rows", 1L
         ));
 
@@ -1933,31 +1958,31 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135L)), "rows", 2L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522L)), "rows", 1L)
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{78L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{97L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{109L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{110L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{112L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{113L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{114L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{118L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{119L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{120L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{121L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{126L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{135L}, "rows", 2L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{144L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{147L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{158L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{166L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1049L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1144L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1193L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1234L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1314L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1321L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1447L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1522L}, "rows", 1L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
@@ -1996,31 +2021,31 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135L)), "rows", 2L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447L)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522L)), "rows", 1L)
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{78L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{97L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{109L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{110L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{112L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{113L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{114L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{118L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{119L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{120L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{121L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{126L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{135L}, "rows", 2L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{144L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{147L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{158L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{166L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1049L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1144L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1193L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1234L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1314L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1321L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1447L}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1522L}, "rows", 1L)
     );
     // reversing list
     Collections.reverse(expectedResults);
@@ -2060,32 +2085,32 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78.622547)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97.387433)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109.705815)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110.931934)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112.987027)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113.446008)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114.290141)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118.57034)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119.922742)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120.134704)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121.583581)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126.411364)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.301506)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.885094)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144.507368)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147.425935)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158.747224)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166.016049)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049.738585)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144.342401)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193.556278)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234.247546)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314.839715)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321.375057)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447.34116)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522.043733)), "rows", 1L)
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{78.622547}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{97.387433}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{109.705815}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{110.931934}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{112.987027}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{113.446008}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{114.290141}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{118.57034}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{119.922742}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{120.134704}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{121.583581}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{126.411364}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{135.301506}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{135.885094}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{144.507368}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{147.425935}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{158.747224}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{166.016049}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1049.738585}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1144.342401}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1193.556278}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1234.247546}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1314.839715}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1321.375057}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1447.34116}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1522.043733}, "rows", 1L)
     );
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
     TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
@@ -2124,32 +2149,32 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78.622547)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97.387433)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109.705815)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110.931934)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112.987027)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113.446008)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114.290141)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118.57034)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119.922742)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120.134704)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121.583581)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126.411364)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.301506)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.885094)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144.507368)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147.425935)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158.747224)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166.016049)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049.738585)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144.342401)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193.556278)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234.247546)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314.839715)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321.375057)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447.34116)), "rows", 1L),
-        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522.043733)), "rows", 1L)
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{78.622547}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{97.387433}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{109.705815}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{110.931934}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{112.987027}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{113.446008}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{114.290141}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{118.57034}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{119.922742}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{120.134704}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{121.583581}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{126.411364}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{135.301506}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{135.885094}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{144.507368}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{147.425935}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{158.747224}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{166.016049}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1049.738585}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1144.342401}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1193.556278}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1234.247546}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1314.839715}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1321.375057}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1447.34116}, "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new Object[]{1522.043733}, "rows", 1L)
     );
     // reversing list
     Collections.reverse(expectedResults);

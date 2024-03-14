@@ -41,8 +41,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -76,7 +76,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
-import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -92,6 +91,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static org.apache.druid.sql.calcite.util.CalciteTests.ARRAYS_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
@@ -175,7 +175,7 @@ public class CalciteMSQTestsHelper
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
                 .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
-          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
+          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
           GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
@@ -193,21 +193,16 @@ public class CalciteMSQTestsHelper
     );
   }
 
-  private static LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  private static DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
     // Currently, there is no metadata in this test for loaded segments. Therefore, this should not be called.
-    // In the future, if this needs to be supported, mocks for LoadedSegmentDataProvider should be added like
+    // In the future, if this needs to be supported, mocks for DataServerQueryHandler should be added like
     // org.apache.druid.msq.exec.MSQLoadedSegmentTests.
-    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
-    LoadedSegmentDataProvider loadedSegmentDataProvider = Mockito.mock(LoadedSegmentDataProvider.class);
-    try {
-      doThrow(new AssertionError("Test does not support loaded segment query"))
-          .when(loadedSegmentDataProvider).fetchRowsFromDataServer(any(), any(), any(), any());
-      doReturn(loadedSegmentDataProvider).when(mockFactory).createLoadedSegmentDataProvider(anyString(), any());
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
+    DataServerQueryHandler dataServerQueryHandler = Mockito.mock(DataServerQueryHandler.class);
+    doThrow(new AssertionError("Test does not support loaded segment query"))
+        .when(dataServerQueryHandler).fetchRowsFromDataServer(any(), any(), any());
+    doReturn(dataServerQueryHandler).when(mockFactory).createDataServerQueryHandler(anyString(), any(), any());
     return mockFactory;
   }
 
@@ -287,7 +282,7 @@ public class CalciteMSQTestsHelper
               .rows(ROWS_LOTS_OF_COLUMNS)
               .buildMMappedIndex();
           break;
-        case CalciteArraysQueryTest.DATA_SOURCE_ARRAYS:
+        case ARRAYS_DATASOURCE:
           index = IndexBuilder.create()
                               .tmpDir(temporaryFolder.newFolder())
                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())

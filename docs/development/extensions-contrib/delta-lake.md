@@ -38,6 +38,23 @@ These Delta Lake files are versioned Parquet files.
 The Delta Lake extension uses the Delta Kernel introduced in Delta Lake 3.0.0, which is compatible with Apache Spark 3.5.x.
 Older versions are unsupported, so consider upgrading to Delta Lake 3.0.x or higher to use this extension.
 
+## Downloading Delta Lake extension
+
+To download `druid-deltalake-extensions`, run the following command after replacing `<VERSION>` with the desired
+Druid version:
+
+```shell
+java \
+  -cp "lib/*" \
+  -Ddruid.extensions.directory="extensions" \
+  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
+  org.apache.druid.cli.Main tools pull-deps \
+  --no-default-hadoop \
+  -c "org.apache.druid.extensions.contrib:druid-deltalake-extensions:<VERSION>"
+```
+
+See [Loading community extensions](../../configuration/extensions.md#loading-community-extensions) for more information.
+
 ## Known limitations
 
 - This extension relies on the Delta Kernel API and can only read from the latest Delta table snapshot.

@@ -89,6 +89,7 @@ import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
@@ -160,6 +161,8 @@ public class MSQIndexingModule implements DruidModule
         SortMergeJoinFrameProcessorFactory.class,
         QueryResultFrameProcessorFactory.class,
         WindowOperatorQueryFrameProcessorFactory.class,
+        ExportResultsFrameProcessorFactory.class,
+
         // DataSource classes (note: ExternalDataSource is in MSQSqlModule)
         InputNumberDataSource.class,
 

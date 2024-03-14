@@ -1317,7 +1317,7 @@ public class MSQInsertTest extends MSQTestBase
                 DruidException.Persona.USER,
                 DruidException.Category.INVALID_INPUT,
                 "invalidInput"
-            ).expectMessageIs("Field [__time] was the wrong type [VARCHAR], expected TIMESTAMP")
+            ).expectMessageIs("Field[__time] was the wrong type[VARCHAR], expected TIMESTAMP")
         )
         .verifyPlanningErrors();
   }

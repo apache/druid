@@ -676,7 +676,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "PARTITIONED BY MONTH")
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(invalidSqlContains(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
+                         "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
                      ))
                      .verifyPlanningErrors();
   }
@@ -692,7 +692,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
                      .setExpectedValidationErrorMatcher(invalidSqlContains(
-                             "INSERT and REPLACE queries cannot have an OFFSET"
+                         "INSERT and REPLACE queries cannot have an OFFSET"
                      ))
                      .setQueryContext(context)
                      .verifyPlanningErrors();
@@ -876,6 +876,44 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
+  public void testReplaceOnFoo1RangeClusteredBySubset()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1\n"
+                         + "OVERWRITE ALL\n"
+                         + "SELECT dim1, m1, COUNT(*) AS cnt\n"
+                         + "FROM foo\n"
+                         + "GROUP BY dim1, m1\n"
+                         + "PARTITIONED BY ALL\n"
+                         + "CLUSTERED BY dim1"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{0L, NullHandling.sqlCompatible() ? "" : null, 1.0f, 1L},
+                             new Object[]{0L, "1", 4.0f, 1L},
+                             new Object[]{0L, "10.1", 2.0f, 1L},
+                             new Object[]{0L, "2", 3.0f, 1L},
+                             new Object[]{0L, "abc", 6.0f, 1L},
+                             new Object[]{0L, "def", 5.0f, 1L}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
   public void testReplaceSegmentsInsertIntoNewTable()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -916,7 +954,7 @@ public class MSQReplaceTest extends MSQTestBase
                              + "FROM foo "
                              + "PARTITIONED BY ALL TIME "
                              + "CLUSTERED BY m2, m1 DESC"
-                             )
+                     )
                      .setExpectedValidationErrorMatcher(
                          invalidSqlIs("Invalid CLUSTERED BY clause [`m1` DESC]: cannot sort in descending order.")
                      )

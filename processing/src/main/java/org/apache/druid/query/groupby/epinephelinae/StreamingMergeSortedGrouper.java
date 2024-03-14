@@ -348,6 +348,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void close()
   {
+    keySerde.reset();
     for (BufferAggregator aggregator : aggregators) {
       try {
         aggregator.close();

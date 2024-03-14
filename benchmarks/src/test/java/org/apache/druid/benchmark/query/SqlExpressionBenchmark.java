@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -212,7 +211,14 @@ public class SqlExpressionBenchmark
       "SELECT string1, long1 FROM foo WHERE ARRAY_CONTAINS(\"multi-string3\", 100) GROUP BY 1,2",
       "SELECT string1, long1 FROM foo WHERE ARRAY_OVERLAP(\"multi-string3\", ARRAY[100, 200]) GROUP BY 1,2",
       // 40: regex filtering
-      "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1"
+      "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1",
+      // 41: complicated filtering
+      "SELECT string2, SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) GROUP BY 1 ORDER BY 2",
+      // 42: array_contains expr
+      "SELECT ARRAY_CONTAINS(\"multi-string3\", 100) FROM foo",
+      "SELECT ARRAY_CONTAINS(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo",
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 100]) FROM foo",
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo"
   );
 
   @Param({"5000000"})
@@ -273,7 +279,12 @@ public class SqlExpressionBenchmark
       "37",
       "38",
       "39",
-      "40"
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+      "45"
   })
   private String query;
 
@@ -367,11 +378,8 @@ public class SqlExpressionBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonMappingException e) {
-      throw new RuntimeException(e);
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+    catch (JsonProcessingException ignored) {
+
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
@@ -384,6 +392,9 @@ public class SqlExpressionBenchmark
         yielder.next(yielder.get());
       }
       log.info("Total result row count:" + rowCounter);
+    }
+    catch (Throwable ignored) {
+
     }
   }
 

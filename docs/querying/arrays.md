@@ -42,7 +42,7 @@ The following sections describe inserting, filtering, and grouping behavior base
 ## Ingesting arrays
 
 ### Native batch and streaming ingestion
-When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../development/extensions-core/kafka-ingestion.md), arrays can be ingested using the [`"auto"`](../ingestion/ingestion-spec.md#dimension-objects) type dimension schema which is shared with [type-aware schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery).
+When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../ingestion/kafka-ingestion.md), arrays can be ingested using the [`"auto"`](../ingestion/ingestion-spec.md#dimension-objects) type dimension schema which is shared with [type-aware schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery).
 
 When ingesting from TSV or CSV data, you can specify the array delimiters using the `listDelimiter` field in the `inputFormat`. JSON data must be formatted as a JSON array to be ingested as an array type. JSON data does not require `inputFormat` configuration.
 
@@ -71,9 +71,46 @@ The following shows an example `dimensionsSpec` for native ingestion of the data
 
 ### SQL-based ingestion
 
-Arrays can also be inserted with [SQL-based ingestion](../multi-stage-query/index.md) when you include a query context parameter [`"arrayIngestMode":"array"`](../multi-stage-query/reference.md#context-parameters).
+#### `arrayIngestMode`
 
-For example, to insert the data used in this document:
+Arrays can be inserted with [SQL-based ingestion](../multi-stage-query/index.md) when you include the query context
+parameter `arrayIngestMode: array`.
+
+When `arrayIngestMode` is `array`, SQL ARRAY types are stored using Druid array columns. This is recommended for new
+tables.
+
+When `arrayIngestMode` is `mvd`, SQL `VARCHAR ARRAY` are implicitly wrapped in [`ARRAY_TO_MV`](sql-functions.md#array_to_mv).
+This causes them to be stored as [multi-value strings](multi-value-dimensions.md), using the same `STRING` column type
+as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`. This
+is the default behavior when `arrayIngestMode` is not provided in your query context, although the default behavior
+may change to `array` in a future release.
+
+When `arrayIngestMode` is `none`, Druid throws an exception when trying to store any type of arrays. This mode is most
+useful when set in the system default query context with `druid.query.default.context.arrayIngestMode = none`, in cases
+where the cluster administrator wants SQL query authors to explicitly provide one or the other in their query context.
+
+The following table summarizes the differences in SQL ARRAY handling between `arrayIngestMode: array` and
+`arrayIngestMode: mvd`.
+
+| SQL type | Stored type when `arrayIngestMode: array` | Stored type when `arrayIngestMode: mvd` (default) |
+|---|---|---|
+|`VARCHAR ARRAY`|`ARRAY<STRING>`|[multi-value `STRING`](multi-value-dimensions.md)|
+|`BIGINT ARRAY`|`ARRAY<LONG>`|not possible (validation error)|
+|`DOUBLE ARRAY`|`ARRAY<DOUBLE>`|not possible (validation error)|
+
+In either mode, you can explicitly wrap string arrays in `ARRAY_TO_MV` to cause them to be stored as
+[multi-value strings](multi-value-dimensions.md).
+
+When validating a SQL INSERT or REPLACE statement that contains arrays, Druid checks whether the statement would lead
+to mixing string arrays and multi-value strings in the same column. If this condition is detected, the statement fails
+validation unless the column is named under the `skipTypeVerification` context parameter. This parameter can be either
+a comma-separated list of column names, or a JSON array in string form. This validation is done to prevent accidentally
+mixing arrays and multi-value strings in the same column.
+
+#### Examples
+
+Set [`arrayIngestMode: array`](#arrayingestmode) in your query context to run the following examples.
+
 ```sql
 REPLACE INTO "array_example" OVERWRITE ALL
 WITH "ext" AS (
@@ -81,9 +118,14 @@ WITH "ext" AS (
   FROM TABLE(
     EXTERN(
       '{"type":"inline","data":"{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row1\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, null,3], \"arrayDouble\":[1.1, 2.2, null]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row2\", \"arrayString\": [null, \"b\"], \"arrayLong\":null,        \"arrayDouble\":[999, null, 5.5]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row3\", \"arrayString\": [],          \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[null, 2.2, 1.1]} \n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row4\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row5\", \"arrayString\": null,        \"arrayLong\":[],          \"arrayDouble\":null}"}',
-      '{"type":"json"}',
-      '[{"name":"timestamp", "type":"STRING"},{"name":"label", "type":"STRING"},{"name":"arrayString", "type":"ARRAY<STRING>"},{"name":"arrayLong", "type":"ARRAY<LONG>"},{"name":"arrayDouble", "type":"ARRAY<DOUBLE>"}]'
+      '{"type":"json"}'
     )
+  ) EXTEND (
+    "timestamp" VARCHAR,
+    "label" VARCHAR,
+    "arrayString" VARCHAR ARRAY,
+    "arrayLong" BIGINT ARRAY,
+    "arrayDouble" DOUBLE ARRAY
   )
 )
 SELECT
@@ -96,8 +138,7 @@ FROM "ext"
 PARTITIONED BY DAY
 ```
 
-### SQL-based ingestion with rollup
-These input arrays can also be grouped for rollup:
+Arrays can also be used as `GROUP BY` keys for rollup:
 
 ```sql
 REPLACE INTO "array_example_rollup" OVERWRITE ALL
@@ -106,9 +147,14 @@ WITH "ext" AS (
   FROM TABLE(
     EXTERN(
       '{"type":"inline","data":"{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row1\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, null,3], \"arrayDouble\":[1.1, 2.2, null]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row2\", \"arrayString\": [null, \"b\"], \"arrayLong\":null,        \"arrayDouble\":[999, null, 5.5]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row3\", \"arrayString\": [],          \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[null, 2.2, 1.1]} \n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row4\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row5\", \"arrayString\": null,        \"arrayLong\":[],          \"arrayDouble\":null}"}',
-      '{"type":"json"}',
-      '[{"name":"timestamp", "type":"STRING"},{"name":"label", "type":"STRING"},{"name":"arrayString", "type":"ARRAY<STRING>"},{"name":"arrayLong", "type":"ARRAY<LONG>"},{"name":"arrayDouble", "type":"ARRAY<DOUBLE>"}]'
+      '{"type":"json"}'
     )
+  ) EXTEND (
+    "timestamp" VARCHAR,
+    "label" VARCHAR,
+    "arrayString" VARCHAR ARRAY,
+    "arrayLong" BIGINT ARRAY,
+    "arrayDouble" DOUBLE ARRAY
   )
 )
 SELECT
@@ -238,7 +284,7 @@ Avoid confusing string arrays with [multi-value dimensions](multi-value-dimensio
 
 Use care during ingestion to ensure you get the type you want.
 
-To get arrays when performing an ingestion using JSON ingestion specs, such as [native batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../development/extensions-core/kafka-ingestion.md), use dimension type `auto` or enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), write a query that generates arrays and set the context parameter `"arrayIngestMode": "array"`. Arrays may contain strings or numbers.
+To get arrays when performing an ingestion using JSON ingestion specs, such as [native batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../ingestion/kafka-ingestion.md), use dimension type `auto` or enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), write a query that generates arrays and set the context parameter `"arrayIngestMode": "array"`. Arrays may contain strings or numbers.
 
 To get multi-value dimensions when performing an ingestion using JSON ingestion specs, use dimension type `string` and do not enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), wrap arrays in [`ARRAY_TO_MV`](multi-value-dimensions.md#sql-based-ingestion), which ensures you get multi-value dimensions in any `arrayIngestMode`. Multi-value dimensions can only contain strings.
 

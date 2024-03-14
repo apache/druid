@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.LiteralSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.SingleValueSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.StringSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumZeroSqlAggregator;
@@ -125,10 +126,10 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.external.TableAppendMacro;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -173,6 +174,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.AND))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.OR))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.XOR))
+                   .add(new SingleValueSqlAggregator())
                    .build();
 
   // STRLEN has so many aliases.
@@ -424,6 +426,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
                    .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
                    .addAll(NESTED_DATA_OPERATOR_CONVERSIONS)
+                   .add(TableAppendMacro.OPERATOR_CONVERSION)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

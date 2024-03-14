@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -42,6 +43,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
@@ -526,6 +528,69 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        NestedDataTestUtils.COUNT,
+        Granularities.DAY,
+        true,
+        IndexSpec.DEFAULT
+    );
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsRealtimeAutoExplicit() throws Exception
+  {
+    DimensionsSpec spec = DimensionsSpec.builder()
+                                        .setDimensions(
+                                            ImmutableList.of(
+                                                new AutoTypeColumnSchema("str", ColumnType.STRING),
+                                                new AutoTypeColumnSchema("long", ColumnType.LONG),
+                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT)
+                                            )
+                                        )
+                                        .build();
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.TYPES_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            spec,
+            TransformSpec.NONE,
+            NestedDataTestUtils.COUNT,
+            Granularities.DAY,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.TYPES_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        spec,
         TransformSpec.NONE,
         NestedDataTestUtils.COUNT,
         Granularities.DAY,

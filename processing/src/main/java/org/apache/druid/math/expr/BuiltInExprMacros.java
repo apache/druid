@@ -19,13 +19,12 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class BuiltInExprMacros
 {
@@ -58,7 +57,7 @@ public class BuiltInExprMacros
 
       public ComplexDecodeBase64Expression(List<Expr> args)
       {
-        super(name(), args);
+        super(ComplexDecodeBase64ExprMacro.this, args);
         validationHelperCheckArgumentCount(args, 2);
         final Expr arg0 = args.get(0);
 
@@ -117,13 +116,6 @@ public class BuiltInExprMacros
         return ExprEval.ofComplex(complexType, typeStrategy.fromBytes(base64));
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-        return shuttle.visit(new ComplexDecodeBase64Expression(newArgs));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -160,7 +152,7 @@ public class BuiltInExprMacros
     public Expr apply(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 1);
-      return new StringDecodeBase64UTFExpression(args.get(0));
+      return new StringDecodeBase64UTFExpression(this, args);
     }
 
     /**
@@ -174,11 +166,14 @@ public class BuiltInExprMacros
       return NAME;
     }
 
-    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    static final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      public StringDecodeBase64UTFExpression(Expr arg)
+      private final Expr arg;
+
+      public StringDecodeBase64UTFExpression(StringDecodeBase64UTFExprMacro macro, List<Expr> args)
       {
-        super(name(), arg);
+        super(macro, args);
+        this.arg = Iterables.getOnlyElement(args);
       }
 
       @Override
@@ -189,12 +184,6 @@ public class BuiltInExprMacros
           return ExprEval.of(null);
         }
         return new StringExpr(StringUtils.fromUtf8(StringUtils.decodeBase64String(toDecode.asString()))).eval(bindings);
-      }
-
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(Collections.singletonList(arg))));
       }
 
       @Nullable

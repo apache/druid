@@ -286,11 +286,11 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     useCallback(state => state.increment, []),
   );
   useEffect(() => {
-    if (execution?.isSuccessfulInsert()) {
+    if (execution?.isSuccessfulIngest()) {
       incrementMetadataVersion();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Boolean(execution?.isSuccessfulInsert())]);
+  }, [Boolean(execution?.isSuccessfulIngest())]);
 
   function moveToPosition(position: RowColumn) {
     const currentQueryInput = queryInputRef.current;
@@ -434,12 +434,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 queryResult={execution.result}
                 onQueryAction={handleQueryAction}
               />
-            ) : execution.isSuccessfulInsert() ? (
-              <IngestSuccessPane
-                execution={execution}
-                onDetails={onDetails}
-                onQueryTab={onQueryTab}
-              />
             ) : execution.error ? (
               <div className="error-container">
                 <ExecutionErrorPane execution={execution} />
@@ -452,8 +446,24 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   />
                 )}
               </div>
+            ) : execution.isSuccessfulIngest() ? (
+              <IngestSuccessPane
+                execution={execution}
+                onDetails={onDetails}
+                onQueryTab={onQueryTab}
+              />
             ) : (
-              <div>Unknown query execution state</div>
+              <div className="generic-status-container">
+                <div className="generic-status-container-info">
+                  {`Execution completed with status: ${execution.status}`}
+                </div>
+                <ExecutionStagesPane
+                  execution={execution}
+                  onErrorClick={() => onDetails(statsTaskId!, 'error')}
+                  onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                  goToTask={goToTask}
+                />
+              </div>
             ))}
           {executionState.error && (
             <QueryErrorPane

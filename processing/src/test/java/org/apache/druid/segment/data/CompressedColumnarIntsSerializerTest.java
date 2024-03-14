@@ -167,7 +167,8 @@ public class CompressedColumnarIntsSerializerTest
           "test",
           CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
           byteOrder,
-          compressionStrategy
+          compressionStrategy,
+          segmentWriteOutMedium.getCloser()
       );
       serializer.open();
 
@@ -196,7 +197,8 @@ public class CompressedColumnarIntsSerializerTest
         "test",
         chunkFactor,
         byteOrder,
-        compressionStrategy
+        compressionStrategy,
+        segmentWriteOutMedium.getCloser()
     );
     CompressedColumnarIntsSupplier supplierFromList = CompressedColumnarIntsSupplier.fromList(
         IntArrayList.wrap(vals),
@@ -227,6 +229,7 @@ public class CompressedColumnarIntsSerializerTest
       Assert.assertEquals(vals[i], columnarInts.get(i));
     }
     CloseableUtils.closeAndWrapExceptions(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(segmentWriteOutMedium);
   }
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
@@ -236,7 +239,6 @@ public class CompressedColumnarIntsSerializerTest
 
     CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(
         "test",
-        segmentWriteOutMedium,
         chunkFactor,
         byteOrder,
         compressionStrategy,
@@ -244,8 +246,10 @@ public class CompressedColumnarIntsSerializerTest
             segmentWriteOutMedium,
             "test",
             compressionStrategy,
-            Long.BYTES * 10000
-        )
+            Long.BYTES * 10000,
+            segmentWriteOutMedium.getCloser()
+        ),
+        segmentWriteOutMedium.getCloser()
     );
 
     writer.open();

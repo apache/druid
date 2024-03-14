@@ -54,7 +54,7 @@ page.
 There are two available options for streaming ingestion. Streaming ingestion is controlled by a continuously-running
 supervisor.
 
-| **Method** | [Kafka](../development/extensions-core/kafka-ingestion.md) | [Kinesis](../development/extensions-core/kinesis-ingestion.md) |
+| **Method** | [Kafka](../ingestion/kafka-ingestion.md) | [Kinesis](../ingestion/kinesis-ingestion.md) |
 |---|-----|--------------|
 | **Supervisor type** | `kafka` | `kinesis`|
 | **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis.|

@@ -76,6 +76,7 @@ import {
   adjustForceGuaranteedRollup,
   adjustId,
   BATCH_INPUT_FORMAT_FIELDS,
+  changeFlattenSpec,
   chooseByBestTimestamp,
   cleanSpec,
   computeFlattenPathsForData,
@@ -89,6 +90,7 @@ import {
   FLATTEN_FIELD_FIELDS,
   getArrayMode,
   getDimensionSpecName,
+  getFlattenSpec,
   getIngestionComboType,
   getIngestionImage,
   getIngestionTitle,
@@ -96,6 +98,7 @@ import {
   getIoConfigTuningFormFields,
   getIssueWithSpec,
   getMetricSpecName,
+  getPossibleSystemFieldsForSpec,
   getRequiredModule,
   getRollup,
   getSchemaMode,
@@ -868,7 +871,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             {mode !== 'streaming' && (
               <>
                 {this.renderIngestionCard('index_parallel:s3')}
-                {this.renderIngestionCard('index_parallel:azure')}
+                {this.renderIngestionCard('index_parallel:azureStorage')}
                 {this.renderIngestionCard('index_parallel:google')}
                 {this.renderIngestionCard('index_parallel:delta')}
                 {this.renderIngestionCard('index_parallel:hdfs')}
@@ -962,7 +965,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:s3':
         return <p>Load text based, orc, or parquet data from Amazon S3.</p>;
 
-      case 'index_parallel:azure':
+      case 'index_parallel:azureStorage':
         return <p>Load text based, orc, or parquet data from Azure.</p>;
 
       case 'index_parallel:google':
@@ -1027,7 +1030,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:druid':
       case 'index_parallel:inline':
       case 'index_parallel:s3':
-      case 'index_parallel:azure':
+      case 'index_parallel:azureStorage':
       case 'index_parallel:google':
       case 'index_parallel:delta':
       case 'index_parallel:hdfs':
@@ -1458,8 +1461,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { columnFilter, specialColumnsOnly, parserQueryState, selectedFlattenField } = this.state;
     const spec = this.getEffectiveSpec();
     const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
-    const flattenFields: FlattenField[] =
-      deepGet(spec, 'spec.ioConfig.inputFormat.flattenSpec.fields') || EMPTY_ARRAY;
+    const flattenFields: FlattenField[] = getFlattenSpec(spec)?.fields || EMPTY_ARRAY;
 
     const canHaveNestedData = inputFormatCanProduceNestedData(inputFormat);
 
@@ -1519,6 +1521,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const inputFormatFields = isStreamingSpec(spec)
       ? STREAMING_INPUT_FORMAT_FIELDS
       : BATCH_INPUT_FORMAT_FIELDS;
+
+    const possibleSystemFields = getPossibleSystemFieldsForSpec(spec);
 
     const normalInputAutoForm = (
       <AutoForm
@@ -1583,6 +1587,21 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   )}
                 </>
               )}
+              {possibleSystemFields.length > 0 && (
+                <AutoForm
+                  fields={[
+                    {
+                      name: 'spec.ioConfig.inputSource.systemFields',
+                      label: 'System fields',
+                      type: 'string-array',
+                      suggestions: possibleSystemFields,
+                      info: 'JSON array of system fields to return as part of input rows.',
+                    },
+                  ]}
+                  model={spec}
+                  onChange={this.updateSpecPreview}
+                />
+              )}
               {this.renderApplyButtonBar(
                 parserQueryState,
                 AutoForm.issueWithModel(inputFormat, inputFormatFields) ||
@@ -1599,13 +1618,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 icon={IconNames.LIGHTBULB}
                 text={`Auto add ${pluralIfNeeded(suggestedFlattenFields.length, 'flatten spec')}`}
                 onClick={() => {
-                  this.updateSpec(
-                    deepSet(
-                      spec,
-                      'spec.ioConfig.inputFormat.flattenSpec.fields',
-                      suggestedFlattenFields,
-                    ),
-                  );
+                  this.updateSpec(changeFlattenSpec(spec, { fields: suggestedFlattenFields }));
                 }}
               />
             </FormGroup>
@@ -1658,24 +1671,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           initValue={selectedFlattenField.value}
           onClose={this.resetSelected}
           onDirty={this.handleDirty}
-          onApply={flattenField =>
+          onApply={flattenField => {
+            const flattenSpec = getFlattenSpec(spec) || {};
             this.updateSpec(
-              deepSet(
+              changeFlattenSpec(
                 spec,
-                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenField.index}`,
-                flattenField,
+                deepSet(flattenSpec, `fields.${selectedFlattenField.index}`, flattenField),
               ),
-            )
-          }
+            );
+          }}
           showDelete={selectedFlattenField.index !== -1}
-          onDelete={() =>
+          onDelete={() => {
+            const flattenSpec = getFlattenSpec(spec) || {};
             this.updateSpec(
-              deepDelete(
+              changeFlattenSpec(
                 spec,
-                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenField.index}`,
+                deepDelete(flattenSpec, `fields.${selectedFlattenField.index}`),
               ),
-            )
-          }
+            );
+          }}
         />
       );
     } else {
@@ -3236,23 +3250,39 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={spec}
             onChange={this.updateSpec}
           />
-          <Switch
-            label="Allow concurrent tasks (experimental)"
-            checked={typeof deepGet(spec, 'context.taskLockType') === 'string'}
-            onChange={() => {
-              this.updateSpec(
-                typeof deepGet(spec, 'context.taskLockType') === 'string'
-                  ? deepDelete(spec, 'context.taskLockType')
-                  : deepSet(
-                      spec,
-                      'context.taskLockType',
-                      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
-                        ? 'APPEND'
-                        : 'REPLACE',
-                    ),
-              );
-            }}
-          />
+          <FormGroupWithInfo
+            inlineInfo
+            info={
+              <PopoverText>
+                <p>
+                  If you want to append data to a datasource while compaction is running, you need
+                  to enable concurrent append and replace for the datasource by updating the
+                  compaction settings.
+                </p>
+                <p>
+                  For more information refer to the{' '}
+                  <ExternalLink
+                    href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
+                  >
+                    documentation
+                  </ExternalLink>
+                  .
+                </p>
+              </PopoverText>
+            }
+          >
+            <Switch
+              label="Use concurrent locks (experimental)"
+              checked={Boolean(deepGet(spec, 'context.useConcurrentLocks'))}
+              onChange={() => {
+                this.updateSpec(
+                  deepGet(spec, 'context.useConcurrentLocks')
+                    ? deepDelete(spec, 'context.useConcurrentLocks')
+                    : deepSet(spec, 'context.useConcurrentLocks', true),
+                );
+              }}
+            />
+          </FormGroupWithInfo>
         </div>
         <div className="other">
           <H5>Parse error reporting</H5>

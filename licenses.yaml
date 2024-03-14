@@ -397,7 +397,7 @@ name: JsonPath
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.3.0
+version: 2.9.0
 libraries:
   - com.jayway.jsonpath: json-path
 
@@ -507,7 +507,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.16.0
+version: 1.16.1
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -632,7 +632,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.24.0
+version: 1.26.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -965,7 +965,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.3
+version: 0.9.6
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -1249,7 +1249,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.100.Final
+version: 4.1.107.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1801,7 +1801,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.0
+version: 2.22.1
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -1999,7 +1999,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.53.v20231009
+version: 9.4.54.v20240208
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2812,6 +2812,16 @@ libraries:
 
 ---
 
+name: com.rabbitmq stream-client
+license_category: binary
+version: 0.9
+module: extensions-contrib/rabbit-stream-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.rabbitmq: stream-client
+
+---
+
 name: swagger-annotations
 version: 1.6.0
 license_category: binary
@@ -3461,7 +3471,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3473,7 +3483,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3485,7 +3495,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.6.0
+version: 42.7.2
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4640,13 +4650,23 @@ libraries:
 
 ---
 
-name: com.amazonaws aws-java-sdk-bundle
+name: com.amazonaws aws-java-sdk-logs
 license_category: binary
 version: 1.12.638
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
-  - com.amazonaws: aws-java-sdk-bundle
+  - com.amazonaws: aws-java-sdk-logs
+
+---
+
+name: com.amazonaws jmespath-java
+license_category: binary
+version: 1.12.638
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: jmespath-java
 
 ---
 
@@ -4943,7 +4963,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.5
+version: 7.22.15
 license_file_path: licenses/bin/@babel-helper-module-imports.MIT
 
 ---
@@ -4993,7 +5013,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.23.5
+version: 7.24.0
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -5277,12 +5297,22 @@ license_file_path: licenses/bin/ansi-styles.MIT
 
 ---
 
+name: "asynckit"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alex Indigo
+version: 0.4.0
+license_file_path: licenses/bin/asynckit.MIT
+
+---
+
 name: "axios"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 0.26.1
+version: 1.6.7
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -5413,6 +5443,16 @@ license_name: MIT License
 copyright: DY
 version: 1.1.3
 license_file_path: licenses/bin/color-name.MIT
+
+---
+
+name: "combined-stream"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Felix Geisendörfer
+version: 1.0.8
+license_file_path: licenses/bin/combined-stream.MIT
 
 ---
 
@@ -5636,6 +5676,16 @@ license_file_path: licenses/bin/define-properties.MIT
 
 ---
 
+name: "delayed-stream"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Felix Geisendörfer
+version: 1.0.0
+license_file_path: licenses/bin/delayed-stream.MIT
+
+---
+
 name: "diff-match-patch"
 license_category: binary
 module: web-console
@@ -5749,7 +5799,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.15.1
+version: 1.15.5
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5761,6 +5811,16 @@ license_name: MIT License
 copyright: Lotus
 version: 3.0.9
 license_file_path: licenses/bin/fontsource-open-sans.MIT
+
+---
+
+name: "form-data"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Felix Geisendörfer
+version: 4.0.0
+license_file_path: licenses/bin/form-data.MIT
 
 ---
 
@@ -6123,6 +6183,26 @@ license_file_path: licenses/bin/memoize-one.MIT
 
 ---
 
+name: "mime-db"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jonathan Ong <me@jongleberry.com>
+version: 1.52.0
+license_file_path: licenses/bin/mime-db.MIT
+
+---
+
+name: "mime-types"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jonathan Ong <me@jongleberry.com>
+version: 2.1.35
+license_file_path: licenses/bin/mime-types.MIT
+
+---
+
 name: "moment-timezone"
 license_category: binary
 module: web-console
@@ -6309,6 +6389,16 @@ license_name: MIT License
 copyright: Facebook, Inc.
 version: 15.7.2
 license_file_path: licenses/bin/prop-types.MIT
+
+---
+
+name: "proxy-from-env"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Rob Wu
+version: 1.1.0
+license_file_path: licenses/bin/proxy-from-env.MIT
 
 ---
 

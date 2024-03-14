@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -49,9 +50,13 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -193,6 +198,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           5,
           null,
           null,
+          null,
           null
       );
 
@@ -231,6 +237,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   private CoordinatorClient coordinatorClient;
   // An executor that executes API calls using a different thread from the caller thread as if they were remote calls.
   private ExecutorService remoteApiExecutor;
+  private File reportsFile;
 
   protected AbstractParallelIndexSupervisorTaskTest(
       double transientTaskFailureRate,
@@ -256,6 +263,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
     coordinatorClient = new LocalCoordinatorClient(remoteApiExecutor);
     prepareObjectMapper(objectMapper, getIndexIO());
+    reportsFile = temporaryFolder.newFile();
   }
 
   @After
@@ -301,6 +309,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         5,
+        null,
         null,
         null,
         null
@@ -700,6 +709,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .intermediaryDataManager(intermediaryDataManager)
+        .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
         .chatHandlerProvider(new NoopChatHandlerProvider())
         .rowIngestionMetersFactory(new TestUtils().getRowIngestionMetersFactory())
@@ -1061,5 +1071,21 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
       throw new ISE("Can't find segment for id[%s]", segmentId);
     }
+  }
+
+  public Map<String, TaskReport> getReports() throws IOException
+  {
+    return objectMapper.readValue(reportsFile, new TypeReference<Map<String, TaskReport>>()
+    {
+    });
+  }
+
+  public List<IngestionStatsAndErrorsTaskReportData> getIngestionReports() throws IOException
+  {
+    return getReports().entrySet()
+                       .stream()
+                       .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+                       .map(entry -> (IngestionStatsAndErrorsTaskReportData) entry.getValue().getPayload())
+                       .collect(Collectors.toList());
   }
 }

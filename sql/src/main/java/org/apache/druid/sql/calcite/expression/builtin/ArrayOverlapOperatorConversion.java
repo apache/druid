@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -66,7 +67,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
               )
           )
       )
-      .returnTypeInference(ReturnTypes.BOOLEAN)
+      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .build();
 
   public ArrayOverlapOperatorConversion()
@@ -110,7 +111,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         complexExpr = leftExpr;
       }
     } else {
-      return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+      return toExpressionFilter(plannerContext, druidExpressions);
     }
 
     final Expr expr = plannerContext.parseExpression(complexExpr.getExpression());
@@ -135,10 +136,14 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
                                     simpleExtractionExpr,
                                     simpleExtractionExpr.getDruidType()
                                 );
+          final Object elementValue = arrayElements[0];
+          if (elementValue == null) {
+            return NullFilter.forColumn(column);
+          }
           return new EqualityFilter(
               column,
               ExpressionType.toColumnType(exprEval.type()),
-              arrayElements[0],
+              elementValue,
               null
           );
         }
@@ -197,6 +202,6 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       }
     }
 
-    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+    return toExpressionFilter(plannerContext, druidExpressions);
   }
 }

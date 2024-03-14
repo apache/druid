@@ -36,11 +36,11 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 COPY . /src
 WORKDIR /src
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-      mvn -B -ff -q dependency:go-offline \
+      mvn -B -ff -q \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true \
+      -Dmaven.javadoc.skip=true -T1C \
       ; fi
 
 RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
@@ -82,15 +82,19 @@ RUN addgroup -S -g 1000 druid \
 COPY --from=bash-static /bin/bash /bin/bash
 RUN chmod 755 /bin/bash
 
-COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
 COPY distribution/docker/peon.sh /peon.sh
+COPY distribution/docker/deduplicate_jars.sh /deduplicate_jars.sh
 
 # create necessary directories which could be mounted as volume
+# copy and de-duplicate jars from builder in same layer to reduce image size
 #   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
 #   /opt/shared is used to keep segments and task logs shared among Druid services
-RUN mkdir /opt/druid/var /opt/shared \
- && chown druid:druid /opt/druid/var /opt/shared \
+RUN --mount=type=bind,from=builder,source=/opt,target=/builder/opt \
+ mkdir -p /opt/druid/var /opt/shared \
+ && cp -r /builder/opt/druid /opt/ \
+ && /deduplicate_jars.sh /opt/druid \
+ && chown -R druid:druid /opt/druid \
  && chmod 775 /opt/druid/var /opt/shared
 
 USER druid

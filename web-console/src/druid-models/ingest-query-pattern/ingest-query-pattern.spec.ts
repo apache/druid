@@ -47,59 +47,59 @@ describe('ingest-query-pattern', () => {
     const insertQueryPattern = fitIngestQueryPattern(query);
 
     expect(insertQueryPattern).toMatchInlineSnapshot(`
-      Object {
-        "clusteredBy": Array [
+      {
+        "clusteredBy": [
           3,
         ],
         "destinationTableName": "kttm-2019",
-        "dimensions": Array [
-          "TIME_PARSE(\\"timestamp\\") AS __time",
+        "dimensions": [
+          "TIME_PARSE("timestamp") AS __time",
           "agent_category",
           "agent_type",
           "browser",
           "browser_version",
         ],
-        "filters": Array [],
-        "mainExternalConfig": Object {
-          "inputFormat": Object {
+        "filters": [],
+        "mainExternalConfig": {
+          "inputFormat": {
             "type": "json",
           },
-          "inputSource": Object {
+          "inputSource": {
             "type": "http",
-            "uris": Array [
+            "uris": [
               "https://example.com/data.json.gz",
             ],
           },
-          "signature": Array [
-            "\\"timestamp\\" VARCHAR",
-            "\\"agent_category\\" VARCHAR",
-            "\\"agent_type\\" VARCHAR",
-            "\\"browser\\" VARCHAR",
-            "\\"browser_version\\" VARCHAR",
-            "\\"city\\" VARCHAR",
-            "\\"continent\\" VARCHAR",
-            "\\"country\\" VARCHAR",
-            "\\"version\\" VARCHAR",
-            "\\"event_type\\" VARCHAR",
-            "\\"event_subtype\\" VARCHAR",
-            "\\"loaded_image\\" VARCHAR",
-            "\\"adblock_list\\" VARCHAR",
-            "\\"forwarded_for\\" VARCHAR",
-            "\\"language\\" VARCHAR",
-            "\\"number\\" BIGINT",
-            "\\"os\\" VARCHAR",
-            "\\"path\\" VARCHAR",
-            "\\"platform\\" VARCHAR",
-            "\\"referrer\\" VARCHAR",
-            "\\"referrer_host\\" VARCHAR",
-            "\\"region\\" VARCHAR",
-            "\\"remote_address\\" VARCHAR",
-            "\\"screen\\" VARCHAR",
-            "\\"session\\" VARCHAR",
-            "\\"session_length\\" BIGINT",
-            "\\"timezone\\" VARCHAR",
-            "\\"timezone_offset\\" BIGINT",
-            "\\"window\\" VARCHAR",
+          "signature": [
+            ""timestamp" VARCHAR",
+            ""agent_category" VARCHAR",
+            ""agent_type" VARCHAR",
+            ""browser" VARCHAR",
+            ""browser_version" VARCHAR",
+            ""city" VARCHAR",
+            ""continent" VARCHAR",
+            ""country" VARCHAR",
+            ""version" VARCHAR",
+            ""event_type" VARCHAR",
+            ""event_subtype" VARCHAR",
+            ""loaded_image" VARCHAR",
+            ""adblock_list" VARCHAR",
+            ""forwarded_for" VARCHAR",
+            ""language" VARCHAR",
+            ""number" BIGINT",
+            ""os" VARCHAR",
+            ""path" VARCHAR",
+            ""platform" VARCHAR",
+            ""referrer" VARCHAR",
+            ""referrer_host" VARCHAR",
+            ""region" VARCHAR",
+            ""remote_address" VARCHAR",
+            ""screen" VARCHAR",
+            ""session" VARCHAR",
+            ""session_length" BIGINT",
+            ""timezone" VARCHAR",
+            ""timezone_offset" BIGINT",
+            ""window" VARCHAR",
           ],
         },
         "mainExternalName": "ext",
@@ -142,39 +142,39 @@ describe('ingest-query-pattern', () => {
     const insertQueryPattern = fitIngestQueryPattern(query);
 
     expect(insertQueryPattern).toMatchInlineSnapshot(`
-      Object {
-        "clusteredBy": Array [],
+      {
+        "clusteredBy": [],
         "destinationTableName": "inline_data",
-        "dimensions": Array [
-          "\\"name\\"",
-          "\\"num\\"",
-          "ARRAY_TO_MV(\\"strings\\") AS \\"strings\\"",
-          "\\"ints\\"",
-          "\\"floats\\"",
+        "dimensions": [
+          ""name"",
+          ""num"",
+          "ARRAY_TO_MV("strings") AS "strings"",
+          ""ints"",
+          ""floats"",
         ],
-        "filters": Array [],
-        "mainExternalConfig": Object {
-          "inputFormat": Object {
+        "filters": [],
+        "mainExternalConfig": {
+          "inputFormat": {
             "type": "json",
           },
-          "inputSource": Object {
-            "data": "{\\"name\\":\\"Moon\\",\\"num\\":11,\\"strings\\":[\\"A\\", \\"B\\"],\\"ints\\":[1,2],\\"floats\\":[1.1,2.2],\\"msg\\":{\\"hello\\":\\"world\\",\\"letters\\":[{\\"letter\\":\\"A\\",\\"index\\":1},{\\"letter\\":\\"B\\",\\"index\\":2}]}}
-      {\\"name\\":\\"Beam\\",\\"num\\":12,\\"strings\\":[\\"A\\", \\"C\\"],\\"ints\\":[3,4],\\"floats\\":[3.3,4,4],\\"msg\\":{\\"where\\":\\"go\\",\\"for\\":\\"food\\",\\"letters\\":[{\\"letter\\":\\"C\\",\\"index\\":3},{\\"letter\\":\\"D\\",\\"index\\":4}]}}
+          "inputSource": {
+            "data": "{"name":"Moon","num":11,"strings":["A", "B"],"ints":[1,2],"floats":[1.1,2.2],"msg":{"hello":"world","letters":[{"letter":"A","index":1},{"letter":"B","index":2}]}}
+      {"name":"Beam","num":12,"strings":["A", "C"],"ints":[3,4],"floats":[3.3,4,4],"msg":{"where":"go","for":"food","letters":[{"letter":"C","index":3},{"letter":"D","index":4}]}}
       ",
             "type": "inline",
           },
-          "signature": Array [
-            "\\"name\\" VARCHAR",
-            "\\"num\\" BIGINT",
-            "\\"strings\\" VARCHAR ARRAY",
-            "\\"ints\\" BIGINT ARRAY",
-            "\\"floats\\" DOUBLE ARRAY",
-            "\\"msg\\" TYPE('COMPLEX<json>')",
+          "signature": [
+            ""name" VARCHAR",
+            ""num" BIGINT",
+            ""strings" VARCHAR ARRAY",
+            ""ints" BIGINT ARRAY",
+            ""floats" DOUBLE ARRAY",
+            ""msg" TYPE('COMPLEX<json>')",
           ],
         },
         "mainExternalName": "ext",
-        "metrics": Array [
-          "COUNT(*) AS \\"count\\"",
+        "metrics": [
+          "COUNT(*) AS "count"",
         ],
         "mode": "replace",
         "overwriteWhere": undefined,
