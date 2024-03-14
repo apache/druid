@@ -403,7 +403,6 @@ public class CalcitePlanner implements Planner, ViewExpander
         SqlValidator.Config.DEFAULT.withConformance(connectionConfig.conformance())
                                    .withLenientOperatorLookup(connectionConfig.lenientOperatorLookup())
                                    .withIdentifierExpansion(true);
-                                   //.withTypeCoercionEnabled(false);
     return new DruidSqlValidator(
         opTab,
         catalogReader,
