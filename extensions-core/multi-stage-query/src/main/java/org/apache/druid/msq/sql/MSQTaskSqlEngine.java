@@ -29,20 +29,29 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.util.ArrayIngestMode;
+import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
@@ -50,7 +59,9 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.destination.TableDestination;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +118,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature)
   {
     switch (feature) {
       case ALLOW_BINDABLE_PLAN:
@@ -118,6 +129,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
       case ALLOW_TOP_LEVEL_UNION_ALL:
+      case GROUPBY_IMPLICITLY_SORTS:
         return false;
       case UNNEST:
       case CAN_SELECT:
@@ -162,7 +174,18 @@ public class MSQTaskSqlEngine implements SqlEngine
       final PlannerContext plannerContext
   )
   {
-    validateInsert(relRoot.rel, relRoot.fields, plannerContext);
+    validateInsert(
+        relRoot.rel,
+        relRoot.fields,
+        destination instanceof TableDestination
+        ? plannerContext.getPlannerToolbox()
+                        .rootSchema()
+                        .getNamedSchema(plannerContext.getPlannerToolbox().druidSchemaName())
+                        .getSchema()
+                        .getTable(((TableDestination) destination).getTableName())
+        : null,
+        plannerContext
+    );
 
     return new MSQTaskQueryMaker(
         destination,
@@ -193,71 +216,24 @@ public class MSQTaskSqlEngine implements SqlEngine
     }
   }
 
+  /**
+   * Engine-specific validation that happens after the query is planned.
+   */
   private static void validateInsert(
       final RelNode rootRel,
       final List<Pair<Integer, String>> fieldMappings,
+      @Nullable Table targetTable,
       final PlannerContext plannerContext
   )
   {
+    final int timeColumnIndex = getTimeColumnIndex(fieldMappings);
+    final Granularity segmentGranularity = getSegmentGranularity(plannerContext);
+
     validateNoDuplicateAliases(fieldMappings);
-
-    // Find the __time field.
-    int timeFieldIndex = -1;
-
-    for (final Pair<Integer, String> field : fieldMappings) {
-      if (field.right.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-        timeFieldIndex = field.left;
-
-        // Validate the __time field has the proper type.
-        final SqlTypeName timeType = rootRel.getRowType().getFieldList().get(field.left).getType().getSqlTypeName();
-        if (timeType != SqlTypeName.TIMESTAMP) {
-          throw InvalidSqlInput.exception(
-              "Field [%s] was the wrong type [%s], expected TIMESTAMP",
-              ColumnHolder.TIME_COLUMN_NAME,
-              timeType
-          );
-        }
-      }
-    }
-
-    // Validate that if segmentGranularity is not ALL then there is also a __time field.
-    final Granularity segmentGranularity;
-
-    try {
-      segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
-          plannerContext.getJsonMapper(),
-          plannerContext.queryContextMap()
-      );
-    }
-    catch (Exception e) {
-      // This is a defensive check as the DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
-      // populated by Druid. If the user entered an incorrect granularity, that should have been flagged before reaching
-      // here
-      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                          .ofCategory(DruidException.Category.DEFENSIVE)
-                          .build(
-                              e,
-                              "[%s] is not a valid value for [%s]",
-                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY),
-                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
-                          );
-
-    }
-
-    final boolean hasSegmentGranularity = !Granularities.ALL.equals(segmentGranularity);
-
-    // Validate that the query does not have an inappropriate LIMIT or OFFSET. LIMIT prevents gathering result key
-    // statistics, which INSERT execution logic depends on. (In QueryKit, LIMIT disables statistics generation and
-    // funnels everything through a single partition.)
-    validateLimitAndOffset(rootRel, !hasSegmentGranularity);
-
-    if (hasSegmentGranularity && timeFieldIndex < 0) {
-      throw InvalidInput.exception(
-          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL. "
-          + "Therefore, the query must specify a time column (named __time).",
-          segmentGranularity
-      );
-    }
+    validateTimeColumnType(rootRel, timeColumnIndex);
+    validateTimeColumnExistsIfNeeded(timeColumnIndex, segmentGranularity);
+    validateLimitAndOffset(rootRel, Granularities.ALL.equals(segmentGranularity));
+    validateTypeChanges(rootRel, fieldMappings, targetTable, plannerContext);
   }
 
   /**
@@ -275,15 +251,70 @@ public class MSQTaskSqlEngine implements SqlEngine
     }
   }
 
-  private static void validateLimitAndOffset(final RelNode topRel, final boolean limitOk)
+  /**
+   * Validate the time field {@link ColumnHolder#TIME_COLUMN_NAME} has type TIMESTAMP.
+   *
+   * @param rootRel         root rel
+   * @param timeColumnIndex index of the time field
+   */
+  private static void validateTimeColumnType(final RelNode rootRel, final int timeColumnIndex)
+  {
+    if (timeColumnIndex < 0) {
+      return;
+    }
+
+    // Validate the __time field has the proper type.
+    final SqlTypeName timeType = rootRel.getRowType().getFieldList().get(timeColumnIndex).getType().getSqlTypeName();
+    if (timeType != SqlTypeName.TIMESTAMP) {
+      throw InvalidSqlInput.exception(
+          "Field[%s] was the wrong type[%s], expected TIMESTAMP",
+          ColumnHolder.TIME_COLUMN_NAME,
+          timeType
+      );
+    }
+  }
+
+  /**
+   * Validate that if segmentGranularity is not ALL, then there is also a {@link ColumnHolder#TIME_COLUMN_NAME} field.
+   *
+   * @param segmentGranularity granularity from {@link #getSegmentGranularity(PlannerContext)}
+   * @param timeColumnIndex    index of the time field
+   */
+  private static void validateTimeColumnExistsIfNeeded(
+      final int timeColumnIndex,
+      final Granularity segmentGranularity
+  )
+  {
+    final boolean hasSegmentGranularity = !Granularities.ALL.equals(segmentGranularity);
+
+    if (hasSegmentGranularity && timeColumnIndex < 0) {
+      throw InvalidInput.exception(
+          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL. "
+          + "Therefore, the query must specify a time column (named __time).",
+          segmentGranularity
+      );
+    }
+  }
+
+  /**
+   * Validate that the query does not have an inappropriate LIMIT or OFFSET. LIMIT prevents gathering result key
+   * statistics, which INSERT execution logic depends on. (In QueryKit, LIMIT disables statistics generation and
+   * funnels everything through a single partition.)
+   *
+   * LIMIT is allowed when segment granularity is ALL, disallowed otherwise. OFFSET is never allowed.
+   *
+   * @param rootRel root rel
+   * @param limitOk whether LIMIT is ok (OFFSET is never ok)
+   */
+  private static void validateLimitAndOffset(final RelNode rootRel, final boolean limitOk)
   {
     Sort sort = null;
 
-    if (topRel instanceof Sort) {
-      sort = (Sort) topRel;
-    } else if (topRel instanceof Project) {
+    if (rootRel instanceof Sort) {
+      sort = (Sort) rootRel;
+    } else if (rootRel instanceof Project) {
       // Look for Project after a Sort, then validate the sort.
-      final Project project = (Project) topRel;
+      final Project project = (Project) rootRel;
       if (project.isMapping()) {
         final RelNode projectInput = project.getInput();
         if (projectInput instanceof Sort) {
@@ -304,6 +335,132 @@ public class MSQTaskSqlEngine implements SqlEngine
     if (sort != null && sort.offset != null) {
       // Found an outer OFFSET that is not allowed.
       throw InvalidSqlInput.exception("INSERT and REPLACE queries cannot have an OFFSET.");
+    }
+  }
+
+  /**
+   * Validate that the query does not include any type changes from string to array or vice versa.
+   *
+   * These type changes tend to cause problems due to mixing of multi-value strings and string arrays. In particular,
+   * many queries written in the "classic MVD" style (treating MVDs as if they were regular strings) will fail when
+   * MVDs and arrays are mixed. So, we detect them as invalid.
+   *
+   * @param rootRel        root rel
+   * @param fieldMappings  field mappings from {@link #validateInsert(RelNode, List, Table, PlannerContext)}
+   * @param targetTable    table we are inserting (or replacing) into, if any
+   * @param plannerContext planner context
+   */
+  private static void validateTypeChanges(
+      final RelNode rootRel,
+      final List<Pair<Integer, String>> fieldMappings,
+      @Nullable final Table targetTable,
+      final PlannerContext plannerContext
+  )
+  {
+    if (targetTable == null) {
+      return;
+    }
+
+    final Set<String> columnsExcludedFromTypeVerification =
+        MultiStageQueryContext.getColumnsExcludedFromTypeVerification(plannerContext.queryContext());
+    final ArrayIngestMode arrayIngestMode = MultiStageQueryContext.getArrayIngestMode(plannerContext.queryContext());
+
+    for (Pair<Integer, String> fieldMapping : fieldMappings) {
+      final int columnIndex = fieldMapping.left;
+      final String columnName = fieldMapping.right;
+      final RelDataTypeField oldSqlTypeField =
+          targetTable.getRowType(DruidTypeSystem.TYPE_FACTORY).getField(columnName, true, false);
+
+      if (!columnsExcludedFromTypeVerification.contains(columnName) && oldSqlTypeField != null) {
+        final ColumnType oldDruidType = Calcites.getColumnTypeForRelDataType(oldSqlTypeField.getType());
+        final RelDataType newSqlType = rootRel.getRowType().getFieldList().get(columnIndex).getType();
+        final ColumnType newDruidType =
+            DimensionSchemaUtils.getDimensionType(Calcites.getColumnTypeForRelDataType(newSqlType), arrayIngestMode);
+
+        if (newDruidType.isArray() && oldDruidType.is(ValueType.STRING)
+            || (newDruidType.is(ValueType.STRING) && oldDruidType.isArray())) {
+          final StringBuilder messageBuilder = new StringBuilder(
+              StringUtils.format(
+                  "Cannot write into field[%s] using type[%s] and arrayIngestMode[%s], since the existing type is[%s]",
+                  columnName,
+                  newSqlType,
+                  StringUtils.toLowerCase(arrayIngestMode.toString()),
+                  oldSqlTypeField.getType()
+              )
+          );
+
+          if (newDruidType.is(ValueType.STRING)
+              && newSqlType.getSqlTypeName() == SqlTypeName.ARRAY
+              && arrayIngestMode == ArrayIngestMode.MVD) {
+            // Tried to insert a SQL ARRAY, which got turned into a STRING by arrayIngestMode: mvd.
+            messageBuilder.append(". Try setting arrayIngestMode to[array] to retain the SQL type[")
+                          .append(newSqlType)
+                          .append("]");
+          } else if (newDruidType.is(ValueType.ARRAY)
+                     && oldDruidType.is(ValueType.STRING)
+                     && arrayIngestMode == ArrayIngestMode.ARRAY) {
+            // Tried to insert a SQL ARRAY, which stayed an ARRAY, but wasn't compatible with existing STRING.
+            messageBuilder.append(". Try wrapping this field using ARRAY_TO_MV(...) AS ")
+                          .append(CalciteSqlDialect.DEFAULT.quoteIdentifier(columnName));
+          } else if (newDruidType.is(ValueType.STRING) && oldDruidType.is(ValueType.ARRAY)) {
+            // Tried to insert a SQL VARCHAR, but wasn't compatible with existing ARRAY.
+            messageBuilder.append(". Try");
+            if (arrayIngestMode == ArrayIngestMode.MVD) {
+              messageBuilder.append(" setting arrayIngestMode to[array] and");
+            }
+            messageBuilder.append(" adjusting your query to make this column an ARRAY instead of VARCHAR");
+          }
+
+          messageBuilder.append(". See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode "
+                                + "for more details about this check and how to override it if needed.");
+
+          throw InvalidSqlInput.exception(StringUtils.encodeForFormat(messageBuilder.toString()));
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns the index of {@link ColumnHolder#TIME_COLUMN_NAME} within a list of field mappings from
+   * {@link #validateInsert(RelNode, List, Table, PlannerContext)}.
+   *
+   * Returns -1 if the list does not contain a time column.
+   */
+  private static int getTimeColumnIndex(final List<Pair<Integer, String>> fieldMappings)
+  {
+    for (final Pair<Integer, String> field : fieldMappings) {
+      if (field.right.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+        return field.left;
+      }
+    }
+
+    return -1;
+  }
+
+  /**
+   * Retrieve the segment granularity for a query.
+   */
+  private static Granularity getSegmentGranularity(final PlannerContext plannerContext)
+  {
+    try {
+      return QueryKitUtils.getSegmentGranularityFromContext(
+          plannerContext.getJsonMapper(),
+          plannerContext.queryContextMap()
+      );
+    }
+    catch (Exception e) {
+      // This is a defensive check as the DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
+      // populated by Druid. If the user entered an incorrect granularity, that should have been flagged before reaching
+      // here.
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build(
+                              e,
+                              "[%s] is not a valid value for [%s]",
+                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY),
+                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+                          );
+
     }
   }
 

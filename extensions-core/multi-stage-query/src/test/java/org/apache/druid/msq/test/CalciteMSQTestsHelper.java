@@ -76,7 +76,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
-import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -92,6 +91,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static org.apache.druid.sql.calcite.util.CalciteTests.ARRAYS_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
@@ -282,7 +282,7 @@ public class CalciteMSQTestsHelper
               .rows(ROWS_LOTS_OF_COLUMNS)
               .buildMMappedIndex();
           break;
-        case CalciteArraysQueryTest.DATA_SOURCE_ARRAYS:
+        case ARRAYS_DATASOURCE:
           index = IndexBuilder.create()
                               .tmpDir(temporaryFolder.newFolder())
                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
