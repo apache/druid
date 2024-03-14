@@ -35,6 +35,8 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -685,7 +687,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -718,7 +720,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   @Override
   public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<String> segmentIds)
-      throws UnknownSegmentIdsException
   {
     try {
       Pair<List<DataSegment>, SegmentTimeline> unusedSegmentsAndTimeline = connector
@@ -744,8 +745,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     catch (Exception e) {
       Throwable rootCause = Throwables.getRootCause(e);
-      if (rootCause instanceof UnknownSegmentIdsException) {
-        throw (UnknownSegmentIdsException) rootCause;
+      if (rootCause instanceof DruidException) {
+        throw (DruidException) rootCause;
       } else {
         throw e;
       }
@@ -756,58 +757,30 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final String dataSource,
       final Set<String> segmentIds,
       final Handle handle
-  ) throws UnknownSegmentIdsException
+  )
   {
-    List<String> unknownSegmentIds = new ArrayList<>();
-    List<DataSegment> segments = segmentIds
-        .stream()
-        .map(
-            segmentId -> {
-              Iterator<DataSegment> segmentResultIterator = handle
-                  .createQuery(
-                      StringUtils.format(
-                          "SELECT used, payload FROM %1$s WHERE dataSource = :dataSource AND id = :id",
-                          getSegmentsTable()
-                      )
-                  )
-                  .bind("dataSource", dataSource)
-                  .bind("id", segmentId)
-                  .map((int index, ResultSet resultSet, StatementContext context) -> {
-                    try {
-                      if (!resultSet.getBoolean("used")) {
-                        return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
-                      } else {
-                        // We emit nulls for used segments. They are filtered out below in this method.
-                        return null;
-                      }
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-                  })
-                  .iterator();
-              if (!segmentResultIterator.hasNext()) {
-                unknownSegmentIds.add(segmentId);
-                return null;
-              } else {
-                @Nullable DataSegment segment = segmentResultIterator.next();
-                if (segmentResultIterator.hasNext()) {
-                  log.error(
-                      "There is more than one row corresponding to segment id [%s] in data source [%s] in the database",
-                      segmentId,
-                      dataSource
-                  );
-                }
-                return segment;
-              }
-            }
-        )
-        .filter(Objects::nonNull) // Filter nulls corresponding to used segments.
-        .collect(Collectors.toList());
-    if (!unknownSegmentIds.isEmpty()) {
-      throw new UnknownSegmentIdsException(unknownSegmentIds);
+    final List<DataSegmentPlus> retrievedSegments = SqlSegmentsMetadataQuery
+        .forHandle(handle, connector, dbTables.get(), jsonMapper)
+        .retrieveSegmentsById(dataSource, segmentIds);
+
+    final Set<String> unknownSegmentIds = new HashSet<>(segmentIds);
+    final List<DataSegment> unusedSegments = new ArrayList<>();
+    for (DataSegmentPlus entry : retrievedSegments) {
+      final DataSegment segment = entry.getDataSegment();
+      unknownSegmentIds.remove(segment.getId().toString());
+      if (Boolean.FALSE.equals(entry.getUsed())) {
+        unusedSegments.add(segment);
+      }
     }
-    return segments;
+
+    if (!unknownSegmentIds.isEmpty()) {
+      throw InvalidInput.exception(
+          "Could not find segment IDs[%s] for datasource[%s]",
+          unknownSegmentIds, dataSource
+      );
+    }
+
+    return unusedSegments;
   }
 
   private CloseableIterator<DataSegment> retrieveUsedSegmentsOverlappingIntervals(
@@ -993,7 +966,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
+                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, null, limit, lastSegmentId, sortOrder, null)) {
             return ImmutableList.copyOf(iterator);
           }
         }
