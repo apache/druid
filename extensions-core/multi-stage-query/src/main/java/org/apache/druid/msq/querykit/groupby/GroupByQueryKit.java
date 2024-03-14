@@ -189,8 +189,13 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       List<KeyColumn> columns = resultClusterBy.getColumns();
       if (nextShuffleWindowSpec != null) {
         columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
+        // Creating a new cluster by with the columns from existing
+        // plus the columns from the next window partition column
+        final ClusterBy tmp = new ClusterBy(columns, resultClusterBy.getBucketByCount());
+        stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(tmp, false);
+      } else {
+        stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(resultClusterBy, false);
       }
-      stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(resultClusterBy, false);
     } else {
       stageShuffleSpec = nextShuffleWindowSpec;
     }

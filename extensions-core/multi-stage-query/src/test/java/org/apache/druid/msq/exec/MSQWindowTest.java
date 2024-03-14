@@ -21,18 +21,14 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
-import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
-import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -59,41 +55,19 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class MSQWindowTest extends MSQTestBase
 {
-
-  public static final String QUERY_RESULTS_WITH_DURABLE_STORAGE = "query_results_with_durable_storage";
-
-  public static final String QUERY_RESULTS_WITH_DEFAULT = "query_results_with_default_storage";
-
-  public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
-      ImmutableMap.<String, Object>builder()
-                  .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
-                  .put(
-                      MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
-                  )
-                  .build();
-
-
-  public static final Map<String, Object> QUERY_RESULTS_WITH_DEFAULT_CONTEXT =
-      ImmutableMap.<String, Object>builder()
-                  .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
-                      MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
-                  )
-                  .build();
   @Parameterized.Parameter(0)
   public String contextName;
   @Parameterized.Parameter(1)
@@ -106,9 +80,7 @@ public class MSQWindowTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
-        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
-        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
 
     return Arrays.asList(data);
@@ -168,9 +140,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -277,9 +246,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -390,9 +356,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -502,9 +465,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -586,9 +546,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -669,9 +626,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -743,9 +697,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -814,9 +765,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -892,9 +840,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -961,9 +906,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -1079,9 +1021,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -1193,9 +1132,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -1284,9 +1220,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -1378,9 +1311,6 @@ public class MSQWindowTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
@@ -1397,8 +1327,268 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  public boolean isDurableStorageDestination()
+  // Insert Tests
+  @Test
+  public void testInsertWithWindow()
   {
-    return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName) || QUERY_RESULTS_WITH_DEFAULT_CONTEXT.equals(context);
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, 1.0f, 1.0},
+        new Object[]{946771200000L, 2.0f, 2.0},
+        new Object[]{946857600000L, 3.0f, 3.0},
+        new Object[]{978307200000L, 4.0f, 4.0},
+        new Object[]{978393600000L, 5.0f, 5.0},
+        new Object[]{978480000000L, 6.0f, 6.0}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("summ1", ColumnType.DOUBLE)
+                                            .build();
+
+
+    testIngestQuery().setSql(
+                         "insert into foo1 SELECT __time, m1,\n"
+                         + "SUM(m1) OVER(PARTITION BY m1) as summ1\n"
+                         + "from foo\n"
+                         + "GROUP BY __time, m1 PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertWithWindowEmptyOver()
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, 1.0f, 21.0},
+        new Object[]{946771200000L, 2.0f, 21.0},
+        new Object[]{946857600000L, 3.0f, 21.0},
+        new Object[]{978307200000L, 4.0f, 21.0},
+        new Object[]{978393600000L, 5.0f, 21.0},
+        new Object[]{978480000000L, 6.0f, 21.0}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("summ1", ColumnType.DOUBLE)
+                                            .build();
+
+
+    testIngestQuery().setSql(
+                         "insert into foo1 SELECT __time, m1,\n"
+                         + "SUM(m1) OVER() as summ1\n"
+                         + "from foo\n"
+                         + "GROUP BY __time, m1 PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  // There is an issue with this test throwing out an ISE
+  // Comes in the case when the GroupByPostShuffle has a shuffle spec
+  // for the next window, the one with empty OVER() works
+  @Test
+  public void testInsertWithWindowPartitionByOrderBy()
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, 1.0f, 1.0},
+        new Object[]{946771200000L, 2.0f, 2.0},
+        new Object[]{946857600000L, 3.0f, 3.0},
+        new Object[]{978307200000L, 4.0f, 4.0},
+        new Object[]{978393600000L, 5.0f, 5.0},
+        new Object[]{978480000000L, 6.0f, 6.0}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("summ1", ColumnType.DOUBLE)
+                                            .build();
+
+
+    testIngestQuery().setSql(
+                         "insert into foo1 SELECT __time, m1,\n"
+                         + "SUM(m1) OVER(PARTITION BY m1 ORDER BY m1 ASC) as summ1\n"
+                         + "from foo\n"
+                         + "GROUP BY __time, m1 PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+
+  // Replace Tests
+  @Test
+  public void testReplaceWithWindowsAndUnnest()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .add("d3", ColumnType.STRING)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL\n"
+                             + "select __time,m1,SUM(m1) OVER(PARTITION BY m1) cc, u.d3 from foo CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) as u(d3)\n"
+                             + "PARTITIONED BY ALL CLUSTERED BY m1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 2.0, "a"},
+                             new Object[]{946684800000L, 1.0f, 2.0, "b"},
+                             new Object[]{946771200000L, 2.0f, 4.0, "b"},
+                             new Object[]{946771200000L, 2.0f, 4.0, "c"},
+                             new Object[]{946857600000L, 3.0f, 3.0, "d"},
+                             new Object[]{978307200000L, 4.0f, 4.0, NullHandling.sqlCompatible() ? "" : null},
+                             new Object[]{978393600000L, 5.0f, 5.0, null},
+                             new Object[]{978480000000L, 6.0f, 6.0, null}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testSimpleWindowWithPartitionBy()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL\n"
+                             + "select __time, m1,SUM(m1) OVER(PARTITION BY m1) cc from foo group by __time, m1\n"
+                             + "PARTITIONED BY ALL CLUSTERED BY m1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 1.0},
+                             new Object[]{946771200000L, 2.0f, 2.0},
+                             new Object[]{946857600000L, 3.0f, 3.0},
+                             new Object[]{978307200000L, 4.0f, 4.0},
+                             new Object[]{978393600000L, 5.0f, 5.0},
+                             new Object[]{978480000000L, 6.0f, 6.0}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testSimpleWindowWithEmptyOver()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL\n"
+                             + "select __time, m1,SUM(m1) OVER() cc from foo group by __time, m1\n"
+                             + "PARTITIONED BY ALL CLUSTERED BY m1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 21.0},
+                             new Object[]{946771200000L, 2.0f, 21.0},
+                             new Object[]{946857600000L, 3.0f, 21.0},
+                             new Object[]{978307200000L, 4.0f, 21.0},
+                             new Object[]{978393600000L, 5.0f, 21.0},
+                             new Object[]{978480000000L, 6.0f, 21.0}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testSimpleWindowWithEmptyOverNoGroupBy()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL\n"
+                             + "select __time, m1,SUM(m1) OVER() cc from foo\n"
+                             + "PARTITIONED BY ALL CLUSTERED BY m1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 21.0},
+                             new Object[]{946771200000L, 2.0f, 21.0},
+                             new Object[]{946857600000L, 3.0f, 21.0},
+                             new Object[]{978307200000L, 4.0f, 21.0},
+                             new Object[]{978393600000L, 5.0f, 21.0},
+                             new Object[]{978480000000L, 6.0f, 21.0}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testSimpleWindowWithJoins()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .add("m2", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL\n"
+                             + "select foo.__time,foo.m1,SUM(foo.m1) OVER(PARTITION BY foo.m1 ORDER BY foo.m1) cc, t.m2 from foo JOIN (select * from foo) as t ON foo.m1=t.m2\n"
+                             + "PARTITIONED BY DAY CLUSTERED BY m1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 1.0, 1.0},
+                             new Object[]{946771200000L, 2.0f, 2.0, 2.0},
+                             new Object[]{946857600000L, 3.0f, 3.0, 3.0},
+                             new Object[]{978307200000L, 4.0f, 4.0, 4.0},
+                             new Object[]{978393600000L, 5.0f, 5.0, 5.0},
+                             new Object[]{978480000000L, 6.0f, 6.0, 6.0}
+                         )
+                     )
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0),
+                             SegmentId.of("foo1", Intervals.of("2000-01-02T/P1D"), "test", 0),
+                             SegmentId.of("foo1", Intervals.of("2000-01-03T/P1D"), "test", 0),
+                             SegmentId.of("foo1", Intervals.of("2001-01-01T/P1D"), "test", 0),
+                             SegmentId.of("foo1", Intervals.of("2001-01-02T/P1D"), "test", 0),
+                             SegmentId.of("foo1", Intervals.of("2001-01-03T/P1D"), "test", 0)
+                         )
+                     )
+                     .verifyResults();
   }
 }

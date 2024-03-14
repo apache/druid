@@ -83,9 +83,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL,
           windowClusterBy
       ));
-    } else {
-      nextShuffleSpec = ShuffleSpecFactories.singlePartition()
-                                            .build(ClusterBy.none(), false);
     }
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
@@ -106,6 +103,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
     RowSignature rowSignature = queryToRun.getRowSignature();
 
+
     if (status) {
       // empty over clause found
       // moving everything to a single partition
@@ -114,11 +112,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                          .inputs(new StageInputSpec(firstStageNumber - 1))
                          .signature(rowSignature)
                          .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(nextShuffleSpec)
+                         .shuffleSpec(ShuffleSpecFactories.singlePartition()
+                                                          .build(ClusterBy.none(), false))
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                              queryToRun,
                              queryToRun.getOperators(),
-                             rowSignature
+                             rowSignature,
+                             true
                          ))
       );
     } else {
@@ -164,7 +164,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                            .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                                queryToRun,
                                operatorList.get(i),
-                               stageRowSignature
+                               stageRowSignature,
+                               false
                            ))
         );
       }

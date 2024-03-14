@@ -87,6 +87,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
+  private boolean isOverEmpty;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -96,7 +97,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       FrameReader frameReader,
       ObjectMapper jsonMapper,
       final List<OperatorFactory> operatorFactoryList,
-      final RowSignature rowSignature
+      final RowSignature rowSignature,
+      final boolean isOverEmpty
   )
   {
     this.inputChannel = inputChannel;
@@ -112,6 +114,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
     this.partitionColsIndex = new ArrayList<>();
+    this.isOverEmpty = isOverEmpty;
   }
 
   private static VirtualColumns makeVirtualColumnsForFrameWriter(
@@ -206,8 +209,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
     // Phase 1 of the execution
     // eagerly validate presence of empty OVER() clause
-    boolean status = checkEagerlyForEmptyWindow(operatorFactoryList);
-    if (status) {
+    if (isOverEmpty) {
       // if OVER() found
       // have to bring all data to a single executor for processing
       // convert each frame to rac
@@ -296,22 +298,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       }
     }
     return ReturnOrAwait.runAgain();
-  }
-
-  /**
-   * @param operatorFactoryList the list of operators to check for empty window
-   * @return true is there is a single OVER() clause across all the operators, false otherwise
-   */
-  private boolean checkEagerlyForEmptyWindow(List<OperatorFactory> operatorFactoryList)
-  {
-    for (OperatorFactory of : operatorFactoryList) {
-      if (of instanceof NaivePartitioningOperatorFactory) {
-        if (((NaivePartitioningOperatorFactory) of).getPartitionColumns().isEmpty()) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   /**

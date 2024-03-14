@@ -59,17 +59,20 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
+  private final boolean isEmptyOver;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
-      @JsonProperty("stageRowSignature") RowSignature stageRowSignature
+      @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
+      @JsonProperty("emptyOver") boolean emptyOver
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
+    this.isEmptyOver = emptyOver;
   }
 
   @JsonProperty("query")
@@ -89,6 +92,13 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   {
     return stageRowSignature;
   }
+
+  @JsonProperty("emptyOver")
+  public boolean isEmptyOverFound()
+  {
+    return isEmptyOver;
+  }
+
   @Override
   public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
@@ -137,7 +147,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               readableInput.getChannelFrameReader(),
               frameContext.jsonMapper(),
               operatorList,
-              stageRowSignature
+              stageRowSignature,
+              isEmptyOver
           );
         }
     );
