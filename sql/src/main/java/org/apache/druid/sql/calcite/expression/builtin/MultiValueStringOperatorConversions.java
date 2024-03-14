@@ -344,9 +344,9 @@ public class MultiValueStringOperatorConversions
       final DruidExpression.ExpressionGenerator builder = (args) -> {
         final StringBuilder expressionBuilder;
         if (isAllowList()) {
-          expressionBuilder = new StringBuilder("filter_only((x) -> array_contains(");
+          expressionBuilder = new StringBuilder("filter((x) -> array_contains(");
         } else {
-          expressionBuilder = new StringBuilder("filter_only((x) -> !array_contains(");
+          expressionBuilder = new StringBuilder("filter((x) -> !array_contains(");
         }
 
         expressionBuilder.append(args.get(1).getExpression())

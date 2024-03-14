@@ -442,11 +442,15 @@ public interface ApplyFunction extends NamedFunction
 
       Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofArray(arrayEval.asArrayType(), null);
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
       Object[] filtered = filter(arrayEval.asArray(), lambdaExpr, lambdaBinding).toArray();
+      // return null array expr if nothing is left in filtered
+      if (filtered.length == 0) {
+        return ExprEval.ofArray(arrayEval.asArrayType(), null);
+      }
       return ExprEval.ofArray(arrayEval.asArrayType(), filtered);
     }
 
@@ -468,44 +472,6 @@ public interface ApplyFunction extends NamedFunction
     {
       // output type is input array type
       return args.get(0).getOutputType(inspector);
-    }
-
-    private <T> Stream<T> filter(T[] array, LambdaExpr expr, SettableLambdaBinding binding)
-    {
-      return Arrays.stream(array).filter(s -> expr.eval(binding.withBinding(expr.getIdentifier(), s)).asBoolean());
-    }
-  }
-
-  /**
-   * Extended version of {@link FilterFunction} to return a null expr if filtered result turns out to be empty
-   */
-  class FilterOnlyFunction extends FilterFunction
-  {
-    static final String NAME = "filter_only";
-
-    @Override
-    public String name()
-    {
-      return NAME;
-    }
-
-    @Override
-    public ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings)
-    {
-      Expr arrayExpr = argsExpr.get(0);
-      ExprEval arrayEval = arrayExpr.eval(bindings);
-
-      Object[] array = arrayEval.asArray();
-      if (array == null) {
-        return ExprEval.of(null);
-      }
-
-      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
-      Object[] filtered = filter(arrayEval.asArray(), lambdaExpr, lambdaBinding).toArray();
-      if (filtered.length == 0) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.ofArray(arrayEval.asArrayType(), filtered);
     }
 
     private <T> Stream<T> filter(T[] array, LambdaExpr expr, SettableLambdaBinding binding)

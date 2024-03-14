@@ -1348,7 +1348,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     new ExpressionVirtualColumn(
                         "v0",
-                        "filter_only((x) -> array_contains(array(\"dim2\"), x), \"dim3\")",
+                        "filter((x) -> array_contains(array(\"dim2\"), x), \"dim3\")",
                         ColumnType.STRING,
                         TestExprMacroTable.INSTANCE
                     )
@@ -1438,7 +1438,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     new ExpressionVirtualColumn(
                         "v0",
-                        "filter_only((x) -> !array_contains(array(\"dim2\"), x), \"dim3\")",
+                        "filter((x) -> !array_contains(array(\"dim2\"), x), \"dim3\")",
                         ColumnType.STRING,
                         TestExprMacroTable.INSTANCE
                     )
