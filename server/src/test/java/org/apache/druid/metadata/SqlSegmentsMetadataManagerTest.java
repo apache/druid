@@ -41,6 +41,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -690,7 +691,7 @@ public class SqlSegmentsMetadataManagerTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsWithInvalidVersions() throws Exception
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonExistentVersions() throws Exception
   {
     publishWikiSegments();
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
@@ -954,28 +955,92 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.poll();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
 
-    final DataSegment koalaSegment1 = createNewSegment1(DS.KOALA);
-    final DataSegment koalaSegment2 = createNewSegment2(DS.KOALA);
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.plus(Duration.standardDays(1)).toString();
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        v1
+    );
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        v2
+    );
     final DataSegment koalaSegment3 = createSegment(
         DS.KOALA,
         "2017-10-19T00:00:00.000/2017-10-20T00:00:00.000",
-        "2017-10-15T20:19:12.565Z"
+        v2
     );
 
     publisher.publishSegment(koalaSegment1);
     publisher.publishSegment(koalaSegment2);
     publisher.publishSegment(koalaSegment3);
-    final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
+    final Interval theInterval = Intervals.of("2017-10-15/2017-10-18");
 
-    // 2 out of 3 segments match the interval
     Assert.assertEquals(
         2,
-        sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(DS.KOALA, theInterval, ImmutableList.of("foo", "bar", "2017-10-15T20:19:12.565Z"))
+        sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(
+            DS.KOALA,
+            theInterval,
+            ImmutableList.of(v1, v2)
+        )
     );
 
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
         ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment3),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkAsUnusedSegmentsInIntervalAndNonExistentVersions() throws IOException
+  {
+    publishWikiSegments();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.plus(Duration.standardDays(1)).toString();
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        v1
+    );
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        v2
+    );
+    final DataSegment koalaSegment3 = createSegment(
+        DS.KOALA,
+        "2017-10-19T00:00:00.000/2017-10-20T00:00:00.000",
+        v2
+    );
+
+    publisher.publishSegment(koalaSegment1);
+    publisher.publishSegment(koalaSegment2);
+    publisher.publishSegment(koalaSegment3);
+    final Interval theInterval = Intervals.of("2017-10-15/2017-10-18");
+
+    Assert.assertEquals(
+        0,
+        sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(
+            DS.KOALA,
+            theInterval,
+            ImmutableList.of("foo", "bar", "baz")
+        )
+    );
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment1, koalaSegment2, koalaSegment3),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
   }
