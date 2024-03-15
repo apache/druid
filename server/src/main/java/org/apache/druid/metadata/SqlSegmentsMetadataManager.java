@@ -658,21 +658,13 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegmentsInInterval(final String dataSource, final Interval interval)
-  {
-    Preconditions.checkNotNull(interval);
-    return doMarkAsUsedNonOvershadowedSegments(dataSource, interval, null);
-  }
-
-  @Override
   public int markAsUsedNonOvershadowedSegmentsInInterval(
       final String dataSource,
       final Interval interval,
-      final List<String> versions
+      @Nullable final List<String> versions
   )
   {
     Preconditions.checkNotNull(interval);
-    Preconditions.checkNotNull(versions);
     return doMarkAsUsedNonOvershadowedSegments(dataSource, interval, versions);
   }
 
@@ -868,30 +860,13 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUnusedSegmentsInInterval(String dataSourceName, Interval interval)
-  {
-    Preconditions.checkNotNull(interval);
-    try {
-      return connector.getDBI().withHandle(
-          handle ->
-              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentsUnused(dataSourceName, interval)
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
   public int markAsUnusedSegmentsInInterval(
       final String dataSource,
       final Interval interval,
-      final List<String> versions
+      @Nullable final List<String> versions
   )
   {
     Preconditions.checkNotNull(interval);
-    Preconditions.checkNotNull(versions);
     try {
       return connector.getDBI().withHandle(
           handle ->
