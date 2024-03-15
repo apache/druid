@@ -7332,6 +7332,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testGroupByNestedArrayInline()
   {
     cannotVectorize();
+    // msq does not support nested arrays currently
+    msqIncompatible();
     testQuery(
         "SELECT c1, ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) c5 \n"
         + "FROM (VALUES (1,1),(2,2),(3,3)) t(c1,c2)\n"
@@ -7409,6 +7411,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testGroupByNestedArrayInlineCount()
   {
     cannotVectorize();
+    // msq does not support nested arrays currently
+    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) c FROM (\n"
         + "SELECT c1, ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) c5 \n"
