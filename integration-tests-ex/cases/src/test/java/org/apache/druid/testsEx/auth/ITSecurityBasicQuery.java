@@ -161,7 +161,7 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synched, to avoid flakiness
+    // Wait for a second so that the auth is synced, to avoid flakiness
     Thread.sleep(1000);
 
     String queryLocal =
@@ -226,8 +226,8 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synched, to avoid flakiness
-    Thread.sleep(1000);
+    // Wait for a second so that the auth is synced, to avoid flakiness
+    Thread.sleep(4000);
 
     String exportQuery =
         StringUtils.format(
@@ -266,7 +266,7 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synched, to avoid flakyness
+    // Wait for a second so that the auth is synced, to avoid flakyness
     Thread.sleep(1000);
 
     String exportQuery =
@@ -306,7 +306,7 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synched, to avoid flakiness
+    // Wait for a second so that the auth is synced, to avoid flakiness
     Thread.sleep(1000);
 
     String task = createTaskString();
@@ -327,7 +327,7 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synched, to avoid flakiness
+    // Wait for a second so that the auth is synced, to avoid flakiness
     Thread.sleep(1000);
 
     String task = createTaskString();
