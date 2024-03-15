@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -60,19 +59,17 @@ public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<Colum
   private final int totalSize;
   private final int sizePer;
   private final ByteBuffer buffer;
-  private final Supplier<ColumnarLongs> supplier;
+  private final ColumnPartSupplier<ColumnarLongs> supplier;
   private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingFormat encoding;
-  private final int sizeBytes;
 
   CompressedColumnarLongsSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer buffer,
-      Supplier<ColumnarLongs> supplier,
+      ColumnPartSupplier<ColumnarLongs> supplier,
       CompressionStrategy compression,
-      CompressionFactory.LongEncodingFormat encoding,
-      int sizeBytes
+      CompressionFactory.LongEncodingFormat encoding
   )
   {
     this.totalSize = totalSize;
@@ -81,7 +78,6 @@ public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<Colum
     this.supplier = supplier;
     this.compression = compression;
     this.encoding = encoding;
-    this.sizeBytes = sizeBytes;
   }
 
   @Override
@@ -105,7 +101,7 @@ public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<Colum
             compression.toString(),
             sizePer
         ),
-        sizeBytes
+        META_SERDE_HELPER.size(this) + supplier.getColumnPartSize().getSize()
     );
   }
 
@@ -118,7 +114,6 @@ public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<Colum
 
   public static CompressedColumnarLongsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
-    final int startPosition = buffer.position();
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
@@ -134,7 +129,7 @@ public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<Colum
         }
         compression = CompressionStrategy.forId(compressionId);
       }
-      Supplier<ColumnarLongs> supplier = CompressionFactory.getLongSupplier(
+      ColumnPartSupplier<ColumnarLongs> supplier = CompressionFactory.getLongSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
@@ -142,15 +137,13 @@ public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<Colum
           encoding,
           compression
       );
-      final int sizeBytes = buffer.position() - startPosition;
       return new CompressedColumnarLongsSupplier(
           totalSize,
           sizePer,
           buffer,
           supplier,
           compression,
-          encoding,
-          sizeBytes
+          encoding
       );
     }
 

@@ -19,17 +19,20 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
-public class EntireLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
+public class EntireLayoutColumnarLongsSupplier implements ColumnPartSupplier<ColumnarLongs>
 {
 
   private final int totalSize;
+  private final int sizeBytes;
   private final CompressionFactory.LongEncodingReader reader;
 
-  public EntireLayoutColumnarLongsSupplier(int totalSize, CompressionFactory.LongEncodingReader reader)
+  public EntireLayoutColumnarLongsSupplier(int numElements, int sizeBytes, CompressionFactory.LongEncodingReader reader)
   {
-    this.totalSize = totalSize;
+    this.totalSize = numElements;
+    this.sizeBytes = sizeBytes;
     this.reader = reader;
   }
 
@@ -37,6 +40,12 @@ public class EntireLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs
   public ColumnarLongs get()
   {
     return new EntireLayoutColumnarLongs();
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple("encoded longs", sizeBytes);
   }
 
   private class EntireLayoutColumnarLongs implements ColumnarLongs
