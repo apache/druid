@@ -867,7 +867,8 @@ public class SqlSegmentsMetadataQuery
   private static void appendConditionForVersions(
       final StringBuilder sb,
       final List<String> versions
-  ) {
+  )
+  {
     if (CollectionUtils.isNullOrEmpty(versions)) {
       return;
     }
