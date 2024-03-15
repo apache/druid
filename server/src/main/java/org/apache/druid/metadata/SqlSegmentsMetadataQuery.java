@@ -124,11 +124,8 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * TODO: javadocs
-   * @param dataSource
-   * @param intervals
-   * @param versions
-   * @return
+   * Similar to {@link #retrieveUsedSegments}, but with an additional {@code versions} argument. When {@code versions}
+   * is specified, all used segments in the specified {@code intervals} and {@code versions} are retrieved.
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,

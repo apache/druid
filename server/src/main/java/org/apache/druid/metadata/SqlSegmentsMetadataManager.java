@@ -668,7 +668,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   public int markAsUsedNonOvershadowedSegmentsInInterval(
       final String dataSource,
       final Interval interval,
-      @Nullable final List<String> versions
+      final List<String> versions
   )
   {
     Preconditions.checkNotNull(interval);
@@ -870,6 +870,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public int markAsUnusedSegmentsInInterval(String dataSourceName, Interval interval)
   {
+    Preconditions.checkNotNull(interval);
     try {
       return connector.getDBI().withHandle(
           handle ->
@@ -886,9 +887,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   public int markAsUnusedSegmentsInInterval(
       final String dataSource,
       final Interval interval,
-      @Nullable final List<String> versions
+      final List<String> versions
   )
   {
+    Preconditions.checkNotNull(interval);
+    Preconditions.checkNotNull(versions);
     try {
       return connector.getDBI().withHandle(
           handle ->
