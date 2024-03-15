@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
@@ -137,6 +138,24 @@ public class TestDerbyConnector extends DerbyConnector
       return dbTables;
     }
 
+    public SegmentsTable segments()
+    {
+      return new SegmentsTable(this);
+    }
+  }
+
+  /**
+   * A wrapper class for queries on the segments table.
+   */
+  public static class SegmentsTable
+  {
+    private final DerbyConnectorRule rule;
+
+    public SegmentsTable(DerbyConnectorRule rule)
+    {
+      this.rule = rule;
+    }
+
     /**
      * Updates the segments table with the supplied SQL query format and arguments.
      *
@@ -144,19 +163,34 @@ public class TestDerbyConnector extends DerbyConnector
      * @param args the arguments to be substituted into the SQL query
      * @return the number of rows affected by the update operation
      */
-    public int updateSegmentsTable(String sqlFormat, Object... args)
+    public int update(String sqlFormat, Object... args)
     {
-      return this.getConnector().retryWithHandle(
+      return this.rule.getConnector().retryWithHandle(
           handle -> handle.update(
-              StringUtils.format(sqlFormat, getSegmentsTable()),
+              StringUtils.format(sqlFormat, getTableName()),
               args
           )
       );
     }
 
-    private String getSegmentsTable()
+  /**
+   * Updates the last used status time for the supplied segment ID.
+   */
+    public int updateUsedStatusLastUpdated(String segmentId, DateTime lastUpdatedTime)
     {
-      return this.metadataTablesConfigSupplier()
+      return update(
+          "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
+          lastUpdatedTime.toString(),
+          segmentId
+      );
+    }
+
+    /**
+     * @return the segment table name.
+     */
+    public String getTableName()
+    {
+      return this.rule.metadataTablesConfigSupplier()
                  .get()
                  .getSegmentsTable()
                  .toUpperCase(Locale.ENGLISH);

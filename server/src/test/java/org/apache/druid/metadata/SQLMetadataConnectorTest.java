@@ -172,7 +172,7 @@ public class SQLMetadataConnectorTest
   public void testAlterSegmentTableAddLastUsed()
   {
     connector.createSegmentTable();
-    derbyConnectorRule.updateSegmentsTable("ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED");
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED");
 
     connector.alterSegmentTableAddUsedFlagLastUpdated();
     connector.tableHasColumn(

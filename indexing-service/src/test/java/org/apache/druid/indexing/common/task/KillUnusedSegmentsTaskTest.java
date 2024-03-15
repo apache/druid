@@ -576,8 +576,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final DateTime lastUpdatedTime1 = DateTimes.nowUtc();
-    updateUsedStatusLastUpdated(segment1, lastUpdatedTime1);
-    updateUsedStatusLastUpdated(segment4, lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment1.getId().toString(), lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment4.getId().toString(), lastUpdatedTime1);
 
     // Now mark the third segment as unused
     Assert.assertEquals(
@@ -589,7 +589,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final DateTime lastUpdatedTime2 = DateTimes.nowUtc();
-    updateUsedStatusLastUpdated(segment3, lastUpdatedTime2);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment3.getId().toString(), lastUpdatedTime2);
 
     final List<Interval> segmentIntervals = segments.stream()
                                                     .map(DataSegment::getInterval)
@@ -686,8 +686,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final DateTime lastUpdatedTime1 = DateTimes.nowUtc();
-    updateUsedStatusLastUpdated(segment1, lastUpdatedTime1);
-    updateUsedStatusLastUpdated(segment4, lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment1.getId().toString(), lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment4.getId().toString(), lastUpdatedTime1);
 
     Assert.assertEquals(
         2,
@@ -700,8 +700,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final DateTime lastUpdatedTime2 = DateTimes.nowUtc();
-    updateUsedStatusLastUpdated(segment2, lastUpdatedTime2);
-    updateUsedStatusLastUpdated(segment3, lastUpdatedTime2);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment2.getId().toString(), lastUpdatedTime2);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment3.getId().toString(), lastUpdatedTime2);
 
     final List<Interval> segmentIntervals = segments.stream()
                                                     .map(DataSegment::getInterval)
@@ -787,9 +787,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final DateTime lastUpdatedTime1 = DateTimes.nowUtc();
-    updateUsedStatusLastUpdated(segment1, lastUpdatedTime1);
-    updateUsedStatusLastUpdated(segment2, lastUpdatedTime1);
-    updateUsedStatusLastUpdated(segment4, lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment1.getId().toString(), lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment2.getId().toString(), lastUpdatedTime1);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment4.getId().toString(), lastUpdatedTime1);
 
     Assert.assertEquals(
         2,
@@ -799,7 +799,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     final DateTime lastUpdatedTime2 = DateTimes.nowUtc();
-    updateUsedStatusLastUpdated(segment4, lastUpdatedTime2);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment4.getId().toString(), lastUpdatedTime2);
 
     final List<Interval> segmentIntervals = segments.stream()
                                                     .map(DataSegment::getInterval)
@@ -1176,15 +1176,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         9,
         10L
-    );
-  }
-
-  private void updateUsedStatusLastUpdated(DataSegment segment, DateTime newValue)
-  {
-    derbyConnectorRule.updateSegmentsTable(
-        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
-        newValue.toString(),
-        segment.getId().toString()
     );
   }
 }

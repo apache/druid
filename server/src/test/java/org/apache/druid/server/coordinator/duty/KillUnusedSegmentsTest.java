@@ -774,7 +774,7 @@ public class KillUnusedSegmentsTest
       throw new RuntimeException(e);
     }
     sqlSegmentsMetadataManager.markSegmentsAsUnused(ImmutableSet.of(segment.getId()));
-    updateUsedStatusLastUpdated(segment, lastUpdatedTime);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment.getId().toString(), lastUpdatedTime);
   }
 
   private DataSegment createSegment(final String dataSource, final Interval interval, final String version)
@@ -922,14 +922,5 @@ public class KillUnusedSegmentsTest
     {
       observedDatasourceToLastKillTaskId.remove(dataSource);
     }
-  }
-
-  private void updateUsedStatusLastUpdated(DataSegment segment, DateTime lastUpdatedTime)
-  {
-    derbyConnectorRule.updateSegmentsTable(
-        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
-        lastUpdatedTime.toString(),
-        segment.getId().toString()
-    );
   }
 }
