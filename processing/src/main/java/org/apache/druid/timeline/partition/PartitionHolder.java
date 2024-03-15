@@ -33,6 +33,9 @@ import java.util.Objects;
 public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<PartitionChunk<T>>
 {
   private final OvershadowableManager<T> overshadowableManager;
+
+  // Maintains the maximum minor version across all the added segments.
+  // We do not handle updates of this variable when segments are removed for the sake of simplicity.
   private short maxMinorVersion;
 
   public static <T extends Overshadowable<T>> PartitionHolder<T> copyWithOnlyVisibleChunks(

@@ -1063,11 +1063,19 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     if (segments.isEmpty()) {
       log.info("No segments found in the database!");
     } else {
-      log.info("Polled and found %,d segments in the database", segments.size());
+      log.info("Polled and found %,d segments in the database.", segments.size());
     }
+
+    log.debug("Building datasources snapshot from polled segments.");
+    final long snapshotCreationStartTime = System.currentTimeMillis();
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties
+    );
+    final long snapshotCreationEndTime = System.currentTimeMillis();
+    log.info(
+        "Successfully created snapshot from polled segments in [%d] ms. Found [%d] overshadowed segments.",
+        (snapshotCreationEndTime - snapshotCreationStartTime), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
   }
 

@@ -450,6 +450,18 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     return overshadowedPartitionsTimeline;
   }
 
+  /**
+   * 0) Determine the TimelineEntry with the given interval
+   * 1) If the major versions are equal, the segment is overshadowed iff any of the segments in the TimelineEntry overshadows it.
+   * 2) If the major versions are different, simply return true if the TimelineEntry has a greater major version. False otherwise.
+   * 3) If there is no TimelineEntry with the same interval, find one which contains the input interval.
+   * 4) If a TimelineEntry is found in step 3, repeat steps 1, 2 with it. Return false otherwise.
+   *
+   * @param interval The interval of the overshadowable object (segment)
+   * @param version The version of the overshadowable object (segment)
+   * @param object The overshadowable object to be determined as overshadowed or not
+   * @return true iff the object is overshadowed in this timeline
+   */
   public boolean isOvershadowed(Interval interval, VersionType version, ObjectType object)
   {
     lock.readLock().lock();
@@ -458,6 +470,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       if (entry != null) {
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
         if (majorVersionCompare == 0) {
+          // If the major versions of the timeline entry and target segment are equal, and
+          // the maximum minor version among the segments is not greater than the minor version of the target segment,
+          // none of the segments in the interval can overshadow it.
           if (entry.getMaxMinorVersion() > object.getMinorVersion()) {
             for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
               if (chunk.getObject().overshadows(object)) {
