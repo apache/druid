@@ -20,11 +20,13 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
@@ -53,9 +55,15 @@ public class FixedIndexed<T> implements Indexed<T>
 {
   public static final byte IS_SORTED_MASK = 0x02;
 
-  public static <T> Supplier<FixedIndexed<T>> read(ByteBuffer bb, TypeStrategy<T> strategy, ByteOrder byteOrder, int width)
+  public static <T> ColumnPartSupplier<FixedIndexed<T>> read(
+      ByteBuffer bb,
+      TypeStrategy<T> strategy,
+      ByteOrder byteOrder,
+      int width
+  )
   {
     final ByteBuffer buffer = bb.asReadOnlyBuffer().order(byteOrder);
+    final int startPosition = buffer.position();
     final byte version = buffer.get();
     Preconditions.checkState(version == 0, "Unknown version [%s]", version);
     final byte flags = buffer.get();
@@ -64,18 +72,37 @@ public class FixedIndexed<T> implements Indexed<T>
     Preconditions.checkState(!(hasNull && !isSorted), "cannot have null values if not sorted");
     final int size = buffer.getInt() + (hasNull ? 1 : 0);
     final int valuesOffset = buffer.position();
-    final Supplier<FixedIndexed<T>> fixedIndexed = () -> new FixedIndexed<>(
-        bb,
-        byteOrder,
-        strategy,
-        hasNull,
-        isSorted,
-        width,
-        size,
-        valuesOffset
-    );
+    final int endPosition = buffer.position() + (width * (hasNull ? size - 1 : size));
+    final ColumnPartSupplier<FixedIndexed<T>> fixedIndexed = new ColumnPartSupplier<FixedIndexed<T>>()
+    {
+      @Override
+      public FixedIndexed<T> get()
+      {
+        return new FixedIndexed<>(
+            bb,
+            byteOrder,
+            strategy,
+            hasNull,
+            isSorted,
+            width,
+            size,
+            valuesOffset
+        );
 
-    bb.position(buffer.position() + (width * (hasNull ? size - 1 : size)));
+      }
+
+      @Override
+      public ColumnPartSize getColumnPartSize()
+      {
+        return ColumnPartSize.indexedComponent(
+            StringUtils.format("fixed indexed, width [%s]", width),
+            size,
+            endPosition - startPosition
+        );
+      }
+    };
+
+    bb.position(endPosition);
     return fixedIndexed;
   }
 

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,7 +41,8 @@ import java.util.Iterator;
  * If we want to streams VSizeInts, we must know the max value in the value sets. It's easy to know the max id of
  * values(like dimension cardinality while encoding dimension), but difficult to known the max id of offsets.
  */
-public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>
+public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>,
+    ColumnPartSupplier<ColumnarMultiInts>
 {
   public static final byte VERSION = 0x3;
 

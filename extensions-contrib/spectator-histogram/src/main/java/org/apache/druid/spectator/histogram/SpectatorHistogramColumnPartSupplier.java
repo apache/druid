@@ -20,9 +20,10 @@
 package org.apache.druid.spectator.histogram;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 
-public class SpectatorHistogramColumnPartSupplier implements Supplier<ComplexColumn>
+public class SpectatorHistogramColumnPartSupplier implements ColumnSupplier<ComplexColumn>
 {
   private final SpectatorHistogramIndexed complexType;
   private final String typeName;

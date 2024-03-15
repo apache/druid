@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -71,7 +70,7 @@ public class StringEncodingStrategies
     }
   }
 
-  public static Supplier<? extends Indexed<ByteBuffer>> getStringDictionarySupplier(
+  public static ColumnPartSupplier<? extends Indexed<ByteBuffer>> getStringDictionarySupplier(
       SmooshedFileMapper mapper,
       ByteBuffer stringDictionaryBuffer,
       ByteOrder byteOrder
@@ -100,7 +99,7 @@ public class StringEncodingStrategies
       // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
       // GenericIndexed version can be correctly read
       stringDictionaryBuffer.position(dictionaryStartPosition);
-      return GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper)::singleThreaded;
+      return GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
     }
   }
 

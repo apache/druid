@@ -20,9 +20,9 @@
 package org.apache.druid.compressedbigdecimal;
 
 
-import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 /**
  * Complex column supplier that understands {@link CompressedBigDecimal} values.
  */
-public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexColumn>
+public class CompressedBigDecimalColumnSupplier implements ColumnSupplier<ComplexColumn>
 {
   public static final int VERSION = 0x1;
 
@@ -42,7 +42,7 @@ public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexC
    * @param buffer Byte buffer
    * @return new instance of CompressedBigDecimalColumnPartSupplier
    */
-  public static CompressedBigDecimalColumnPartSupplier fromByteBuffer(
+  public static CompressedBigDecimalColumnSupplier fromByteBuffer(
       ByteBuffer buffer
   )
   {
@@ -59,7 +59,7 @@ public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexC
       V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier =
           V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, IndexIO.BYTE_ORDER);
 
-      return new CompressedBigDecimalColumnPartSupplier(
+      return new CompressedBigDecimalColumnSupplier(
           buffer.position() - positionStart,
           scaleSupplier,
           magnitudeSupplier
@@ -79,7 +79,7 @@ public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexC
    * @param scaleSupplier     scale supplier
    * @param magnitudeSupplier supplied of results
    */
-  public CompressedBigDecimalColumnPartSupplier(
+  public CompressedBigDecimalColumnSupplier(
       int byteSize,
       CompressedVSizeColumnarIntsSupplier scaleSupplier,
       V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier

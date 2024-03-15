@@ -20,12 +20,13 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -94,9 +95,10 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     return version;
   }
 
-  public static Supplier<FrontCodedIndexed> read(ByteBuffer buffer, ByteOrder ordering)
+  public static ColumnPartSupplier<FrontCodedIndexed> read(ByteBuffer buffer, ByteOrder ordering)
   {
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
+    final int startPosition = orderedBuffer.position();
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == V0 || version == V1, "only V0 and V1 exist, encountered " + version);
     final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
@@ -109,23 +111,57 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     buffer.position(offsetsPosition + size);
 
     if (version == V0) {
-      return () -> new FrontCodedV0(
-          buffer,
-          ordering,
-          bucketSize,
-          numValues,
-          hasNull,
-          offsetsPosition
-      );
+      return new ColumnPartSupplier<FrontCodedIndexed>()
+      {
+        @Override
+        public FrontCodedIndexed get()
+        {
+          return new FrontCodedV0(
+              buffer,
+              ordering,
+              bucketSize,
+              numValues,
+              hasNull,
+              offsetsPosition
+          );
+        }
+
+        @Override
+        public ColumnPartSize getColumnPartSize()
+        {
+          return ColumnPartSize.indexedComponent(
+              StringUtils.format("front-coded v0, bucket size [%s]", bucketSize),
+              hasNull ? numValues + 1 : numValues,
+              (offsetsPosition + size) - startPosition
+          );
+        }
+      };
     } else {
-      return () -> new FrontCodedV1(
-          buffer,
-          ordering,
-          bucketSize,
-          numValues,
-          hasNull,
-          offsetsPosition
-      );
+      return new ColumnPartSupplier<FrontCodedIndexed>()
+      {
+        @Override
+        public FrontCodedIndexed get()
+        {
+          return new FrontCodedV1(
+              buffer,
+              ordering,
+              bucketSize,
+              numValues,
+              hasNull,
+              offsetsPosition
+          );
+        }
+
+        @Override
+        public ColumnPartSize getColumnPartSize()
+        {
+          return ColumnPartSize.indexedComponent(
+              StringUtils.format("front-coded v1, bucket size [%s]", bucketSize),
+              hasNull ? numValues + 1 : numValues,
+              (offsetsPosition + size) - startPosition
+          );
+        }
+      };
     }
   }
 

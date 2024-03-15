@@ -20,6 +20,8 @@
 package org.apache.druid.segment.column;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Provides indexes and information about them ({@link ColumnIndexCapabilities}) for a column. Indexes which satisfy
@@ -44,4 +46,9 @@ public interface ColumnIndexSupplier
    */
   @Nullable
   <T> T as(Class<T> clazz);
+
+  default Map<String, ColumnPartSize> getIndexComponents()
+  {
+    return Collections.emptyMap();
+  }
 }

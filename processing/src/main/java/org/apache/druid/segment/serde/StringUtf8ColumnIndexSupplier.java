@@ -20,11 +20,14 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
@@ -46,6 +49,7 @@ import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>> implements ColumnIndexSupplier
 {
@@ -69,6 +73,18 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
     this.bitmaps = bitmaps;
     this.utf8Dictionary = utf8Dictionary;
     this.indexedTree = indexedTree;
+  }
+
+  @Nullable
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    ImmutableMap.Builder<String, ColumnPartSize> components = ImmutableMap.builder();
+    components.put(ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART, bitmaps.getColumnPartSize());
+    if (indexedTree != null) {
+      components.put("spatialIndex", ColumnPartSize.simple("rtree", indexedTree.size()));
+    }
+    return components.build();
   }
 
   @Nullable

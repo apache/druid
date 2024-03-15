@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 
-public class EntireLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoubles>
+public class EntireLayoutColumnarDoublesSupplier implements ColumnPartSupplier<ColumnarDoubles>
 {
   private final int totalSize;
   private final DoubleBuffer buffer;

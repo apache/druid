@@ -32,6 +32,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
@@ -82,7 +84,7 @@ import java.util.Iterator;
  *
  * @see GenericIndexedWriter
  */
-public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
+public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializer, ColumnPartSupplier<Indexed<T>>
 {
   static final byte VERSION_ONE = 0x1;
   static final byte VERSION_TWO = 0x2;
@@ -352,6 +354,22 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
       inspector.visit("theBuffer", theBuffer);
       inspector.visit("strategy", strategy);
     }
+
+    @Override
+    public Indexed<T> get()
+    {
+      return singleThreaded();
+    }
+
+    @Override
+    public ColumnPartSize getColumnPartSize()
+    {
+      return ColumnPartSize.indexedComponent(
+          "generic v1",
+          size,
+          getSerializedSize()
+      );
+    }
   }
 
   private static final class V2<T> extends GenericIndexed<T>
@@ -468,6 +486,26 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
       // are the same.
       inspector.visit("valueBuffer", valueBuffers.length > 0 ? valueBuffers[0] : null);
       inspector.visit("strategy", strategy);
+    }
+
+    @Override
+    public Indexed<T> get()
+    {
+      return singleThreaded();
+    }
+
+    @Override
+    public ColumnPartSize getColumnPartSize()
+    {
+      long size = headerBuffer.capacity();
+      for (ByteBuffer valueBuffer : valueBuffers) {
+        size += valueBuffer.capacity();
+      }
+      return ColumnPartSize.indexedComponent(
+          "generic v2",
+          size,
+          getSerializedSize()
+      );
     }
   }
 

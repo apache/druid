@@ -24,8 +24,11 @@ import org.apache.druid.common.utils.ByteUtils;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 
@@ -36,7 +39,8 @@ import java.util.Iterator;
 
 /**
  */
-public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSupplier<ColumnarMultiInts>
+public class VSizeColumnarMultiInts
+    implements ColumnarMultiInts, WritableSupplier<ColumnarMultiInts>, ColumnPartSupplier<ColumnarMultiInts>
 {
   private static final byte VERSION = 0x1;
 
@@ -167,6 +171,15 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   public ColumnarMultiInts get()
   {
     return this;
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple(
+        StringUtils.format("dictionary encoded multi-value vsize[%s]", numBytes),
+        getSerializedSize()
+    );
   }
 
   public static VSizeColumnarMultiInts readFromByteBuffer(ByteBuffer buffer)

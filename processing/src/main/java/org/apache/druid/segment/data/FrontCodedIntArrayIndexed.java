@@ -20,11 +20,12 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -73,9 +74,10 @@ import java.util.NoSuchElementException;
  */
 public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
 {
-  public static Supplier<FrontCodedIntArrayIndexed> read(ByteBuffer buffer, ByteOrder ordering)
+  public static ColumnPartSupplier<FrontCodedIntArrayIndexed> read(ByteBuffer buffer, ByteOrder ordering)
   {
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
+    final int startPosition = orderedBuffer.position();
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == 0, "only V0 exists, encountered " + version);
     final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
@@ -87,14 +89,31 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
     // move position to end of buffer
     buffer.position(offsetsPosition + size);
 
-    return () -> new FrontCodedIntArrayIndexed(
-        buffer,
-        ordering,
-        bucketSize,
-        numValues,
-        hasNull,
-        offsetsPosition
-    );
+    return new ColumnPartSupplier<FrontCodedIntArrayIndexed>()
+    {
+      @Override
+      public FrontCodedIntArrayIndexed get()
+      {
+        return new FrontCodedIntArrayIndexed(
+            buffer,
+            ordering,
+            bucketSize,
+            numValues,
+            hasNull,
+            offsetsPosition
+        );
+      }
+
+      @Override
+      public ColumnPartSize getColumnPartSize()
+      {
+        return ColumnPartSize.indexedComponent(
+            StringUtils.format("front-coded int array v0, bucket size [%s]", bucketSize),
+            hasNull ? numValues + 1 : numValues,
+            (offsetsPosition + size) - startPosition
+        );
+      }
+    };
   }
 
   private final ByteBuffer buffer;

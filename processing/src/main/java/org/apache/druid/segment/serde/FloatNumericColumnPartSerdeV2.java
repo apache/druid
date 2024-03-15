@@ -151,7 +151,9 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       final boolean hasNulls;
+      final int bitmapSize;
       if (buffer.hasRemaining() && NullHandling.sqlCompatible()) {
+        final int startOffset = buffer.position();
         if (NullHandling.sqlCompatible()) {
           bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
         } else {
@@ -159,17 +161,18 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
           bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
           bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
         }
-
+        bitmapSize = buffer.position() - startOffset;
         hasNulls = !bitmap.isEmpty();
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
         hasNulls = false;
+        bitmapSize = 0;
       }
       builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
              .setHasNulls(hasNulls)
              .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap))
-             .setNullValueIndexSupplier(bitmap);
+             .setNullValueIndexSupplier(bitmap, bitmapSize);
     };
   }
 }

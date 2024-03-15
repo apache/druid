@@ -20,7 +20,6 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -37,7 +36,7 @@ public class ColumnBuilder
   private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
-  private Supplier<? extends BaseColumn> columnSupplier = null;
+  private ColumnSupplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
   private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
@@ -86,7 +85,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setDictionaryEncodedColumnSupplier(Supplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
+  public ColumnBuilder setDictionaryEncodedColumnSupplier(ColumnSupplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
   {
     checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
@@ -96,21 +95,21 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setComplexColumnSupplier(Supplier<? extends ComplexColumn> columnSupplier)
+  public ColumnBuilder setComplexColumnSupplier(ColumnSupplier<? extends ComplexColumn> columnSupplier)
   {
     checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
     return this;
   }
 
-  public ColumnBuilder setNumericColumnSupplier(Supplier<? extends NumericColumn> columnSupplier)
+  public ColumnBuilder setNumericColumnSupplier(ColumnSupplier<? extends NumericColumn> columnSupplier)
   {
     checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
     return this;
   }
 
-  public ColumnBuilder setNestedCommonFormatColumnSupplier(Supplier<? extends NestedCommonFormatColumn> columnSupplier)
+  public ColumnBuilder setNestedCommonFormatColumnSupplier(ColumnSupplier<? extends NestedCommonFormatColumn> columnSupplier)
   {
     checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;
@@ -130,10 +129,10 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setNullValueIndexSupplier(ImmutableBitmap nullValueIndex)
+  public ColumnBuilder setNullValueIndexSupplier(ImmutableBitmap nullValueIndex, int size)
   {
     checkIndexSupplierNotSet();
-    this.indexSupplier = new NullValueIndexSupplier(nullValueIndex);
+    this.indexSupplier = new NullValueIndexSupplier(nullValueIndex, size);
     return this;
   }
 

@@ -22,7 +22,10 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Supplier;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 
@@ -33,7 +36,7 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>, Serializer
+public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<ColumnarLongs>, Serializer
 {
   public static final byte LZF_VERSION = 0x1;
   public static final byte VERSION = 0x2;
@@ -60,6 +63,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   private final Supplier<ColumnarLongs> supplier;
   private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingFormat encoding;
+  private final int sizeBytes;
 
   CompressedColumnarLongsSupplier(
       int totalSize,
@@ -67,7 +71,8 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
       ByteBuffer buffer,
       Supplier<ColumnarLongs> supplier,
       CompressionStrategy compression,
-      CompressionFactory.LongEncodingFormat encoding
+      CompressionFactory.LongEncodingFormat encoding,
+      int sizeBytes
   )
   {
     this.totalSize = totalSize;
@@ -76,6 +81,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
     this.supplier = supplier;
     this.compression = compression;
     this.encoding = encoding;
+    this.sizeBytes = sizeBytes;
   }
 
   @Override
@@ -91,6 +97,19 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   }
 
   @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple(
+        StringUtils.format(
+            "compressed longs column compression:[%s] values per block:[%s]",
+            compression.toString(),
+            sizePer
+        ),
+        sizeBytes
+    );
+  }
+
+  @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
@@ -99,6 +118,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
 
   public static CompressedColumnarLongsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
+    final int startPosition = buffer.position();
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
@@ -122,13 +142,15 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
           encoding,
           compression
       );
+      final int sizeBytes = buffer.position() - startPosition;
       return new CompressedColumnarLongsSupplier(
           totalSize,
           sizePer,
           buffer,
           supplier,
           compression,
-          encoding
+          encoding,
+          sizeBytes
       );
     }
 

@@ -1084,17 +1084,17 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
     columns.put(
         "a",
-        new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 26, "a", "z", null)
+        new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 26, "a", "z", null, null)
     );
 
     columns.put(
         "count",
-        new ColumnAnalysis(ColumnType.LONG, ColumnType.LONG.asTypeString(), false, true, 1234, 26, "a", "z", null)
+        new ColumnAnalysis(ColumnType.LONG, ColumnType.LONG.asTypeString(), false, true, 1234, 26, "a", "z", null, null)
     );
 
     columns.put(
         "b",
-        new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), false, true, 1234, 26, null, null, null)
+        new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), false, true, 1234, 26, null, null, null, null)
     );
 
     RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
@@ -1140,6 +1140,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                         26,
                         "a",
                         "z",
+                        null,
                         null
                     ),
                     "count",
@@ -1152,6 +1153,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                         null,
                         null,
                         null,
+                        null,
                         null
                     ),
                     "distinct",
@@ -1161,6 +1163,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                         false,
                         true,
                         1234,
+                        null,
                         null,
                         null,
                         null,

@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
@@ -111,7 +112,7 @@ public class NullColumnPartSerde implements ColumnPartSerde
              // this is a bit sneaky, we set supplier to null here to act like a null column instead of a column
              // without any indexes, which is the default state
              .setIndexSupplier(null, true, false)
-             .setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
+             .setDictionaryEncodedColumnSupplier(new ColumnSupplier.LegacyColumnSupplier<>(() -> nullDictionaryEncodedColumn));
     };
   }
 
