@@ -176,7 +176,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "bitwiseConvertDoubleToLongBits",
         "bitwiseConvertLongBitsToDouble"
     };
-    final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)"};
+    final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)", "%s(missing)"};
     testFunctions(types, templates, functions);
   }
 
