@@ -822,20 +822,15 @@ public class DataSourcesResourceTest
   {
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(null).once();
-    Interval interval = Intervals.of("2010-01-22/P1D");
-    int numUpdatedSegments =
-        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval));
-    EasyMock.expect(numUpdatedSegments).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     DataSourcesResource dataSourcesResource = createResource();
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null, null)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), null, null)
     );
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+    Assert.assertEquals(204, response.getStatus());
     EasyMock.verify(segmentsMetadataManager);
   }
 
