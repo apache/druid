@@ -309,8 +309,7 @@ public class DataSourcesResource
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      log.info("Datasource[%s] not found, but perhaps there are no used segments.", dataSourceName);
-//      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     return performSegmentUpdate(dataSourceName, operation);
