@@ -25,6 +25,15 @@ description: Introduction to three-valued null handling
   -->
 
 This tutorial introduces the basic concepts of three-valued null handling in Apache Druid.
+The three-valued logic primarily affects filters using the logical NOT operation on columns with NULL values.
+This applies to both query and ingestion time filtering.
+
+Druid differentiates between the following:
+- `null` values
+- empty strings: `""`
+- a record with no data
+- empty numerical records
+- 0
 
 ## Prerequisites
 
@@ -40,24 +49,23 @@ The tutorial loads some data with null values for various data types as follows:
 ```json
 {"date": "1/1/2024 1:02:00","title": "example_1","string_value": "some_value","numeric_value": 1,"boolean_value_1": true,"boolean_value_2": "1"}
 {"date": "1/1/2024 1:03:00","title": "example_2","string_value": "another_value","numeric_value": 2,"boolean_value_1": false,"boolean_value_2": "0"}
-{"date": "1/1/2024 1:04:00","title": "example_3","": "", "numeric_value": null, "boolean_value_1": null,"boolean_value_2":null}
+{"date": "1/1/2024 1:04:00","title": "example_3","string_value": "", "numeric_value": "", "boolean_value_1": "","boolean_value_2":""}
+{"date": "1/1/2024 1:05:00","title": "example_4","string_value": null, "numeric_value": null, "boolean_value_1": null,"boolean_value_2":null}
 ```
-
-Note the following about the input data:
-- An empty string value `""` serves as null for VARCHAR/string, but the BIGINT and BOOLEAN columns use `null`.
-- The two boolean columns demonstrate the use of `true/false` and `0/1` as boolean input values. 
 
 Run the following query in the Druid Console to load the data:
 
 ```sql
-REPLACE INTO "null_data_example" OVERWRITE ALL
-WITH "ext" AS (SELECT *
-FROM TABLE(
-  EXTERN(
-    '{"type":"inline","data":"{\"date\": \"1/1/2024 1:02:00\",\"title\": \"example_1\",\"string_value\": \"some_value\",\"numeric_value\": 1,\"boolean_value_1\": true,\"boolean_value_2\": \"1\"}\n{\"date\": \"1/1/2024 1:03:00\",\"title\": \"example_2\",\"string_value\": \"another_value\",\"numeric_value\": 2,\"boolean_value_1\": false,\"boolean_value_2\": \"0\"}\n{\"date\": \"1/1/2024 1:04:00\",\"title\": \"example_3\",\"\": \"\", \"numeric_value\": null, \"boolean_value_1\": \"\",\"boolean_value_2\":null}"}',
-    '{"type":"json"}'
-  )
-) EXTEND ("date" VARCHAR, "title" VARCHAR, "string_value" VARCHAR, "numeric_value" BIGINT, "boolean_value_1" VARCHAR, "boolean_value_2" VARCHAR))
+REPLACE INTO "inline_data--abcdef" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"date\": \"1/1/2024 1:02:00\",\"title\": \"example_1\",\"string_value\": \"some_value\",\"numeric_value\": 1,\"boolean_value_1\": true,\"boolean_value_2\": \"1\"}\n{\"date\": \"1/1/2024 1:03:00\",\"title\": \"example_2\",\"string_value\": \"another_value\",\"numeric_value\": 2,\"boolean_value_1\": false,\"boolean_value_2\": \"0\"}\n{\"date\": \"1/1/2024 1:04:00\",\"title\": \"example_3\",\"string_value\": \"\", \"numeric_value\": \"\", \"boolean_value_1\": \"\",\"boolean_value_2\":\"\"}\n{\"date\": \"1/1/2024 1:05:00\",\"title\": \"example_4\",\"string_value\": null, \"numeric_value\": null, \"boolean_value_1\": null,\"boolean_value_2\":null}"}',
+      '{"type":"json"}'
+    )
+  ) EXTEND ("date" VARCHAR, "title" VARCHAR, "string_value" VARCHAR, "numeric_value" BIGINT, "boolean_value_1" VARCHAR, "boolean_value_2" BIGINT)
+)
 SELECT
   TIME_PARSE("date", 'd/M/yyyy H:mm:ss') AS "__time",
   "title",
@@ -69,7 +77,7 @@ FROM "ext"
 PARTITIONED BY DAY
 ```
 
-After Druid finishes loading the data, run the following query to see how Druid loads the data:
+After Druid finishes loading the data, run the following query to see the data in Druid:
 
 ```sql
 SELECT * FROM null_data_example
@@ -77,12 +85,13 @@ SELECT * FROM null_data_example
 
 |`__time`|`title`|`string_value`|`numeric_value`|`boolean_value_1`|`boolean_value_2`|
 |---|---|---|---|---|---|
-|`"2024-01-01T01:02:00.000Z"`|`"example_1`|`"some_value"`|1|`1|1|
+|`"2024-01-01T01:02:00.000Z"`|`"example_1`|`"some_value"`|1|1|1|
 |`"2024-01-01T01:03:00.000Z"`|`"example_2`|`"another_value"`|2|0|0|
-|`"2024-01-01T01:04:00.000Z"`|`"example_3"`|`null`|`null`|`null`|`null`|
+|`"2024-01-01T01:04:00.000Z"`|`"example_3"`|`empty`|`null`|`null`|`null`|
+|`"2024-01-01T01:05:00.000Z"`|`"example_4"`|`null`|`null`|`null`|`null`|
 
 Note the follwoing about the result set:
-- Druid stores the empty string and null values for `example_3` as `null`.
+- Druid stores the empty string value for `example_3` as an empty, but the other values are null.
 - Druid uses `0/1` for both BOOLEAN type columns.
 
 ### Compare to two-valued logic
@@ -99,7 +108,7 @@ Note that the `null` values for the BIGINT type column and for both BOOLEAN type
 
 ## String query example
 
-Using three-valued logic, Druid treats `null` values as "unknown" and does not count them in comparisons.
+
 
 ```sql
 SELECT COUNT(*)
@@ -107,13 +116,25 @@ FROM "null_data_example2"
 WHERE "string_value" != 'some_value'
 ```
 
-Druid returns 1. The `null` value for `example_3` is excluded.
+```sql
+SELECT "string_value",
+      COUNT(*) AS count_all_rows,
+      COUNT("string_value") AS count_values
+FROM "inline_datafix"
+GROUP BY 1
+```
+
+If you dont want to count empty strings or nulls, filter them out. For example:
+
+
 
 ### Compare to two-valued logic
 
 The same query using two valued logic returns a value of 2.
 
 ## Numeric query example
+
+Using three-valued logic, Druid treats `null` values as "unknown" and does not count them in comparisons.
 
 ```sql
 SELECT COUNT(*)
@@ -140,9 +161,9 @@ Druid returns the following:
 
 |`boolean_value_1`|`count_of`|
 |---|---|
-|`empty`|1|
-|FALSE|1|
-|TRUE|1|
+|`null`|1|
+|0|1|
+|1|1|
 
 
 ```sql
