@@ -36,7 +36,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.Either;
@@ -53,7 +52,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
-import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.utils.CollectionUtils;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
