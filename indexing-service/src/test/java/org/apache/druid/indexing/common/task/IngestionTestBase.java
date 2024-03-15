@@ -62,7 +62,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -158,7 +157,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return new TestLocalTaskActionClient(task);
   }
 
-  public void prepareTaskForLocking(Task task) throws EntryExistsException
+  public void prepareTaskForLocking(Task task)
   {
     lockbox.add(task);
     taskStorage.insert(task, TaskStatus.running(task.getId()));

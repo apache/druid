@@ -94,6 +94,8 @@ export class WorkbenchQuery {
     partitionedByHint: string | undefined,
     arrayMode: ArrayMode,
   ): WorkbenchQuery {
+    const queryContext: QueryContext = {};
+    if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
         externalConfigToIngestQueryPattern(
@@ -103,9 +105,7 @@ export class WorkbenchQuery {
           arrayMode,
         ),
       ).toString(),
-      queryContext: {
-        arrayIngestMode: 'array',
-      },
+      queryContext,
     });
   }
 

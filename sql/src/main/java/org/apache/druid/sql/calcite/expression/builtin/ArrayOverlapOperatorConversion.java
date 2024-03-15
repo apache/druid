@@ -67,7 +67,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
               )
           )
       )
-      .returnTypeInference(ReturnTypes.BOOLEAN)
+      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .build();
 
   public ArrayOverlapOperatorConversion()
@@ -111,7 +111,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         complexExpr = leftExpr;
       }
     } else {
-      return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+      return toExpressionFilter(plannerContext, druidExpressions);
     }
 
     final Expr expr = plannerContext.parseExpression(complexExpr.getExpression());
@@ -202,6 +202,6 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       }
     }
 
-    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+    return toExpressionFilter(plannerContext, druidExpressions);
   }
 }

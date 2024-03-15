@@ -183,6 +183,16 @@ public interface Expr extends Cacheable
   }
 
   /**
+   * Possibly convert the {@link Expr} into an optimized, possibly not thread-safe {@link Expr}. Does not convert
+   * child {@link Expr}. Most callers should use {@link Expr#singleThreaded(Expr, InputBindingInspector)} to convert
+   * an entire tree, which delegates to this method to translate individual nodes.
+   */
+  default Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return this;
+  }
+
+  /**
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
    *
@@ -769,30 +779,9 @@ public interface Expr extends Cacheable
    * Returns the single-threaded version of the given expression tree.
    *
    * Nested expressions in the subtree are also optimized.
-   * Individual {@link Expr}-s which have a singleThreaded implementation via {@link SingleThreadSpecializable} are substituted.
    */
-  static Expr singleThreaded(Expr expr)
+  static Expr singleThreaded(Expr expr, InputBindingInspector inspector)
   {
-    return expr.visit(
-        node -> {
-          if (node instanceof SingleThreadSpecializable) {
-            SingleThreadSpecializable canBeSingleThreaded = (SingleThreadSpecializable) node;
-            return canBeSingleThreaded.toSingleThreaded();
-          } else {
-            return node;
-          }
-        }
-    );
-  }
-
-  /**
-   * Implementing this interface allows to provide a non-threadsafe {@link Expr} implementation.
-   */
-  interface SingleThreadSpecializable
-  {
-    /**
-     * Non-threadsafe version of this expression.
-     */
-    Expr toSingleThreaded();
+    return expr.visit(node -> node.asSingleThreaded(inspector));
   }
 }
