@@ -77,7 +77,7 @@ public class VectorMathProcessors
     if (inputType == null || inputType.is(ExprType.DOUBLE)) {
       processor = doubleOutDoubleInSupplier.get();
     } else if (inputType.is(ExprType.LONG)) {
-        processor = doubleOutLongInSupplier.get();
+      processor = doubleOutLongInSupplier.get();
     }
 
     if (processor == null) {
@@ -104,7 +104,7 @@ public class VectorMathProcessors
     if (inputType == null || inputType.is(ExprType.DOUBLE)) {
       processor = longOutDoubleInSupplier.get();
     } else if (inputType.is(ExprType.LONG)) {
-        processor = longOutLongInSupplier.get();
+      processor = longOutLongInSupplier.get();
     }
 
     if (processor == null) {
