@@ -707,10 +707,7 @@ public class ControllerImpl implements Controller
     );
 
     // propagate the controller's tags to the worker task
-    Map<String, Object> taskMetricTags = taskIdentitiesProvider.getTaskMetricTags(task);
-    if (!taskMetricTags.isEmpty()) {
-      taskContextOverridesBuilder.put(DruidMetrics.TAGS, taskMetricTags);
-    }
+    taskContextOverridesBuilder.put(DruidMetrics.TAGS, taskIdentitiesProvider.getTaskMetricTags(task));
 
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),

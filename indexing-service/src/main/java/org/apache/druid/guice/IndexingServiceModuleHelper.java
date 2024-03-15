@@ -41,10 +41,10 @@ public class IndexingServiceModuleHelper
     JsonConfigProvider.bind(binder, INDEXER_RUNNER_PROPERTY_PREFIX, HttpRemoteTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.zk.paths.indexer", IndexerZkConfig.class);
 
-    configureTaskLabelsProvider(binder);
+    configureTaskIdentitiesProvider(binder);
   }
 
-  public static void configureTaskLabelsProvider(Binder binder)
+  public static void configureTaskIdentitiesProvider(Binder binder)
   {
     PolyBind.optionBinder(binder, Key.get(TaskIdentitiesProvider.class))
             .addBinding(DefaultTaskIdentitiesProvider.TYPE)
@@ -53,7 +53,7 @@ public class IndexingServiceModuleHelper
 
     PolyBind.createChoiceWithDefault(
         binder,
-        "druid.indexer.task.labelsprovider.type",
+        "druid.indexer.task.identitiesprovider.type",
         Key.get(TaskIdentitiesProvider.class),
         DefaultTaskIdentitiesProvider.TYPE
     );
