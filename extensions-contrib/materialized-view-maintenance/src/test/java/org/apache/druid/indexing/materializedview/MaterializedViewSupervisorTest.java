@@ -25,8 +25,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import junit.framework.AssertionFailedError;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.HadoopTuningConfig;
@@ -37,6 +39,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -58,11 +61,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,10 +75,9 @@ import java.util.SortedMap;
 public class MaterializedViewSupervisorTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
+      = new TestDerbyConnector.DerbyConnectorRule();
 
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -102,7 +105,7 @@ public class MaterializedViewSupervisorTest
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
     sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);
     taskQueue = EasyMock.createMock(TaskQueue.class);
-    taskQueue.start();
+
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     spec = new MaterializedViewSupervisorSpec(
         "base",
@@ -113,7 +116,7 @@ public class MaterializedViewSupervisorTest
         null,
         null,
         null,
-        null,
+        Collections.singletonMap("maxTaskCount", 2),
         false,
         objectMapper,
         taskMaster,
@@ -133,125 +136,81 @@ public class MaterializedViewSupervisorTest
   @Test
   public void testCheckSegments() throws IOException
   {
-    Set<DataSegment> baseSegments = Sets.newHashSet(
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-            "2015-01-02",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        ),
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-            "2015-01-03",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        ),
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
-            "2015-01-04",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        )
+    List<DataSegment> baseSegments = createBaseSegments();
+    Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
+
+    final Interval day1 = baseSegments.get(0).getInterval();
+    final Interval day2 = new Interval(day1.getStart().plusDays(1), day1.getEnd().plusDays(1));
+
+    indexerMetadataStorageCoordinator.commitSegments(new HashSet<>(baseSegments));
+    indexerMetadataStorageCoordinator.commitSegments(derivativeSegments);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval
+        = supervisor.checkSegments();
+
+    Map<Interval, List<DataSegment>> expectedSegments = ImmutableMap.of(
+        day1, Collections.singletonList(baseSegments.get(0)),
+        day2, Collections.singletonList(baseSegments.get(1))
     );
-    Set<DataSegment> derivativeSegments = Sets.newHashSet(
-        new DataSegment(
-            derivativeDatasourceName,
-            Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-            "2015-01-02",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        ),
-        new DataSegment(
-            derivativeDatasourceName,
-            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-            "3015-01-01",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        )
-    );
+    Assert.assertEquals(Collections.singleton(day1), toBuildInterval.lhs.keySet());
+    Assert.assertEquals(expectedSegments, toBuildInterval.rhs);
+  }
+
+  @Test
+  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists() throws IOException
+  {
+    Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
+    Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
+
     indexerMetadataStorageCoordinator.commitSegments(baseSegments);
     indexerMetadataStorageCoordinator.commitSegments(derivativeSegments);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-    Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
-    Set<Interval> expectedToBuildInterval = Sets.newHashSet(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"));
-    Map<Interval, List<DataSegment>> expectedSegments = new HashMap<>();
-    expectedSegments.put(
-        Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-        Collections.singletonList(
-            new DataSegment(
-                "base",
-                Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-                "2015-01-02",
-                ImmutableMap.of(),
-                ImmutableList.of("dim1", "dim2"),
-                ImmutableList.of("m1"),
-                new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-                9,
-                1024
-            )
-        )
+
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject()))
+            .andThrow(EntryAlreadyExists.exception("Task ID already exists"));
+
+    EasyMock.replay(taskMaster, taskStorage, taskQueue);
+
+    supervisor.checkSegmentsAndSubmitTasks();
+
+    EasyMock.verify(taskMaster, taskStorage, taskQueue);
+  }
+
+  @Test
+  public void testSubmitTasksFailsIfTaskCannotBeAdded() throws IOException
+  {
+    Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
+    Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
+
+    indexerMetadataStorageCoordinator.commitSegments(baseSegments);
+    indexerMetadataStorageCoordinator.commitSegments(derivativeSegments);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject()))
+            .andThrow(new ISE("Could not add task"));
+
+    EasyMock.replay(taskMaster, taskStorage, taskQueue);
+
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> supervisor.checkSegmentsAndSubmitTasks()
     );
-    expectedSegments.put(
-        Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-        Collections.singletonList(
-            new DataSegment(
-                "base",
-                Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-                "2015-01-03",
-                ImmutableMap.of(),
-                ImmutableList.of("dim1", "dim2"),
-                ImmutableList.of("m1"),
-                new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-                9,
-                1024
-            )
-        )
-    );
-    Assert.assertEquals(expectedToBuildInterval, toBuildInterval.lhs.keySet());
-    Assert.assertEquals(expectedSegments, toBuildInterval.rhs);
+    Assert.assertEquals("Could not add task", exception.getMessage());
+
+    EasyMock.verify(taskMaster, taskStorage, taskQueue);
   }
 
   @Test
   public void testCheckSegmentsAndSubmitTasks() throws IOException
   {
-    Set<DataSegment> baseSegments = Sets.newHashSet(
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-            "2015-01-03",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        )
-    );
+    Set<DataSegment> baseSegments = Collections.singleton(createBaseSegments().get(0));
     indexerMetadataStorageCoordinator.commitSegments(baseSegments);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
@@ -315,28 +274,12 @@ public class MaterializedViewSupervisorTest
 
     Assert.assertEquals(expectedRunningTasks, runningTasks);
     Assert.assertEquals(expectedRunningVersion, runningVersion);
-
   }
 
-  /**
-   * Verifies that creating HadoopIndexTask compleates without raising exception.
-   */
   @Test
-  public void testCreateTask()
+  public void testCreateTaskSucceeds()
   {
-    List<DataSegment> baseSegments = Collections.singletonList(
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-            "2015-01-03",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
-            9,
-            1024
-        )
-    );
+    List<DataSegment> baseSegments = createBaseSegments().subList(0, 1);
 
     HadoopIndexTask task = spec.createTask(
         Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
@@ -348,7 +291,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSuspendedDoesntRun()
+  public void testSuspendedDoesNotRun()
   {
     MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
         "base",
@@ -378,10 +321,7 @@ public class MaterializedViewSupervisorTest
     // which will be true if truly suspended, since this is the first operation of the 'run' method otherwise
     IndexerSQLMetadataStorageCoordinator mock = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
     EasyMock.expect(mock.retrieveDataSourceMetadata(suspended.getDataSourceName()))
-            .andAnswer(() -> {
-              Assert.fail();
-              return null;
-            })
+            .andThrow(new AssertionFailedError())
             .anyTimes();
 
     EasyMock.replay(mock);
@@ -418,6 +358,38 @@ public class MaterializedViewSupervisorTest
         "Reset offsets not supported in MaterializedViewSupervisor",
         UnsupportedOperationException.class,
         () -> supervisor.resetOffsets(null)
+    );
+  }
+
+  private List<DataSegment> createBaseSegments()
+  {
+    return Arrays.asList(
+        createSegment("base", "2015-01-01T00Z/2015-01-02T00Z", "2015-01-02"),
+        createSegment("base", "2015-01-02T00Z/2015-01-03T00Z", "2015-01-03"),
+        createSegment("base", "2015-01-03T00Z/2015-01-04T00Z", "2015-01-04")
+    );
+  }
+
+  private List<DataSegment> createDerivativeSegments()
+  {
+    return Arrays.asList(
+        createSegment(derivativeDatasourceName, "2015-01-01T00Z/2015-01-02T00Z", "2015-01-02"),
+        createSegment(derivativeDatasourceName, "2015-01-02T00Z/2015-01-03T00Z", "3015-01-01")
+    );
+  }
+
+  private DataSegment createSegment(String datasource, String interval, String version)
+  {
+    return new DataSegment(
+        datasource,
+        Intervals.of(interval),
+        version,
+        Collections.emptyMap(),
+        Arrays.asList("dim1", "dim2"),
+        Collections.singletonList("m2"),
+        new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+        9,
+        1024
     );
   }
 }
