@@ -173,9 +173,6 @@ public class TestDerbyConnector extends DerbyConnector
       );
     }
 
-  /**
-   * Updates the last used status time for the supplied segment ID.
-   */
     public int updateUsedStatusLastUpdated(String segmentId, DateTime lastUpdatedTime)
     {
       return update(
@@ -185,9 +182,6 @@ public class TestDerbyConnector extends DerbyConnector
       );
     }
 
-    /**
-     * @return the segment table name.
-     */
     public String getTableName()
     {
       return this.rule.metadataTablesConfigSupplier()
