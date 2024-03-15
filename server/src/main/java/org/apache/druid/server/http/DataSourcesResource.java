@@ -263,8 +263,6 @@ public class DataSourcesResource
           .status(Response.Status.BAD_REQUEST)
           .entity("Invalid request payload, either interval or segmentIds array must be specified")
           .build();
-    } else if (getQueryableDataSource(dataSourceName) == null) {
-      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     } else {
       SegmentUpdateOperation operation = () -> {
         final Interval interval = payload.getInterval();

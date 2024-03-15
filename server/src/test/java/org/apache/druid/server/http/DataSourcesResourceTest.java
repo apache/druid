@@ -1010,8 +1010,6 @@ public class DataSourcesResourceTest
                        .map(DataSegment::getId)
                        .collect(Collectors.toSet());
 
-    EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
     EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(segmentIds)).andReturn(1).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -1041,8 +1039,6 @@ public class DataSourcesResourceTest
                        .map(DataSegment::getId)
                        .collect(Collectors.toSet());
 
-    EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
     EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(segmentIds)).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -1072,8 +1068,6 @@ public class DataSourcesResourceTest
                        .map(DataSegment::getId)
                        .collect(Collectors.toSet());
 
-    EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
     EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(segmentIds))
             .andThrow(new RuntimeException("Exception occurred"))
             .once();
@@ -1099,10 +1093,7 @@ public class DataSourcesResourceTest
   public void testMarkAsUnusedSegmentsInInterval()
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
-    final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
 
-    EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
     EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval)).andReturn(1).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -1122,10 +1113,7 @@ public class DataSourcesResourceTest
   public void testMarkAsUnusedSegmentsInIntervalNoChanges()
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
-    final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
 
-    EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
     EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval)).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -1144,10 +1132,7 @@ public class DataSourcesResourceTest
   public void testMarkAsUnusedSegmentsInIntervalException()
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
-    final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
 
-    EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
     EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval))
             .andThrow(new RuntimeException("Exception occurred"))
             .once();
