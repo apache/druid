@@ -22,8 +22,10 @@ package org.apache.druid.testsEx.auth;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -31,9 +33,11 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.SecurityClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.apache.druid.testsEx.categories.Security;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -62,10 +66,13 @@ public class ITSecurityBasicQuery
   private CoordinatorResourceTestClient coordinatorClient;
   @Inject
   private SecurityClient securityClient;
+  @Inject
+  private OverlordResourceTestClient overlordResourceTestClient;
 
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
+  private static final String EXPORT_TASK = "/indexer/export_task.json";
 
   @Before
   public void setUp() throws IOException
@@ -154,6 +161,9 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
+    // Wait for a second so that the auth is synched, to avoid flakiness
+    Thread.sleep(1000);
+
     String queryLocal =
         StringUtils.format(
             "INSERT INTO %s\n"
@@ -216,6 +226,9 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
+    // Wait for a second so that the auth is synched, to avoid flakiness
+    Thread.sleep(1000);
+
     String exportQuery =
         StringUtils.format(
             "INSERT INTO extern(%s(exportPath => '%s'))\n"
@@ -253,6 +266,9 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
+    // Wait for a second so that the auth is synched, to avoid flakyness
+    Thread.sleep(1000);
+
     String exportQuery =
         StringUtils.format(
             "INSERT INTO extern(%s(exportPath => '%s'))\n"
@@ -275,5 +291,54 @@ public class ITSecurityBasicQuery
     );
 
     Assert.assertEquals(HttpResponseStatus.ACCEPTED, statusResponseHolder.getStatus());
+  }
+
+  @Test
+  public void testExportTaskSubmitOverlordWithPermission() throws Exception
+  {
+    // No external write permissions for s3
+    List<ResourceAction> permissions = ImmutableList.of(
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
+        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
+        new ResourceAction(new Resource(LocalFileExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
+        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
+    );
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
+
+    // Wait for a second so that the auth is synched, to avoid flakiness
+    Thread.sleep(1000);
+
+    String task = createTaskString();
+    StatusResponseHolder statusResponseHolder = overlordResourceTestClient.submitTaskAndReturnStatusWithAuth(task, USER_1, USER_1_PASSWORD);
+    Assert.assertEquals(HttpResponseStatus.OK, statusResponseHolder.getStatus());
+  }
+
+  @Test
+  public void testExportTaskSubmitOverlordWithoutPermission() throws Exception
+  {
+    // No external write permissions for s3
+    List<ResourceAction> permissions = ImmutableList.of(
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
+        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
+        new ResourceAction(new Resource(S3ExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
+        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
+    );
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
+
+    // Wait for a second so that the auth is synched, to avoid flakiness
+    Thread.sleep(1000);
+
+    String task = createTaskString();
+    StatusResponseHolder statusResponseHolder = overlordResourceTestClient.submitTaskAndReturnStatusWithAuth(task, USER_1, USER_1_PASSWORD);
+    Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
+  }
+
+  private String createTaskString() throws Exception
+  {
+    String queryId = IdUtils.newTaskId(MSQControllerTask.TYPE, "external", null);
+    String template = AbstractIndexerTest.getResourceAsString(EXPORT_TASK);
+    return StringUtils.replace(template, "%%QUERY_ID%%", queryId);
   }
 }
