@@ -225,18 +225,6 @@ public class MetricsModuleTest
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
-  @Test
-  public void testGetServiceStatusMonitor()
-  {
-    Injector injector = createInjector(new Properties(), ImmutableSet.of());
-    final ServiceStatusMonitor serviceStatusMonitor = injector.getInstance(ServiceStatusMonitor.class);
-    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    serviceStatusMonitor.doMonitor(emitter);
-
-    Assert.assertTrue(serviceStatusMonitor instanceof ServiceStatusMonitor);
-    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-  }
-
   private static Injector createInjector(Properties properties, ImmutableSet<NodeRole> nodeRoles)
   {
     return Guice.createInjector(

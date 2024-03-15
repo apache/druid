@@ -111,7 +111,10 @@ public class MetricsModule implements Module
   )
   {
     List<Monitor> monitors = new ArrayList<>();
-
+    // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
+    // CliPeon.runTask and CliPeon.getDataSourceFromTask/CliPeon.getTaskIDFromTask. The reason for this is unclear
+    // but by injecting DataSourceTaskIdHolder early this cycle is avoided.
+    injector.getInstance(DataSourceTaskIdHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       monitors.add(injector.getInstance(monitorClass));
     }
@@ -209,12 +212,5 @@ public class MetricsModule implements Module
       );
       return new OshiSysMonitor(dimensions);
     }
-  }
-
-  @Provides
-  @ManageLifecycle
-  public ServiceStatusMonitor getServiceStatusMonitor()
-  {
-    return new ServiceStatusMonitor();
   }
 }
