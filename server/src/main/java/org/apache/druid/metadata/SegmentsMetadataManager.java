@@ -53,7 +53,20 @@ public interface SegmentsMetadataManager
    */
   int markAsUsedAllNonOvershadowedSegmentsInDataSource(String dataSource);
 
-  int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval);
+  /**
+   * Marks non-overshadowed unused segments for the given interval as used.
+   * @return Number of segments updated
+   */
+  default int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval)
+  {
+    return markAsUsedNonOvershadowedSegmentsInInterval(dataSource, interval, null);
+  }
+
+  /**
+   * Marks non-overshadowed unused segments for the given interval and optional list of versions as used.
+   * @return Number of segments updated
+   */
+  int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, List<String> versions);
 
   /**
    * Marks the given segment IDs as "used" only if there are not already overshadowed
@@ -81,7 +94,22 @@ public interface SegmentsMetadataManager
    */
   int markAsUnusedAllSegmentsInDataSource(String dataSource);
 
-  int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
+  /**
+   * Marks segments as unused that are fully contained in the specified interval. Segments that are already marked as
+   * unused are not updated.
+   * @return Number of segments updated
+   */
+  default int markAsUnusedSegmentsInInterval(String dataSource, Interval interval)
+  {
+    return markAsUnusedSegmentsInInterval(dataSource, interval, null);
+  }
+
+  /**
+   * Marks segments as unused that are fully contained in the specified interval with an optional list of versions.
+   * Segments that are already marked as unused are not updated.
+   * @return The number of segments updated
+   */
+  int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, List<String> versions);
 
   int markSegmentsAsUnused(Set<SegmentId> segmentIds);
 

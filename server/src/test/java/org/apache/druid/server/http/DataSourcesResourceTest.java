@@ -742,7 +742,7 @@ public class DataSourcesResourceTest
     DataSourcesResource dataSourcesResource = createResource();
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null, null)
     );
     Assert.assertEquals(200, response.getStatus());
     EasyMock.verify(segmentsMetadataManager, inventoryView, server);
@@ -761,7 +761,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null, null)
     );
     Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
     EasyMock.verify(segmentsMetadataManager, inventoryView, server);
@@ -780,7 +780,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, segmentIds)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, segmentIds, null)
     );
     Assert.assertEquals(200, response.getStatus());
     EasyMock.verify(segmentsMetadataManager, inventoryView, server);
@@ -799,7 +799,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(interval, null, null)
     );
     Assert.assertEquals(500, response.getStatus());
     EasyMock.verify(segmentsMetadataManager, inventoryView, server);
@@ -818,7 +818,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), null)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), null, null)
     );
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
@@ -832,7 +832,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null)
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null, null)
     );
     Assert.assertEquals(400, response.getStatus());
   }
@@ -844,7 +844,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), ImmutableSet.of())
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), ImmutableSet.of(), null)
     );
     Assert.assertEquals(400, response.getStatus());
   }
@@ -856,7 +856,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, ImmutableSet.of())
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, ImmutableSet.of(), null)
     );
     Assert.assertEquals(400, response.getStatus());
   }
@@ -1018,7 +1018,8 @@ public class DataSourcesResourceTest
             null,
             segmentIds.stream()
                       .map(SegmentId::toString)
-                      .collect(Collectors.toSet())
+                      .collect(Collectors.toSet()),
+            null
         );
 
     DataSourcesResource dataSourcesResource = createResource();
@@ -1047,7 +1048,8 @@ public class DataSourcesResourceTest
             null,
             segmentIds.stream()
                       .map(SegmentId::toString)
-                      .collect(Collectors.toSet())
+                      .collect(Collectors.toSet()),
+            null
         );
 
     DataSourcesResource dataSourcesResource = createResource();
@@ -1078,7 +1080,8 @@ public class DataSourcesResourceTest
             null,
             segmentIds.stream()
                       .map(SegmentId::toString)
-                      .collect(Collectors.toSet())
+                      .collect(Collectors.toSet()),
+            null
         );
 
     DataSourcesResource dataSourcesResource =
@@ -1098,7 +1101,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null, null);
 
     DataSourcesResource dataSourcesResource = createResource();
     prepareRequestForAudit();
@@ -1118,7 +1121,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null, null);
 
     DataSourcesResource dataSourcesResource = createResource();
     prepareRequestForAudit();
@@ -1139,7 +1142,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null, null);
 
     DataSourcesResource dataSourcesResource =
         createResource();
@@ -1157,7 +1160,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null, null);
     DataSourcesResource dataSourcesResource = createResource();
     prepareRequestForAudit();
 
@@ -1189,7 +1192,7 @@ public class DataSourcesResourceTest
         createResource();
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null, null);
 
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
     Assert.assertEquals(400, response.getStatus());
@@ -1203,7 +1206,7 @@ public class DataSourcesResourceTest
         createResource();
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-01/P1D"), ImmutableSet.of());
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-01/P1D"), ImmutableSet.of(), null);
 
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
     Assert.assertEquals(400, response.getStatus());

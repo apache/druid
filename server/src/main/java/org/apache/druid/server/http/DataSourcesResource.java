@@ -217,10 +217,14 @@ public class DataSourcesResource
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
-
         final Interval interval = payload.getInterval();
+        final List<String> versions = payload.getVersions();
         if (interval != null) {
-          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+          if (versions != null) {
+            return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval, versions);
+          } else {
+            return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+          }
         } else {
           final Set<String> segmentIds = payload.getSegmentIds();
           if (segmentIds == null || segmentIds.isEmpty()) {
@@ -266,9 +270,14 @@ public class DataSourcesResource
     } else {
       SegmentUpdateOperation operation = () -> {
         final Interval interval = payload.getInterval();
+        final List<String> versions = payload.getVersions();
         final int numUpdatedSegments;
         if (interval != null) {
-          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+          if (versions != null) {
+            numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, versions);
+          } else {
+            numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+          }
         } else {
           final Set<SegmentId> segmentIds =
               payload.getSegmentIds()
@@ -995,15 +1004,18 @@ public class DataSourcesResource
   {
     private final Interval interval;
     private final Set<String> segmentIds;
+    private final List<String> versions;
 
     @JsonCreator
     public MarkDataSourceSegmentsPayload(
         @JsonProperty("interval") Interval interval,
-        @JsonProperty("segmentIds") Set<String> segmentIds
+        @JsonProperty("segmentIds") Set<String> segmentIds,
+        @JsonProperty("versions") List<String> versions
     )
     {
       this.interval = interval;
       this.segmentIds = segmentIds;
+      this.versions = versions;
     }
 
     @JsonProperty
@@ -1018,9 +1030,15 @@ public class DataSourcesResource
       return segmentIds;
     }
 
+    @JsonProperty
+    public List<String> getVersions()
+    {
+      return versions;
+    }
+
     public boolean isValid()
     {
-      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty()); // fixme
     }
   }
 }

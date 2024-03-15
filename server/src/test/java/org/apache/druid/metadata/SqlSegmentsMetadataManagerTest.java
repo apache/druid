@@ -41,6 +41,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -590,6 +591,156 @@ public class SqlSegmentsMetadataManagerTest
   }
 
   @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsInEternityIntervalWithVersions() throws Exception
+  {
+    publishWikiSegments();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z"
+    );
+
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-16T20:19:12.565Z"
+    );
+
+    // Overshadowed by koalaSegment2
+    final DataSegment koalaSegment3 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z"
+    );
+
+    publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3);
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+    Assert.assertEquals(
+        2,
+        sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(
+            DS.KOALA,
+            Intervals.ETERNITY,
+            ImmutableList.of("2017-10-15T20:19:12.565Z", "2017-10-16T20:19:12.565Z")
+        )
+    );
+    sqlSegmentsMetadataManager.poll();
+
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment1, koalaSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsInFiniteIntervalWithVersions() throws Exception
+  {
+    publishWikiSegments();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z"
+    );
+
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-16T20:19:12.565Z"
+    );
+
+    // Overshadowed by koalaSegment2
+    final DataSegment koalaSegment3 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z"
+    );
+
+    publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3);
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+    Assert.assertEquals(
+        2,
+        sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(
+            DS.KOALA,
+            Intervals.of("2017-10-15/2017-10-18"),
+            ImmutableList.of("2017-10-15T20:19:12.565Z", "2017-10-16T20:19:12.565Z")
+        )
+    );
+    sqlSegmentsMetadataManager.poll();
+
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment1, koalaSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonExistentVersions() throws Exception
+  {
+    publishWikiSegments();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z"
+    );
+
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-16T20:19:12.565Z"
+    );
+
+    // Overshadowed by koalaSegment2
+    final DataSegment koalaSegment3 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z"
+    );
+
+    publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3);
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+    Assert.assertEquals(
+        0,
+        sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(
+            DS.KOALA,
+            Intervals.ETERNITY,
+            ImmutableList.of("foo", "bar")
+        )
+    );
+    sqlSegmentsMetadataManager.poll();
+
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
   public void testMarkAsUsedNonOvershadowedSegmentsInvalidDataSource() throws Exception
   {
     publishWikiSegments();
@@ -792,6 +943,104 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
         ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment3),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkAsUnusedSegmentsInIntervalAndVersions() throws IOException
+  {
+    publishWikiSegments();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.plus(Duration.standardDays(1)).toString();
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        v1
+    );
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        v2
+    );
+    final DataSegment koalaSegment3 = createSegment(
+        DS.KOALA,
+        "2017-10-19T00:00:00.000/2017-10-20T00:00:00.000",
+        v2
+    );
+
+    publisher.publishSegment(koalaSegment1);
+    publisher.publishSegment(koalaSegment2);
+    publisher.publishSegment(koalaSegment3);
+    final Interval theInterval = Intervals.of("2017-10-15/2017-10-18");
+
+    Assert.assertEquals(
+        2,
+        sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(
+            DS.KOALA,
+            theInterval,
+            ImmutableList.of(v1, v2)
+        )
+    );
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment3),
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+    );
+  }
+
+  @Test
+  public void testMarkAsUnusedSegmentsInIntervalAndNonExistentVersions() throws IOException
+  {
+    publishWikiSegments();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.plus(Duration.standardDays(1)).toString();
+
+    final DataSegment koalaSegment1 = createSegment(
+        DS.KOALA,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        v1
+    );
+    final DataSegment koalaSegment2 = createSegment(
+        DS.KOALA,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        v2
+    );
+    final DataSegment koalaSegment3 = createSegment(
+        DS.KOALA,
+        "2017-10-19T00:00:00.000/2017-10-20T00:00:00.000",
+        v2
+    );
+
+    publisher.publishSegment(koalaSegment1);
+    publisher.publishSegment(koalaSegment2);
+    publisher.publishSegment(koalaSegment3);
+    final Interval theInterval = Intervals.of("2017-10-15/2017-10-18");
+
+    Assert.assertEquals(
+        0,
+        sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(
+            DS.KOALA,
+            theInterval,
+            ImmutableList.of("foo", "bar", "baz")
+        )
+    );
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertEquals(
+        ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment1, koalaSegment2, koalaSegment3),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
   }
