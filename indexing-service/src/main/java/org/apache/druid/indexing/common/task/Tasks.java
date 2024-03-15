@@ -58,7 +58,6 @@ public class Tasks
   public static final String USE_SHARED_LOCK = "useSharedLock";
   public static final String TASK_LOCK_TYPE = "taskLockType";
   public static final String USE_CONCURRENT_LOCKS = "useConcurrentLocks";
-  public static final String TASK_LABEL = "taskLabel";
 
   /**
    * Context flag denoting if maximum possible values should be used to estimate

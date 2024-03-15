@@ -304,7 +304,7 @@ public class CliPeon extends GuiceRunnable
               binder.install(new BroadcastSegmentLoadingModule());
             }
 
-            IndexingServiceModuleHelper.configureTaskLabelsProvider(binder);
+            IndexingServiceModuleHelper.configureTaskIdentitiesProvider(binder);
           }
 
           @Provides
