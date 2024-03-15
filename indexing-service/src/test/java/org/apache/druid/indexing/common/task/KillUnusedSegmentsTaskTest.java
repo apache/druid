@@ -90,17 +90,10 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2019-03-01/2019-04-01"),
-        null,
-        null,
-        false,
-        null,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2019-03-01/2019-04-01"))
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
@@ -141,17 +134,11 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2019-03-01/2019-04-01"),
-        null,
-        null,
-        true,
-        null,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2019-03-01/2019-04-01"))
+        .markAsUnused(true)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
@@ -203,17 +190,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018/2020"),
-        ImmutableList.of(v1, v2),
-        null,
-        false,
-        3,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018/2020"))
+        .versions(ImmutableList.of(v1, v2))
+        .batchSize(3)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
@@ -256,17 +238,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018/2020"),
-        ImmutableList.of(v1),
-        null,
-        false,
-        3,
-        2,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018/2020"))
+        .versions(ImmutableList.of(v1))
+        .batchSize(3)
+        .limit(2)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
@@ -309,17 +287,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018/2020"),
-        ImmutableList.of(now.plusDays(100).toString()),
-        null,
-        false,
-        3,
-        2,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018/2020"))
+        .versions(ImmutableList.of(now.plusDays(100).toString()))
+        .batchSize(3)
+        .limit(2)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
@@ -367,17 +341,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018/2020"),
-        ImmutableList.of(v1, v2),
-        null,
-        false,
-        null,
-        100,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018/2020"))
+        .versions(ImmutableList.of(v1, v2))
+        .limit(100)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
@@ -399,34 +368,21 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testGetInputSourceResources()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2019-03-01/2019-04-01"),
-        null,
-        null,
-        true,
-        null,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2019-03-01/2019-04-01"))
+        .markAsUnused(true)
+        .build();
     Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 
   @Test
   public void testKillBatchSizeOneAndLimit4() throws Exception
   {
-    final String version = DateTimes.nowUtc().toString();
-    final Set<DataSegment> segments = ImmutableSet.of(
-        segment1,
-        segment2,
-        segment3,
-        segment4
-    );
+    final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
     final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
 
     Assert.assertEquals(segments, announced);
-
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
@@ -435,17 +391,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        1,
-        4,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .batchSize(1)
+        .limit(4)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
@@ -509,18 +460,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
 
-
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        null,
-        null,
-        false,
-        1,
-        10,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .batchSize(1)
+        .limit(10)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
@@ -597,17 +542,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
 
-    final KillUnusedSegmentsTask task1 = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        null,
-        null,
-        false,
-        1,
-        10,
-        lastUpdatedTime1
-    );
+    final KillUnusedSegmentsTask task1 = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .batchSize(1)
+        .limit(10)
+        .maxUsedStatusLastUpdatedTime(lastUpdatedTime1)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
 
@@ -625,17 +566,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        null,
-        null,
-        false,
-        1,
-        10,
-        lastUpdatedTime2
-    );
+    final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .batchSize(1)
+        .limit(10)
+        .maxUsedStatusLastUpdatedTime(lastUpdatedTime2)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
 
@@ -709,17 +646,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
 
-    final KillUnusedSegmentsTask task1 = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        null,
-        null,
-        false,
-        1,
-        10,
-        lastUpdatedTime1
-    );
+    final KillUnusedSegmentsTask task1 = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .batchSize(1)
+        .limit(10)
+        .maxUsedStatusLastUpdatedTime(lastUpdatedTime1)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
 
@@ -737,17 +670,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         getReportedStats()
     );
 
-    final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        null,
-        null,
-        false,
-        1,
-        10,
-        lastUpdatedTime2
-    );
+    final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .batchSize(1)
+        .limit(10)
+        .maxUsedStatusLastUpdatedTime(lastUpdatedTime2)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
 
@@ -807,17 +736,14 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
 
-    final KillUnusedSegmentsTask task1 = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        ImmutableList.of(version.toString()),
-        null,
-        false,
-        1,
-        10,
-        lastUpdatedTime1
-    );
+    final KillUnusedSegmentsTask task1 = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .versions(ImmutableList.of(version.toString()))
+        .batchSize(1)
+        .limit(10)
+        .maxUsedStatusLastUpdatedTime(lastUpdatedTime1)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
     Assert.assertEquals(
@@ -835,17 +761,14 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableSet.of(segment3, segment4, segment5), new HashSet<>(observedUnusedSegments));
 
-    final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        umbrellaInterval,
-        ImmutableList.of(version.toString()),
-        null,
-        false,
-        1,
-        10,
-        lastUpdatedTime2
-    );
+    final KillUnusedSegmentsTask task2 = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(umbrellaInterval)
+        .versions(ImmutableList.of(version.toString()))
+        .batchSize(1)
+        .limit(10)
+        .maxUsedStatusLastUpdatedTime(lastUpdatedTime2)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
     Assert.assertEquals(
@@ -871,17 +794,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
     Assert.assertEquals(segments, announced);
 
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        true,
-        3,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .markAsUnused(true)
+        .batchSize(3)
+        .build();
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
@@ -903,102 +821,68 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testComputeNextBatchSizeDefault()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        null,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .build();
     Assert.assertEquals(100, task.computeNextBatchSize(50));
   }
 
   @Test
   public void testComputeNextBatchSizeWithBatchSizeLargerThanLimit()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        10,
-        5,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .batchSize(10)
+        .limit(5)
+        .build();
     Assert.assertEquals(5, task.computeNextBatchSize(0));
   }
 
   @Test
   public void testComputeNextBatchSizeWithBatchSizeSmallerThanLimit()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        5,
-        10,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .batchSize(5)
+        .limit(10)
+        .build();
     Assert.assertEquals(5, task.computeNextBatchSize(0));
   }
 
   @Test
   public void testComputeNextBatchSizeWithRemainingLessThanLimit()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        5,
-        10,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .batchSize(5)
+        .limit(10)
+        .build();
     Assert.assertEquals(3, task.computeNextBatchSize(7));
   }
 
   @Test
   public void testGetNumTotalBatchesDefault()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        null,
-        null,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .build();
     Assert.assertNull(task.getNumTotalBatches());
   }
 
   @Test
   public void testGetNumTotalBatchesWithBatchSizeLargerThanLimit()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        10,
-        5,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .batchSize(10)
+        .limit(5)
+        .build();
     Assert.assertEquals(1, (int) task.getNumTotalBatches());
   }
 
@@ -1008,17 +892,11 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> new KillUnusedSegmentsTask(
-                null,
-                DATA_SOURCE,
-                Intervals.of("2018-01-01/2020-01-01"),
-                null,
-                null,
-                false,
-                10,
-                0,
-                null
-            )
+            () -> new KillUnusedSegmentsTaskBuilder()
+                .dataSource(DATA_SOURCE)
+                .interval(Intervals.of("2018-01-01/2020-01-01"))
+                .limit(0)
+                .build()
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "limit[0] must be a positive integer."
@@ -1032,17 +910,11 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> new KillUnusedSegmentsTask(
-                null,
-                DATA_SOURCE,
-                Intervals.of("2018-01-01/2020-01-01"),
-                null,
-                null,
-                false,
-                0,
-                10,
-                null
-            )
+            () -> new KillUnusedSegmentsTaskBuilder()
+                .dataSource(DATA_SOURCE)
+                .interval(Intervals.of("2018-01-01/2020-01-01"))
+                .batchSize(0)
+                .build()
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "batchSize[0] must be a positive integer."
@@ -1056,17 +928,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> new KillUnusedSegmentsTask(
-                null,
-                DATA_SOURCE,
-                Intervals.of("2018-01-01/2020-01-01"),
-                null,
-                null,
-                true,
-                10,
-                10,
-                null
-            )
+            () -> new KillUnusedSegmentsTaskBuilder()
+                .dataSource(DATA_SOURCE)
+                .interval(Intervals.of("2018-01-01/2020-01-01"))
+                .markAsUnused(true)
+                .batchSize(10)
+                .limit(10)
+                .build()
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "limit[10] cannot be provided when markAsUnused is enabled."
@@ -1075,22 +943,17 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testInvalidVersionWithMarkAsUnused()
+  public void testInvalidVersionsWithMarkAsUnused()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> new KillUnusedSegmentsTask(
-                null,
-                DATA_SOURCE,
-                Intervals.of("2018-01-01/2020-01-01"),
-                ImmutableList.of("foo"),
-                null,
-                true,
-                10,
-                null,
-                null
-            )
+            () -> new KillUnusedSegmentsTaskBuilder()
+                .dataSource(DATA_SOURCE)
+                .interval(Intervals.of("2018-01-01/2020-01-01"))
+                .markAsUnused(true)
+                .versions(ImmutableList.of("foo"))
+                .build()
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "versions[[foo]] cannot be provided when markAsUnused is enabled."
@@ -1101,17 +964,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testGetNumTotalBatchesWithBatchSizeSmallerThanLimit()
   {
-    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
-        null,
-        DATA_SOURCE,
-        Intervals.of("2018-01-01/2020-01-01"),
-        null,
-        null,
-        false,
-        5,
-        10,
-        null
-    );
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018-01-01/2020-01-01"))
+        .versions(ImmutableList.of("foo"))
+        .batchSize(5)
+        .limit(10)
+        .build();
     Assert.assertEquals(2, (int) task.getNumTotalBatches());
   }
 
@@ -1131,6 +990,88 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(KillTaskReport.REPORT_KEY, deserializedKillReport.getReportKey());
     Assert.assertEquals(taskId, deserializedKillReport.getTaskId());
     Assert.assertEquals(stats, deserializedKillReport.getPayload());
+  }
+
+  private static class KillUnusedSegmentsTaskBuilder
+  {
+    private String id;
+    private String dataSource;
+    private Interval interval;
+    private List<String> versions;
+    private Map<String, Object> context;
+    private Boolean markAsUnused;
+    private Integer batchSize;
+    private Integer limit;
+    private DateTime maxUsedStatusLastUpdatedTime;
+
+    public KillUnusedSegmentsTaskBuilder id(String id)
+    {
+      this.id = id;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder dataSource(String dataSource)
+    {
+      this.dataSource = dataSource;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder interval(Interval interval)
+    {
+      this.interval = interval;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder versions(List<String> versions)
+    {
+      this.versions = versions;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder context(Map<String, Object> context)
+    {
+      this.context = context;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder markAsUnused(Boolean markAsUnused)
+    {
+      this.markAsUnused = markAsUnused;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder batchSize(Integer batchSize)
+    {
+      this.batchSize = batchSize;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder limit(Integer limit)
+    {
+      this.limit = limit;
+      return this;
+    }
+
+    public KillUnusedSegmentsTaskBuilder maxUsedStatusLastUpdatedTime(DateTime maxUsedStatusLastUpdatedTime)
+    {
+      this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
+      return this;
+    }
+
+    public KillUnusedSegmentsTask build()
+    {
+      return new KillUnusedSegmentsTask(
+          id,
+          dataSource,
+          interval,
+          versions,
+          context,
+          markAsUnused,
+          batchSize,
+          limit,
+          maxUsedStatusLastUpdatedTime
+      );
+    }
   }
 
   private KillTaskReport.Stats getReportedStats()
