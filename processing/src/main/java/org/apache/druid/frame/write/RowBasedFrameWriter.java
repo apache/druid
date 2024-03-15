@@ -299,13 +299,9 @@ public class RowBasedFrameWriter implements FrameWriter
                                       .column(signature.getColumnName(i))
                                       .build();
       }
-      catch (RuntimeException e) {
+      catch (Exception e) {
         throw new FrameFieldWriterException(signature.getColumnName(i), e.getMessage(), e.getCause());
       }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
 
       if (writeResult < 0) {
         // Reset to beginning of loop.
