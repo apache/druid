@@ -37,13 +37,13 @@ public class GoogleTimestampVersionedDataFinderTest
 
     // object for directory prefix/dir/0/
     final GoogleStorageObjectMetadata storageObject1 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "//", 0);
-    storageObject1.setLastUpdateTime(System.currentTimeMillis());
+    storageObject1.setLastUpdateTimeMillis(System.currentTimeMillis());
     final GoogleStorageObjectMetadata storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v1", 1);
-    storageObject2.setLastUpdateTime(System.currentTimeMillis());
+    storageObject2.setLastUpdateTimeMillis(System.currentTimeMillis());
     final GoogleStorageObjectMetadata storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v2", 1);
-    storageObject3.setLastUpdateTime(System.currentTimeMillis() + 100);
+    storageObject3.setLastUpdateTimeMillis(System.currentTimeMillis() + 100);
     final GoogleStorageObjectMetadata storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/other", 4);
-    storageObject4.setLastUpdateTime(System.currentTimeMillis() + 100);
+    storageObject4.setLastUpdateTimeMillis(System.currentTimeMillis() + 100);
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
     final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);
@@ -61,13 +61,13 @@ public class GoogleTimestampVersionedDataFinderTest
 
     // object for directory prefix/dir/0/
     final GoogleStorageObjectMetadata storageObject1 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/", 0);
-    storageObject1.setLastUpdateTime(System.currentTimeMillis());
+    storageObject1.setLastUpdateTimeMillis(System.currentTimeMillis());
     final GoogleStorageObjectMetadata storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v1", 1);
-    storageObject2.setLastUpdateTime(System.currentTimeMillis());
+    storageObject2.setLastUpdateTimeMillis(System.currentTimeMillis());
     final GoogleStorageObjectMetadata storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v2", 1);
-    storageObject3.setLastUpdateTime(System.currentTimeMillis() + 100);
+    storageObject3.setLastUpdateTimeMillis(System.currentTimeMillis() + 100);
     final GoogleStorageObjectMetadata storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "other", 4);
-    storageObject4.setLastUpdateTime(System.currentTimeMillis() + 100);
+    storageObject4.setLastUpdateTimeMillis(System.currentTimeMillis() + 100);
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
     final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);

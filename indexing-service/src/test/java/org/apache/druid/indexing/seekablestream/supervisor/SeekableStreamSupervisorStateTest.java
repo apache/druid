@@ -79,7 +79,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -2074,7 +2073,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.verify(executorService, spec);
   }
 
-  private void expectEmitterSupervisor(boolean suspended) throws EntryExistsException
+  private void expectEmitterSupervisor(boolean suspended)
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();

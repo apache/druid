@@ -17,29 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.query.rowsandcols;
 
-import java.util.Collection;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumnsTest;
+import org.apache.druid.segment.StorageAdapter;
 
-/**
- * Exception thrown by {@link SegmentsMetadataManager} when a segment id is unknown.
- *
- * @deprecated Usages of this exception will be replaced by the new
- * {@link org.apache.druid.error.DruidException} in a future release.
- */
-@Deprecated
-public class UnknownSegmentIdsException extends Exception
+import java.util.function.Function;
+
+public class StorageAdapterRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-  private final Collection<String> unknownSegmentIds;
-
-  UnknownSegmentIdsException(Collection<String> segmentIds)
+  public StorageAdapterRowsAndColumnsTest()
   {
-    super("Cannot find segment ids " + segmentIds);
-    this.unknownSegmentIds = segmentIds;
+    super(StorageAdapterRowsAndColumns.class);
   }
 
-  public Collection<String> getUnknownSegmentIds()
+  public static Function<MapOfColumnsRowsAndColumns, StorageAdapterRowsAndColumns> MAKER = input -> {
+    return buildFrame(input);
+  };
+
+  private static StorageAdapterRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    return unknownSegmentIds;
+    FrameRowsAndColumns fRAC = FrameRowsAndColumnsTest.buildFrame(input);
+    return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
   }
 }

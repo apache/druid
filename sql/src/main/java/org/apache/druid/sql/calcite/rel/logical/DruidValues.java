@@ -32,7 +32,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
 import org.apache.druid.sql.calcite.rel.CostEstimates;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.table.InlineTable;
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 /**
  * {@link DruidLogicalNode} convention node for {@link LogicalValues} plan node.
  */
-public class DruidValues extends LogicalValues implements DruidLogicalNode, InputDescProducer
+public class DruidValues extends LogicalValues implements DruidLogicalNode, SourceDescProducer
 {
 
   private InlineTable inlineTable;
@@ -72,12 +72,12 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode, Inpu
   }
 
   @Override
-  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
     if (inlineTable == null) {
       inlineTable = buildInlineTable(plannerContext);
     }
-    return new InputDesc(inlineTable.getDataSource(), inlineTable.getRowSignature());
+    return new SourceDesc(inlineTable.getDataSource(), inlineTable.getRowSignature());
   }
 
   private InlineTable buildInlineTable(PlannerContext plannerContext)

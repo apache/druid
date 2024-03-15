@@ -99,7 +99,7 @@ public class GcsTestUtil
     );
   }
 
-  public void deleteFileFromGcs(String gcsObjectName) throws IOException
+  public void deleteFileFromGcs(String gcsObjectName)
   {
     LOG.info("Deleting object %s at path %s in bucket %s", gcsObjectName, GOOGLE_PREFIX, GOOGLE_BUCKET);
     googleStorageClient.delete(GOOGLE_BUCKET, GOOGLE_PREFIX + "/" + gcsObjectName);
