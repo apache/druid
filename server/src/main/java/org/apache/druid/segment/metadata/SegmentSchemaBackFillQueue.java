@@ -107,15 +107,6 @@ public class SegmentSchemaBackFillQueue
     );
   }
 
-  private void add(SegmentSchemaMetadataPlus plus)
-  {
-    queue.add(new SegmentSchemaMetadataPlus(
-        plus.getSegmentId(),
-        plus.getFingerprint(),
-        plus.getSegmentSchemaMetadata())
-    );
-  }
-
   public boolean isEnabled()
   {
     return executor != null && !executor.isShutdown();
@@ -123,7 +114,7 @@ public class SegmentSchemaBackFillQueue
 
   private void scheduleQueuePoll(long delay)
   {
-    executor.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
+    executor.scheduleAtFixedRate(this::processBatchesDue, delay, delay, TimeUnit.MILLISECONDS);
   }
 
   public void processBatchesDue()
