@@ -145,7 +145,7 @@ public class TestDerbyConnector extends DerbyConnector
   }
 
   /**
-   * A wrapper class for queries on the segments table.
+   * A wrapper class for updating the segments table.
    */
   public static class SegmentsTable
   {
