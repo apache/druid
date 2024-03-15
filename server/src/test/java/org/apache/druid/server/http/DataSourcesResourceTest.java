@@ -1150,6 +1150,24 @@ public class DataSourcesResourceTest
   }
 
   @Test
+  public void testMarkAsUnusedSegmentsInIntervalNoDataSource()
+  {
+    final Interval theInterval = Intervals.of("2010-01-01/P1D");
+    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval)).andReturn(0).once();
+    EasyMock.replay(segmentsMetadataManager, inventoryView, server);
+
+    final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(theInterval, null);
+    DataSourcesResource dataSourcesResource = createResource();
+    prepareRequestForAudit();
+
+    Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+    EasyMock.verify(segmentsMetadataManager);
+  }
+
+  @Test
   public void testMarkSegmentsAsUnusedNullPayload()
   {
     DataSourcesResource dataSourcesResource =
