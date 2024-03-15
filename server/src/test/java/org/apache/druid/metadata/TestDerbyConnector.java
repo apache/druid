@@ -137,7 +137,14 @@ public class TestDerbyConnector extends DerbyConnector
       return dbTables;
     }
 
-    public Integer updateSegmentsTable(String sqlFormat, Object... args)
+    /**
+     * Updates the segments table with the supplied SQL query format and arguments.
+     *
+     * @param sqlFormat the SQL query format with %s placeholder for the table name and ? for each query {@code args}
+     * @param args the arguments to be substituted into the SQL query
+     * @return the number of rows affected by the update operation
+     */
+    public int updateSegmentsTable(String sqlFormat, Object... args)
     {
       return this.getConnector().retryWithHandle(
           handle -> handle.update(

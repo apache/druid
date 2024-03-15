@@ -383,7 +383,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
           1,
-          (int) derbyConnectorRule.updateSegmentsTable(
+          derbyConnectorRule.updateSegmentsTable(
               "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",
               usedStatusLastUpdatedTime.toString(),
               segment.getId().toString()
