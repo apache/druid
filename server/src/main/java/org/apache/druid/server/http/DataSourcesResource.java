@@ -209,37 +209,41 @@ public class DataSourcesResource
       MarkDataSourceSegmentsPayload payload
   )
   {
-    SegmentUpdateOperation operation = () -> {
-      final Interval interval = payload.getInterval();
-      if (interval != null) {
-        return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
-      } else {
-        final Set<String> segmentIds = payload.getSegmentIds();
-        if (segmentIds == null || segmentIds.isEmpty()) {
-          return 0;
-        }
+    if (payload == null || !payload.isValid()) {
+      log.warn("Invalid request payload: [%s]", payload);
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .build();
+    } else {
+      SegmentUpdateOperation operation = () -> {
 
-        // Validate segmentIds
-        final List<String> invalidSegmentIds = new ArrayList<>();
-        for (String segmentId : segmentIds) {
-          if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
-            invalidSegmentIds.add(segmentId);
+        final Interval interval = payload.getInterval();
+        if (interval != null) {
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+        } else {
+          final Set<String> segmentIds = payload.getSegmentIds();
+          if (segmentIds == null || segmentIds.isEmpty()) {
+            return 0;
           }
-        }
-        if (!invalidSegmentIds.isEmpty()) {
-          throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
-        }
 
-        return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
-      }
-    };
+          // Validate segmentIds
+          final List<String> invalidSegmentIds = new ArrayList<>();
+          for (String segmentId : segmentIds) {
+            if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
+              invalidSegmentIds.add(segmentId);
+            }
+          }
+          if (!invalidSegmentIds.isEmpty()) {
+            throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
+          }
 
-    return performSegmentUpdate(
-        dataSourceName,
-        payload,
-        operation,
-        false // datasource may have previously had all segments marked unused, in which case it is not queryable
-    );
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+        }
+      };
+
+      return performSegmentUpdate(dataSourceName, operation);
+    }
   }
 
   @POST
@@ -253,63 +257,48 @@ public class DataSourcesResource
       @Context final HttpServletRequest req
   )
   {
-    SegmentUpdateOperation operation = () -> {
-      final Interval interval = payload.getInterval();
-      final int numUpdatedSegments;
-      if (interval != null) {
-        numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
-      } else {
-        final Set<SegmentId> segmentIds =
-            payload.getSegmentIds()
-                   .stream()
-                   .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
-                   .filter(Objects::nonNull)
-                   .collect(Collectors.toSet());
-
-        // Filter out segmentIds that do not belong to this datasource
-        numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
-            segmentIds.stream()
-                      .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
-                      .collect(Collectors.toSet())
-        );
-      }
-      auditManager.doAudit(
-          AuditEntry.builder()
-                    .key(dataSourceName)
-                    .type("segment.markUnused")
-                    .payload(payload)
-                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
-                    .build()
-      );
-      return numUpdatedSegments;
-    };
-    return performSegmentUpdate(dataSourceName, payload, operation, true);
-  }
-
-  private Response performSegmentUpdate(
-      String dataSourceName,
-      MarkDataSourceSegmentsPayload payload,
-      SegmentUpdateOperation operation,
-      boolean validateDatasourceIsQueryable
-  )
-  {
     if (payload == null || !payload.isValid()) {
       log.warn("Invalid request payload: [%s]", payload);
       return Response
           .status(Response.Status.BAD_REQUEST)
           .entity("Invalid request payload, either interval or segmentIds array must be specified")
           .build();
-    }
+    } else if (getQueryableDataSource(dataSourceName) == null) {
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+    } else {
+      SegmentUpdateOperation operation = () -> {
+        final Interval interval = payload.getInterval();
+        final int numUpdatedSegments;
+        if (interval != null) {
+          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        } else {
+          final Set<SegmentId> segmentIds =
+              payload.getSegmentIds()
+                  .stream()
+                  .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
+                  .filter(Objects::nonNull)
+                  .collect(Collectors.toSet());
 
-    if (validateDatasourceIsQueryable) {
-      final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
-      if (dataSource == null) {
-        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
-      }
+          // Filter out segmentIds that do not belong to this datasource
+          numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
+              segmentIds.stream()
+                  .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
+                  .collect(Collectors.toSet())
+          );
+        }
+        auditManager.doAudit(
+            AuditEntry.builder()
+                .key(dataSourceName)
+                .type("segment.markUnused")
+                .payload(payload)
+                .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                .build()
+        );
+        return numUpdatedSegments;
+      };
+      return performSegmentUpdate(dataSourceName, operation);
     }
-
-    return performSegmentUpdate(dataSourceName, operation);
   }
 
   private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
