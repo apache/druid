@@ -332,6 +332,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/unneededEternityTombstone/count`|Number of non-overshadowed eternity tombstones marked as unused.| |Varies|
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
+|`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
 |`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|

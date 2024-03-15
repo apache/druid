@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -233,6 +234,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
+      @Nullable List<String> versions,
       @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
@@ -244,6 +246,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .retrieveUnusedSegments(
                                                dataSource,
                                                Collections.singletonList(interval),
+                                               versions,
                                                limit,
                                                null,
                                                null,
@@ -255,8 +258,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedStatusLastUpdatedTime[%s].",
-             matchingSegments.size(), dataSource, interval, maxUsedStatusLastUpdatedTime);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] and versions[%s] with maxUsedStatusLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, versions, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
   }
 
@@ -2122,6 +2125,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptySet();
     }
 
+    final String datasource = replaceSegments.iterator().next().getDataSource();
+
     // For each replace interval, find the number of core partitions and total partitions
     final Map<Interval, Integer> intervalToNumCorePartitions = new HashMap<>();
     final Map<Interval, Integer> intervalToCurrentPartitionNum = new HashMap<>();
@@ -2142,7 +2147,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Map<String, String> upgradeSegmentToLockVersion
         = getAppendSegmentsCommittedDuringTask(handle, taskId);
     final List<DataSegment> segmentsToUpgrade
-        = retrieveSegmentsById(handle, upgradeSegmentToLockVersion.keySet());
+        = retrieveSegmentsById(handle, datasource, upgradeSegmentToLockVersion.keySet());
 
     if (segmentsToUpgrade.isEmpty()) {
       return Collections.emptySet();
@@ -2329,30 +2334,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private List<DataSegment> retrieveSegmentsById(Handle handle, Set<String> segmentIds)
+  private List<DataSegment> retrieveSegmentsById(Handle handle, String datasource, Set<String> segmentIds)
   {
     if (segmentIds.isEmpty()) {
       return Collections.emptyList();
     }
 
-    final String segmentIdCsv = segmentIds.stream()
-                                          .map(id -> "'" + id + "'")
-                                          .collect(Collectors.joining(","));
-    ResultIterator<DataSegment> resultIterator = handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT payload FROM %s WHERE id in (%s)",
-                dbTables.getSegmentsTable(), segmentIdCsv
-            )
-        )
-        .setFetchSize(connector.getStreamingFetchSize())
-        .map(
-            (index, r, ctx) ->
-                JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class)
-        )
-        .iterator();
-
-    return Lists.newArrayList(resultIterator);
+    return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                   .retrieveSegmentsById(datasource, segmentIds)
+                                   .stream()
+                                   .map(DataSegmentPlus::getDataSegment)
+                                   .collect(Collectors.toList());
   }
 
   private String buildSqlToInsertSegments()

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
@@ -67,13 +66,8 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 {
   private static final Logger log = new Logger(RetrieveUsedSegmentsAction.class);
 
-  @JsonIgnore
   private final String dataSource;
-
-  @JsonIgnore
   private final List<Interval> intervals;
-
-  @JsonIgnore
   private final Segments visibility;
 
   @JsonCreator
