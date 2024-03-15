@@ -62,7 +62,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
@@ -83,7 +82,6 @@ import java.util.stream.IntStream;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.mock;
 
-@RunWith(Enclosed.class)
 public class ParallelIndexSupervisorTaskTest
 {
   @RunWith(Parameterized.class)

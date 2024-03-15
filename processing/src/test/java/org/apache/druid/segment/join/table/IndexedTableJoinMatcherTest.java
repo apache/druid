@@ -41,9 +41,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -52,12 +50,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 
-@RunWith(Enclosed.class)
 public class IndexedTableJoinMatcherTest
 {
   private static final int SIZE = 3;
 
-  @RunWith(Enclosed.class)
   public static class ConditionMatcherFactoryTest
   {
     public static class MakeLongProcessorTest extends InitializedNullHandlingTest

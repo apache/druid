@@ -24,15 +24,12 @@ import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.util.Set;
 
-@RunWith(Enclosed.class)
 public class ConnectionUriUtilsTest
 {
   public static class ThrowIfURLHasNotAllowedPropertiesTest
