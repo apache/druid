@@ -75,7 +75,7 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean featureAvailable(final EngineFeature feature, final PlannerContext plannerContext)
+  public boolean featureAvailable(final EngineFeature feature)
   {
     switch (feature) {
       case CAN_SELECT:
@@ -85,6 +85,7 @@ public class IngestionTestSqlEngine implements SqlEngine
       case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
       case UNNEST:
+      case GROUPBY_IMPLICITLY_SORTS:
         return false;
       case CAN_INSERT:
       case CAN_REPLACE:

@@ -14,6 +14,7 @@
       "tutorials/tutorial-rollup",
       "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
+      "tutorials/tutorial-append-data",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
       "tutorials/tutorial-delete-data",
@@ -122,6 +123,7 @@
         "label": "Druid SQL",
         "items": [
           "querying/sql",
+          "querying/sql-functions",
           "querying/tips-good-queries",
           "querying/query-deep-storage",
           "querying/sql-data-types",
@@ -132,7 +134,6 @@
           "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
-          "querying/sql-functions",
           "querying/sql-query-context",
           "querying/sql-metadata-tables",
           "querying/sql-translation"

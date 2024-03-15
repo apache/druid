@@ -493,7 +493,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         new ArrayList<>()
     );
 
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).withBaggage(closeable);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeable);
 
     // All frames are generated with the same signature therefore we can attach the row signature
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
