@@ -68,6 +68,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -205,8 +206,8 @@ public class DataSourcesResource
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedNonOvershadowedSegments(
-      @PathParam("dataSourceName") String dataSourceName,
-      MarkDataSourceSegmentsPayload payload
+      @PathParam("dataSourceName") final String dataSourceName,
+      final MarkDataSourceSegmentsPayload payload
   )
   {
     if (payload == null || !payload.isValid()) {
@@ -1030,7 +1031,16 @@ public class DataSourcesResource
 
     public boolean isValid()
     {
-      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty()); // fixme
+      if (interval == null && CollectionUtils.isNullOrEmpty(segmentIds)) {
+        return false;
+      }
+      if (interval != null && segmentIds != null) {
+        return false;
+      }
+      if (!CollectionUtils.isNullOrEmpty(versions) && interval == null) {
+        return false;
+      }
+      return true;
     }
   }
 }

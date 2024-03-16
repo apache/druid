@@ -735,7 +735,7 @@ public class DataSourcesResourceTest
   {
     Interval interval = Intervals.of("2010-01-22/P1D");
     int numUpdatedSegments =
-        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval));
+        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval), EasyMock.isNull());
     EasyMock.expect(numUpdatedSegments).andReturn(3).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -753,7 +753,7 @@ public class DataSourcesResourceTest
   {
     Interval interval = Intervals.of("2010-01-22/P1D");
     int numUpdatedSegments =
-        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval));
+        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval), EasyMock.isNull());
     EasyMock.expect(numUpdatedSegments).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -791,7 +791,7 @@ public class DataSourcesResourceTest
   {
     Interval interval = Intervals.of("2010-01-22/P1D");
     int numUpdatedSegments =
-        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval));
+        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval), EasyMock.isNull());
     EasyMock.expect(numUpdatedSegments).andThrow(new RuntimeException("Error!")).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -810,7 +810,7 @@ public class DataSourcesResourceTest
   {
     Interval interval = Intervals.of("2010-01-22/P1D");
     int numUpdatedSegments =
-        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval));
+        segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(EasyMock.eq("datasource1"), EasyMock.eq(interval), EasyMock.isNull());
     EasyMock.expect(numUpdatedSegments).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
@@ -1097,7 +1097,7 @@ public class DataSourcesResourceTest
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
 
-    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval)).andReturn(1).once();
+    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval, null)).andReturn(1).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
@@ -1117,7 +1117,7 @@ public class DataSourcesResourceTest
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
 
-    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval)).andReturn(0).once();
+    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval, null)).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
@@ -1136,7 +1136,7 @@ public class DataSourcesResourceTest
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
 
-    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval))
+    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval, null))
             .andThrow(new RuntimeException("Exception occurred"))
             .once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
@@ -1156,7 +1156,7 @@ public class DataSourcesResourceTest
   public void testMarkAsUnusedSegmentsInIntervalNoDataSource()
   {
     final Interval theInterval = Intervals.of("2010-01-01/P1D");
-    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval)).andReturn(0).once();
+    EasyMock.expect(segmentsMetadataManager.markAsUnusedSegmentsInInterval("datasource1", theInterval, null)).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
