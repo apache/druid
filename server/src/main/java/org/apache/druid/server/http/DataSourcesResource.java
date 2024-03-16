@@ -211,7 +211,6 @@ public class DataSourcesResource
   )
   {
     if (payload == null || !payload.isValid()) {
-      log.warn("Invalid request payload: [%s]", payload);
       return Response
           .status(Response.Status.BAD_REQUEST)
           .entity("Invalid request payload, either interval or segmentIds array must be specified")
@@ -259,7 +258,6 @@ public class DataSourcesResource
   )
   {
     if (payload == null || !payload.isValid()) {
-      log.warn("Invalid request payload: [%s]", payload);
       return Response
           .status(Response.Status.BAD_REQUEST)
           .entity("Invalid request payload, either interval or segmentIds array must be specified")
@@ -993,7 +991,7 @@ public class DataSourcesResource
   }
 
   @VisibleForTesting
-  protected static class MarkDataSourceSegmentsPayload
+  static class MarkDataSourceSegmentsPayload
   {
     private final Interval interval;
     private final Set<String> segmentIds;

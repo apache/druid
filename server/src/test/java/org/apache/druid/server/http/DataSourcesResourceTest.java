@@ -886,13 +886,13 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidVersionsNoInterval()
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidVersionsWithoutInterval()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, ImmutableSet.of(), ImmutableList.of("v1", "v2"))
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null, ImmutableList.of("v1", "v2"))
     );
     Assert.assertEquals(400, response.getStatus());
   }
