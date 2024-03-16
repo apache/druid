@@ -206,9 +206,8 @@ Marks the state of a group of segments as unused, using an array of segment IDs 
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
-Optionally, specify an array of segment versions with interval.
-
-Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+Optionally, specify an array of segment versions with interval. Druid updates only the segments completely contained
+within the specified interval that match the optional list of versions; partially overlapping segments are not affected.
 
 #### URL
 
@@ -309,9 +308,8 @@ Marks the state of a group of segments as used, using an array of segment IDs or
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
-Optionally, specify an array of segment versions with interval.
-
-Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+Optionally, specify an array of segment versions with interval. Druid updates only the segments completely contained
+within the specified interval that match the optional list of versions; partially overlapping segments are not affected.
 
 #### URL
 
