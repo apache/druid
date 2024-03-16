@@ -939,7 +939,7 @@ public class ControllerImpl implements Controller
     return TaskReport.buildTaskReports(
         new MSQTaskReport(
             id(),
-            taskIdentitiesProvider.getTaskMetricTags(task),
+            null,
             new MSQTaskReportPayload(
                 makeStatusReport(
                     TaskState.RUNNING,
