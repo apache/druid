@@ -118,6 +118,9 @@ public class DataSourcesResource
   private final DruidCoordinator coordinator;
   private final AuditManager auditManager;
 
+  private final String invalidErrMsg = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
+                                       + " Optionally, include 'versions' only when 'interval' is provided.";
+
   @Inject
   public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
@@ -213,7 +216,7 @@ public class DataSourcesResource
     if (payload == null || !payload.isValid()) {
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .entity(invalidErrMsg)
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
@@ -260,8 +263,7 @@ public class DataSourcesResource
     if (payload == null || !payload.isValid()) {
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity("Invalid request payload, either 'interval' or 'segmentIds' array must be specified. 'versions' array "
-                  + "may be optionally specified only when 'interval' is provided.")
+          .entity(invalidErrMsg)
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
@@ -567,9 +569,9 @@ public class DataSourcesResource
 
   private static class SegmentsLoadStatistics
   {
-    private int numPublishedSegments;
-    private int numUnavailableSegments;
-    private int numLoadedSegments;
+    private final int numPublishedSegments;
+    private final int numUnavailableSegments;
+    private final int numLoadedSegments;
 
     SegmentsLoadStatistics(
         int numPublishedSegments,
@@ -991,6 +993,10 @@ public class DataSourcesResource
     return false;
   }
 
+  /**
+   * Either {@code interval} or {@code segmentIds} array must be specified, but not both.
+   * {@code versions} may be optionally specified only when {@code interval} is provided.
+   */
   @VisibleForTesting
   static class MarkDataSourceSegmentsPayload
   {
