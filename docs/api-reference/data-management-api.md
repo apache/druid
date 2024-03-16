@@ -206,6 +206,8 @@ Marks the state of a group of segments as unused, using an array of segment IDs 
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
+Optionally, specify an array of segment versions with interval.
+
 Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
 #### URL
@@ -214,12 +216,13 @@ Druid only updates the segments completely contained within the specified interv
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts one of the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
 |Property|Description|Example|
 |----------|-------------|---------|
 |`interval`|ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
 |`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
+|`versions`|Array of segment versions. Must be provided with `interval`.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 
@@ -306,6 +309,8 @@ Marks the state of a group of segments as used, using an array of segment IDs or
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
+Optionally, specify an array of segment versions with interval.
+
 Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
 #### URL
@@ -314,12 +319,13 @@ Druid only updates the segments completely contained within the specified interv
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts one of the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
 |Property|Description|Example|
 |----------|-------------|---------|
 |`interval`| ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
 |`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
+|`versions`|Array of segment versions. Must be provided with an `interval`.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 
