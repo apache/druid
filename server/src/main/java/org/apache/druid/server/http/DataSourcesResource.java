@@ -220,11 +220,7 @@ public class DataSourcesResource
         final Interval interval = payload.getInterval();
         final List<String> versions = payload.getVersions();
         if (interval != null) {
-          if (versions != null) {
-            return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval, versions);
-          } else {
-            return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
-          }
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval, versions);
         } else {
           final Set<String> segmentIds = payload.getSegmentIds();
           if (segmentIds == null || segmentIds.isEmpty()) {
@@ -273,11 +269,7 @@ public class DataSourcesResource
         final List<String> versions = payload.getVersions();
         final int numUpdatedSegments;
         if (interval != null) {
-          if (versions != null) {
-            numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, versions);
-          } else {
-            numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
-          }
+          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, versions);
         } else {
           final Set<SegmentId> segmentIds =
               payload.getSegmentIds()
