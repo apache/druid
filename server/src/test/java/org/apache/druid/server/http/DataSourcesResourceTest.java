@@ -826,7 +826,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidPayloadNoArguments()
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidNoArguments()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -838,7 +838,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidPayloadBothArguments()
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidBothIntervalAndSegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -850,7 +850,19 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidPayloadEmptyArray()
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidAllParamsSpecified()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2020/2030"), ImmutableSet.of("seg1"), ImmutableList.of("v1", "v2"))
+    );
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidEmptySegmentIdsArray()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -862,11 +874,26 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsNoPayload()
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidEmptyVersionsArray()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
-    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments("datasource1", null);
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null, ImmutableList.of())
+    );
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsInvalidVersionsNoInterval()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, ImmutableSet.of(), ImmutableList.of("v1", "v2"))
+    );
     Assert.assertEquals(400, response.getStatus());
   }
 

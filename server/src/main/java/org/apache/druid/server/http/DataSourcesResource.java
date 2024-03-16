@@ -1029,7 +1029,7 @@ public class DataSourcesResource
       return versions;
     }
 
-    public boolean isValid()
+    private boolean isValid()
     {
       if (interval == null && CollectionUtils.isNullOrEmpty(segmentIds)) {
         return false;
@@ -1037,10 +1037,7 @@ public class DataSourcesResource
       if (interval != null && segmentIds != null) {
         return false;
       }
-      if (!CollectionUtils.isNullOrEmpty(versions) && interval == null) {
-        return false;
-      }
-      return true;
+      return CollectionUtils.isNullOrEmpty(versions) || interval != null;
     }
   }
 }
