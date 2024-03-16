@@ -1207,7 +1207,8 @@ public class DataSourcesResourceTest
     Assert.assertEquals(400, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(
-        "Invalid request payload, either interval or segmentIds array must be specified",
+        "Invalid request payload, either 'interval' or 'segmentIds' array must be specified."
+        + " 'versions' array may be optionally specified only when 'interval' is provided.",
         response.getEntity()
     );
   }

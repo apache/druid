@@ -260,7 +260,8 @@ public class DataSourcesResource
     if (payload == null || !payload.isValid()) {
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .entity("Invalid request payload, either 'interval' or 'segmentIds' array must be specified. 'versions' array "
+                  + "may be optionally specified only when 'interval' is provided.")
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
@@ -301,7 +302,7 @@ public class DataSourcesResource
 
   private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
   {
-    log.warn("datasource not found [%s]", dataSourceName);
+    log.warn("datasource[%s] not found", dataSourceName);
     return Response.noContent().build();
   }
 
@@ -318,7 +319,7 @@ public class DataSourcesResource
           .build();
     }
     catch (Exception e) {
-      log.error(e, "Error occurred while updating segments for data source[%s]", dataSourceName);
+      log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);
       return Response
           .serverError()
           .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
@@ -999,9 +1000,9 @@ public class DataSourcesResource
 
     @JsonCreator
     public MarkDataSourceSegmentsPayload(
-        @JsonProperty("interval") Interval interval,
-        @JsonProperty("segmentIds") Set<String> segmentIds,
-        @JsonProperty("versions") List<String> versions
+        @JsonProperty("interval") @Nullable Interval interval,
+        @JsonProperty("segmentIds") @Nullable Set<String> segmentIds,
+        @JsonProperty("versions") @Nullable List<String> versions
     )
     {
       this.interval = interval;
@@ -1009,18 +1010,21 @@ public class DataSourcesResource
       this.versions = versions;
     }
 
+    @Nullable
     @JsonProperty
     public Interval getInterval()
     {
       return interval;
     }
 
+    @Nullable
     @JsonProperty
     public Set<String> getSegmentIds()
     {
       return segmentIds;
     }
 
+    @Nullable
     @JsonProperty
     public List<String> getVersions()
     {
