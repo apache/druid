@@ -37,7 +37,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -159,7 +158,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     ));
     Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments = new HashMap<>();
     pendingSegments.forEach(pendingSegment -> {
-      if (pendingSegment.getParentId() != null) {
+      if (pendingSegment.getParentId() != null
+          && !pendingSegment.getParentId().equals(pendingSegment.getId().asSegmentId().toString())) {
         upgradedPendingSegments.put(
             pendingSegment.getId(),
             pendingSegmentIdMap.get(pendingSegment.getParentId())

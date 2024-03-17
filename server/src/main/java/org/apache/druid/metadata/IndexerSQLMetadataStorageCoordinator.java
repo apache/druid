@@ -2790,9 +2790,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<PendingSegment> getAllPendingSegments(String datasource)
   {
-    connector.retryWithHandle(
-        handle -> getPendingSegmentsForIntervalWithHandle(handle, datasource, Intervals.ETERNITY);
-    )
+    return connector.retryWithHandle(
+        handle -> getPendingSegmentsForIntervalWithHandle(handle, datasource, Intervals.ETERNITY)
+    );
   }
 
   @Override
