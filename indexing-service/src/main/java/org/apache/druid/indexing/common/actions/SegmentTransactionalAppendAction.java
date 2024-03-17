@@ -135,14 +135,16 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     if (startMetadata == null) {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
-          segmentToReplaceLock
+          segmentToReplaceLock,
+          task.getPendingSegmentGroup()
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
           segments,
           segmentToReplaceLock,
           startMetadata,
-          endMetadata
+          endMetadata,
+          task.getPendingSegmentGroup()
       );
     }
 

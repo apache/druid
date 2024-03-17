@@ -387,7 +387,7 @@ public class TaskLockbox
       if (request instanceof LockRequestForNewSegment) {
         final LockRequestForNewSegment lockRequestForNewSegment = (LockRequestForNewSegment) request;
         if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
-          newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
+          newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion(), null);
           if (newSegmentId == null) {
             return LockResult.fail();
           }
@@ -411,7 +411,7 @@ public class TaskLockbox
                   newSegmentId
               );
             }
-            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion());
+            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion(), task.getPendingSegmentGroup());
           }
         }
         return LockResult.ok(posseToUse.getTaskLock(), newSegmentId);
@@ -710,7 +710,7 @@ public class TaskLockbox
     }
   }
 
-  private SegmentIdWithShardSpec allocateSegmentId(LockRequestForNewSegment request, String version)
+  private SegmentIdWithShardSpec allocateSegmentId(LockRequestForNewSegment request, String version, String taskGroup)
   {
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
@@ -719,7 +719,8 @@ public class TaskLockbox
         request.getInterval(),
         request.getPartialShardSpec(),
         version,
-        request.isSkipSegmentLineageCheck()
+        request.isSkipSegmentLineageCheck(),
+        taskGroup
     );
   }
 
@@ -1165,12 +1166,17 @@ public class TaskLockbox
     }
   }
 
+  public void remove(final Task task)
+  {
+    remove(task, false);
+  }
+
   /**
    * Release all locks for a task and remove task from set of active tasks. Does nothing if the task is not currently locked or not an active task.
    *
    * @param task task to unlock
    */
-  public void remove(final Task task)
+  public void remove(final Task task, final boolean cleanPendingSegments)
   {
     giant.lock();
     try {
@@ -1183,6 +1189,16 @@ public class TaskLockbox
               upgradeSegmentsDeleted,
               task.getId()
           );
+        }
+        if (cleanPendingSegments) {
+          if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.APPEND)) {
+            final int pendingSegmentsDeleted = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(task.getPendingSegmentGroup());
+            log.info(
+                "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
+                pendingSegmentsDeleted,
+                task.getPendingSegmentGroup()
+            );
+          }
         }
         unlockAll(task);
       }

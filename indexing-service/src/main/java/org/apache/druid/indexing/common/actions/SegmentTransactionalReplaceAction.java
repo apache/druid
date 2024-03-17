@@ -30,11 +30,15 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.PendingSegment;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -141,22 +145,30 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
+
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
       return;
     }
 
-    final Set<String> activeRealtimeSequencePrefixes
-        = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorIdWithAppendLock.get());
-    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
-        toolbox.getIndexerMetadataStorageCoordinator()
-               .upgradePendingSegmentsOverlappingWith(segments, activeRealtimeSequencePrefixes);
-    log.info(
-        "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
-        upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
-    );
+    List<PendingSegment> pendingSegments
+        = toolbox.getIndexerMetadataStorageCoordinator().getAllPendingSegments(task.getDataSource());
+    Map<String, SegmentIdWithShardSpec> pendingSegmentIdMap = new HashMap<>();
+    pendingSegments.forEach(pendingSegment -> pendingSegmentIdMap.put(
+        pendingSegment.getId().asSegmentId().toString(),
+        pendingSegment.getId()
+    ));
+    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments = new HashMap<>();
+    pendingSegments.forEach(pendingSegment -> {
+      if (pendingSegment.getParentId() != null) {
+        upgradedPendingSegments.put(
+            pendingSegment.getId(),
+            pendingSegmentIdMap.get(pendingSegment.getParentId())
+        );
+      }
+    });
 
     upgradedPendingSegments.forEach(
-        (oldId, newId) -> toolbox.getSupervisorManager()
+        (newId, oldId) -> toolbox.getSupervisorManager()
                                  .registerNewVersionOfPendingSegmentOnSupervisor(
                                      activeSupervisorIdWithAppendLock.get(),
                                      oldId,

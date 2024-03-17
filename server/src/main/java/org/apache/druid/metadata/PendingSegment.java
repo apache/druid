@@ -117,8 +117,8 @@ public class PendingSegment
           jsonMapper.readValue(payload, SegmentIdWithShardSpec.class),
           resultSet.getString("sequence_name"),
           resultSet.getString("sequence_prev_id"),
-          resultSet.getString("task_group"),
-          resultSet.getString("parent_id")
+          resultSet.getString("parent_id"),
+          resultSet.getString("task_group")
       );
     }
     catch (Exception e) {

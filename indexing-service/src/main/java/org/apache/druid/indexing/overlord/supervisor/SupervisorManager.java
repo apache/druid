@@ -126,15 +126,6 @@ public class SupervisorManager
     return Optional.absent();
   }
 
-  public Set<String> getActiveRealtimeSequencePrefixes(String activeSupervisorId)
-  {
-    if (supervisors.containsKey(activeSupervisorId)) {
-      return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
-    } else {
-      return Collections.emptySet();
-    }
-  }
-
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
