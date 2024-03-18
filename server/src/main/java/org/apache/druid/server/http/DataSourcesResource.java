@@ -1039,13 +1039,12 @@ public class DataSourcesResource
 
     private boolean isValid()
     {
-      if (interval == null && CollectionUtils.isNullOrEmpty(segmentIds)) {
-        return false;
+      final boolean hasSegmentIds = !CollectionUtils.isNullOrEmpty(segmentIds);
+      if (interval == null) {
+        return hasSegmentIds && CollectionUtils.isNullOrEmpty(versions);
+      } else {
+        return !hasSegmentIds;
       }
-      if (interval != null && segmentIds != null) {
-        return false;
-      }
-      return CollectionUtils.isNullOrEmpty(versions) || interval != null;
     }
   }
 }

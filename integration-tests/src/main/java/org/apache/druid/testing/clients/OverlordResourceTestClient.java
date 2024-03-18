@@ -116,6 +116,22 @@ public class OverlordResourceTestClient
     }
   }
 
+  public StatusResponseHolder submitTaskAndReturnStatusWithAuth(
+      final String task,
+      final String username,
+      final String password
+  ) throws Exception
+  {
+    return httpClient.go(
+        new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
+            .setContent(
+                "application/json",
+                StringUtils.toUtf8(task)
+            ).setBasicAuthentication(username, password),
+        StatusResponseHandler.getInstance()
+    ).get();
+  }
+
   public TaskStatusPlus getTaskStatus(String taskID)
   {
     try {

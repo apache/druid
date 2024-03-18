@@ -874,7 +874,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidNoArguments()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNullIntervalAndSegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -886,7 +886,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidBothIntervalAndSegmentIds()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndEmptySegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -895,6 +895,32 @@ public class DataSourcesResourceTest
         new DataSourcesResource.SegmentsToUpdateFilter(
             Intervals.of("2010-01-22/P1D"), ImmutableSet.of(), null
         )
+    );
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndNullSegmentIds()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.SegmentsToUpdateFilter(Intervals.of("2010-01-22/P1D"), null, null)
+    );
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndSegmentIds()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.SegmentsToUpdateFilter(Intervals.of("2010-01-22/P1D"), ImmutableSet.of("segment1"), null)
     );
     Assert.assertEquals(400, response.getStatus());
   }
@@ -1323,10 +1349,9 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedInvalidPayload()
+  public void testMarkSegmentsAsUnusedWithNullIntervalAndSegmentIds()
   {
-    DataSourcesResource dataSourcesResource =
-        createResource();
+    DataSourcesResource dataSourcesResource = createResource();
 
     final DataSourcesResource.SegmentsToUpdateFilter payload =
         new DataSourcesResource.SegmentsToUpdateFilter(null, null, null);
@@ -1337,17 +1362,16 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedInvalidPayloadBothArguments()
+  public void testMarkSegmentsAsUnusedWithNonNullIntervalAndEmptySegmentIds()
   {
-    DataSourcesResource dataSourcesResource =
-        createResource();
-
+    DataSourcesResource dataSourcesResource = createResource();
+    prepareRequestForAudit();
     final DataSourcesResource.SegmentsToUpdateFilter payload =
         new DataSourcesResource.SegmentsToUpdateFilter(Intervals.of("2010-01-01/P1D"), ImmutableSet.of(), null);
-
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertNotNull(response.getEntity());
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
   }
 
   @Test
