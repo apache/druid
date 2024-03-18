@@ -874,7 +874,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsWithNullIntervalAndSegmentIds()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNullIntervalAndSegmentIdsAndVersions()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -901,7 +901,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndNullSegmentIds()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullInterval()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -926,7 +926,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidAllParamsSpecified()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndSegmentIdsAndVersions()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -940,7 +940,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidEmptySegmentIdsArray()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithEmptySegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -952,7 +952,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidEmptyVersionsArray()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithEmptyVersions()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -964,19 +964,53 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidVersionsWithoutInterval()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullVersions()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
     Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
         "datasource1",
-        new DataSourcesResource.SegmentsToUpdateFilter(
-            null,
-            null,
-            ImmutableList.of("v1", "v2")
-        )
+        new DataSourcesResource.SegmentsToUpdateFilter(null, null, ImmutableList.of("v1", "v2"))
     );
     Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullSegmentIdsAndVersions()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.SegmentsToUpdateFilter(null, ImmutableSet.of("segment1"), ImmutableList.of("v1", "v2"))
+    );
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndVersions()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.SegmentsToUpdateFilter(Intervals.ETERNITY, null, ImmutableList.of("v1", "v2"))
+    );
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndEmptyVersions()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.SegmentsToUpdateFilter(Intervals.ETERNITY, null, ImmutableList.of())
+    );
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
   }
 
   @Test
@@ -1193,8 +1227,7 @@ public class DataSourcesResourceTest
             null
         );
 
-    DataSourcesResource dataSourcesResource =
-        createResource();
+    DataSourcesResource dataSourcesResource = createResource();
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
     Assert.assertEquals(500, response.getStatus());
     Assert.assertNotNull(response.getEntity());
@@ -1253,8 +1286,7 @@ public class DataSourcesResourceTest
     final DataSourcesResource.SegmentsToUpdateFilter payload =
         new DataSourcesResource.SegmentsToUpdateFilter(theInterval, null, null);
 
-    DataSourcesResource dataSourcesResource =
-        createResource();
+    DataSourcesResource dataSourcesResource = createResource();
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
     Assert.assertEquals(500, response.getStatus());
     Assert.assertNotNull(response.getEntity());
@@ -1349,7 +1381,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedWithNullIntervalAndSegmentIds()
+  public void testMarkSegmentsAsUnusedWithNullIntervalAndSegmentIdsAndVersions()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
