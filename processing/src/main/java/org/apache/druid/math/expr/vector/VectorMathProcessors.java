@@ -47,7 +47,7 @@ public class VectorMathProcessors
     final ExpressionType inputType = arg.getOutputType(inspector);
 
     ExprVectorProcessor<?> processor = null;
-    if (inputType == null || inputType.is(ExprType.DOUBLE)) {
+    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
       processor = doubleOutDoubleInSupplier.get();
     } else if (inputType.is(ExprType.LONG)) {
       processor = longOutLongInSupplier.get();
@@ -74,7 +74,7 @@ public class VectorMathProcessors
     final ExpressionType inputType = arg.getOutputType(inspector);
 
     ExprVectorProcessor<?> processor = null;
-    if (inputType == null || inputType.is(ExprType.DOUBLE)) {
+    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
       processor = doubleOutDoubleInSupplier.get();
     } else if (inputType.is(ExprType.LONG)) {
       processor = doubleOutLongInSupplier.get();
@@ -101,7 +101,7 @@ public class VectorMathProcessors
     final ExpressionType inputType = arg.getOutputType(inspector);
 
     ExprVectorProcessor<?> processor = null;
-    if (inputType == null || inputType.is(ExprType.DOUBLE)) {
+    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
       processor = longOutDoubleInSupplier.get();
     } else if (inputType.is(ExprType.LONG)) {
       processor = longOutLongInSupplier.get();

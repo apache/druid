@@ -204,8 +204,8 @@ public interface Function extends NamedFunction
     @Override
     protected final ExprEval eval(ExprEval param)
     {
-      if (NullHandling.sqlCompatible() && param.isNumericNull()) {
-        return ExprEval.of(null);
+      if (param.isNumericNull()) {
+        return NullHandling.sqlCompatible() ? ExprEval.of(null) : eval(0.0d);
       }
       if (param.type().is(ExprType.LONG)) {
         return eval(param.asLong());
