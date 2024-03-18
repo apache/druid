@@ -118,7 +118,7 @@ public class DataSourcesResource
   private final DruidCoordinator coordinator;
   private final AuditManager auditManager;
 
-  private final String invalidErrMsg = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
+  private static final String INVALID_PAYLOAD_ERROR_MESSAGE = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
                                        + " Optionally, include 'versions' only when 'interval' is provided.";
 
   @Inject
