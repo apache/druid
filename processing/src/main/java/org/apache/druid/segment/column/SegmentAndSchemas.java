@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input.table;
+package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;

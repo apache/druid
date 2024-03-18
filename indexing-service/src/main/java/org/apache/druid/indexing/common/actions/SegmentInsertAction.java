@@ -57,6 +57,12 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
     return segments;
   }
 
+  @JsonProperty
+  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  {
+    return minimalSegmentSchemas;
+  }
+
   @Override
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {

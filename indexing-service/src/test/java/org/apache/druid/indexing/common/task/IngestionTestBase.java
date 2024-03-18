@@ -71,6 +71,7 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -246,6 +247,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
   {
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -265,7 +268,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .appenderatorsManager(new TestAppenderatorsManager())
         .taskLogPusher(null)
         .attemptId("1")
-        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 
@@ -335,6 +338,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
+    private MinimalSegmentSchemas segmentSchemas = null;
 
     private TestLocalTaskActionClient(Task task)
     {
@@ -347,8 +351,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       final RetType result = super.submit(taskAction);
       if (taskAction instanceof SegmentTransactionalInsertAction) {
         publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
+        segmentSchemas = ((SegmentTransactionalInsertAction) taskAction).getMinimalSegmentSchemas();
       } else if (taskAction instanceof SegmentInsertAction) {
         publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
+        segmentSchemas = ((SegmentInsertAction) taskAction).getMinimalSegmentSchemas();
       }
       return result;
     }
@@ -356,6 +362,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     public Set<DataSegment> getPublishedSegments()
     {
       return publishedSegments;
+    }
+
+    public MinimalSegmentSchemas getSegmentSchemas()
+    {
+      return segmentSchemas;
     }
   }
 
@@ -405,6 +416,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       return segments;
     }
 
+    public MinimalSegmentSchemas getSegmentSchemas()
+    {
+      return taskActionClient.getSegmentSchemas();
+    }
+
     @Override
     public ListenableFuture<TaskStatus> run(Task task)
     {
@@ -419,6 +435,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         final TaskConfig config = new TaskConfigBuilder()
             .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+        centralizedDatasourceSchemaConfig.setEnabled(true);
         final TaskToolbox box = new TaskToolbox.Builder()
             .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -438,7 +456,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .appenderatorsManager(new TestAppenderatorsManager())
             .taskLogPusher(null)
             .attemptId("1")
-            .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
+            .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
             .build();
 
 

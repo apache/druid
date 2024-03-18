@@ -1010,11 +1010,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       TaskActionClientFactory taskActionClientFactory
   )
   {
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
     TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
         .setConfig(taskConfig)
         .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
         .setTaskActionClientFactory(taskActionClientFactory)
-        .setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create());
+        .setCentralizedTableSchemaConfig(centralizedDatasourceSchemaConfig);
     return new TestTaskToolboxFactory(builder)
     {
       @Override
