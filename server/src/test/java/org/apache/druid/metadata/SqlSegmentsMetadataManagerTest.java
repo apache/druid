@@ -41,7 +41,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.MatcherAssert;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -52,7 +51,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -401,7 +399,10 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-15T20:19:12.565Z"
     );
     publishUnusedSegments(koalaSegment1);
-    updateUsedStatusLastUpdated(koalaSegment1, DateTimes.nowUtc().minus(Duration.standardHours(2)));
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(
+        koalaSegment1.getId().toString(),
+        DateTimes.nowUtc().minus(Duration.standardHours(2))
+    );
 
     // Publish an unused segment with used_status_last_updated 2 days ago
     final DataSegment koalaSegment2 = createSegment(
@@ -410,7 +411,10 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-15T20:19:12.565Z"
     );
     publishUnusedSegments(koalaSegment2);
-    updateUsedStatusLastUpdated(koalaSegment2, DateTimes.nowUtc().minus(Duration.standardDays(2)));
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(
+        koalaSegment2.getId().toString(),
+        DateTimes.nowUtc().minus(Duration.standardDays(2))
+    );
 
     // Publish an unused segment and set used_status_last_updated to null
     final DataSegment koalaSegment3 = createSegment(
@@ -904,51 +908,32 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertEquals(0, getCountOfRowsWithLastUsedNull());
   }
 
-  private void updateSegmentPayload(DataSegment segment, byte[] payload)
-  {
-    executeUpdate(
-        "UPDATE %1$s SET PAYLOAD = ? WHERE ID = ?",
-        payload,
-        segment.getId().toString()
-    );
-  }
-
   private int getCountOfRowsWithLastUsedNull()
   {
     return derbyConnectorRule.getConnector().retryWithHandle(
         handle -> handle.select(
             StringUtils.format(
                 "SELECT ID FROM %1$s WHERE USED_STATUS_LAST_UPDATED IS NULL",
-                getSegmentsTable()
+                derbyConnectorRule.segments().getTableName()
             )
         ).size()
     );
   }
 
-  private void updateUsedStatusLastUpdated(DataSegment segment, DateTime newValue)
+  private void updateSegmentPayload(DataSegment segment, byte[] payload)
   {
-    executeUpdate(
-        "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
-        newValue.toString(),
+    derbyConnectorRule.segments().update(
+        "UPDATE %1$s SET PAYLOAD = ? WHERE ID = ?",
+        payload,
         segment.getId().toString()
     );
   }
 
   private void updateUsedStatusLastUpdatedToNull(DataSegment segment)
   {
-    executeUpdate(
+    derbyConnectorRule.segments().update(
         "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = NULL WHERE ID = ?",
         segment.getId().toString()
-    );
-  }
-
-  private void executeUpdate(String sqlFormat, Object... args)
-  {
-    derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format(sqlFormat, getSegmentsTable()),
-            args
-        )
     );
   }
 
@@ -959,14 +944,8 @@ public class SqlSegmentsMetadataManagerTest
    */
   private void allowUsedFlagLastUpdatedToBeNullable()
   {
-    executeUpdate("ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL");
-  }
-
-  private String getSegmentsTable()
-  {
-    return derbyConnectorRule.metadataTablesConfigSupplier()
-                             .get()
-                             .getSegmentsTable()
-                             .toUpperCase(Locale.ENGLISH);
+    derbyConnectorRule.segments().update(
+        "ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL"
+    );
   }
 }
