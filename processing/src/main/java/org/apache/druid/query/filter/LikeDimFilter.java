@@ -421,6 +421,12 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
 
       public int advance(String value, int offset)
       {
+        if (leadingLength > Integer.MAX_VALUE - offset || offset > Integer.MAX_VALUE - leadingLength) {
+          // Even though overflow would be handled by PatternType, CodeQL flags it as needing to be checked here:
+          // https://codeql.github.com/codeql-query-help/java/java-tainted-arithmetic/
+          return -1;
+        }
+
         return patternType.advance(offset + leadingLength, value, clause);
       }
 
