@@ -454,6 +454,15 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       rowIdProvider.incrementAndGet();
     }
 
+    // Corner case when the numRows=1 and upperOffset=1
+    // In such a case the priming of results is not needed
+    if (rowIdProvider.get() == numRows) {
+      for (int i = 0; i < aggs.length; i++) {
+        results[i][resultStorageIndex] = aggs[i].get();
+      }
+      ++resultStorageIndex;
+    }
+
     // Prime the results
     if (rowIdProvider.get() < numRows) {
       for (int i = 0; i < aggs.length; i++) {
@@ -539,6 +548,15 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         agg.aggregate();
       }
       rowIdProvider.decrementAndGet();
+    }
+
+    // Corner case when the numRows=1 and lowerOffset=1
+    // In such a case the priming of results is not needed
+    if (rowIdProvider.get() < 0) {
+      for (int i = 0; i < aggs.length; i++) {
+        results[i][resultStorageIndex] = aggs[i].get();
+      }
+      --resultStorageIndex;
     }
 
     // Prime the results
