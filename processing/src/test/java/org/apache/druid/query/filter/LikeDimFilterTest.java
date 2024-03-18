@@ -22,6 +22,7 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -172,7 +173,7 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testPatternEmpty()
   {
-    assertMatch("", null, DruidPredicateMatch.UNKNOWN);
+    assertMatch("", null, NullHandling.replaceWithDefault() ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN);
     assertMatch("", "", DruidPredicateMatch.TRUE);
     assertMatch("", "a", DruidPredicateMatch.FALSE);
     assertMatch("", "This is a test!", DruidPredicateMatch.FALSE);
@@ -199,10 +200,10 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testPatternOnlySpecial()
   {
-    assertMatch("%", null, DruidPredicateMatch.UNKNOWN);
+    assertMatch("%", null, NullHandling.replaceWithDefault() ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN);
     assertMatch("%", "", DruidPredicateMatch.TRUE);
     assertMatch("%", "abcxyzxyz", DruidPredicateMatch.TRUE);
-    assertMatch("_", null, DruidPredicateMatch.UNKNOWN);
+    assertMatch("_", null, NullHandling.replaceWithDefault() ? DruidPredicateMatch.FALSE : DruidPredicateMatch.UNKNOWN);
     assertMatch("_", "", DruidPredicateMatch.FALSE);
     assertMatch("_", "a", DruidPredicateMatch.TRUE);
     assertMatch("_", "ab", DruidPredicateMatch.FALSE);
