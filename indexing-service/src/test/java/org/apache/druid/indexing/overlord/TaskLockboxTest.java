@@ -1905,6 +1905,7 @@ public class TaskLockboxTest
         = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
     // Only the replaceTask should attempt a delete on the upgradeSegments table
     EasyMock.expect(coordinator.deleteUpgradeSegmentsForTask(replaceTask.getId())).andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(appendTask.getId())).andReturn(0);
     EasyMock.replay(coordinator);
 
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);

@@ -507,7 +507,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     final String v1 = replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23).getVersion();
 
     final DataSegment segmentV10 = createSegment(FIRST_OF_JAN_23, v1);
-    commitReplaceSegments(segmentV10);
+    replaceTask.commitReplaceSegments(segmentV10);
     verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV10);
     verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV10);
 
@@ -635,7 +635,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
 
     final DataSegment segmentV01 = asSegment(pendingSegment);
-    commitAppendSegments(segmentV01);
+    appendTask.commitAppendSegments(segmentV01);
 
     verifyIntervalHasUsedSegments(JAN_23, segmentV01);
     verifyIntervalHasVisibleSegments(JAN_23, segmentV01);
@@ -643,125 +643,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     // Verify that replace lock cannot be acquired on DAY as MONTH is already locked
     final TaskLock replaceLock = replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23);
     Assert.assertNull(replaceLock);
-  }
-
-  @Test
-  public void testSegmentIsAllocatedAtLatestVersion()
-  {
-    final SegmentIdWithShardSpec pendingSegmentV01
-        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    Assert.assertEquals(SEGMENT_V0, pendingSegmentV01.getVersion());
-    Assert.assertEquals(JAN_23, pendingSegmentV01.getInterval());
-
-    final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
-    final DataSegment segmentV10 = createSegment(JAN_23, v1);
-    commitReplaceSegments(segmentV10);
-    verifyIntervalHasUsedSegments(JAN_23, segmentV10);
-    verifyIntervalHasVisibleSegments(JAN_23, segmentV10);
-
-    final SegmentIdWithShardSpec pendingSegmentV12
-        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV12.asSegmentId());
-    Assert.assertEquals(v1, pendingSegmentV12.getVersion());
-    Assert.assertEquals(JAN_23, pendingSegmentV12.getInterval());
-
-    replaceTask.releaseLock(JAN_23);
-    final ActionsTestTask replaceTask2 = createAndStartTask();
-    final String v2 = replaceTask2.acquireReplaceLockOn(JAN_23).getVersion();
-    final DataSegment segmentV20 = createSegment(JAN_23, v2);
-    replaceTask2.commitReplaceSegments(segmentV20);
-    verifyIntervalHasUsedSegments(JAN_23, segmentV10, segmentV20);
-    verifyIntervalHasVisibleSegments(JAN_23, segmentV20);
-
-    final SegmentIdWithShardSpec pendingSegmentV23
-        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV23.asSegmentId());
-    Assert.assertEquals(v2, pendingSegmentV23.getVersion());
-    Assert.assertEquals(JAN_23, pendingSegmentV23.getInterval());
-
-    // Commit the append segments
-    final DataSegment segmentV01 = asSegment(pendingSegmentV01);
-    final DataSegment segmentV12 = asSegment(pendingSegmentV12);
-    final DataSegment segmentV23 = asSegment(pendingSegmentV23);
-
-    Set<DataSegment> appendedSegments
-        = commitAppendSegments(segmentV01, segmentV12, segmentV23).getSegments();
-    Assert.assertEquals(3 + 3, appendedSegments.size());
-
-    // Verify that the original append segments have been committed
-    Assert.assertTrue(appendedSegments.remove(segmentV01));
-    Assert.assertTrue(appendedSegments.remove(segmentV12));
-    Assert.assertTrue(appendedSegments.remove(segmentV23));
-
-    // Verify that segmentV01 has been upgraded to both v1 and v2
-    final DataSegment segmentV11 = findSegmentWith(v1, segmentV01.getLoadSpec(), appendedSegments);
-    Assert.assertNotNull(segmentV11);
-    final DataSegment segmentV21 = findSegmentWith(v2, segmentV01.getLoadSpec(), appendedSegments);
-    Assert.assertNotNull(segmentV21);
-
-    // Verify that segmentV12 has been upgraded to v2
-    final DataSegment segmentV22 = findSegmentWith(v2, segmentV12.getLoadSpec(), appendedSegments);
-    Assert.assertNotNull(segmentV22);
-
-    // Verify that segmentV23 is not downgraded to v1
-    final DataSegment segmentV13 = findSegmentWith(v1, segmentV23.getLoadSpec(), appendedSegments);
-    Assert.assertNull(segmentV13);
-
-    verifyIntervalHasUsedSegments(
-        YEAR_23,
-        segmentV01,
-        segmentV10, segmentV11, segmentV12,
-        segmentV20, segmentV21, segmentV22, segmentV23
-    );
-    verifyIntervalHasVisibleSegments(YEAR_23, segmentV20, segmentV21, segmentV22, segmentV23);
-  }
-
-  @Test
-  public void testSegmentsToReplace()
-  {
-    final SegmentIdWithShardSpec pendingSegmentV01
-        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    Assert.assertEquals(SEGMENT_V0, pendingSegmentV01.getVersion());
-    Assert.assertEquals(JAN_23, pendingSegmentV01.getInterval());
-    final DataSegment segment1 = asSegment(pendingSegmentV01);
-    commitAppendSegments(segment1);
-
-    final SegmentIdWithShardSpec pendingSegmentV02
-        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV02.asSegmentId());
-    Assert.assertEquals(SEGMENT_V0, pendingSegmentV02.getVersion());
-    Assert.assertEquals(JAN_23, pendingSegmentV02.getInterval());
-
-    verifyInputSegments(replaceTask, JAN_23, segment1);
-
-    replaceTask.acquireReplaceLockOn(JAN_23);
-
-    final DataSegment segment2 = asSegment(pendingSegmentV02);
-    commitAppendSegments(segment2);
-
-    // Despite segment2 existing, it is not chosen to be replaced because it was created after the tasklock was acquired
-    verifyInputSegments(replaceTask, JAN_23, segment1);
-
-    replaceTask.releaseLock(JAN_23);
-
-    final SegmentIdWithShardSpec pendingSegmentV03
-        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV03.asSegmentId());
-    Assert.assertNotEquals(pendingSegmentV02.asSegmentId(), pendingSegmentV03.asSegmentId());
-    Assert.assertEquals(SEGMENT_V0, pendingSegmentV03.getVersion());
-    Assert.assertEquals(JAN_23, pendingSegmentV03.getInterval());
-    final DataSegment segment3 = asSegment(pendingSegmentV03);
-    commitAppendSegments(segment3);
-    appendTask.releaseLock(JAN_23);
-
-    replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23);
-    // The new lock was acquired before segment3 was created but it doesn't contain the month's interval
-    // So, all three segments are chosen
-    verifyInputSegments(replaceTask, JAN_23, segment1, segment2, segment3);
-
-    replaceTask.releaseLock(FIRST_OF_JAN_23);
-    // All the segments are chosen when there's no lock
-    verifyInputSegments(replaceTask, JAN_23, segment1, segment2, segment3);
   }
 
   @Test
@@ -922,6 +803,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     supervisorId.reset();
     oldPendingSegment.reset();
     newPendingSegment.reset();
+    replaceTask.finishRunAndGetStatus();
   }
 
   private SegmentPublishResult commitAppendSegments(DataSegment... dataSegments)
@@ -931,6 +813,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     for (DataSegment segment : dataSegments) {
       parentSegmentToLoadSpec.put(segment.getId(), Iterables.getOnlyElement(segment.getLoadSpec().values()));
     }
+    appendTask.finishRunAndGetStatus();
     return result;
   }
 

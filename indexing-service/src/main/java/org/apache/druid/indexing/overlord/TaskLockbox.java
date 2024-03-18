@@ -1202,7 +1202,7 @@ public class TaskLockbox
           );
         }
         final String pendingSegmentGroup = task.getPendingSegmentGroup();
-        if (task.getPendingSegmentGroup() != null) {
+        if (pendingSegmentGroup != null && activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
           final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
           idsInSameGroup.remove(task.getId());
           if (idsInSameGroup.isEmpty()) {
