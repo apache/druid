@@ -1768,6 +1768,8 @@
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                         <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                        <!-- Surefire default is to exclude static inner classes; which may lead to the ignore of static inner classes
+                             https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#excludes -->
                         <excludes>
                            <exclude/>
                         </excludes>
