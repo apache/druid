@@ -115,6 +115,11 @@ abstract class ConstantExpr<T> implements Expr, Expr.SingleThreadSpecializable
 
   protected abstract ExprEval<T> realEval();
 
+  @Override
+  public String toString()
+  {
+    return String.valueOf(value);
+  }
 
   @Override
   public Expr toSingleThreaded()
@@ -143,6 +148,18 @@ abstract class ConstantExpr<T> implements Expr, Expr.SingleThreadSpecializable
     protected ExprEval<T> realEval()
     {
       return eval;
+    }
+
+    @Override
+    public String stringify()
+    {
+      return eval.toExpr().stringify();
+    }
+
+    @Override
+    public String toString()
+    {
+      return eval.toExpr().toString();
     }
 
     @Override
