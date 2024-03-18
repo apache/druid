@@ -665,7 +665,7 @@
     <cve>CVE-2023-36415</cve>
   </suppress>
   <suppress>
-    <!-- Covers DOS on identity server by triggering high resource consumption. Used in Azure as a client.
+    <!-- Used in Azure dependencies.
     Current latest version of Azure BOM (1.2.21) still uses 9.30.2, whereas bug resolved in 9.37.3 -->
     <notes><![CDATA[
    file name: nimbus-jose-jwt-9.30.2.jar
