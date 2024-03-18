@@ -288,16 +288,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval
   )
   {
+    boolean compareIntervalEndpointsAsStrings = Intervals.canCompareEndpointsAsStrings(interval);
+
     String sql = "SELECT payload, sequence_name, sequence_prev_id, task_group, parent_id"
                  + " FROM " + dbTables.getPendingSegmentsTable()
-                 + " WHERE dataSource = :dataSource"
-                 + " AND start < :end"
-                 + StringUtils.format(" AND %1$send%1$s > :start", connector.getQuoteString());
+                 + " WHERE dataSource = :dataSource";
+    if (compareIntervalEndpointsAsStrings) {
+      sql = sql
+            + " AND start < :end"
+            + StringUtils.format(" AND %1$send%1$s > :start", connector.getQuoteString());
+    }
 
     Query<Map<String, Object>> query = handle.createQuery(sql)
-                                             .bind("dataSource", dataSource)
-                                             .bind("start", interval.getStart().toString())
-                                             .bind("end", interval.getEnd().toString());
+                                             .bind("dataSource", dataSource);
+    if (compareIntervalEndpointsAsStrings) {
+      query = query.bind("start", interval.getStart().toString())
+                   .bind("end", interval.getEnd().toString());
+    }
 
 
     final ResultIterator<PendingSegment> pendingSegmentIterator =
@@ -305,7 +312,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
              .iterator();
     final ImmutableList.Builder<PendingSegment> pendingSegments = ImmutableList.builder();
     while (pendingSegmentIterator.hasNext()) {
-      pendingSegments.add(pendingSegmentIterator.next());
+      final PendingSegment pendingSegment = pendingSegmentIterator.next();
+      if (compareIntervalEndpointsAsStrings || pendingSegment.getId().getInterval().overlaps(interval)) {
+        pendingSegments.add(pendingSegment);
+      }
     }
     pendingSegmentIterator.close();
     return pendingSegments.build();

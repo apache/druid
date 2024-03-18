@@ -568,19 +568,7 @@ public class TaskQueue
   {
     final Task task = tasks.remove(taskId);
     if (task != null) {
-      final String pendingSegmentGroup = task.getPendingSegmentGroup();
-      boolean cleanPendingSegments = false;
-      Set<String> tasksWithSamePendingGroup = new HashSet<>();
-      if (pendingSegmentGroup != null) {
-        for (Task otherTask : tasks.values()) {
-          if (pendingSegmentGroup.equals(otherTask.getPendingSegmentGroup())) {
-            tasksWithSamePendingGroup.add(otherTask.getId());
-          }
-        }
-        tasksWithSamePendingGroup.removeAll(recentlyCompletedTasks);
-        cleanPendingSegments = tasksWithSamePendingGroup.isEmpty();
-      }
-      taskLockbox.remove(task, cleanPendingSegments);
+      taskLockbox.remove(task);
       return true;
     } else {
       return false;

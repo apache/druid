@@ -103,6 +103,11 @@ public class TaskLockbox
   // this set should be accessed under the giant lock.
   private final Set<String> activeTasks = new HashSet<>();
 
+  // Stores map of pending task group of tasks to the set of their ids.
+  // Useful for task replicas. Clean up pending segments only when the set is empty.
+  // this map should be accessed under the giant lock.
+  private final HashMap<String, Set<String>> activePendingTaskGroupToTaskIds = new HashMap<>();
+
   @Inject
   public TaskLockbox(
       TaskStorage taskStorage,
@@ -211,6 +216,13 @@ public class TaskLockbox
         if (failedToReacquireLockTaskGroups.contains(task.getGroupId())) {
           tasksToFail.add(task);
           activeTasks.remove(task.getId());
+        }
+      }
+      activePendingTaskGroupToTaskIds.clear();
+      for (Task task : storedActiveTasks) {
+        if (activeTasks.contains(task.getId()) && task.getPendingSegmentGroup() != null) {
+          activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroup(), s -> new HashSet<>())
+                                         .add(task.getId());
         }
       }
 
@@ -1160,15 +1172,14 @@ public class TaskLockbox
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
       activeTasks.add(task.getId());
+      if (task.getPendingSegmentGroup() != null) {
+        activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroup(), s -> new HashSet<>())
+                                       .add(task.getId());
+      }
     }
     finally {
       giant.unlock();
     }
-  }
-
-  public void remove(final Task task)
-  {
-    remove(task, false);
   }
 
   /**
@@ -1176,7 +1187,7 @@ public class TaskLockbox
    *
    * @param task task to unlock
    */
-  public void remove(final Task task, final boolean cleanPendingSegments)
+  public void remove(final Task task)
   {
     giant.lock();
     try {
@@ -1190,14 +1201,21 @@ public class TaskLockbox
               task.getId()
           );
         }
-        if (cleanPendingSegments) {
-          if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.APPEND)) {
-            final int pendingSegmentsDeleted = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(task.getPendingSegmentGroup());
-            log.info(
-                "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
-                pendingSegmentsDeleted,
-                task.getPendingSegmentGroup()
-            );
+        final String pendingSegmentGroup = task.getPendingSegmentGroup();
+        if (task.getPendingSegmentGroup() != null) {
+          final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
+          idsInSameGroup.remove(task.getId());
+          if (idsInSameGroup.isEmpty()) {
+            if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.APPEND)) {
+              final int pendingSegmentsDeleted
+                  = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(task.getPendingSegmentGroup());
+              log.info(
+                  "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
+                  pendingSegmentsDeleted,
+                  task.getPendingSegmentGroup()
+              );
+            }
+            activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
           }
         }
         unlockAll(task);
