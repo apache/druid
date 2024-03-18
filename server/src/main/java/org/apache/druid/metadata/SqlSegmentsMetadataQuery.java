@@ -147,7 +147,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
+   * Retrieves segments for a given datasource that are marked unused and that are <b>fully contained by</b> any interval
    * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
    * unused segments.
    * <p>
@@ -197,7 +197,7 @@ public class SqlSegmentsMetadataQuery
 
   /**
    * Similar to {@link #retrieveUnusedSegments}, but also retrieves associated metadata for the segments for a given
-   * datasource that are marked unused and that are *fully contained by* any interval in a particular collection of
+   * datasource that are marked unused and that are <b>fully contained by</b> any interval in a particular collection of
    * intervals. If the collection of intervals is empty, this method will retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
@@ -325,7 +325,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all used segments that are *fully contained by* a particular interval as unused.
+   * Marks all used segments that are <b>fully contained by</b> a particular interval as unused.
    *
    * @return Number of segments updated.
    */
@@ -335,7 +335,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all used segments that are *fully contained by* a particular interval filtered by an optional list of versions
+   * Marks all used segments that are <b>fully contained by</b> a particular interval filtered by an optional list of versions
    * as unused.
    *
    * @return Number of segments updated.
@@ -351,7 +351,10 @@ public class SqlSegmentsMetadataQuery
               dbTables.getSegmentsTable()
           )
       );
-      appendConditionForVersions(sb, versions);
+
+      if (!CollectionUtils.isNullOrEmpty(versions)) {
+        sb.append(getConditionForVersions(versions));
+      }
 
       return handle
           .createStatement(sb.toString())
@@ -373,7 +376,10 @@ public class SqlSegmentsMetadataQuery
               IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
           )
       );
-      appendConditionForVersions(sb, versions);
+
+      if (!CollectionUtils.isNullOrEmpty(versions)) {
+        sb.append(getConditionForVersions(versions));
+      }
 
       return handle
           .createStatement(sb.toString())
@@ -712,7 +718,9 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    appendConditionForVersions(sb, versions);
+    if (!CollectionUtils.isNullOrEmpty(versions)) {
+      sb.append(getConditionForVersions(versions));
+    }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
     final boolean addMaxUsedLastUpdatedTimeFilter = !used && maxUsedStatusLastUpdatedTime != null;
@@ -861,19 +869,18 @@ public class SqlSegmentsMetadataQuery
     return numChangedSegments;
   }
 
-  private static void appendConditionForVersions(
-      final StringBuilder sb,
+  private static String getConditionForVersions(
       final List<String> versions
   )
   {
     if (CollectionUtils.isNullOrEmpty(versions)) {
-      return;
+      return "";
     }
 
     final String versionsCsv = versions.stream()
                                        .map(version -> "'" + version + "'")
                                        .collect(Collectors.joining(","));
-    sb.append(StringUtils.format(" AND version IN (%s)", versionsCsv));
+    return StringUtils.format(" AND version IN (%s)", versionsCsv);
   }
 
   enum IntervalMode

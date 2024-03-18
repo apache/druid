@@ -118,9 +118,6 @@ public class DataSourcesResource
   private final DruidCoordinator coordinator;
   private final AuditManager auditManager;
 
-  private static final String INVALID_PAYLOAD_ERROR_MESSAGE = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
-                                       + " Optionally, include 'versions' only when 'interval' is provided.";
-
   @Inject
   public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
@@ -210,13 +207,13 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedNonOvershadowedSegments(
       @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDataSourceSegmentsPayload payload
+      final SegmentsToUpdateFilter payload
   )
   {
     if (payload == null || !payload.isValid()) {
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity(invalidErrMsg)
+          .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
@@ -256,14 +253,14 @@ public class DataSourcesResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDataSourceSegmentsPayload payload,
+      final SegmentsToUpdateFilter payload,
       @Context final HttpServletRequest req
   )
   {
     if (payload == null || !payload.isValid()) {
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity(invalidErrMsg)
+          .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
@@ -998,14 +995,17 @@ public class DataSourcesResource
    * {@code versions} may be optionally specified only when {@code interval} is provided.
    */
   @VisibleForTesting
-  static class MarkDataSourceSegmentsPayload
+  static class SegmentsToUpdateFilter
   {
     private final Interval interval;
     private final Set<String> segmentIds;
     private final List<String> versions;
 
+    private static final String INVALID_PAYLOAD_ERROR_MESSAGE = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
+                                                                + " Optionally, include 'versions' only when 'interval' is provided.";
+
     @JsonCreator
-    public MarkDataSourceSegmentsPayload(
+    public SegmentsToUpdateFilter(
         @JsonProperty("interval") @Nullable Interval interval,
         @JsonProperty("segmentIds") @Nullable Set<String> segmentIds,
         @JsonProperty("versions") @Nullable List<String> versions
