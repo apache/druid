@@ -68,6 +68,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1020,7 +1021,12 @@ public class DataSourcesResource
 
     public boolean isValid()
     {
-      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+      final boolean hasSegmentIds = !CollectionUtils.isNullOrEmpty(segmentIds);
+      if (interval == null) {
+        return hasSegmentIds;
+      } else {
+        return !hasSegmentIds;
+      }
     }
   }
 }
