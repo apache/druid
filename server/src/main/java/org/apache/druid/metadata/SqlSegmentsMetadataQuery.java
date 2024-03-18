@@ -42,6 +42,8 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.SQLStatement;
+import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -352,16 +354,23 @@ public class SqlSegmentsMetadataQuery
           )
       );
 
-      if (!CollectionUtils.isNullOrEmpty(versions)) {
+      final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
+
+      if (hasVersions) {
         sb.append(getConditionForVersions(versions));
       }
 
-      return handle
+      final Update stmt = handle
           .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-          .execute();
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+
+      if (hasVersions) {
+        bindVersionsToQuery(stmt, versions);
+      }
+
+      return stmt.execute();
     } else if (Intervals.canCompareEndpointsAsStrings(interval)
                && interval.getStart().getYear() == interval.getEnd().getYear()) {
       // Safe to write a WHERE clause with this interval. Note that it is unsafe if the years are different, because
@@ -377,18 +386,24 @@ public class SqlSegmentsMetadataQuery
           )
       );
 
-      if (!CollectionUtils.isNullOrEmpty(versions)) {
+      final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
+
+      if (hasVersions) {
         sb.append(getConditionForVersions(versions));
       }
 
-      return handle
+      final Update stmt = handle
           .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-          .execute();
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+
+      if (hasVersions) {
+        bindVersionsToQuery(stmt, versions);
+      }
+      return stmt.execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
@@ -718,7 +733,9 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    if (!CollectionUtils.isNullOrEmpty(versions)) {
+    final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
+
+    if (hasVersions) {
       sb.append(getConditionForVersions(versions));
     }
 
@@ -767,6 +784,10 @@ public class SqlSegmentsMetadataQuery
 
     if (compareAsString) {
       bindQueryIntervals(sql, intervals);
+    }
+
+    if (hasVersions) {
+      bindVersionsToQuery(sql, versions);
     }
 
     return sql;
@@ -869,18 +890,34 @@ public class SqlSegmentsMetadataQuery
     return numChangedSegments;
   }
 
-  private static String getConditionForVersions(
-      final List<String> versions
-  )
+  private static String getConditionForVersions(final List<String> versions)
   {
     if (CollectionUtils.isNullOrEmpty(versions)) {
       return "";
     }
 
-    final String versionsCsv = versions.stream()
-                                       .map(version -> "'" + version + "'")
-                                       .collect(Collectors.joining(","));
-    return StringUtils.format(" AND version IN (%s)", versionsCsv);
+    final StringBuilder sb = new StringBuilder();
+
+    sb.append(" AND version IN (");
+    for (int i = 0; i < versions.size(); i++) {
+      sb.append(StringUtils.format(":version%d", i));
+      if (i != versions.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append(")");
+    return sb.toString();
+  }
+
+  private static void bindVersionsToQuery(final SQLStatement query, final List<String> versions)
+  {
+    if (CollectionUtils.isNullOrEmpty(versions)) {
+      return;
+    }
+
+    for (int i = 0; i < versions.size(); i++) {
+      query.bind(StringUtils.format("version%d", i), versions.get(i));
+    }
   }
 
   enum IntervalMode
