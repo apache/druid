@@ -22,7 +22,6 @@ package org.apache.druid.server.http;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
-import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;

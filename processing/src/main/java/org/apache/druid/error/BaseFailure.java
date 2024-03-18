@@ -20,33 +20,41 @@
 package org.apache.druid.error;
 
 /**
- * A failure type used to make {@link DruidException}s of category
- * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER}.
+ * {@link DruidException.Failure} for a specific errorCode, category and persona.
  */
-public class InvalidInput extends BaseFailure
+public abstract class BaseFailure extends DruidException.Failure
 {
-  public static DruidException exception(String msg, Object... args)
-  {
-    return exception(null, msg, args);
-  }
+  private final Throwable t;
+  private final String msg;
+  private final Object[] args;
+  private final DruidException.Persona persona;
+  private final DruidException.Category category;
 
-  public static DruidException exception(Throwable t, String msg, Object... args)
-  {
-    return DruidException.fromFailure(new InvalidInput(t, msg, args));
-  }
-
-  public InvalidInput(
+  protected BaseFailure(
+      String errorCode,
+      DruidException.Persona persona,
+      DruidException.Category category,
       Throwable t,
       String msg,
       Object... args
   )
   {
-    super(
-        "invalidInput",
-        DruidException.Persona.USER,
-        DruidException.Category.INVALID_INPUT,
-        t, msg, args
-    );
+    super(errorCode);
+    this.persona = persona;
+    this.category = category;
+    this.t = t;
+    this.msg = msg;
+    this.args = args;
   }
 
+  @Override
+  protected DruidException makeException(DruidException.DruidExceptionBuilder bob)
+  {
+    bob = bob.forPersona(persona).ofCategory(category);
+    if (t == null) {
+      return bob.build(msg, args);
+    } else {
+      return bob.build(t, msg, args);
+    }
+  }
 }
