@@ -37,7 +37,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisher;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
@@ -70,7 +69,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class KillUnusedSegmentsTest
@@ -779,7 +777,7 @@ public class KillUnusedSegmentsTest
       throw new RuntimeException(e);
     }
     sqlSegmentsMetadataManager.markSegmentsAsUnused(ImmutableSet.of(segment.getId()));
-    updateUsedStatusLastUpdated(segment, lastUpdatedTime);
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment.getId().toString(), lastUpdatedTime);
   }
 
   private DataSegment createSegment(final String dataSource, final Interval interval, final String version)
@@ -927,26 +925,5 @@ public class KillUnusedSegmentsTest
     {
       observedDatasourceToLastKillTaskId.remove(dataSource);
     }
-  }
-
-  private void updateUsedStatusLastUpdated(DataSegment segment, DateTime lastUpdatedTime)
-  {
-    derbyConnectorRule.getConnector().retryWithHandle(
-        handle -> handle.update(
-            StringUtils.format(
-                "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?", getSegmentsTable()
-            ),
-            lastUpdatedTime.toString(),
-            segment.getId().toString()
-        )
-    );
-  }
-
-  private String getSegmentsTable()
-  {
-    return derbyConnectorRule.metadataTablesConfigSupplier()
-                             .get()
-                             .getSegmentsTable()
-                             .toUpperCase(Locale.ENGLISH);
   }
 }

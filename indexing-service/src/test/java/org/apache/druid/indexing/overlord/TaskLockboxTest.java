@@ -52,7 +52,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -240,7 +239,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTryMixedLocks() throws EntryExistsException
+  public void testTryMixedLocks()
   {
     final Task lowPriorityTask = NoopTask.ofPriority(0);
     final Task lowPriorityTask2 = NoopTask.ofPriority(0);
@@ -332,7 +331,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSyncFromStorage() throws EntryExistsException
+  public void testSyncFromStorage()
   {
     final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     for (int i = 0; i < 5; i++) {
@@ -370,7 +369,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSyncFromStorageWithMissingTaskLockPriority() throws EntryExistsException
+  public void testSyncFromStorageWithMissingTaskLockPriority()
   {
     final Task task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -394,7 +393,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSyncFromStorageWithMissingTaskPriority() throws EntryExistsException
+  public void testSyncFromStorageWithMissingTaskPriority()
   {
     final Task task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -425,7 +424,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSyncFromStorageWithInvalidPriority() throws EntryExistsException
+  public void testSyncFromStorageWithInvalidPriority()
   {
     final Task task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -496,7 +495,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testRevokedLockSyncFromStorage() throws EntryExistsException
+  public void testRevokedLockSyncFromStorage()
   {
     final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
 
@@ -643,7 +642,7 @@ public class TaskLockboxTest
   }
 
   @Test(timeout = 60_000L)
-  public void testAcquireLockAfterRevoked() throws EntryExistsException, InterruptedException
+  public void testAcquireLockAfterRevoked() throws InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.ofPriority(0);
@@ -668,7 +667,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testUnlock() throws EntryExistsException
+  public void testUnlock()
   {
     final List<Task> lowPriorityTasks = new ArrayList<>();
     final List<Task> highPriorityTasks = new ArrayList<>();
@@ -733,7 +732,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testFindLockPosseAfterRevokeWithDifferentLockIntervals() throws EntryExistsException
+  public void testFindLockPosseAfterRevokeWithDifferentLockIntervals()
   {
     final Task lowPriorityTask = NoopTask.ofPriority(0);
     final Task highPriorityTask = NoopTask.ofPriority(10);
@@ -843,7 +842,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSegmentAndTimeChunkLockForSameIntervalWithDifferentPriority() throws EntryExistsException
+  public void testSegmentAndTimeChunkLockForSameIntervalWithDifferentPriority()
   {
     final Task task1 = NoopTask.ofPriority(10);
     lockbox.add(task1);

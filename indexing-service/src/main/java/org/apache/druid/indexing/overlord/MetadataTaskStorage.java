@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import org.apache.druid.common.exception.DruidException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataStorageActionHandler;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageActionHandlerTypes;
@@ -126,7 +125,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(final Task task, final TaskStatus status) throws EntryExistsException
+  public void insert(final Task task, final TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");

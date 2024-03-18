@@ -446,20 +446,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final MinimalSegmentSchemas minimalSegmentSchemas
   ) throws IOException
   {
-    if (segments.isEmpty()) {
-      throw new IllegalArgumentException("segment set must not be empty");
-    }
-
-    final String dataSource = segments.iterator().next().getDataSource();
-    for (DataSegment segment : segments) {
-      if (!dataSource.equals(segment.getDataSource())) {
-        throw new IllegalArgumentException("segments must all be from the same dataSource");
-      }
-    }
+    verifySegmentsToCommit(segments);
 
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
     }
+
+    final String dataSource = segments.iterator().next().getDataSource();
 
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = new HashSet<>();

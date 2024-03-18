@@ -31,13 +31,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -48,7 +46,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -176,29 +173,7 @@ public class SQLMetadataConnectorTest
   public void testAlterSegmentTableAddLastUsed()
   {
     connector.createSegmentTable();
-
-    // Drop column used_status_last_updated to bring us in line with pre-upgrade state
-    derbyConnectorRule.getConnector().retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            final Batch batch = handle.createBatch();
-            batch.add(
-                StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED",
-                    derbyConnectorRule.metadataTablesConfigSupplier()
-                                      .get()
-                                      .getSegmentsTable()
-                                      .toUpperCase(Locale.ENGLISH)
-                )
-            );
-            batch.execute();
-            return null;
-          }
-        }
-    );
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED");
 
     connector.alterSegmentTable();
     Assert.assertTrue(connector.tableHasColumn(
