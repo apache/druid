@@ -217,11 +217,11 @@ within the specified interval that match the optional list of versions; partiall
 
 The group of segments is sent as a JSON request payload that accepts the following properties:
 
-|Property|Description|Example|
-|----------|-------------|---------|
-|`interval`|ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
-|`versions`|Array of segment versions. Must be provided with `interval`.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
+|Property|Description|Required|Example|
+|----------|-------------|---------|---------|
+|`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
+|`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 
@@ -319,11 +319,11 @@ within the specified interval that match the optional list of versions; partiall
 
 The group of segments is sent as a JSON request payload that accepts the following properties:
 
-|Property|Description|Example|
-|----------|-------------|---------|
-|`interval`| ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
-|`versions`|Array of segment versions. Must be provided with an `interval`.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
+|Property|Description|Required|Example|
+|----------|-------------|---------|---------|
+|`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
+|`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 

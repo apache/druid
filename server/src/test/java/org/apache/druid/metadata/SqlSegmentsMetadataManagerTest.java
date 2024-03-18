@@ -834,7 +834,7 @@ public class SqlSegmentsMetadataManagerTest
     );
 
     // 2 out of 3 segments match the interval
-    Assert.assertEquals(2, sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(DS.KOALA, theInterval));
+    Assert.assertEquals(2, sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(DS.KOALA, theInterval, null));
 
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
@@ -882,7 +882,7 @@ public class SqlSegmentsMetadataManagerTest
     );
 
     // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be marked unused
-    Assert.assertEquals(1, sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(DS.KOALA, theInterval));
+    Assert.assertEquals(1, sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(DS.KOALA, theInterval, null));
 
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
@@ -938,7 +938,7 @@ public class SqlSegmentsMetadataManagerTest
     final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
 
     // 2 out of 3 segments match the interval
-    Assert.assertEquals(2, sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(DS.KOALA, theInterval));
+    Assert.assertEquals(2, sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(DS.KOALA, theInterval, null));
 
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
@@ -1071,7 +1071,7 @@ public class SqlSegmentsMetadataManagerTest
     final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
 
     // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be marked unused
-    Assert.assertEquals(1, sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(DS.KOALA, theInterval));
+    Assert.assertEquals(1, sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(DS.KOALA, theInterval, null));
 
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
