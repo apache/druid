@@ -29,11 +29,13 @@ public class CentralizedDatasourceSchemaConfig
 {
   @JsonProperty
   private boolean enabled = false;
-
   @JsonProperty
   private boolean backFillEnabled = true;
   @JsonProperty
   private long backFillPeriod = 60000;
+
+  // internal config meant for testing
+  private boolean taskSchemaPublishDisabled = false;
 
   @JsonProperty
   public boolean isEnabled()
@@ -51,6 +53,12 @@ public class CentralizedDatasourceSchemaConfig
   public long getBackFillPeriod()
   {
     return backFillPeriod;
+  }
+
+  @JsonProperty
+  public boolean isTaskSchemaPublishDisabled()
+  {
+    return taskSchemaPublishDisabled;
   }
 
   public static CentralizedDatasourceSchemaConfig create()

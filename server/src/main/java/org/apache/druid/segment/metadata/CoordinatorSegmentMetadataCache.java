@@ -46,6 +46,7 @@ import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -74,6 +75,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
 
+  private final SegmentMetadataCacheConfig config;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
@@ -94,6 +96,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   )
   {
     super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
+    this.config = config;
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.segmentSchemaCache = segmentSchemaCache;
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
@@ -307,7 +310,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     log.debug("SegmentsToRefreshMinusCachedSegments [%s], cachedSegments [%s]", segmentsToRefreshMinusRealtimeSegments, cachedSegments);
 
     // Refresh the segments.
-    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefreshMinusCachedSegments);
+    Set<SegmentId> refreshed = Collections.emptySet();
+
+    if (!config.isDisableSegmentMetadataQueries()) {
+      refreshed = refreshSegments(segmentsToRefreshMinusCachedSegments);
+    }
 
     log.debug("Refreshed segments are [%s]", refreshed);
 

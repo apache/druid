@@ -1997,7 +1997,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Map<String, Long> fingerprintSchemaIdMap = null;
     boolean schemaPresent = false;
     try {
-      if (centralizedDatasourceSchemaConfig.isEnabled()
+      if (!publishSchema()) {
+        log.info("Task schema publish is disabled.");
+      }
+      if (publishSchema()
           && minimalSegmentSchemas != null
           && minimalSegmentSchemas.isNonEmpty()) {
         schemaPresent = true;
@@ -2059,7 +2062,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("payload", jsonMapper.writeValueAsBytes(segment))
               .bind("used_status_last_updated", now);
 
-          if (centralizedDatasourceSchemaConfig.isEnabled()) {
+          if (publishSchema()) {
             preparedBatchPart
                 .bind("schema_id", schemaId)
                 .bind("num_rows", numRows);
@@ -2222,7 +2225,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Map<String, Long> fingerprintSchemaIdMap = null;
     boolean schemaPresent = false;
 
-    if (minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
+    if (!publishSchema()) {
+      log.info("Task schema publish is disabled.");
+    }
+    if (publishSchema() && minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
       schemaPresent = true;
       log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
       segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
@@ -2290,7 +2296,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("payload", jsonMapper.writeValueAsBytes(segment))
                  .bind("used_status_last_updated", now);
 
-        if (centralizedDatasourceSchemaConfig.isEnabled()) {
+        if (publishSchema()) {
           preparedBatchPart
               .bind("schema_id", schemaId)
               .bind("num_rows", numRows);
@@ -2376,7 +2382,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                   .retrieveSegmentsById(datasource, segmentIds, centralizedDatasourceSchemaConfig.isEnabled())
+                                   .retrieveSegmentsById(datasource, segmentIds, publishSchema())
                                    .stream()
                                    .map(DataSegmentPlus::getDataSegment)
         .map(v -> new DataSegmentWithSchemaInformation(v, null, null))
@@ -2385,7 +2391,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private String buildSqlToInsertSegments()
   {
-    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+    if (publishSchema()) {
       return StringUtils.format(
           "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
           + " partitioned, version, used, payload, used_status_last_updated, schema_id, num_rows) "
@@ -2854,6 +2860,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("task_id", taskId)
             .execute()
     );
+  }
+
+  private boolean publishSchema()
+  {
+    return centralizedDatasourceSchemaConfig.isEnabled()
+           && !centralizedDatasourceSchemaConfig.isTaskSchemaPublishDisabled();
   }
 
   private static class PendingSegmentsRecord
