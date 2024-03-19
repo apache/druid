@@ -204,8 +204,8 @@ public interface Function extends NamedFunction
     @Override
     protected final ExprEval eval(ExprEval param)
     {
-      if (param.isNumericNull() && param.value() == null) {
-        return NullHandling.sqlCompatible() ? ExprEval.of(null) : eval(NullHandling.ZERO_DOUBLE);
+      if (NullHandling.sqlCompatible() && param.isNumericNull()) {
+        return ExprEval.of(null);
       }
       if (param.type().is(ExprType.LONG)) {
         return eval(param.asLong());
@@ -241,7 +241,11 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return inspector.areNumeric(args) && inspector.canVectorize(args);
+      final ExpressionType outputType = args.get(0).getOutputType(inspector);
+      if (outputType == null && NullHandling.replaceWithDefault()) {
+        return false;
+      }
+      return (outputType == null || outputType.isNumeric()) && inspector.canVectorize(args);
     }
   }
 
