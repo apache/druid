@@ -22,10 +22,13 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -36,7 +39,22 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.LookupExprMacro;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.MapLookupExtractorFactory;
+import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.DimensionTopNMetricSpec;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.join.JoinTestHelper;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -56,20 +74,33 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class QueryLifecycleTest
 {
   private static final String DATASOURCE = "some_datasource";
   private static final String IDENTITY = "some_identity";
   private static final String AUTHORIZER = "some_authorizer";
+  private static final String LOOKUP_COUNTRY_CODE_TO_NAME = "country_code_to_name";
+  private static final String LOOKUP_COUNTRY_NUMBER_TO_NAME = "country_number_to_name";
+
 
   private final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                               .dataSource(DATASOURCE)
                                               .intervals(ImmutableList.of(Intervals.ETERNITY))
                                               .aggregators(new CountAggregatorFactory("chocula"))
                                               .build();
+  private ExprMacroTable exprMacroTable;
+  private VirtualColumns lookupVirtualColumns;
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
   QueryToolChestWarehouse toolChestWarehouse;
   QuerySegmentWalker texasRanger;
   GenericQueryMetricsFactory metricsFactory;
@@ -88,7 +119,7 @@ public class QueryLifecycleTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Before
-  public void setup()
+  public void setup() throws IOException
   {
     toolChestWarehouse = EasyMock.createMock(QueryToolChestWarehouse.class);
     texasRanger = EasyMock.createMock(QuerySegmentWalker.class);
@@ -103,6 +134,46 @@ public class QueryLifecycleTest
     runner = EasyMock.createMock(QueryRunner.class);
     metrics = EasyMock.createNiceMock(QueryMetrics.class);
     authenticationResult = EasyMock.createMock(AuthenticationResult.class);
+
+    final Map<String, String> countryCodeToNameMap = JoinTestHelper.createCountryIsoCodeToNameLookup().getMap();
+    final Map<String, String> countryNumberToNameMap = JoinTestHelper.createCountryNumberToNameLookup().getMap();
+
+    exprMacroTable = new ExprMacroTable(ImmutableList.of(new LookupExprMacro(new LookupExtractorFactoryContainerProvider()
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return ImmutableSet.of(LOOKUP_COUNTRY_CODE_TO_NAME, LOOKUP_COUNTRY_NUMBER_TO_NAME);
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        if (LOOKUP_COUNTRY_CODE_TO_NAME.equals(lookupName)) {
+          return Optional.of(new LookupExtractorFactoryContainer("0",
+                                                                 new MapLookupExtractorFactory(
+                                                                         countryCodeToNameMap,
+                                                                         false
+                                                                 )
+          ));
+        } else if (LOOKUP_COUNTRY_NUMBER_TO_NAME.equals(lookupName)) {
+          return Optional.of(new LookupExtractorFactoryContainer("0",
+                                                                 new MapLookupExtractorFactory(
+                                                                         countryNumberToNameMap,
+                                                                         false
+                                                                 )
+          ));
+        } else {
+          return Optional.empty();
+        }
+      }
+    })));
+    lookupVirtualColumns = VirtualColumns.create(ImmutableList.of(new ExpressionVirtualColumn(
+            LOOKUP_COUNTRY_CODE_TO_NAME,
+            "lookup(countryIsoCode, '" + LOOKUP_COUNTRY_CODE_TO_NAME + "')",
+            ColumnType.STRING,
+            exprMacroTable
+    )));
   }
 
   private QueryLifecycle createLifecycle(AuthConfig authConfig)
@@ -179,6 +250,122 @@ public class QueryLifecycleTest
 
     QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
     lifecycle.runSimple(query, authenticationResult, new Access(false));
+  }
+
+  @Test
+  public void testScanQuery_authorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK).times(2);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(LOOKUP_COUNTRY_CODE_TO_NAME, ResourceType.LOOKUP), Action.READ))
+            .andReturn(Access.OK).times(2);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .times(2);
+
+    replayAll();
+    final ScanQuery scanQuery = Druids.newScanQueryBuilder()
+                                      .dataSource(DATASOURCE)
+                                      .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+                                      .virtualColumns(lookupVirtualColumns)
+                                      .build();
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+                                      .setAuthorizeQueryContextParams(true)
+                                      .setEnableAuthorizeLookupDirectly(true)
+                                      .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(scanQuery);
+
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(scanQuery);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+  }
+
+  @Test
+  public void testTopNQuery_authorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK).times(2);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(LOOKUP_COUNTRY_CODE_TO_NAME, ResourceType.LOOKUP), Action.READ))
+            .andReturn(Access.OK).times(2);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .times(2);
+
+    replayAll();
+    final TopNQuery topNquery = new TopNQueryBuilder().dataSource(DATASOURCE)
+                                                      .granularity(Granularities.ALL)
+                                                      .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                                      .dimension(LOOKUP_COUNTRY_CODE_TO_NAME)
+                                                      .virtualColumns(lookupVirtualColumns)
+                                                      .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                                                      .threshold(5)
+                                                      .build();
+
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+                                      .setAuthorizeQueryContextParams(true)
+                                      .setEnableAuthorizeLookupDirectly(true)
+                                      .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(topNquery);
+
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(topNquery);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+  }
+
+  @Test
+  public void testGroupByQuery_authorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK).times(2);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(LOOKUP_COUNTRY_CODE_TO_NAME, ResourceType.LOOKUP), Action.READ))
+            .andReturn(Access.OK).times(2);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .times(2);
+
+    replayAll();
+    final GroupByQuery groupByQuery = GroupByQuery.builder()
+                                                  .setDataSource(DATASOURCE)
+                                                  .setInterval(ImmutableList.of(Intervals.ETERNITY))
+                                                  .setVirtualColumns(lookupVirtualColumns)
+                                                  .setGranularity(Granularities.ALL)
+                                                  .build();
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+                                      .setAuthorizeQueryContextParams(true)
+                                      .setEnableAuthorizeLookupDirectly(true)
+                                      .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(groupByQuery);
+
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(groupByQuery);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
   }
 
   @Test
@@ -389,7 +576,7 @@ public class QueryLifecycleTest
 
     AuthConfig authConfig = AuthConfig.newBuilder()
         .setAuthorizeQueryContextParams(true)
-         // We have secured keys. User used one of them.
+        // We have secured keys. User used one of them.
         .setSecuredContextKeys(ImmutableSet.of("foo", "baz2"))
         .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);

@@ -60,7 +60,7 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
   }
 
   @Override
-  public SqlNode visit(SqlCall call)
+  public SqlNode visit(final SqlCall call)
   {
     if (call.getOperator() instanceof AuthorizableOperator) {
       resourceActions.addAll(((AuthorizableOperator) call.getOperator()).computeResources(
@@ -69,6 +69,16 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
       ));
     }
 
+    if (call.getOperator().getName().equals("LOOKUP")) {
+      String lookupName = call.getOperandList().get(1).toString();
+      if (lookupName.startsWith("'") && lookupName.endsWith("'")) {
+        lookupName = lookupName.substring(1, lookupName.length() - 1);
+      }
+      final String resourceType = plannerContext.getSchemaResourceType("lookup", lookupName);
+      if (resourceType != null) {
+        resourceActions.add(new ResourceAction(new Resource(lookupName, resourceType), Action.READ));
+      }
+    }
     return super.visit(call);
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.math.expr.LookupNameExtractionShuttle;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
@@ -47,6 +49,15 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.dimension.LookupDimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -63,12 +74,15 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Class that helps a Druid server (broker, historical, etc) manage the lifecycle of a query that it is handling. It
@@ -222,7 +236,7 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+    Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
             baseQuery.getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
@@ -232,6 +246,17 @@ public class QueryLifecycle
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
+
+    Set<String> lookupNames = collectLookupNames();
+    if (!lookupNames.isEmpty()) {
+      resourcesToAuthorize = Iterables.concat(
+        resourcesToAuthorize,
+        Iterables.transform(
+          lookupNames,
+          lookup -> new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.READ)
+        )
+      );
+    }
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),
         AuthorizationUtils.authorizeAllResourceActions(
@@ -240,6 +265,70 @@ public class QueryLifecycle
             authorizerMapper
         )
     );
+  }
+
+  private String getLookUpName(DimensionSpec dimension)
+  {
+    if (dimension instanceof LookupDimensionSpec) {
+      return ((LookupDimensionSpec) dimension).getName();
+    } else if (dimension instanceof ExtractionDimensionSpec) {
+      ExtractionFn extractionFn = ((ExtractionDimensionSpec) dimension).getExtractionFn();
+      if (extractionFn instanceof RegisteredLookupExtractionFn) {
+        return ((RegisteredLookupExtractionFn) extractionFn).getLookupName();
+      }
+    }
+    return null;
+  }
+
+  private Set<String> collectLookupNames()
+  {
+    if (authConfig.isEnableAuthorizeLookupDirectly()) {
+      Set<String> lookupNames = new HashSet<>();
+      if (baseQuery instanceof GroupByQuery) {
+        GroupByQuery groupByQuery = (GroupByQuery) baseQuery;
+        lookupNames.addAll(getLookupNameFromDimension(groupByQuery));
+        lookupNames.addAll(getLookUpNameFromVirtualColumn());
+      } else if (baseQuery instanceof TopNQuery) {
+        TopNQuery topNQuery = (TopNQuery) baseQuery;
+        DimensionSpec dimension = topNQuery.getDimensionSpec();
+        lookupNames.addAll(getLookUpNameFromVirtualColumn());
+        String lookupName = getLookUpName(dimension);
+        if (!Strings.isNullOrEmpty(lookupName)) {
+          lookupNames.add(lookupName);
+        }
+      } else if (baseQuery instanceof ScanQuery) {
+        lookupNames.addAll(getLookUpNameFromVirtualColumn());
+      }
+      return lookupNames;
+    }
+    return ImmutableSet.of();
+  }
+
+  private Set<String> getLookupNameFromDimension(GroupByQuery groupByQuery)
+  {
+    return groupByQuery.getDimensions()
+                       .stream()
+                       .map(this::getLookUpName)
+                       .filter(lookupName -> !Strings.isNullOrEmpty(lookupName))
+                       .collect(Collectors.toSet());
+  }
+
+  private Set<String> getLookUpNameFromVirtualColumn()
+  {
+    final LookupNameExtractionShuttle lookNameExtraction = new LookupNameExtractionShuttle();
+    return Arrays.stream(baseQuery.getVirtualColumns().getVirtualColumns())
+       .filter(virtualColumn -> virtualColumn instanceof ExpressionVirtualColumn
+                                && ((ExpressionVirtualColumn) virtualColumn).getExpression()
+                                                                            .toUpperCase(Locale.getDefault())
+                                                                            .startsWith(
+                                                                                    ResourceType.LOOKUP))
+       .map(virtualColumn -> ((ExpressionVirtualColumn) virtualColumn).getParsedExpression()
+                                                                      .get())
+       .map(express -> {
+         express.visit(lookNameExtraction);
+         return lookNameExtraction.getLookupName();
+       }).filter(lookupName -> !lookupName.isEmpty())
+       .collect(Collectors.toSet());
   }
 
   /**
@@ -253,7 +342,7 @@ public class QueryLifecycle
   public Access authorize(AuthenticationResult authenticationResult)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+    Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
             baseQuery.getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
@@ -263,6 +352,16 @@ public class QueryLifecycle
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
+    Set<String> lookupNames = collectLookupNames();
+    if (!lookupNames.isEmpty()) {
+      resourcesToAuthorize = Iterables.concat(
+        resourcesToAuthorize,
+        Iterables.transform(
+          lookupNames,
+          lookup -> new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.READ)
+        )
+      );
+    }
     return doAuthorize(
         authenticationResult,
         AuthorizationUtils.authorizeAllResourceActions(

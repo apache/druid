@@ -1,0 +1,15 @@
+{
+  "__default": {
+    "auth-lookup": {
+      "version": "v1",
+      "lookupExtractorFactory": {
+        "type": "map",
+        "map": {
+          "key1": "value1",
+          "key2": "value2",
+          "key3": "value3"
+        }
+      }
+    }
+  }
+}

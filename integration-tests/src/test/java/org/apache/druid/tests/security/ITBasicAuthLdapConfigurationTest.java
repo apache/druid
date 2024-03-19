@@ -33,7 +33,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
-import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.testng.annotations.BeforeClass;
@@ -70,13 +69,9 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   @BeforeClass
   public void before() throws Exception
   {
-    // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
-    );
-
     setupHttpClientsAndUsers();
     setExpectedSystemSchemaObjects();
+    setExpectedLookupObjects();
   }
 
   @Test
@@ -127,6 +122,15 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
     createRoleWithPermissionsAndGroupMapping(
         "datasourceOnlyGroup",
         ImmutableMap.of("datasourceOnlyRole", DATASOURCE_ONLY_PERMISSIONS)
+    );
+  }
+
+  @Override
+  protected void setupDatasourceAndLookupUser() throws Exception
+  {
+    createRoleWithPermissionsAndGroupMapping(
+        "datasourceAndLookupGroup",
+        ImmutableMap.of("datasourceAndLookupRole", DATASOURCE_LOOKUP_CONFIG_PERMISSIONS)
     );
   }
 
