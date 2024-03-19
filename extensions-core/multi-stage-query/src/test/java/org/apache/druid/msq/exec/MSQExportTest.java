@@ -27,7 +27,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -106,14 +106,14 @@ public class MSQExportTest extends MSQTestBase
   }
 
   @Test
-  public void testNumberOfRowsPerFile() throws IOException
+  public void testNumberOfRowsPerFile()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
 
     Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
