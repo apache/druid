@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.generator.ColumnValueGenerator;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -148,13 +149,15 @@ public class LongCompressionBenchmarkFileGenerator
           compFile.delete();
           File dataFile = new File(dir, entry.getKey());
 
+          SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
           ColumnarLongsSerializer writer = CompressionFactory.getLongSerializer(
               "long-benchmark",
-              new OffHeapMemorySegmentWriteOutMedium(),
+              segmentWriteOutMedium,
               "long",
               ByteOrder.nativeOrder(),
               encoding,
-              compression
+              compression,
+              segmentWriteOutMedium.getCloser()
           );
           try (
               BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);

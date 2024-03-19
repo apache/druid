@@ -39,6 +39,9 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -49,7 +52,6 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -184,7 +186,7 @@ public class DataSourcesResource
 
   private interface SegmentUpdateOperation
   {
-    int perform() throws UnknownSegmentIdsException;
+    int perform();
   }
 
   @POST
@@ -193,8 +195,8 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    SegmentUpdateOperation operation = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
-        dataSourceName);
+    SegmentUpdateOperation operation = () -> segmentsMetadataManager
+        .markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
     return performSegmentUpdate(dataSourceName, operation);
   }
 
@@ -213,6 +215,21 @@ public class DataSourcesResource
         return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
       } else {
         final Set<String> segmentIds = payload.getSegmentIds();
+        if (segmentIds == null || segmentIds.isEmpty()) {
+          return 0;
+        }
+
+        // Validate segmentIds
+        final List<String> invalidSegmentIds = new ArrayList<>();
+        for (String segmentId : segmentIds) {
+          if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
+            invalidSegmentIds.add(segmentId);
+          }
+        }
+        if (!invalidSegmentIds.isEmpty()) {
+          throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
+        }
+
         return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
       }
     };
@@ -298,11 +315,10 @@ public class DataSourcesResource
       int numChangedSegments = operation.perform();
       return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
-    catch (UnknownSegmentIdsException e) {
-      log.warn("Could not find segmentIds[%s]", e.getUnknownSegmentIds());
+    catch (DruidException e) {
       return Response
-          .status(Response.Status.NOT_FOUND)
-          .entity(ImmutableMap.of("message", e.getMessage()))
+          .status(e.getStatusCode())
+          .entity(new ErrorResponse(e))
           .build();
     }
     catch (Exception e) {
@@ -380,7 +396,7 @@ public class DataSourcesResource
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       final String killTaskId = FutureUtils.getUnchecked(
-          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null),
+          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null, null),
           true
       );
       auditManager.doAudit(

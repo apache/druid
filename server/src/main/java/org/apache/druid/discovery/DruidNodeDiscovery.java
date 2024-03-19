@@ -54,5 +54,13 @@ public interface DruidNodeDiscovery
     {
       // do nothing
     }
+
+    /**
+     * Called once when the underlying cache in the DruidNodeDiscovery implementation has timed out trying to initialize.
+     */
+    default void nodeViewInitializedTimedOut()
+    {
+      // do nothing
+    }
   }
 }

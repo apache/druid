@@ -315,6 +315,12 @@ public class K8sDruidNodeDiscoveryProviderTest
     }
 
     @Override
+    public void nodeViewInitializedTimedOut()
+    {
+      nodeViewInitialized();
+    }
+
+    @Override
     public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
     {
       List<DiscoveryDruidNode> l = Lists.newArrayList(nodes);

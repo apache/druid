@@ -23,8 +23,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 
@@ -38,34 +36,25 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
   private final BitmapFactory bitmapFactory;
   private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
-  private final ColumnConfig columnConfig;
-  private final int numRows;
 
   public IndexedStringDruidPredicateIndexes(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
-      Indexed<ImmutableBitmap> bitmaps,
-      @Nullable ColumnConfig columnConfig,
-      int numRows
+      Indexed<ImmutableBitmap> bitmaps
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
-    this.columnConfig = columnConfig;
-    this.numRows = numRows;
   }
 
   @Override
   @Nullable
   public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
   {
-    if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
-      return null;
-    }
     final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
 
-    return new SimpleImmutableBitmapIterableIndex()
+    return new DictionaryScanningBitmapIndex(dictionary.size())
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)

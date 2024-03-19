@@ -67,7 +67,8 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
         segmentWriteOutMedium,
         StringUtils.format("%s.double_column", fieldName),
         ByteOrder.nativeOrder(),
-        indexSpec.getDimensionCompression()
+        indexSpec.getDimensionCompression(),
+        fieldResourceCloser
     );
     doublesSerializer.open();
   }

@@ -39,9 +39,11 @@ public interface SqlEngine
   String name();
 
   /**
-   * Whether a feature applies to this engine or not.
+   * Whether a feature applies to this engine or not. Most callers should use
+   * {@link PlannerContext#featureAvailable(EngineFeature)} instead, which also checks feature flags in context
+   * parameters.
    */
-  boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext);
+  boolean featureAvailable(EngineFeature feature);
 
   /**
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
