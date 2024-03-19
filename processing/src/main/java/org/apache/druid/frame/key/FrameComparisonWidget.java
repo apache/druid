@@ -51,6 +51,10 @@ public interface FrameComparisonWidget
   /**
    * Compare a specific row of this frame to the provided key. The key must have been created with sortColumns
    * that match the ones used to create this widget, or else results are undefined.
+   *
+   * Comparison considers null to be equal to null. Callers that need to determine if key parts are null
+   * (perhaps because they *don't* want to consider null to be equal to null) should use
+   * {@link #hasNonNullKeyParts(int, int[])} to check the relevant parts.
    */
   int compare(int row, RowKey key);
 
@@ -58,6 +62,10 @@ public interface FrameComparisonWidget
    * Compare a specific row of this frame to a specific row of another frame. The other frame must have the same
    * sort key, or else results are undefined. The other frame may be the same object as this frame; for example,
    * this is used by {@link org.apache.druid.frame.write.FrameSort} to sort frames in-place.
+   *
+   * Comparison considers null to be equal to null. Callers that need to determine if key parts are null
+   * (perhaps because they *don't* want to consider null to be equal to null) should use
+   * {@link #hasNonNullKeyParts(int, int[])} to check the relevant parts.
    */
   int compare(int row, FrameComparisonWidget otherWidget, int otherRow);
 }
