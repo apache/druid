@@ -20,6 +20,7 @@
 package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
@@ -35,7 +36,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 
 /**
@@ -80,6 +80,10 @@ public class DefaultObjectMapper extends ObjectMapper
     configure(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS, false);
     configure(SerializationFeature.INDENT_OUTPUT, false);
     configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, false);
+
+    // Disable automatic JSON termination, so readers can detect truncated responses when a JsonGenerator is
+    // closed after an exception is thrown while writing.
+    configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
 
     addHandler(new DefaultDeserializationProblemHandler(serviceName));
   }
