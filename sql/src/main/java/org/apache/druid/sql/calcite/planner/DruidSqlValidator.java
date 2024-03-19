@@ -41,6 +41,7 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
@@ -448,21 +449,21 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       // extensions which are not loaded. Those details are not known at the time
       // of this code so we are not yet in a position to make the right decision.
       // This is a task to be revisited when we have more information.
-      final String sqlTypeName = definedCol.sqlStorageType();
-      if (sqlTypeName == null) {
+      if (definedCol.sqlStorageType() == null) {
         // Don't know the storage type. Just skip this one: Druid types are
         // fluid so let Druid sort out what to store. This is probably not the right
         // answer, but should avoid problems until full type system support is completed.
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;
       }
-      if (NullHandling.replaceWithDefault()) {
+      SqlTypeName sqlTypeName = SqlTypeName.get(definedCol.sqlStorageType());
+      RelDataType relType = typeFactory.createSqlType(sqlTypeName);
+      if (NullHandling.replaceWithDefault() && !SqlTypeFamily.STRING.contains(relType)) {
         fields.add(Pair.of(
             colName,
-            typeFactory.createSqlType(SqlTypeName.get(sqlTypeName))
+            relType
         ));
       } else {
-        RelDataType relType = typeFactory.createSqlType(SqlTypeName.get(sqlTypeName));
         fields.add(Pair.of(
             colName,
             typeFactory.createTypeWithNullability(relType, true)
