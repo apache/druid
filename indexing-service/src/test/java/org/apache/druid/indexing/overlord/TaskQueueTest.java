@@ -64,7 +64,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -209,7 +208,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testSetUseLineageBasedSegmentAllocationByDefault() throws EntryExistsException
+  public void testSetUseLineageBasedSegmentAllocationByDefault()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -234,7 +233,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
+  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -269,7 +268,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
+  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -301,7 +300,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testLockConfigTakePrecedenceThanDefaultTaskContext() throws EntryExistsException
+  public void testLockConfigTakePrecedenceThanDefaultTaskContext()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -334,7 +333,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedContextOverrideLockConfig() throws EntryExistsException
+  public void testUserProvidedContextOverrideLockConfig()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -364,7 +363,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException
+  public void testTaskStatusWhenExceptionIsThrownInIsReady()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -400,7 +399,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException
+  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws InterruptedException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));

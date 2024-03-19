@@ -85,7 +85,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
     // Add a large enough delay to allow propagation of credentials to all services. It'd be ideal
     // to have a "readiness" endpoint exposed by different services that'd return the version of auth creds cached.
     try {
-      Thread.sleep(10000);
+      Thread.sleep(20000);
     }
     catch (InterruptedException e) {
       // Ignore exception
