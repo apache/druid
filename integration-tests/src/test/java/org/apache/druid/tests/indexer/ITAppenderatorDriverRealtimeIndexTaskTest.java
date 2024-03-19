@@ -44,7 +44,7 @@ import java.util.Map;
 /**
  * See {@link AbstractITRealtimeIndexTaskTest} for test details.
  */
-@Test(groups = TestNGGroup.REALTIME_INDEX)
+@Test(groups = {TestNGGroup.REALTIME_INDEX, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_SMQ_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
 {

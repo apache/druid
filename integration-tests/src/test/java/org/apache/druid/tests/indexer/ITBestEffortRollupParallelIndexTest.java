@@ -38,7 +38,7 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_SMQ_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTest
 {
