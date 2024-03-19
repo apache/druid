@@ -2071,6 +2071,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
+    defaultValue: 0,
     hideInMore: true,
     info: (
       <>
