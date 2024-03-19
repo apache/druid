@@ -28,6 +28,8 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,16 +75,21 @@ public class LoadingLookup extends LookupExtractor
       // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       return null;
     }
-
-    final String presentVal;
-    try {
-      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
+    // the usage of getIfPresent instead of get is to mitigate the issue that can arise
+    // when the data exists in druid but not in the data fetcher.
+    String presentVal = loadingCache.getIfPresent(keyEquivalent);
+    if (presentVal != null) {
       return NullHandling.emptyToNullIfNeeded(presentVal);
     }
-    catch (ExecutionException e) {
-      LOGGER.debug("value not found for key [%s]", key);
+
+    String val = this.dataFetcher.fetch(keyEquivalent);
+    if (val == null) {
       return null;
     }
+    Map<String, String> map = new HashMap<>();
+    map.put(keyEquivalent, val);
+    loadingCache.putAll(map);
+    return NullHandling.emptyToNullIfNeeded(val);
   }
 
   @Override
@@ -109,25 +116,30 @@ public class LoadingLookup extends LookupExtractor
   @Override
   public boolean canIterate()
   {
-    return false;
+    return true;
   }
 
   @Override
   public boolean canGetKeySet()
   {
-    return false;
+    return true;
   }
 
   @Override
   public Iterable<Map.Entry<String, String>> iterable()
   {
-    throw new UnsupportedOperationException("Cannot iterate");
+    return this.dataFetcher.fetchAll();
   }
 
   @Override
   public Set<String> keySet()
   {
-    throw new UnsupportedOperationException("Cannot get key set");
+    Iterable<Map.Entry<String, String>> data = this.dataFetcher.fetchAll();
+    Set<String> set = new HashSet<>();
+    if (data != null) {
+      data.forEach(each -> set.add(each.getKey()));
+    }
+    return set;
   }
 
   @Override
