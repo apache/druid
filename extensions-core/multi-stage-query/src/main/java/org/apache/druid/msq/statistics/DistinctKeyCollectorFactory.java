@@ -19,15 +19,11 @@
 
 package org.apache.druid.msq.statistics;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import it.unimi.dsi.fastutil.objects.Object2LongRBTreeMap;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.RowKey;
 
-import java.io.IOException;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
@@ -49,19 +45,6 @@ public class DistinctKeyCollectorFactory implements KeyCollectorFactory<Distinct
   public DistinctKeyCollector newKeyCollector()
   {
     return new DistinctKeyCollector(comparator);
-  }
-
-  @Override
-  public JsonDeserializer<DistinctKeySnapshot> snapshotDeserializer()
-  {
-    return new JsonDeserializer<DistinctKeySnapshot>()
-    {
-      @Override
-      public DistinctKeySnapshot deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException
-      {
-        return jp.readValueAs(DistinctKeySnapshot.class);
-      }
-    };
   }
 
   @Override

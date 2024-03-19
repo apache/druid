@@ -69,8 +69,8 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.Period;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -132,7 +132,7 @@ public class ExpressionsTest extends CalciteTestBase
 
   final DruidOperatorTable operatorTable = new DruidOperatorTable(Collections.emptySet(), Collections.emptySet());
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);

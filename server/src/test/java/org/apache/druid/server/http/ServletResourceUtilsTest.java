@@ -17,10 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.server.http;
 
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+
+import javax.ws.rs.core.Response;
 
 public class ServletResourceUtilsTest
 {
@@ -39,5 +46,20 @@ public class ServletResourceUtilsTest
         return message;
       }
     }).get("error"));
+  }
+
+  @Test
+  public void testBuildErrorReponseFrom()
+  {
+    DruidException exception = InvalidInput.exception("Invalid value of [%s]", "inputKey");
+    Response response = ServletResourceUtils.buildErrorResponseFrom(exception);
+    Assert.assertEquals(exception.getStatusCode(), response.getStatus());
+
+    Object entity = response.getEntity();
+    Assert.assertTrue(entity instanceof ErrorResponse);
+    MatcherAssert.assertThat(
+        ((ErrorResponse) entity).getUnderlyingException(),
+        DruidExceptionMatcher.invalidInput().expectMessageIs("Invalid value of [inputKey]")
+    );
   }
 }
