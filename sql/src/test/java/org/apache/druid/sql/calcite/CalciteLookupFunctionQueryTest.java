@@ -54,16 +54,17 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 {
@@ -772,7 +773,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
         QUERY_CONTEXT,
         NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(expressionFilter("array_contains(\"dim1\",null)"))
+        ? buildFilterTestExpectedQuery(expressionFilter("array_contains(mv_harmonize_nulls(\"dim1\"),null)"))
         : buildFilterTestExpectedQueryAlwaysFalse(),
         ImmutableList.of()
     );
@@ -856,17 +857,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("MV_CONTAINS(lookup(dim1, 'lookyloo'), 'xabc') IS NOT TRUE"),
         QUERY_CONTEXT,
-        NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
-            not(equality("v0", "xabc", ColumnType.STRING))
-        )
-        : buildFilterTestExpectedQuery(
-            not(equality("dim1", "abc", ColumnType.STRING))
+        buildFilterTestExpectedQuery(
+            NullHandling.sqlCompatible()
+            ? not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+            : not(equality("dim1", "abc", ColumnType.STRING))
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of()
-        : ImmutableList.of(new Object[]{"", 5L})
+        ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
     );
   }
 
@@ -912,12 +908,10 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
             NullHandling.sqlCompatible()
-            ? not(in("dim1", ImmutableList.of("x6", "xabc", "nonexistent"), EXTRACTION_FN))
+            ? not(istrue(in("dim1", ImmutableList.of("6", "abc"), null)))
             : not(in("dim1", ImmutableList.of("6", "abc"), null))
         ),
-        NullHandling.sqlCompatible()
-        ? Collections.emptyList()
-        : ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
+        ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
     );
   }
 
@@ -1591,7 +1585,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Too many optimize calls[2]"))
     );

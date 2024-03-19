@@ -28,7 +28,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.exception.DruidException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
@@ -68,6 +69,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataStorageActionHandler.class);
+  private static final String CONTEXT_KEY_IS_TRANSIENT = "isTransient";
 
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
@@ -163,7 +165,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       final StatusType status,
       final String type,
       final String groupId
-  ) throws EntryExistsException
+  )
   {
     try {
       getConnector().retryWithHandle(
@@ -236,7 +238,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     if (t instanceof CallbackFailedException) {
       return isTransientDruidException(t.getCause());
     } else if (t instanceof DruidException) {
-      return ((DruidException) t).isTransient();
+      return Boolean.parseBoolean(((DruidException) t).getContextValue(CONTEXT_KEY_IS_TRANSIENT));
     } else {
       return getConnector().isTransientException(t);
     }
@@ -433,26 +435,20 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private DruidException wrapInDruidException(String taskId, Throwable t)
   {
     if (isStatementException(t) && getEntry(taskId).isPresent()) {
-      return new EntryExistsException("Task", taskId);
+      return InvalidInput.exception("Task [%s] already exists", taskId);
     } else if (connector.isRootCausePacketTooBigException(t)) {
-      return new DruidException(
-          StringUtils.format(
-              "Payload for task [%s] exceeds the packet limit."
-              + " Update the max_allowed_packet on your metadata store"
-              + " server or in the connection properties.",
-              taskId
-          ),
-          DruidException.HTTP_CODE_BAD_REQUEST,
-          t,
-          false
+      return InvalidInput.exception(
+          "Payload for task [%s] exceeds the max allowed packet limit."
+          + " If you encountered this error while running native batch ingestion,"
+          + " set a 'splitHintSpec' to reduce the payload of each task."
+          + " If not running native batch ingestion, report this error to your operator.",
+          taskId
       );
     } else {
-      return new DruidException(
-          StringUtils.format("Encountered metadata exception for task [%s]", taskId),
-          DruidException.HTTP_CODE_SERVER_ERROR,
-          t,
-          connector.isTransientException(t)
-      );
+      return DruidException.forPersona(DruidException.Persona.OPERATOR)
+                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                           .build(t, "Encountered metadata exception for task [%s]", taskId)
+                           .withContext(CONTEXT_KEY_IS_TRANSIENT, connector.isTransientException(t));
     }
   }
 

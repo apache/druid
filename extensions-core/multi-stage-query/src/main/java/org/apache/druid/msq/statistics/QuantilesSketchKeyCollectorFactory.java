@@ -19,9 +19,6 @@
 
 package org.apache.druid.msq.statistics;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.common.ArrayOfItemsSerDe;
 import org.apache.datasketches.common.ByteArrayUtil;
@@ -31,7 +28,6 @@ import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.StringUtils;
 
-import java.io.IOException;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -59,20 +55,6 @@ public class QuantilesSketchKeyCollectorFactory
   public QuantilesSketchKeyCollector newKeyCollector()
   {
     return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(byte[].class, SKETCH_INITIAL_K, comparator), 0);
-  }
-
-  @Override
-  public JsonDeserializer<QuantilesSketchKeyCollectorSnapshot> snapshotDeserializer()
-  {
-    return new JsonDeserializer<QuantilesSketchKeyCollectorSnapshot>()
-    {
-      @Override
-      public QuantilesSketchKeyCollectorSnapshot deserialize(JsonParser jp, DeserializationContext ctxt)
-          throws IOException
-      {
-        return jp.readValueAs(QuantilesSketchKeyCollectorSnapshot.class);
-      }
-    };
   }
 
   @Override
