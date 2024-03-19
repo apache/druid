@@ -51,10 +51,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -322,10 +324,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegments().stream()
-                                                                                         .map(
-                                                                                       SegmentIdWithShardSpec::fromDataSegment)
-                                                                                         .collect(Collectors.toList());
+      final Set<DataSegment> segmentsToBeHandedOff = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+      if (segmentsAndCommitMetadata.getUpgradedSegments() != null) {
+        segmentsToBeHandedOff.addAll(segmentsAndCommitMetadata.getUpgradedSegments());
+      }
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList =
+          segmentsToBeHandedOff.stream()
+                               .map(SegmentIdWithShardSpec::fromDataSegment)
+                               .collect(Collectors.toList());
       final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {

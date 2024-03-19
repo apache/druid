@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
@@ -27,6 +28,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class SegmentsAndCommitMetadata
 {
@@ -34,14 +36,34 @@ public class SegmentsAndCommitMetadata
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
+  private final ImmutableSet<DataSegment> upgradedSegments;
 
   public SegmentsAndCommitMetadata(
       List<DataSegment> segments,
-      @Nullable Object commitMetadata
+      Object commitMetadata
+  )
+  {
+    this(segments, commitMetadata, null);
+  }
+
+  private SegmentsAndCommitMetadata(
+      List<DataSegment> segments,
+      @Nullable Object commitMetadata,
+      @Nullable Set<DataSegment> upgradedSegments
   )
   {
     this.segments = ImmutableList.copyOf(segments);
     this.commitMetadata = commitMetadata;
+    this.upgradedSegments = upgradedSegments == null ? null : ImmutableSet.copyOf(upgradedSegments);
+  }
+
+  public SegmentsAndCommitMetadata withUpgradedSegments(Set<DataSegment> upgradedSegments)
+  {
+    return new SegmentsAndCommitMetadata(
+        this.segments,
+        this.commitMetadata,
+        upgradedSegments
+    );
   }
 
   @Nullable
@@ -55,6 +77,12 @@ public class SegmentsAndCommitMetadata
     return segments;
   }
 
+  @Nullable
+  public Set<DataSegment> getUpgradedSegments()
+  {
+    return upgradedSegments;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -66,13 +94,14 @@ public class SegmentsAndCommitMetadata
     }
     SegmentsAndCommitMetadata that = (SegmentsAndCommitMetadata) o;
     return Objects.equals(commitMetadata, that.commitMetadata) &&
+           Objects.equals(upgradedSegments, that.upgradedSegments) &&
            Objects.equals(segments, that.segments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(commitMetadata, segments);
+    return Objects.hash(commitMetadata, segments, upgradedSegments);
   }
 
   @Override
@@ -81,6 +110,7 @@ public class SegmentsAndCommitMetadata
     return getClass().getSimpleName() + "{" +
            "commitMetadata=" + commitMetadata +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           ", upgradedSegments=" + SegmentUtils.commaSeparatedIdentifiers(upgradedSegments) +
            '}';
   }
 
