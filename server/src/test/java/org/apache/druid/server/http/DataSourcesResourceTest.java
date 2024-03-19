@@ -826,7 +826,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidPayloadNoArguments()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNullIntervalAndSegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -838,7 +838,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidPayloadBothArguments()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndEmptySegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -846,11 +846,37 @@ public class DataSourcesResourceTest
         "datasource1",
         new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), ImmutableSet.of())
     );
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndNullSegmentIds()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), null)
+    );
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
+  }
+
+  @Test
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNonNullIntervalAndSegmentIds()
+  {
+    DataSourcesResource dataSourcesResource = createResource();
+
+    Response response = dataSourcesResource.markAsUsedNonOvershadowedSegments(
+        "datasource1",
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-22/P1D"), ImmutableSet.of("segment1"))
+    );
     Assert.assertEquals(400, response.getStatus());
   }
 
   @Test
-  public void testMarkAsUsedNonOvershadowedSegmentsInvalidPayloadEmptyArray()
+  public void testMarkAsUsedNonOvershadowedSegmentsWithNullIntervalAndEmptySegmentIds()
   {
     DataSourcesResource dataSourcesResource = createResource();
 
@@ -1170,8 +1196,7 @@ public class DataSourcesResourceTest
   @Test
   public void testMarkSegmentsAsUnusedNullPayload()
   {
-    DataSourcesResource dataSourcesResource =
-        createResource();
+    DataSourcesResource dataSourcesResource = createResource();
 
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", null, request);
     Assert.assertEquals(400, response.getStatus());
@@ -1183,10 +1208,9 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedInvalidPayload()
+  public void testMarkSegmentsAsUnusedWithNullIntervalAndSegmentIds()
   {
-    DataSourcesResource dataSourcesResource =
-        createResource();
+    DataSourcesResource dataSourcesResource = createResource();
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
         new DataSourcesResource.MarkDataSourceSegmentsPayload(null, null);
@@ -1197,17 +1221,17 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedInvalidPayloadBothArguments()
+  public void testMarkSegmentsAsUnusedWithNonNullIntervalAndEmptySegmentIds()
   {
-    DataSourcesResource dataSourcesResource =
-        createResource();
+    DataSourcesResource dataSourcesResource = createResource();
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
         new DataSourcesResource.MarkDataSourceSegmentsPayload(Intervals.of("2010-01-01/P1D"), ImmutableSet.of());
-
+    prepareRequestForAudit();
     Response response = dataSourcesResource.markSegmentsAsUnused("datasource1", payload, request);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertNotNull(response.getEntity());
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numChangedSegments", 0), response.getEntity());
   }
 
   @Test
