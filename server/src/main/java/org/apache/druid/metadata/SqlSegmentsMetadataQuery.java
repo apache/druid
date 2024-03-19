@@ -263,7 +263,7 @@ public class SqlSegmentsMetadataQuery
     final Query<Map<String, Object>> query = handle.createQuery(
         StringUtils.format(
             "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
-            dbTables.getSegmentsTable(),  getParameterizedInConditionForColumn(segmentIds, "id")
+            dbTables.getSegmentsTable(), getParameterizedInConditionForColumn(segmentIds, "id")
         )
     );
 
@@ -471,28 +471,28 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Append the condition for the interval and match mode to the given string builder with a partial query
-   * @param sb - StringBuilder containing the paritial query with SELECT clause and WHERE condition for used, datasource
+   * Get the condition for the interval and match mode.
    * @param intervals - intervals to fetch the segments for
    * @param matchMode - Interval match mode - overlaps or contains
-   * @param connector - SQL connector
+   * @param quoteString - the connector-specific quote string
    */
-  public static void appendConditionForIntervalsAndMatchMode(
-      final StringBuilder sb,
+  public static String getConditionForIntervalsAndMatchMode(
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
-      final SQLMetadataConnector connector
+      final String quoteString
   )
   {
     if (intervals.isEmpty()) {
-      return;
+      return "";
     }
+
+    final StringBuilder sb = new StringBuilder();
 
     sb.append(" AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
           matchMode.makeSqlCondition(
-              connector.getQuoteString(),
+              quoteString,
               StringUtils.format(":start%d", i),
               StringUtils.format(":end%d", i)
           )
@@ -525,6 +525,7 @@ public class SqlSegmentsMetadataQuery
       ));
     }
     sb.append(")");
+    return sb.toString();
   }
 
   /**
@@ -730,7 +731,7 @@ public class SqlSegmentsMetadataQuery
     }
 
     if (compareAsString) {
-      appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
+      sb.append(getConditionForIntervalsAndMatchMode(intervals, matchMode, connector.getQuoteString()));
     }
 
     final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
