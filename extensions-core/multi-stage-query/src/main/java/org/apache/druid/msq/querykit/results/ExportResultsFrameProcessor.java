@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -89,34 +88,26 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     final RowSignature inputRowSignature = frameReader.signature();
 
     if (columnMappings == null) {
-      // If the column mappings wasn't sent, populate with the frame row signature.
-      for (int i = 0; i < inputRowSignature.size(); i++) {
-        outputColumnNameToFrameColumnNumberMap.put(inputRowSignature.getColumnName(i), i);
-      }
-
-      RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
-      inputRowSignature.getColumnNames()
-                       .stream()
-                       .filter(name -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(name))
-                       .forEach(name -> exportRowSignatureBuilder.add(name, inputRowSignature.getColumnType(name).orElse(null)));
-      this.exportRowSignature = exportRowSignatureBuilder.build();
-    } else {
-      for (final ColumnMapping columnMapping : columnMappings.getMappings()) {
-        this.outputColumnNameToFrameColumnNumberMap.put(
-            columnMapping.getOutputColumn(),
-            frameReader.signature().indexOf(columnMapping.getQueryColumn())
-        );
-      }
-      final RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
-
-      for (String outputColumn : columnMappings.getOutputColumnNames()) {
-        exportRowSignatureBuilder.add(
-            outputColumn,
-            inputRowSignature.getColumnType(outputColumnNameToFrameColumnNumberMap.getInt(outputColumn)).orElse(null)
-        );
-      }
-      this.exportRowSignature = exportRowSignatureBuilder.build();
+      // If the column mappings wasn't sent, fail the query to avoid inconsistency in file format.
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Received null columnMappings from controller. This might be due to an upgrade.");
     }
+    for (final ColumnMapping columnMapping : columnMappings.getMappings()) {
+      this.outputColumnNameToFrameColumnNumberMap.put(
+          columnMapping.getOutputColumn(),
+          frameReader.signature().indexOf(columnMapping.getQueryColumn())
+      );
+    }
+    final RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
+
+    for (String outputColumn : columnMappings.getOutputColumnNames()) {
+      exportRowSignatureBuilder.add(
+          outputColumn,
+          inputRowSignature.getColumnType(outputColumnNameToFrameColumnNumberMap.getInt(outputColumn)).orElse(null)
+      );
+    }
+    this.exportRowSignature = exportRowSignatureBuilder.build();
   }
 
   @Override
