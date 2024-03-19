@@ -584,13 +584,18 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
-    completionReports = getTaskCompletionReports();
+    updateAndWriteCompletionReports(toolbox, null, null);
+  }
+
+  private void updateAndWriteCompletionReports(TaskToolbox toolbox, Integer segmentsRead, Integer segmentsPublished)
+  {
+    completionReports = getTaskCompletionReports(segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
 
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private Map<String, TaskReport> getTaskCompletionReports(Integer segmentsRead, Integer segmentsPublished)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -603,8 +608,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 segmentAvailabilityConfirmationCompleted,
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
-                null,
-                null
+                Long.valueOf(segmentsRead),
+                Long.valueOf(segmentsPublished)
             )
         )
     );
@@ -1071,7 +1076,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
-        updateAndWriteCompletionReports(toolbox);
+        updateAndWriteCompletionReports(
+            toolbox,
+            getTaskLockHelper().getLockedExistingSegments().size(),
+            published.getSegments().size()
+        );
         return TaskStatus.success(getId());
       }
     }
