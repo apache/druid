@@ -263,11 +263,11 @@ public class SqlSegmentsMetadataQuery
     final Query<Map<String, Object>> query = handle.createQuery(
         StringUtils.format(
             "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
-            dbTables.getSegmentsTable(),  getConditionForSegmentIds(segmentIds)
+            dbTables.getSegmentsTable(),  getParameterizedInConditionForColumn(segmentIds, "id")
         )
     );
 
-    bindSegmentIdsToQuery(query, segmentIds);
+    bindColumnValuesToQuery(query, segmentIds, "id");
 
     ResultIterator<DataSegmentPlus> resultIterator = query
         .bind("dataSource", datasource)
@@ -357,7 +357,7 @@ public class SqlSegmentsMetadataQuery
       final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
 
       if (hasVersions) {
-        sb.append(getConditionForVersions(versions));
+        sb.append(getParameterizedInConditionForColumn(versions, "version"));
       }
 
       final Update stmt = handle
@@ -367,7 +367,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
 
       if (hasVersions) {
-        bindVersionsToQuery(stmt, versions);
+        bindColumnValuesToQuery(stmt, versions, "version");
       }
 
       return stmt.execute();
@@ -389,7 +389,7 @@ public class SqlSegmentsMetadataQuery
       final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
 
       if (hasVersions) {
-        sb.append(getConditionForVersions(versions));
+        sb.append(getParameterizedInConditionForColumn(versions, "version"));
       }
 
       final Update stmt = handle
@@ -401,7 +401,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
 
       if (hasVersions) {
-        bindVersionsToQuery(stmt, versions);
+        bindColumnValuesToQuery(stmt, versions, "version");
       }
       return stmt.execute();
     } else {
@@ -736,7 +736,7 @@ public class SqlSegmentsMetadataQuery
     final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
 
     if (hasVersions) {
-      sb.append(getConditionForVersions(versions));
+      sb.append(getParameterizedInConditionForColumn(versions, "version"));
     }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
@@ -787,7 +787,7 @@ public class SqlSegmentsMetadataQuery
     }
 
     if (hasVersions) {
-      bindVersionsToQuery(sql, versions);
+      bindColumnValuesToQuery(sql, versions, "version");
     }
 
     return sql;
@@ -890,18 +890,23 @@ public class SqlSegmentsMetadataQuery
     return numChangedSegments;
   }
 
-  private static String getConditionForVersions(final List<String> versions)
+  /**
+   * @return a parameterized {@code IN} clause for the specified {@code columnName}.
+   *
+   * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
+   */
+  private static String getParameterizedInConditionForColumn(final List<String> values, final String columnName)
   {
-    if (CollectionUtils.isNullOrEmpty(versions)) {
+    if (CollectionUtils.isNullOrEmpty(values)) {
       return "";
     }
 
     final StringBuilder sb = new StringBuilder();
 
-    sb.append(" AND version IN (");
-    for (int i = 0; i < versions.size(); i++) {
-      sb.append(StringUtils.format(":version%d", i));
-      if (i != versions.size() - 1) {
+    sb.append(StringUtils.format(" AND %s IN (", columnName));
+    for (int i = 0; i < values.size(); i++) {
+      sb.append(StringUtils.format(":%s%d", columnName, i));
+      if (i != values.size() - 1) {
         sb.append(",");
       }
     }
@@ -909,44 +914,19 @@ public class SqlSegmentsMetadataQuery
     return sb.toString();
   }
 
-  private static void bindVersionsToQuery(final SQLStatement<?> query, final List<String> versions)
+  /**
+   * Binds the provided {@code values} to the specified {@code columnName} in the given SQL {@code query}.
+   *
+   * @see #getParameterizedInConditionForColumn(List, String)
+   */
+  private static void bindColumnValuesToQuery(final SQLStatement<?> query, final List<String> values, final String columnName)
   {
-    if (CollectionUtils.isNullOrEmpty(versions)) {
+    if (CollectionUtils.isNullOrEmpty(values)) {
       return;
     }
 
-    for (int i = 0; i < versions.size(); i++) {
-      query.bind(StringUtils.format("version%d", i), versions.get(i));
-    }
-  }
-
-  private static String getConditionForSegmentIds(final List<String> versions)
-  {
-    if (CollectionUtils.isNullOrEmpty(versions)) {
-      return "";
-    }
-
-    final StringBuilder sb = new StringBuilder();
-
-    sb.append(" AND id IN (");
-    for (int i = 0; i < versions.size(); i++) {
-      sb.append(StringUtils.format(":id%d", i));
-      if (i != versions.size() - 1) {
-        sb.append(",");
-      }
-    }
-    sb.append(")");
-    return sb.toString();
-  }
-
-  private static void bindSegmentIdsToQuery(final SQLStatement<?> query, final List<String> versions)
-  {
-    if (CollectionUtils.isNullOrEmpty(versions)) {
-      return;
-    }
-
-    for (int i = 0; i < versions.size(); i++) {
-      query.bind(StringUtils.format("id%d", i), versions.get(i));
+    for (int i = 0; i < values.size(); i++) {
+      query.bind(StringUtils.format("%s%d", columnName, i), values.get(i));
     }
   }
 
