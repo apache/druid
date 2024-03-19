@@ -53,7 +53,6 @@ import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -2384,8 +2383,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
                                    .retrieveSegmentsById(datasource, segmentIds, publishSchema())
                                    .stream()
-                                   .map(DataSegmentPlus::getDataSegment)
-        .map(v -> new DataSegmentWithSchemaInformation(v, null, null))
+                                   .map(plus ->
+                                            new DataSegmentWithSchemaInformation(
+                                                plus.getDataSegment(),
+                                                plus.getSchemaId(),
+                                                plus.getNumRows()
+                                            )
+                                   )
                                    .collect(Collectors.toList());
   }
 
@@ -2977,7 +2981,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  public static class DataSegmentWithSchemaInformation
+  private static class DataSegmentWithSchemaInformation
   {
     private final DataSegment dataSegment;
     @Nullable

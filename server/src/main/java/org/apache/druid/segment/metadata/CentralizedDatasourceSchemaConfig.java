@@ -35,6 +35,7 @@ public class CentralizedDatasourceSchemaConfig
   private long backFillPeriod = 60000;
 
   // internal config meant for testing
+  @JsonProperty
   private boolean taskSchemaPublishDisabled = false;
 
   @JsonProperty

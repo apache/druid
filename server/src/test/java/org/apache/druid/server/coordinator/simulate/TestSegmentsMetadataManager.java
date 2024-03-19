@@ -244,7 +244,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public void resetLatestSegmentSchemaPollTime()
+  public void resetLatestSchemaId()
   {
 
   }

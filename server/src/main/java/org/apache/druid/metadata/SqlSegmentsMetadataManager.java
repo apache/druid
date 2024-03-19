@@ -94,6 +94,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -220,8 +221,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @Nullable DatabasePoll latestDatabasePoll = null;
 
-  // Latest created time of the schema polled from the DB.
-  private volatile @Nullable DateTime latestSegmentSchemaPoll = null;
+  // Last schema id polled from the DB.
+  private volatile @Nullable Long latestSchemaId = null;
 
   /** Used to cancel periodic poll task in {@link #stopPollingDatabasePeriodically}. */
   @GuardedBy("startStopPollLock")
@@ -520,7 +521,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
       periodicPollTaskFuture.cancel(false);
       latestDatabasePoll = null;
-      latestSegmentSchemaPoll = null;
+      latestSchemaId = null;
       segmentSchemaCache.uninitialize();
 
       // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadataManager
@@ -919,9 +920,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @VisibleForTesting
-  DateTime getLatestSegmentSchemaPoll()
+  Long getLatestSchemaId()
   {
-    return latestSegmentSchemaPoll;
+    return latestSchemaId;
   }
 
   @Override
@@ -1104,7 +1105,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private void doPollSegmentAndSchema()
   {
-    log.debug("Starting polling of segment and schema table");
+    log.info("Starting polling of segment and schema table");
 
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
 
@@ -1156,16 +1157,18 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     Map<Long, SchemaPayload> schemaMap = new HashMap<>();
 
     String schemaPollQuery;
-    if (latestSegmentSchemaPoll == null) {
-      schemaPollQuery = StringUtils.format("SELECT id, payload, created_date FROM %s", getSegmentSchemaTable());
+    if (latestSchemaId == null) {
+      schemaPollQuery = StringUtils.format("SELECT id, payload FROM %s", getSegmentSchemaTable());
     } else {
       schemaPollQuery = StringUtils.format(
-          "SELECT id, payload, created_date FROM %1$s where created_date > '%2$s'",
+          "SELECT id, payload FROM %1$s where id > '%2$s'",
           getSegmentSchemaTable(),
-          latestSegmentSchemaPoll.toString());
+          latestSchemaId);
     }
     String finalSchemaPollQuery = schemaPollQuery;
-    final DateTime[] maxCreatedDate = {latestSegmentSchemaPoll};
+
+    final AtomicReference<Long> maxPolledId = new AtomicReference<>();
+    maxPolledId.set(latestSchemaId);
 
     connector.inReadOnlyTransaction(new TransactionCallback<Object>()
     {
@@ -1179,11 +1182,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                        public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
                        {
                          try {
-                           DateTime createdDate = DateTimes.ISO_DATE_TIME.parse(r.getString("created_date"));
+                           Long id = r.getLong("id");
 
-
-                           if (maxCreatedDate[0] == null || createdDate.isAfter(maxCreatedDate[0])) {
-                             maxCreatedDate[0] = createdDate;
+                           if (maxPolledId.get() == null || id > maxPolledId.get()) {
+                             maxPolledId.set(id);
                            }
 
                            schemaMap.put(
@@ -1206,10 +1208,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
     segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
 
-    if (latestSegmentSchemaPoll == null) {
+    if (latestSchemaId == null) {
       segmentSchemaCache.setInitialized();
     }
-    latestSegmentSchemaPoll = maxCreatedDate[0];
+    latestSchemaId = maxPolledId.get();
 
     Preconditions.checkNotNull(
         segments,
@@ -1233,7 +1235,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           "Polled and found total %,d segments and [%d] new schema since [%s] in the database",
           segments.size(),
           schemaMap.size(),
-          latestSegmentSchemaPoll
+          latestSchemaId
       );
     }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
@@ -1346,8 +1348,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public void resetLatestSegmentSchemaPollTime()
+  public void resetLatestSchemaId()
   {
-    latestSegmentSchemaPoll = null;
+    latestSchemaId = null;
   }
 }

@@ -52,7 +52,7 @@ public class KillUnreferencedSegmentSchemas implements CoordinatorDuty
     log.info("Cleaned up [%d] unreferenced schemas from the DB.", deleted);
     if (deleted > 0) {
       // reset latest segment schema poll time to trigger full schema refresh.
-      metadataManager.resetLatestSegmentSchemaPollTime();
+      metadataManager.resetLatestSchemaId();
     }
     return params;
   }
