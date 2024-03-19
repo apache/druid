@@ -42,6 +42,8 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.SQLStatement;
+import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -120,10 +122,23 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
+    return retrieveUsedSegments(dataSource, intervals, null);
+  }
+
+  /**
+   * Similar to {@link #retrieveUsedSegments}, but with an additional {@code versions} argument. When {@code versions}
+   * is specified, all used segments in the specified {@code intervals} and {@code versions} are retrieved.
+   */
+  public CloseableIterator<DataSegment> retrieveUsedSegments(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final List<String> versions
+  )
+  {
     return retrieveSegments(
         dataSource,
         intervals,
-        null,
+        versions,
         IntervalMode.OVERLAPS,
         true,
         null,
@@ -134,7 +149,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
+   * Retrieves segments for a given datasource that are marked unused and that are <b>fully contained by</b> any interval
    * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
    * unused segments.
    * <p>
@@ -184,7 +199,7 @@ public class SqlSegmentsMetadataQuery
 
   /**
    * Similar to {@link #retrieveUnusedSegments}, but also retrieves associated metadata for the segments for a given
-   * datasource that are marked unused and that are *fully contained by* any interval in a particular collection of
+   * datasource that are marked unused and that are <b>fully contained by</b> any interval in a particular collection of
    * intervals. If the collection of intervals is empty, this method will retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
@@ -351,45 +366,83 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all used segments that are *fully contained by* a particular interval as unused.
+   * Marks all used segments that are <b>fully contained by</b> a particular interval as unused.
    *
-   * @return the number of segments actually modified.
+   * @return Number of segments updated.
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval)
   {
+    return markSegmentsUnused(dataSource, interval, null);
+  }
+
+  /**
+   * Marks all used segments that are <b>fully contained by</b> a particular interval filtered by an optional list of versions
+   * as unused.
+   *
+   * @return Number of segments updated.
+   */
+  public int markSegmentsUnused(final String dataSource, final Interval interval, @Nullable final List<String> versions)
+  {
     if (Intervals.isEternity(interval)) {
-      return handle
-          .createStatement(
-              StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
-                  + "WHERE dataSource = :dataSource AND used = true",
-                  dbTables.getSegmentsTable()
-              )
+      final StringBuilder sb = new StringBuilder();
+      sb.append(
+          StringUtils.format(
+              "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+              + "WHERE dataSource = :dataSource AND used = true",
+              dbTables.getSegmentsTable()
           )
+      );
+
+      final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
+
+      if (hasVersions) {
+        sb.append(getConditionForVersions(versions));
+      }
+
+      final Update stmt = handle
+          .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-          .execute();
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+
+      if (hasVersions) {
+        bindVersionsToQuery(stmt, versions);
+      }
+
+      return stmt.execute();
     } else if (Intervals.canCompareEndpointsAsStrings(interval)
                && interval.getStart().getYear() == interval.getEnd().getYear()) {
       // Safe to write a WHERE clause with this interval. Note that it is unsafe if the years are different, because
       // that means extra characters can sneak in. (Consider a query interval like "2000-01-01/2001-01-01" and a
       // segment interval like "20001/20002".)
-      return handle
-          .createStatement(
-              StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
-                  + "WHERE dataSource = :dataSource AND used = true AND %s",
-                  dbTables.getSegmentsTable(),
-                  IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
-              )
+      final StringBuilder sb = new StringBuilder();
+      sb.append(
+          StringUtils.format(
+              "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+              + "WHERE dataSource = :dataSource AND used = true AND %s",
+              dbTables.getSegmentsTable(),
+              IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
           )
+      );
+
+      final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
+
+      if (hasVersions) {
+        sb.append(getConditionForVersions(versions));
+      }
+
+      final Update stmt = handle
+          .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-          .execute();
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+
+      if (hasVersions) {
+        bindVersionsToQuery(stmt, versions);
+      }
+      return stmt.execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
@@ -397,7 +450,7 @@ public class SqlSegmentsMetadataQuery
               retrieveSegments(
                   dataSource,
                   Collections.singletonList(interval),
-                  null,
+                  versions,
                   IntervalMode.CONTAINS,
                   true,
                   null,
@@ -719,11 +772,10 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    if (!CollectionUtils.isNullOrEmpty(versions)) {
-      final String versionsStr = versions.stream()
-                                          .map(version -> "'" + version + "'")
-                                          .collect(Collectors.joining(","));
-      sb.append(StringUtils.format(" AND version IN (%s)", versionsStr));
+    final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
+
+    if (hasVersions) {
+      sb.append(getConditionForVersions(versions));
     }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
@@ -771,6 +823,10 @@ public class SqlSegmentsMetadataQuery
 
     if (compareAsString) {
       bindQueryIntervals(sql, intervals);
+    }
+
+    if (hasVersions) {
+      bindVersionsToQuery(sql, versions);
     }
 
     return sql;
@@ -873,6 +929,36 @@ public class SqlSegmentsMetadataQuery
       }
     }
     return numChangedSegments;
+  }
+
+  private static String getConditionForVersions(final List<String> versions)
+  {
+    if (CollectionUtils.isNullOrEmpty(versions)) {
+      return "";
+    }
+
+    final StringBuilder sb = new StringBuilder();
+
+    sb.append(" AND version IN (");
+    for (int i = 0; i < versions.size(); i++) {
+      sb.append(StringUtils.format(":version%d", i));
+      if (i != versions.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append(")");
+    return sb.toString();
+  }
+
+  private static void bindVersionsToQuery(final SQLStatement query, final List<String> versions)
+  {
+    if (CollectionUtils.isNullOrEmpty(versions)) {
+      return;
+    }
+
+    for (int i = 0; i < versions.size(); i++) {
+      query.bind(StringUtils.format("version%d", i), versions.get(i));
+    }
   }
 
   enum IntervalMode
