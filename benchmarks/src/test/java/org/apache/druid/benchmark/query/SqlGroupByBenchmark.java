@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -78,6 +79,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -285,18 +287,33 @@ public class SqlGroupByBenchmark
             )
         )
     );
-    List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
-                                              .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new AutoTypeColumnSchema("nested", null))
-                                              .build();
-    DimensionsSpec dimsSpec = new DimensionsSpec(dims);
+
+    List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                    .getDimensions()
+                                                    .stream()
+                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .collect(Collectors.toList());
+
+    List<DimensionSchema> transformSchemas = transformSpec
+        .getTransforms()
+        .stream()
+        .map(
+            transform -> new AutoTypeColumnSchema(transform.getName(), null)
+        )
+        .collect(Collectors.toList());
 
 
 
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
-        dimsSpec,
+        DimensionsSpec.builder()
+                      .setDimensions(ImmutableList.<DimensionSchema>builder()
+                                                  .addAll(columnSchemas)
+                                                  .addAll(transformSchemas)
+                                                  .build()
+                      )
+                      .build(),
         transformSpec,
         IndexSpec.builder().withStringDictionaryEncoding(new StringEncodingStrategy.Utf8()).build(),
         Granularities.NONE,

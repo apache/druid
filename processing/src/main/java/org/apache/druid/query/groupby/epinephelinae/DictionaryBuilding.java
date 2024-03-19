@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import it.unimi.dsi.fastutil.Hash;
+import it.unimi.dsi.fastutil.objects.Object2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -65,12 +66,12 @@ public class DictionaryBuilding
     return m;
   }
 
-  private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
-  {
-    final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
-    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
-    return m;
-  }
+//  private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
+//  {
+//    final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
+//    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
+//    return m;
+//  }
 
   /**
    * Creates a reverse dictionary which stores the keys in a sorted map. The sorting is decided based on the given
@@ -78,9 +79,9 @@ public class DictionaryBuilding
    *
    * TODO(laksh): This function might be removed, if we decide ot go with hash based dictionaries. Also RB v/s AVL tree
    */
-  public static <T> Object2IntRBTreeMap<T> createTreeSortedReverseDictionary(Comparator<T> comparator)
+  public static <T> Object2IntMap<T> createTreeSortedReverseDictionary(Comparator<T> comparator)
   {
-    final Object2IntRBTreeMap<T> m = new Object2IntRBTreeMap<>(comparator);
+    final Object2IntAVLTreeMap<T> m = new Object2IntAVLTreeMap<>(comparator);
     m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
     return m;
   }
@@ -88,28 +89,28 @@ public class DictionaryBuilding
   /**
    * Creates a reverse dictionary for arrays of primitive types.
    */
-  public static Object2IntMap<Object[]> createReverseDictionaryForPrimitiveArray(TypeSignature<ValueType> arrayType)
-  {
-    if (!arrayType.isPrimitiveArray()) {
-      throw DruidException.defensive("Dictionary building function expected an array of a primitive type");
-    }
-    return createReverseDictionary(new Hash.Strategy<Object[]>()
-    {
-      @Override
-      public int hashCode(Object[] o)
-      {
-        // We don't do a deep comparison, because the array type is primitive, therefore we don't need to incur the extra
-        // overhead of checking the nestings
-        return Arrays.hashCode(o);
-      }
-
-      @Override
-      public boolean equals(Object[] a, Object[] b)
-      {
-        return arrayType.getNullableStrategy().compare(a, b) == 0;
-      }
-    });
-  }
+//  public static Object2IntMap<Object[]> createReverseDictionaryForPrimitiveArray(TypeSignature<ValueType> arrayType)
+//  {
+//    if (!arrayType.isPrimitiveArray()) {
+//      throw DruidException.defensive("Dictionary building function expected an array of a primitive type");
+//    }
+//    return createReverseDictionary(new Hash.Strategy<Object[]>()
+//    {
+//      @Override
+//      public int hashCode(Object[] o)
+//      {
+//        // We don't do a deep comparison, because the array type is primitive, therefore we don't need to incur the extra
+//        // overhead of checking the nestings
+//        return Arrays.hashCode(o);
+//      }
+//
+//      @Override
+//      public boolean equals(Object[] a, Object[] b)
+//      {
+//        return arrayType.getNullableStrategy().compare(a, b) == 0;
+//      }
+//    });
+//  }
 
   /**
    * Estimated footprint of a new entry.

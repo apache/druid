@@ -33,7 +33,6 @@ import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -41,17 +40,13 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.FixedWidthGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.PrebuiltDictionaryStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
@@ -86,7 +81,7 @@ import java.util.stream.Stream;
  */
 public class GroupByQueryEngine
 {
-  private static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
+  private static final GroupByColumnSelectorStrategyFactory STRATEGY_FACTORY = new GroupByColumnSelectorStrategyFactory();
 
   private GroupByQueryEngine()
   {
@@ -231,64 +226,6 @@ public class GroupByQueryEngine
                          && !columnCapabilities.isArray()
                      );
             });
-  }
-
-  private static class GroupByStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
-  {
-    @Override
-    public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities,
-        ColumnValueSelector selector
-    )
-    {
-      switch (capabilities.getType()) {
-        case STRING:
-          DimensionSelector dimSelector = (DimensionSelector) selector;
-          if (dimSelector.getValueCardinality() >= 0 && dimSelector.nameLookupPossibleInAdvance()) {
-            return PrebuiltDictionaryStringGroupByColumnSelectorStrategy.forType(
-                ColumnType.STRING,
-                selector,
-                capabilities
-            );
-          } else {
-            return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.STRING);
-          }
-        case LONG:
-          return new FixedWidthGroupByColumnSelectorStrategy<Long>(
-              Byte.BYTES + Long.BYTES,
-              true,
-              ColumnType.LONG
-          );
-        case FLOAT:
-          return new FixedWidthGroupByColumnSelectorStrategy<Float>(
-              Byte.BYTES + Float.BYTES,
-              true,
-              ColumnType.FLOAT
-          );
-        case DOUBLE:
-          return new FixedWidthGroupByColumnSelectorStrategy<Double>(
-              Byte.BYTES + Double.BYTES,
-              true,
-              ColumnType.DOUBLE
-          );
-        case ARRAY:
-          switch (capabilities.getElementType().getType()) {
-            case LONG:
-              return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.LONG_ARRAY);
-            case STRING:
-              return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.STRING_ARRAY);
-            case DOUBLE:
-              return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.DOUBLE_ARRAY);
-            case FLOAT:
-              // Array<Float> not supported in expressions, ingestion
-            default:
-              throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
-
-          }
-        default:
-          throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
-      }
-    }
   }
 
   private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable

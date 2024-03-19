@@ -1397,6 +1397,8 @@ public class RowBasedGrouperHelper
         reverseFloatArrayDictionary.clear();
         longArrayDictionary.clear();
         reverseLongArrayDictionary.clear();
+        complexTypeDictionaries.clear();
+        complexTypeReverseDictionaries.clear();
         rankOfDictionaryIds = null;
         currentEstimatedSize = 0;
       }
