@@ -25,16 +25,13 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-@RunWith(Parameterized.class)
 public class CombineAndSimplifyBoundsTest extends BaseCalciteQueryTest
 {
 
@@ -100,7 +97,6 @@ public class CombineAndSimplifyBoundsTest extends BaseCalciteQueryTest
     public abstract DimFilter range(String lit1, boolean gte, String name, boolean lte, String lit2);
   }
 
-  @Parameters
   public static List<Object[]> getParameters()
   {
     return ImmutableList.of(
@@ -109,15 +105,9 @@ public class CombineAndSimplifyBoundsTest extends BaseCalciteQueryTest
     );
   }
 
-  final RangeFilterType rangeFilter;
-
-  public CombineAndSimplifyBoundsTest(RangeFilterType rangeFilter)
-  {
-    this.rangeFilter = rangeFilter;
-  }
-
-  @Test
-  public void testNotAZ()
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  public void testNotAZ(RangeFilterType rangeFilter)
   {
     String dim1 = "dim1";
     DimFilter inputFilter = or(
@@ -129,8 +119,9 @@ public class CombineAndSimplifyBoundsTest extends BaseCalciteQueryTest
     check(inputFilter, expected);
   }
 
-  @Test
-  public void testAZ()
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  public void testAZ(RangeFilterType rangeFilter)
   {
     String dim1 = "dim1";
     DimFilter inputFilter = and(
@@ -142,8 +133,9 @@ public class CombineAndSimplifyBoundsTest extends BaseCalciteQueryTest
     check(inputFilter, expected);
   }
 
-  @Test
-  public void testNot2()
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  public void testNot2(RangeFilterType rangeFilter)
   {
     String dim1 = "dim1";
     DimFilter inputFilter = or(

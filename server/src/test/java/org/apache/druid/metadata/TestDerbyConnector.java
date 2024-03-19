@@ -26,6 +26,9 @@ import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
@@ -212,6 +215,22 @@ public class TestDerbyConnector extends DerbyConnector
                  .get()
                  .getSegmentsTable()
                  .toUpperCase(Locale.ENGLISH);
+    }
+  }
+
+  public static class DerbyConnectorRule5 extends DerbyConnectorRule implements BeforeAllCallback, AfterAllCallback
+  {
+
+    @Override
+    public void beforeAll(ExtensionContext context)
+    {
+      before();
+    }
+
+    @Override
+    public void afterAll(ExtensionContext context)
+    {
+      after();
     }
   }
 }

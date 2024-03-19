@@ -35,9 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
@@ -45,7 +43,6 @@ import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.Map;
 
-@RunWith(Enclosed.class)
 public class JdbcDataFetcherTest extends InitializedNullHandlingTest
 {
   private static final String TABLE_NAME = "tableName";
