@@ -201,7 +201,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("dataSource", dataSource);
 
           if (compareIntervalEndpointsAsString) {
-            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+            SqlSegmentsMetadataQuery.bindIntervalsToQuery(query, intervals);
           }
 
           final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query

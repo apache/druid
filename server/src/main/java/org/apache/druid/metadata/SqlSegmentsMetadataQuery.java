@@ -263,11 +263,11 @@ public class SqlSegmentsMetadataQuery
     final Query<Map<String, Object>> query = handle.createQuery(
         StringUtils.format(
             "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
-            dbTables.getSegmentsTable(), getParameterizedInConditionForColumn(segmentIds, "id")
+            dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
         )
     );
 
-    bindColumnValuesToQuery(query, segmentIds, "id");
+    bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
 
     ResultIterator<DataSegmentPlus> resultIterator = query
         .bind("dataSource", datasource)
@@ -357,7 +357,7 @@ public class SqlSegmentsMetadataQuery
       final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
 
       if (hasVersions) {
-        sb.append(getParameterizedInConditionForColumn(versions, "version"));
+        sb.append(getParameterizedInConditionForColumn("version", versions));
       }
 
       final Update stmt = handle
@@ -367,7 +367,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
 
       if (hasVersions) {
-        bindColumnValuesToQuery(stmt, versions, "version");
+        bindColumnValuesToQueryWithInCondition("version", versions, stmt);
       }
 
       return stmt.execute();
@@ -389,7 +389,7 @@ public class SqlSegmentsMetadataQuery
       final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
 
       if (hasVersions) {
-        sb.append(getParameterizedInConditionForColumn(versions, "version"));
+        sb.append(getParameterizedInConditionForColumn("version", versions));
       }
 
       final Update stmt = handle
@@ -401,7 +401,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
 
       if (hasVersions) {
-        bindColumnValuesToQuery(stmt, versions, "version");
+        bindColumnValuesToQueryWithInCondition("version", versions, stmt);
       }
       return stmt.execute();
     } else {
@@ -529,11 +529,10 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Given a Query object bind the input intervals to it
-   * @param query Query to fetch segments
-   * @param intervals Intervals to fetch segments for
+   * Bind the supplied {@code intervals} to {@code query}.
+   * @see #getConditionForIntervalsAndMatchMode(Collection, IntervalMode, String)
    */
-  public static void bindQueryIntervals(final Query<Map<String, Object>> query, final Collection<Interval> intervals)
+  public static void bindIntervalsToQuery(final Query<Map<String, Object>> query, final Collection<Interval> intervals)
   {
     if (intervals.isEmpty()) {
       return;
@@ -737,7 +736,7 @@ public class SqlSegmentsMetadataQuery
     final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
 
     if (hasVersions) {
-      sb.append(getParameterizedInConditionForColumn(versions, "version"));
+      sb.append(getParameterizedInConditionForColumn("version", versions));
     }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
@@ -784,11 +783,11 @@ public class SqlSegmentsMetadataQuery
     }
 
     if (compareAsString) {
-      bindQueryIntervals(sql, intervals);
+      bindIntervalsToQuery(sql, intervals);
     }
 
     if (hasVersions) {
-      bindColumnValuesToQuery(sql, versions, "version");
+      bindColumnValuesToQueryWithInCondition("version", versions, sql);
     }
 
     return sql;
@@ -892,11 +891,12 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * @return a parameterized {@code IN} clause for the specified {@code columnName}.
+   * @return a parameterized {@code IN} clause for the specified {@code columnName}. The column values need to be bound
+   * to a query by calling {@link #bindColumnValuesToQueryWithInCondition(String, List, SQLStatement)}.
    *
    * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
    */
-  private static String getParameterizedInConditionForColumn(final List<String> values, final String columnName)
+  private static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
   {
     if (CollectionUtils.isNullOrEmpty(values)) {
       return "";
@@ -916,11 +916,16 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Binds the provided {@code values} to the specified {@code columnName} in the given SQL {@code query}.
+   * Binds the provided list of {@code values} to the specified {@code columnName} in the given SQL {@code query} that
+   * contains an {@code IN} clause.
    *
-   * @see #getParameterizedInConditionForColumn(List, String)
+   * @see #getParameterizedInConditionForColumn(String, List)
    */
-  private static void bindColumnValuesToQuery(final SQLStatement<?> query, final List<String> values, final String columnName)
+  private static void bindColumnValuesToQueryWithInCondition(
+      final String columnName,
+      final List<String> values,
+      final SQLStatement<?> query
+  )
   {
     if (CollectionUtils.isNullOrEmpty(values)) {
       return;
