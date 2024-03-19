@@ -89,7 +89,7 @@ public class ControllerQueryResultsReader implements FrameProcessor<Void>
   }
 
   @Override
-  public ReturnOrAwait<Void> runIncrementally(final IntSet readableInputs) throws InterruptedException, IOException
+  public ReturnOrAwait<Void> runIncrementally(final IntSet readableInputs)
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(inputChannels().size());

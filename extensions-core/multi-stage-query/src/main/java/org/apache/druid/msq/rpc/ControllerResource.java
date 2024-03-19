@@ -167,7 +167,7 @@ public class ControllerResource
   }
 
   /**
-   * See {@link ControllerClient#getWorkerIds} for the client-side code that calls this API.
+   * See {@link ControllerClient#getTaskList()} for the client-side code that calls this API.
    */
   @GET
   @Path("/taskList")

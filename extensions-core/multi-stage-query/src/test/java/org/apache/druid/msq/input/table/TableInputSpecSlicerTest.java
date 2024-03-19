@@ -39,7 +39,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collections;
 
 public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
@@ -102,7 +101,7 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
   private TaskActionClient taskActionClient;
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3));
     taskActionClient = new TaskActionClient()
