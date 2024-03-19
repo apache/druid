@@ -74,7 +74,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   {
     validateQuery(originalQuery);
 
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder().queryId(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,
@@ -194,7 +194,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
     }
 
-    return queryDefBuilder.queryId(queryId).build();
+    return queryDefBuilder.build();
   }
 
   /**

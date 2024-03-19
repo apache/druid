@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.kernel.controller;
 
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.kernel.ShuffleKind;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -1071,13 +1073,20 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
   @Nonnull
   private ControllerQueryKernelTester getSimpleQueryDefinition(int numWorkers)
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel(numWorkers);
+    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel(
+        configBuilder ->
+            configBuilder
+                .destination(DurableStorageMSQDestination.instance())
+                .durableStorage(true)
+                .faultTolerance(true)
+                .build()
+    );
     // 0 -> 1
     controllerQueryKernelTester.queryDefinition(
         new MockQueryDefinitionBuilder(2)
-            .addVertex(0, 1)
-            .defineStage(0, true, numWorkers)
-            .defineStage(1, true, numWorkers)
+            .addEdge(0, 1)
+            .defineStage(0, ShuffleKind.GLOBAL_SORT, numWorkers)
+            .defineStage(1, ShuffleKind.GLOBAL_SORT, numWorkers)
             .getQueryDefinitionBuilder()
             .build()
     );

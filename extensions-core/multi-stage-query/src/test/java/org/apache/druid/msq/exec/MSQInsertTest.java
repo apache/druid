@@ -1312,7 +1312,7 @@ public class MSQInsertTest extends MSQTestBase
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
-    Mockito.doReturn(500).when(workerMemoryParameters).getLargeFrameSize();
+    Mockito.doReturn(500).when(workerMemoryParameters).getStandardFrameSize();
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"

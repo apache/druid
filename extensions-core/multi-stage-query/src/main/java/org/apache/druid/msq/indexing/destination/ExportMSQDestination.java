@@ -52,8 +52,6 @@ public class ExportMSQDestination implements MSQDestination
     this.resultFormat = resultFormat;
   }
 
-
-
   @JsonProperty("exportStorageProvider")
   public ExportStorageProvider getExportStorageProvider()
   {
@@ -64,6 +62,18 @@ public class ExportMSQDestination implements MSQDestination
   public ResultFormat getResultFormat()
   {
     return resultFormat;
+  }
+
+  @Override
+  public long getRowsInTaskReport()
+  {
+    return 0;
+  }
+
+  @Override
+  public MSQSelectDestination toSelectDestination()
+  {
+    return MSQSelectDestination.EXPORT;
   }
 
   @Override

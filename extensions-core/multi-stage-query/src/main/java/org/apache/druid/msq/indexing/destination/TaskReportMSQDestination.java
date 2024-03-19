@@ -61,4 +61,16 @@ public class TaskReportMSQDestination implements MSQDestination
   {
     return Optional.of(new Resource(MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT, ResourceType.DATASOURCE));
   }
+
+  @Override
+  public long getRowsInTaskReport()
+  {
+    return UNLIMITED;
+  }
+
+  @Override
+  public MSQSelectDestination toSelectDestination()
+  {
+    return MSQSelectDestination.TASKREPORT;
+  }
 }

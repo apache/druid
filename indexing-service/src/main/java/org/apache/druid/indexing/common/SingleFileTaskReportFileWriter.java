@@ -27,8 +27,9 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.Map;
 
 public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
@@ -46,19 +47,23 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   @Override
   public void write(String taskId, Map<String, TaskReport> reports)
   {
-    try {
-      final File reportsFileParent = reportsFile.getParentFile();
-      if (reportsFileParent != null) {
-        FileUtils.mkdirp(reportsFileParent);
-      }
-
-      try (final FileOutputStream outputStream = new FileOutputStream(reportsFile)) {
-        writeReportToStream(objectMapper, outputStream, reports);
-      }
+    try (final OutputStream outputStream = openReportOutputStream(taskId)) {
+      writeReportToStream(objectMapper, outputStream, reports);
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");
     }
+  }
+
+  @Override
+  public OutputStream openReportOutputStream(String taskId) throws IOException
+  {
+    final File reportsFileParent = reportsFile.getParentFile();
+    if (reportsFileParent != null) {
+      FileUtils.mkdirp(reportsFileParent);
+    }
+
+    return Files.newOutputStream(reportsFile.toPath());
   }
 
   @Override
@@ -76,6 +81,8 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
     final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
 
     try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(outputStream)) {
+      // Disable automatic JSON termination, so clients can detect truncated responses.
+      jg.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
       jg.writeStartObject();
 
       for (final Map.Entry<String, TaskReport> entry : reports.entrySet()) {

@@ -60,15 +60,10 @@ public class HashShuffleSpec implements ShuffleSpec
   }
 
   @Override
-  public boolean doesAggregate()
-  {
-    return false;
-  }
-
-  @Override
   @JsonProperty("partitions")
   public int partitionCount()
   {
     return numPartitions;
   }
+
 }

@@ -21,6 +21,7 @@ package org.apache.druid.msq.input.stage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.segment.TestHelper;
@@ -37,7 +38,8 @@ public class StageInputSliceTest
 
     final StageInputSlice slice = new StageInputSlice(
         2,
-        ReadablePartitions.striped(2, 3, 4)
+        ReadablePartitions.striped(2, 3, 4),
+        OutputChannelMode.MEMORY
     );
 
     Assert.assertEquals(

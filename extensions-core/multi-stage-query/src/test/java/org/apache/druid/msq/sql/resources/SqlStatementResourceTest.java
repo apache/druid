@@ -39,8 +39,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
@@ -254,8 +252,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               ImmutableMap.of(),
               ImmutableMap.of(),
               ImmutableMap.of(0, 1),
-              ImmutableMap.of(0, 1)
-
+              ImmutableMap.of(0, 1),
+              ImmutableMap.of()
           ),
           CounterSnapshotsTree.fromMap(ImmutableMap.of(
               0,
@@ -294,9 +292,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                   SqlTypeName.VARCHAR,
                   SqlTypeName.VARCHAR
               ),
-              Yielders.each(
-                  Sequences.simple(
-                      RESULT_ROWS)),
+              RESULT_ROWS,
               null
           )
       )
@@ -318,6 +314,7 @@ public class SqlStatementResourceTest extends MSQTestBase
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
+              ImmutableMap.of(),
               ImmutableMap.of(),
               ImmutableMap.of(),
               ImmutableMap.of(),

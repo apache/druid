@@ -119,7 +119,11 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   @Override
   public int partitionCount()
   {
-    throw new ISE("Number of partitions not known for [%s].", kind());
+    if (maxPartitions == 1) {
+      return 1;
+    } else {
+      throw new ISE("Number of partitions not known for [%s] with maxPartitions[%d].", kind(), maxPartitions);
+    }
   }
 
   @JsonProperty("partitions")

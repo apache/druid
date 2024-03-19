@@ -96,14 +96,14 @@ public class QueryDefinition
     }
   }
 
-  public static QueryDefinitionBuilder builder()
+  public static QueryDefinitionBuilder builder(final String queryId)
   {
-    return new QueryDefinitionBuilder();
+    return new QueryDefinitionBuilder(queryId);
   }
 
   public static QueryDefinitionBuilder builder(final QueryDefinition queryDef)
   {
-    return new QueryDefinitionBuilder().addAll(queryDef);
+    return new QueryDefinitionBuilder(queryDef.getQueryId()).addAll(queryDef);
   }
 
   public String getQueryId()

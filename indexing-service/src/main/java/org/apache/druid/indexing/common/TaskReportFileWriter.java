@@ -21,11 +21,15 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
 
 public interface TaskReportFileWriter
 {
   void write(String taskId, Map<String, TaskReport> reports);
+
+  OutputStream openReportOutputStream(String taskId) throws IOException;
 
   void setObjectMapper(ObjectMapper objectMapper);
 }

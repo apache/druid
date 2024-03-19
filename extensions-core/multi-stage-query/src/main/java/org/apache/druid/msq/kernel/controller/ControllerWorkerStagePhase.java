@@ -69,7 +69,8 @@ public enum ControllerWorkerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerWorkerStagePhase priorPhase)
     {
-      return priorPhase == PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES;
+      return priorPhase == READING_INPUT /* when sorting locally */
+             || priorPhase == PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES /* when sorting globally */;
     }
   },
 

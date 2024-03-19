@@ -21,6 +21,7 @@ package org.apache.druid.msq.input.stage;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -36,9 +37,16 @@ public class StageInputSpecSlicer implements InputSpecSlicer
   // Stage number -> partitions for that stage
   private final Int2ObjectMap<ReadablePartitions> stagePartitionsMap;
 
-  public StageInputSpecSlicer(final Int2ObjectMap<ReadablePartitions> stagePartitionsMap)
+  // Stage number -> output mode for that stage
+  private final Int2ObjectMap<OutputChannelMode> stageOutputChannelModeMap;
+
+  public StageInputSpecSlicer(
+      final Int2ObjectMap<ReadablePartitions> stagePartitionsMap,
+      final Int2ObjectMap<OutputChannelMode> stageOutputChannelModeMap
+  )
   {
     this.stagePartitionsMap = stagePartitionsMap;
+    this.stageOutputChannelModeMap = stageOutputChannelModeMap;
   }
 
   @Override
@@ -53,9 +61,14 @@ public class StageInputSpecSlicer implements InputSpecSlicer
     final StageInputSpec stageInputSpec = (StageInputSpec) inputSpec;
 
     final ReadablePartitions stagePartitions = stagePartitionsMap.get(stageInputSpec.getStageNumber());
+    final OutputChannelMode outputChannelMode = stageOutputChannelModeMap.get(stageInputSpec.getStageNumber());
 
     if (stagePartitions == null) {
-      throw new ISE("Stage [%d] not available", stageInputSpec.getStageNumber());
+      throw new ISE("Stage[%d] output partitions not available", stageInputSpec.getStageNumber());
+    }
+
+    if (outputChannelMode == null) {
+      throw new ISE("Stage[%d] output mode not available", stageInputSpec.getStageNumber());
     }
 
     // Decide how many workers to use, and assign inputs.
@@ -63,7 +76,13 @@ public class StageInputSpecSlicer implements InputSpecSlicer
     final List<InputSlice> retVal = new ArrayList<>();
 
     for (final ReadablePartitions partitions : workerPartitions) {
-      retVal.add(new StageInputSlice(stageInputSpec.getStageNumber(), partitions));
+      retVal.add(
+          new StageInputSlice(
+              stageInputSpec.getStageNumber(),
+              partitions,
+              outputChannelMode
+          )
+      );
     }
 
     return retVal;

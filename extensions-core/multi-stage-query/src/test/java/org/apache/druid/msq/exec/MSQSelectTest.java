@@ -2191,8 +2191,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testJoinUsesDifferentAlgorithm()
   {
-
-    // This test asserts that the join algorithnm used is a different one from that supplied. In sqlCompatible() mode
+    // This test asserts that the join algorithm used is a different one from that supplied. In sqlCompatible() mode
     // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
     // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
     // here, hence ignoring in sqlCompatible() mode

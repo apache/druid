@@ -134,6 +134,18 @@ public class DataSourceMSQDestination implements MSQDestination
   }
 
   @Override
+  public long getRowsInTaskReport()
+  {
+    return 0;
+  }
+
+  @Override
+  public MSQSelectDestination toSelectDestination()
+  {
+    return null;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

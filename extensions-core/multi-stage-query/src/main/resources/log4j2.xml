@@ -31,6 +31,9 @@
     <Logger level="info" name="org.apache.druid.frame" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
+    <Logger level="info" name="org.apache.druid.msq" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
     <Logger level="info" name="org.apache.calcite" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>

@@ -72,6 +72,7 @@ public class ControllerImplTest
 
     // All OK.
     ControllerImpl.performSegmentPublish(taskActionClient, action);
+    EasyMock.verify(taskActionClient);
   }
 
   @Test
@@ -90,6 +91,7 @@ public class ControllerImplTest
     );
 
     Assert.assertEquals(InsertLockPreemptedFault.instance(), e.getFault());
+    EasyMock.verify(taskActionClient);
   }
 
   @Test
@@ -108,6 +110,7 @@ public class ControllerImplTest
     );
 
     Assert.assertEquals("oops", e.getMessage());
+    EasyMock.verify(taskActionClient);
   }
 
   @Test
@@ -126,6 +129,7 @@ public class ControllerImplTest
     );
 
     Assert.assertEquals(InsertLockPreemptedFault.instance(), e.getFault());
+    EasyMock.verify(taskActionClient);
   }
 
 

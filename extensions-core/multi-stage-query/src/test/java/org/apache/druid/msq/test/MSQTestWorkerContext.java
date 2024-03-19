@@ -22,9 +22,9 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
@@ -123,20 +123,7 @@ public class MSQTestWorkerContext implements WorkerContext
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         true
     );
-    final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
-    {
-      @Override
-      public void write(String taskId, Map<String, TaskReport> reports)
-      {
-
-      }
-
-      @Override
-      public void setObjectMapper(ObjectMapper objectMapper)
-      {
-
-      }
-    };
+    final TaskReportFileWriter reportFileWriter = new NoopTestTaskReportFileWriter();
 
     return new IndexerFrameContext(
         new IndexerWorkerContext(
