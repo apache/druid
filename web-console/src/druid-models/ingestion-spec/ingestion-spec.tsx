@@ -208,7 +208,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1].toLowerCase();
+  if (parts.length === 2) return parts[1];
   return ingestionType;
 }
 
