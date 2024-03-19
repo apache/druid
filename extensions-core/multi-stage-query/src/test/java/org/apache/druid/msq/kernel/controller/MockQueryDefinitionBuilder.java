@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class MockQueryDefinitionBuilder
 {
@@ -172,10 +171,6 @@ public class MockQueryDefinitionBuilder
 
     final List<InputSpec> inputSpecs = new ArrayList<>();
     final IntSet broadcastInputNumbers = new IntOpenHashSet();
-
-    adjacencyList.getOrDefault(stageNumber, new HashSet<>())
-                 .stream()
-                 .map(pair -> new StageInputSpec(pair.leftInt())).collect(Collectors.toList());
 
     int inputNumber = 0;
     for (final IntBooleanPair pair : adjacencyList.getOrDefault(stageNumber, Collections.emptySet())) {

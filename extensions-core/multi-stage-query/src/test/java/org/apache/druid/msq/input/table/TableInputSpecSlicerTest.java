@@ -109,7 +109,7 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
     {
       @Override
       @SuppressWarnings("unchecked")
-      public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+      public <RetType> RetType submit(TaskAction<RetType> taskAction)
       {
         if (taskAction instanceof RetrieveUsedSegmentsAction) {
           final RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = (RetrieveUsedSegmentsAction) taskAction;

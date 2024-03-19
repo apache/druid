@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.kernel;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;

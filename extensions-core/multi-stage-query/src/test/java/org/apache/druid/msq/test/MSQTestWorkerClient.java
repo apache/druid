@@ -80,12 +80,13 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     try {
-      inMemoryWorkers.get(workerTaskId)
-                     .postResultPartitionBoundaries(
-                         partitionBoundaries,
-                         stageId.getQueryId(),
-                         stageId.getStageNumber()
-                     );
+      inMemoryWorkers
+          .get(workerTaskId)
+          .postResultPartitionBoundaries(
+              partitionBoundaries,
+              stageId.getQueryId(),
+              stageId.getStageNumber()
+          );
       return Futures.immediateFuture(null);
     }
     catch (Exception e) {

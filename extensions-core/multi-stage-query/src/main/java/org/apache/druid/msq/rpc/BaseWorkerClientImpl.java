@@ -251,7 +251,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   /**
    * Create a client to communicate with a given worker ID.
    */
-  protected abstract ServiceClient getClient(final String workerId);
+  protected abstract ServiceClient getClient(String workerId);
 
   /**
    * Deserialize a {@link BytesFullResponseHolder} as JSON.

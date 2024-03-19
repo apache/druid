@@ -508,15 +508,16 @@ public class MSQFaultsTest extends MSQTestBase
                                                  .dataSource("foo1")
                                                  .build();
 
-    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
-           .when(testTaskActionClient)
-           .submit(
-               ArgumentMatchers.argThat(
-                   (ArgumentMatcher<TaskAction<?>>) argument ->
-                       argument instanceof RetrieveUsedSegmentsAction
-                       && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())
-               )
-           );
+    Mockito
+        .doReturn(ImmutableSet.of(existingDataSegment))
+        .when(testTaskActionClient)
+        .submit(
+            ArgumentMatchers.argThat(
+                (ArgumentMatcher<TaskAction<?>>) argument ->
+                    argument instanceof RetrieveUsedSegmentsAction
+                    && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())
+            )
+        );
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 
@@ -560,15 +561,16 @@ public class MSQFaultsTest extends MSQTestBase
                                                  .dataSource("foo1")
                                                  .build();
 
-    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
-           .when(testTaskActionClient)
-           .submit(
-               ArgumentMatchers.argThat(
-                   (ArgumentMatcher<TaskAction<?>>) argument ->
-                       argument instanceof RetrieveUsedSegmentsAction
-                       && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())
-               )
-           );
+    Mockito
+        .doReturn(ImmutableSet.of(existingDataSegment))
+        .when(testTaskActionClient)
+        .submit(
+            ArgumentMatchers.argThat(
+                (ArgumentMatcher<TaskAction<?>>) argument ->
+                    argument instanceof RetrieveUsedSegmentsAction
+                    && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())
+            )
+        );
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 
