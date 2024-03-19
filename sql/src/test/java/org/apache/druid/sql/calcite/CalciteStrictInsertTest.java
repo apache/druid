@@ -23,7 +23,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.CatalogResolver.NullCatalogResolver;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for the "strict" feature of the catalog which can restrict INSERT statements

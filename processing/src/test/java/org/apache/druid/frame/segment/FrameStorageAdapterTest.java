@@ -54,7 +54,6 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -65,7 +64,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-@RunWith(Enclosed.class)
 public class FrameStorageAdapterTest
 {
   /**
