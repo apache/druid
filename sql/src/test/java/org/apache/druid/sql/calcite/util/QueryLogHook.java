@@ -23,47 +23,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.calcite.runtime.Hook;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
- * JUnit Rule that adds a Calcite hook to log and remember Druid queries.
+ * Class to log Druid queries.
  */
-public class QueryLogHook implements TestRule
+public class QueryLogHook
 {
   private static final Logger log = new Logger(QueryLogHook.class);
 
-  private final Supplier<ObjectMapper> objectMapperSupplier;
+  private final ObjectMapper objectMapper;
   private final List<Query<?>> recordedQueries = Lists.newCopyOnWriteArrayList();
-  private final AtomicBoolean skipLog = new AtomicBoolean(false);
 
-  public QueryLogHook(final Supplier<ObjectMapper> objectMapperSupplier)
+  public QueryLogHook(ObjectMapper objectMapper)
   {
-    this.objectMapperSupplier = objectMapperSupplier;
-  }
-
-  public static QueryLogHook create()
-  {
-    return new QueryLogHook(() -> DefaultObjectMapper.INSTANCE);
-  }
-
-  public static QueryLogHook create(final ObjectMapper objectMapper)
-  {
-    return new QueryLogHook(() -> objectMapper);
-  }
-
-  public void clearRecordedQueries()
-  {
-    recordedQueries.clear();
+    this.objectMapper = objectMapper;
   }
 
   public List<Query<?>> getRecordedQueries()
@@ -71,48 +47,24 @@ public class QueryLogHook implements TestRule
     return ImmutableList.copyOf(recordedQueries);
   }
 
-  public void withSkippedLog(Consumer<Void> consumer)
+  protected void accept(Object query)
   {
     try {
-      skipLog.set(true);
-      consumer.accept(null);
+      recordedQueries.add((Query<?>) query);
+      log.info(
+          "Issued query: %s",
+          objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)
+      );
     }
-    finally {
-      skipLog.set(false);
+    catch (Exception e) {
+      log.warn(e, "Failed to serialize query: %s", query);
     }
   }
 
-  @Override
-  public Statement apply(final Statement base, final Description description)
+  public void logQueriesFor(Runnable r)
   {
-    return new Statement()
-    {
-      @Override
-      public void evaluate() throws Throwable
-      {
-        clearRecordedQueries();
-
-        final Consumer<Object> function = query -> {
-          if (skipLog.get()) {
-            return;
-          }
-
-          try {
-            recordedQueries.add((Query<?>) query);
-            log.info(
-                "Issued query: %s",
-                objectMapperSupplier.get().writerWithDefaultPrettyPrinter().writeValueAsString(query)
-            );
-          }
-          catch (Exception e) {
-            log.warn(e, "Failed to serialize query: %s", query);
-          }
-        };
-
-        try (final Hook.Closeable unhook = Hook.QUERY_PLAN.add(function)) {
-          base.evaluate();
-        }
-      }
-    };
+    try (final Hook.Closeable unhook = Hook.QUERY_PLAN.addThread(this::accept)) {
+      r.run();
+    }
   }
 }

@@ -332,21 +332,18 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     final Int2ObjectMap<List<WorkerStats>> workerStats = new Int2ObjectAVLTreeMap<>();
 
     for (Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
+      final TaskTracker taskTracker = taskEntry.getValue();
+      final TaskStatus taskStatus = taskTracker.statusRef.get();
 
-      TaskTracker taskTracker = taskEntry.getValue();
+      // taskStatus is null when TaskTrackers are first set up, and stay null until the first status call comes back.
+      final TaskState statusCode = taskStatus != null ? taskStatus.getStatusCode() : null;
 
-      TaskStatus taskStatus = taskTracker.statusRef.get();
+      // getDuration() returns -1 for running tasks. It's not calculated on-the-fly here since
+      // taskTracker.startTimeMillis marks task submission time rather than the actual start.
+      final long duration = taskStatus != null ? taskStatus.getDuration() : -1;
+
       workerStats.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
-                 .add(new WorkerStats(
-                     taskEntry.getKey(),
-                     taskStatus.getStatusCode(),
-                     // getDuration() returns -1 for running tasks.
-                     // It's not calculated on-the-fly here since
-                     // taskTracker.startTimeMillis marks task
-                     // submission time rather than the actual start.
-                     taskStatus.getDuration(),
-                     taskTracker.taskPendingTimeInMs()
-                 ));
+                 .add(new WorkerStats(taskEntry.getKey(), statusCode, duration, taskTracker.taskPendingTimeInMs()));
     }
 
     for (List<WorkerStats> workerStatsList : workerStats.values()) {

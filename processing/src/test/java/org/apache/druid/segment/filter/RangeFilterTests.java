@@ -50,7 +50,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -59,7 +58,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class RangeFilterTests
 {
   @RunWith(Parameterized.class)
