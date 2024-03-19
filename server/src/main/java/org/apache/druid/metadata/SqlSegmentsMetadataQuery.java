@@ -256,20 +256,20 @@ public class SqlSegmentsMetadataQuery
 
   private List<DataSegmentPlus> retrieveSegmentBatchById(String datasource, List<String> segmentIds)
   {
-    if (segmentIds.isEmpty()) {
+    if (CollectionUtils.isNullOrEmpty(segmentIds)) {
       return Collections.emptyList();
     }
 
-    final String segmentIdCsv = segmentIds.stream()
-                                          .map(id -> "'" + id + "'")
-                                          .collect(Collectors.joining(","));
-    ResultIterator<DataSegmentPlus> resultIterator = handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT payload, used FROM %s WHERE dataSource = :dataSource AND id IN (%s)",
-                dbTables.getSegmentsTable(), segmentIdCsv
-            )
+    final Query<Map<String, Object>> query = handle.createQuery(
+        StringUtils.format(
+            "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
+            dbTables.getSegmentsTable(),  getConditionForSegmentIds(segmentIds)
         )
+    );
+
+    bindSegmentIdsToQuery(query, segmentIds);
+
+    ResultIterator<DataSegmentPlus> resultIterator = query
         .bind("dataSource", datasource)
         .setFetchSize(connector.getStreamingFetchSize())
         .map(
@@ -909,7 +909,7 @@ public class SqlSegmentsMetadataQuery
     return sb.toString();
   }
 
-  private static void bindVersionsToQuery(final SQLStatement query, final List<String> versions)
+  private static void bindVersionsToQuery(final SQLStatement<?> query, final List<String> versions)
   {
     if (CollectionUtils.isNullOrEmpty(versions)) {
       return;
@@ -917,6 +917,36 @@ public class SqlSegmentsMetadataQuery
 
     for (int i = 0; i < versions.size(); i++) {
       query.bind(StringUtils.format("version%d", i), versions.get(i));
+    }
+  }
+
+  private static String getConditionForSegmentIds(final List<String> versions)
+  {
+    if (CollectionUtils.isNullOrEmpty(versions)) {
+      return "";
+    }
+
+    final StringBuilder sb = new StringBuilder();
+
+    sb.append(" AND id IN (");
+    for (int i = 0; i < versions.size(); i++) {
+      sb.append(StringUtils.format(":id%d", i));
+      if (i != versions.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append(")");
+    return sb.toString();
+  }
+
+  private static void bindSegmentIdsToQuery(final SQLStatement<?> query, final List<String> versions)
+  {
+    if (CollectionUtils.isNullOrEmpty(versions)) {
+      return;
+    }
+
+    for (int i = 0; i < versions.size(); i++) {
+      query.bind(StringUtils.format("id%d", i), versions.get(i));
     }
   }
 
