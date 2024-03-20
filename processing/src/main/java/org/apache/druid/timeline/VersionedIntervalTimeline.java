@@ -824,7 +824,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
      * Returns the maximum minor version across all the added segments.
      * We do not handle updates of this variable when segments are removed for the sake of simplicity.
      */
-    short getMaxMinorVersion()
+    private short getMaxMinorVersion()
     {
       return partitionHolder.getMaxMinorVersion();
     }

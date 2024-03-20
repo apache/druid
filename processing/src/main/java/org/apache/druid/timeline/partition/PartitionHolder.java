@@ -83,6 +83,10 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     return added;
   }
 
+  /**
+   * Returns the maximum minor version across all the added segments.
+   * We do not handle updates of this variable when segments are removed for the sake of simplicity.
+   */
   public short getMaxMinorVersion()
   {
     return maxMinorVersion;

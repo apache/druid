@@ -1015,7 +1015,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @GuardedBy("pollLock")
   private void doPoll()
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     log.info("Starting polling of segment table");
 
     // some databases such as PostgreSQL require auto-commit turned off
@@ -1078,7 +1078,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     stopwatch.restart();
 
-    log.debug("Building datasources snapshot from polled segments.");
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties
