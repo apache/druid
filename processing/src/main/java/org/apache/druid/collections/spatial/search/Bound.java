@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.spatial.ImmutableNode;
-import org.apache.druid.collections.spatial.ImmutablePoint;
 
 /**
  */
@@ -34,17 +33,17 @@ import org.apache.druid.collections.spatial.ImmutablePoint;
     @JsonSubTypes.Type(name = "polygon", value = PolygonBound.class)
 })
 @SubclassesMustOverrideEqualsAndHashCode
-public interface Bound
+public interface Bound<TCoordinateArray, TPoint extends ImmutableNode<TCoordinateArray>>
 {
   int getLimit();
 
   int getNumDims();
 
-  boolean overlaps(ImmutableNode node);
+  boolean overlaps(ImmutableNode<TCoordinateArray> node);
 
-  boolean contains(float[] coords);
+  boolean contains(TCoordinateArray coords);
 
-  Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points);
+  Iterable<TPoint> filter(Iterable<TPoint> points);
 
   byte[] getCacheKey();
 }

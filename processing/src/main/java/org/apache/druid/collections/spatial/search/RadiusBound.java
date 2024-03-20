@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 
 import java.nio.ByteBuffer;
 
@@ -98,14 +98,14 @@ public class RadiusBound extends RectangularBound
   }
 
   @Override
-  public Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points)
+  public Iterable<ImmutableFloatPoint> filter(Iterable<ImmutableFloatPoint> points)
   {
     return Iterables.filter(
         points,
-        new Predicate<ImmutablePoint>()
+        new Predicate<ImmutableFloatPoint>()
         {
           @Override
-          public boolean apply(ImmutablePoint point)
+          public boolean apply(ImmutableFloatPoint point)
           {
             return contains(point.getCoords());
           }

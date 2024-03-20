@@ -193,7 +193,7 @@ public class Node
 
   public int getSizeInBytes()
   {
-    return ImmutableNode.HEADER_NUM_BYTES
+    return ImmutableFloatNode.HEADER_NUM_BYTES
            + 2 * getNumDims() * Float.BYTES
            + Integer.BYTES // size of the set
            + bitmap.getSizeInBytes()

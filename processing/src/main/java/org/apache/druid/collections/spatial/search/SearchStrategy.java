@@ -25,7 +25,7 @@ import org.apache.druid.collections.spatial.ImmutableNode;
 
 /**
  */
-public interface SearchStrategy
+public interface SearchStrategy<TCoordinateArray, TPoint extends ImmutableNode<TCoordinateArray>>
 {
-  Iterable<ImmutableBitmap> search(ImmutableNode node, Bound bound);
+  Iterable<ImmutableBitmap> search(ImmutableNode<TCoordinateArray> node, Bound<TCoordinateArray, TPoint> bound);
 }
