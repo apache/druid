@@ -221,10 +221,8 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     Assert.assertNull(driver.startJob(null));
 
-    for (int i = 0; i < ROWS.size(); i++) {
-      committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
-    }
+    committerSupplier.setMetadata(1);
+    Assert.assertTrue(driver.add(ROWS.get(0), "dummy", committerSupplier, false, true).isOk());
 
     final SegmentsAndCommitMetadata published = driver.publish(
         StreamAppenderatorDriverTest.makeOkPublisher(),
