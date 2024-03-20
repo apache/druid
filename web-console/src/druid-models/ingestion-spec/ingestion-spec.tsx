@@ -2417,7 +2417,10 @@ export function fillInputFormatIfNeeded(
     spec,
     'spec.ioConfig.inputFormat',
     getSpecType(spec) === 'kafka'
-      ? guessKafkaInputFormat(filterMap(sampleResponse.data, l => l.input))
+      ? guessKafkaInputFormat(
+          filterMap(sampleResponse.data, l => l.input),
+          typeof deepGet(spec, 'spec.ioConfig.topicPattern') === 'string',
+        )
       : guessSimpleInputFormat(
           filterMap(sampleResponse.data, l => l.input?.raw),
           isStreamingSpec(spec),
@@ -2429,15 +2432,27 @@ function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessKafkaInputFormat(sampleRaw: Record<string, any>[]): InputFormat {
+export function guessKafkaInputFormat(
+  sampleRaw: Record<string, any>[],
+  multiTopic: boolean,
+): InputFormat {
   const hasHeader = sampleRaw.some(x => Object.keys(x).some(k => k.startsWith('kafka.header.')));
   const keys = filterMap(sampleRaw, x => x['kafka.key']);
-  const payloads = filterMap(sampleRaw, x => x.raw);
+  const valueFormat = guessSimpleInputFormat(
+    filterMap(sampleRaw, x => x.raw),
+    true,
+  );
+
+  if (!hasHeader && !keys.length && !multiTopic) {
+    // No headers or keys and just a single topic means do not pick the 'kafka' format by default as it is less performant
+    return valueFormat;
+  }
+
   return {
     type: 'kafka',
     headerFormat: hasHeader ? { type: 'string' } : undefined,
     keyFormat: keys.length ? guessSimpleInputFormat(keys, true) : undefined,
-    valueFormat: guessSimpleInputFormat(payloads, true),
+    valueFormat,
   };
 }
 
