@@ -156,6 +156,8 @@ public class MultiStageQueryContext
 
   public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
 
+  public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "__maxRowsMaterializedInWindow";
+
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);

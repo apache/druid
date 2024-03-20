@@ -138,10 +138,12 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         );
       }
 
+      // Update partition by of next window
       final RowSignature signatureSoFar = signatureBuilder.build();
       boolean addShuffle = true;
       if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                   .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
         for (KeyColumn c : windowClusterBy.getColumns()) {
           if (!signatureSoFar.contains(c.columnName())) {
             addShuffle = false;
@@ -156,6 +158,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
         signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
       }
+
 
       final ClusterBy clusterBy =
           QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);

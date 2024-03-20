@@ -36,6 +36,10 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
@@ -81,6 +85,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final FrameReader frameReader;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final ArrayList<ResultRow> objectsOfASingleRac;
+  private final int maxRowsMaterialized;
   List<Integer> partitionColsIndex;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
@@ -115,6 +120,12 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.objectsOfASingleRac = new ArrayList<>();
     this.partitionColsIndex = new ArrayList<>();
     this.isOverEmpty = isOverEmpty;
+    if (query.context() != null && query.context()
+                                        .containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
+      maxRowsMaterialized = (int) query.context().get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
+    } else {
+      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_FRAMES;
+    }
   }
 
   private static VirtualColumns makeVirtualColumnsForFrameWriter(
@@ -217,6 +228,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       // let all operators run on the giant rac when channel is finished
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
+        if (frame.numRows() > maxRowsMaterialized) {
+          throw new MSQException(new TooManyRowsInAWindowFault(frame.numRows(), maxRowsMaterialized));
+        }
         convertRowFrameToRowsAndColumns(frame);
       } else if (inputChannel.isFinished()) {
         runAllOpsOnMultipleRac(frameRowsAndCols);
@@ -259,6 +273,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           // write it into a rac
           // and run operators on it
           if (!objectsOfASingleRac.isEmpty()) {
+            if (objectsOfASingleRac.size() > maxRowsMaterialized) {
+              throw new MSQException(new TooManyRowsInAWindowFault(objectsOfASingleRac.size(), maxRowsMaterialized));
+            }
             RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
                 objectsOfASingleRac,
                 frameReader.signature()
@@ -285,6 +302,12 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           // create rac from the rows seen before
           // run the operators on these rows and columns
           // clean up the object to hold the new rows only
+          if (objectsOfASingleRac.size() > maxRowsMaterialized) {
+            throw new MSQException(new TooManyRowsInAWindowFault(
+                objectsOfASingleRac.size(),
+                maxRowsMaterialized
+            ));
+          }
           RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
               objectsOfASingleRac,
               frameReader.signature()
@@ -470,6 +493,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null
     );
     frameRowsAndCols.add(ldrc);
+    if (frameRowsAndColumns.numRows() > maxRowsMaterialized) {
+      throw new MSQException(new TooManyRowsInAWindowFault(frameRowsAndColumns.numRows(), maxRowsMaterialized));
+    }
   }
 
   private List<Integer> findPartitionColumns(RowSignature rowSignature)

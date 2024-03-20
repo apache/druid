@@ -27,8 +27,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -857,8 +859,6 @@ public class MSQWindowTest extends MSQTestBase
   }
 
 
-
-
   @Test
   public void testWindowOnFooWithNoGroupByAndEmptyOver()
   {
@@ -1167,7 +1167,10 @@ public class MSQWindowTest extends MSQTestBase
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
                     .putAll(context)
-                    .put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]")
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                    )
                     .build();
 
     final WindowOperatorQuery query = new WindowOperatorQuery(
@@ -1728,6 +1731,23 @@ public class MSQWindowTest extends MSQTestBase
             new Object[]{"Albuquerque", 2L, 140L}
         ))
         .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectWithWikipediaEmptyOverWithCustomContext()
+  {
+    final Map<String, Object> customContext =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, 200)
+                    .build();
+
+    testSelectQuery()
+        .setSql(
+            "select cityName, added, SUM(added) OVER () cc from wikipedia")
+        .setQueryContext(customContext)
+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15676, 200))
         .verifyResults();
   }
 }

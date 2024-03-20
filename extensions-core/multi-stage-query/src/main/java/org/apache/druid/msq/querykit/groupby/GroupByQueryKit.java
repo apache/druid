@@ -65,6 +65,25 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     this.jsonMapper = jsonMapper;
   }
 
+  /**
+   * Intermediate signature of a particular {@link GroupByQuery}. Does not include post-aggregators, and all
+   * aggregations are nonfinalized.
+   */
+  private static RowSignature computeIntermediateSignature(final GroupByQuery query)
+  {
+    final RowSignature postAggregationSignature = query.getResultRowSignature(RowSignature.Finalization.NO);
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (int i = 0; i < query.getResultRowSizeWithoutPostAggregators(); i++) {
+      builder.add(
+          postAggregationSignature.getColumnName(i),
+          postAggregationSignature.getColumnType(i).orElse(null)
+      );
+    }
+
+    return builder.build();
+  }
+
   @Override
   public QueryDefinition makeQueryDefinition(
       final String queryId,
@@ -167,17 +186,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         partitionBoost
     );
 
-    final ShuffleSpec nextShuffleWindowSpec;
-    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
-                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
-      nextShuffleWindowSpec = new HashShuffleSpec(
-          windowClusterBy,
-          maxWorkerCount
-      );
-    } else {
-      nextShuffleWindowSpec = null;
-    }
+    final ShuffleSpec nextShuffleWindowSpec = getShuffleSpecForNextWindow(originalQuery, maxWorkerCount);
+
     if (nextShuffleWindowSpec == null) {
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 1)
@@ -209,23 +219,11 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         );
       }
     } else {
-      final ShuffleSpec shuffleSpecWithPartitionByFromWindow;
-      if (shuffleSpecFactoryPostAggregation != null) {
-        List<KeyColumn> columns = resultClusterBy.getColumns();
-        columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
-        // Creating a new cluster by with the columns from existing
-        // plus the columns from the next window partition column
-        final ClusterBy tmp = new ClusterBy(columns, resultClusterBy.getBucketByCount());
-        shuffleSpecWithPartitionByFromWindow = shuffleSpecFactoryPostAggregation.build(tmp, false);
-      } else {
-        shuffleSpecWithPartitionByFromWindow = nextShuffleWindowSpec;
-      }
       final RowSignature stageSignature;
-
       // sort the signature to make sure the prefix is aligned
       stageSignature = QueryKitUtils.sortableSignature(
           resultSignature,
-          shuffleSpecWithPartitionByFromWindow.clusterBy().getColumns()
+          nextShuffleWindowSpec.clusterBy().getColumns()
       );
 
       queryDefBuilder.add(
@@ -233,9 +231,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(stageSignature)
                          .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(
-                             shuffleSpecWithPartitionByFromWindow
-                         )
+                         .shuffleSpec(nextShuffleWindowSpec)
                          .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
     }
@@ -244,22 +240,24 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   }
 
   /**
-   * Intermediate signature of a particular {@link GroupByQuery}. Does not include post-aggregators, and all
-   * aggregations are nonfinalized.
+   * @param originalQuery  which has the context for the next shuffle if that's present in the next window
+   * @param maxWorkerCount max worker count
+   * @return shuffle spec without partition boosting for next stage
    */
-  private static RowSignature computeIntermediateSignature(final GroupByQuery query)
+  private ShuffleSpec getShuffleSpecForNextWindow(GroupByQuery originalQuery, int maxWorkerCount)
   {
-    final RowSignature postAggregationSignature = query.getResultRowSignature(RowSignature.Finalization.NO);
-    final RowSignature.Builder builder = RowSignature.builder();
-
-    for (int i = 0; i < query.getResultRowSizeWithoutPostAggregators(); i++) {
-      builder.add(
-          postAggregationSignature.getColumnName(i),
-          postAggregationSignature.getColumnType(i).orElse(null)
+    final ShuffleSpec nextShuffleWindowSpec;
+    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+      nextShuffleWindowSpec = new HashShuffleSpec(
+          windowClusterBy,
+          maxWorkerCount
       );
+    } else {
+      nextShuffleWindowSpec = null;
     }
-
-    return builder.build();
+    return nextShuffleWindowSpec;
   }
 
   /**
