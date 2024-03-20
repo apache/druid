@@ -70,8 +70,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     // later we should also check if these can be parallelized
     // check there is an empty over clause or not
     List<List<OperatorFactory>> operatorList = new ArrayList<>();
-    boolean status = validateAndReturnOperatorList(originalQuery, operatorList);
-
+    boolean isEmptyOverFound = ifEmptyOverPresentInWindowOperstors(originalQuery, operatorList);
 
     ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
     // add this shuffle spec to the last stage of the inner query
@@ -104,7 +103,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     RowSignature rowSignature = queryToRun.getRowSignature();
 
 
-    if (status) {
+    if (isEmptyOverFound) {
       // empty over clause found
       // moving everything to a single partition
       queryDefBuilder.add(
@@ -112,8 +111,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                          .inputs(new StageInputSpec(firstStageNumber - 1))
                          .signature(rowSignature)
                          .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(ShuffleSpecFactories.singlePartition()
-                                                          .build(ClusterBy.none(), false))
+                         .shuffleSpec(null)
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                              queryToRun,
                              queryToRun.getOperators(),
@@ -173,7 +171,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     return queryDefBuilder.queryId(queryId).build();
   }
 
-  private boolean validateAndReturnOperatorList(
+  /**
+   *
+   * @param originalQuery
+   * @param operatorList
+   * @return true if the operator List has a partitioning operator with an empty OVER clause, false otherwise
+   */
+  private boolean ifEmptyOverPresentInWindowOperstors(
       WindowOperatorQuery originalQuery,
       List<List<OperatorFactory>> operatorList
   )

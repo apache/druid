@@ -177,6 +177,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConfig;
@@ -224,6 +225,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.mockito.ArgumentMatchers.any;
@@ -677,6 +679,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .schema(indexSchemaDifferentDim3M1Types)
                 .rows(ROWS2)
                 .buildMMappedIndex();
+            break;
+          case WIKIPEDIA:
+            index = TestDataBuilder.makeWikipediaIndex(temporaryFolder.newFolder());
             break;
           default:
             throw new ISE("Cannot query segment %s in test runner", segmentId);

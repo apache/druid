@@ -169,13 +169,15 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       return false;
     }
     WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return Objects.equals(query, that.query)
-           && Objects.equals(operatorList, that.operatorList)
-           && Objects.equals(stageRowSignature, that.stageRowSignature);
+    return isEmptyOver == that.isEmptyOver && Objects.equals(query, that.query) && Objects.equals(
+        operatorList,
+        that.operatorList
+    ) && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
+
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature);
+    return Objects.hash(query, operatorList, stageRowSignature, isEmptyOver);
   }
 }

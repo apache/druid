@@ -145,7 +145,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       partitionBoost = false;
     }
 
-
     queryDefBuilder.add(
         StageDefinition.builder(firstStageNumber)
                        .inputs(dataSourcePlan.getInputSpecs())
@@ -168,15 +167,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         partitionBoost
     );
 
-    // the result signature might change
-    // if window shufle spec is added
-    // say the output signature was d0, d1
-    // But shuffle spec for window was d1
-    // create the shufflespec from the column in the context
-    // and sort after wards to ensure prefix of shuffle is in row signature
     final ShuffleSpec nextShuffleWindowSpec;
     if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
       nextShuffleWindowSpec = new HashShuffleSpec(
           windowClusterBy,
           maxWorkerCount
@@ -184,33 +178,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     } else {
       nextShuffleWindowSpec = null;
     }
-    final ShuffleSpec stageShuffleSpec;
-    if (shuffleSpecFactoryPostAggregation != null) {
-      List<KeyColumn> columns = resultClusterBy.getColumns();
-      if (nextShuffleWindowSpec != null) {
-        columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
-        // Creating a new cluster by with the columns from existing
-        // plus the columns from the next window partition column
-        final ClusterBy tmp = new ClusterBy(columns, resultClusterBy.getBucketByCount());
-        stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(tmp, false);
-      } else {
-        stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(resultClusterBy, false);
-      }
-    } else {
-      stageShuffleSpec = nextShuffleWindowSpec;
-    }
-    final RowSignature stageSignature;
-    if (stageShuffleSpec == null) {
-      stageSignature = resultSignature;
-    } else {
-      // sort the signature to make sure the prefix is aligned
-      stageSignature = QueryKitUtils.sortableSignature(
-          resultSignature,
-          stageShuffleSpec.clusterBy().getColumns()
-      );
-    }
-
-    if (doLimitOrOffset) {
+    if (nextShuffleWindowSpec == null) {
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 1)
                          .inputs(new StageInputSpec(firstStageNumber))
@@ -223,30 +191,50 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                          )
                          .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
-      final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-      queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber + 2)
-                         .inputs(new StageInputSpec(firstStageNumber + 1))
-                         .signature(resultSignature)
-                         .maxWorkerCount(1)
-                         // no shuffling should be required after a limit processor.
-                         // but need one if the next stage is a window with a partition by
-                         .shuffleSpec(nextShuffleWindowSpec)
-                         .processorFactory(
-                             new OffsetLimitFrameProcessorFactory(
-                                 limitSpec.getOffset(),
-                                 limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
-                             )
-                         )
-      );
+
+      if (doLimitOrOffset) {
+        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+        queryDefBuilder.add(
+            StageDefinition.builder(firstStageNumber + 2)
+                           .inputs(new StageInputSpec(firstStageNumber + 1))
+                           .signature(resultSignature)
+                           .maxWorkerCount(1)
+                           .shuffleSpec(null) // no shuffling should be required after a limit processor.
+                           .processorFactory(
+                               new OffsetLimitFrameProcessorFactory(
+                                   limitSpec.getOffset(),
+                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
+                               )
+                           )
+        );
+      }
     } else {
+      final ShuffleSpec shuffleSpecWithPartitionByFromWindow;
+      if (shuffleSpecFactoryPostAggregation != null) {
+        List<KeyColumn> columns = resultClusterBy.getColumns();
+        columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
+        // Creating a new cluster by with the columns from existing
+        // plus the columns from the next window partition column
+        final ClusterBy tmp = new ClusterBy(columns, resultClusterBy.getBucketByCount());
+        shuffleSpecWithPartitionByFromWindow = shuffleSpecFactoryPostAggregation.build(tmp, false);
+      } else {
+        shuffleSpecWithPartitionByFromWindow = nextShuffleWindowSpec;
+      }
+      final RowSignature stageSignature;
+
+      // sort the signature to make sure the prefix is aligned
+      stageSignature = QueryKitUtils.sortableSignature(
+          resultSignature,
+          shuffleSpecWithPartitionByFromWindow.clusterBy().getColumns()
+      );
+
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 1)
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(stageSignature)
                          .maxWorkerCount(maxWorkerCount)
                          .shuffleSpec(
-                             stageShuffleSpec
+                             shuffleSpecWithPartitionByFromWindow
                          )
                          .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );

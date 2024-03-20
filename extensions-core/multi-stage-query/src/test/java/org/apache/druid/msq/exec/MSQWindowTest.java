@@ -35,7 +35,9 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
@@ -855,6 +857,8 @@ public class MSQWindowTest extends MSQTestBase
   }
 
 
+
+
   @Test
   public void testWindowOnFooWithNoGroupByAndEmptyOver()
   {
@@ -1147,6 +1151,71 @@ public class MSQWindowTest extends MSQTestBase
   }
 
   @Test
+  public void testWindowOnFooWithDim2()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim2", ColumnType.STRING)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "m1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]")
+                    .build();
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim2", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("dim2", ColumnType.STRING).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("dim2"))),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("dim2")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql("select dim2, SUM(m1) OVER (PARTITION BY dim2) cc from foo")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("dim2", "dim2"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{null, 8.0},
+            new Object[]{null, 8.0},
+            new Object[]{"", 3.0},
+            new Object[]{"a", 5.0},
+            new Object[]{"a", 5.0},
+            new Object[]{"abc", 5.0}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
   public void testWindowOnFooWithEmptyOverWithUnnest()
   {
     final Map<String, Object> contextWithRowSignature =
@@ -1392,9 +1461,6 @@ public class MSQWindowTest extends MSQTestBase
 
   }
 
-  // There is an issue with this test throwing out an ISE
-  // Comes in the case when the GroupByPostShuffle has a shuffle spec
-  // for the next window, the one with empty OVER() works
   @Test
   public void testInsertWithWindowPartitionByOrderBy()
   {
@@ -1590,5 +1656,78 @@ public class MSQWindowTest extends MSQTestBase
                          )
                      )
                      .verifyResults();
+  }
+
+  @Test
+  public void testSelectWithWikipedia()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cityName", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("cc", ColumnType.LONG)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new LongSumAggregatorFactory("w0", "added")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"}]"
+                    )
+                    .build();
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.WIKIPEDIA)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(new InDimFilter("cityName", ImmutableSet.of("Ahmedabad", "Albuquerque")))
+                .columns("added", "cityName")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("cityName", ColumnType.STRING)
+                    .add("added", ColumnType.LONG)
+                    .add("w0", ColumnType.LONG).build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("cityName"))),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("cityName")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql(
+            "select cityName, added, SUM(added) OVER (PARTITION BY cityName) cc from wikipedia where cityName IN ('Ahmedabad', 'Albuquerque')")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("cityName", "cityName"),
+                                           new ColumnMapping("added", "added"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{"Ahmedabad", 0L, 0L},
+            new Object[]{"Ahmedabad", 0L, 0L},
+            new Object[]{"Albuquerque", 129L, 140L},
+            new Object[]{"Albuquerque", 9L, 140L},
+            new Object[]{"Albuquerque", 2L, 140L}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
   }
 }

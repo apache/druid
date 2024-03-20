@@ -198,9 +198,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
-    // Try to run with the segment on the server
-    // if segment was not found for some reason
-    // call runWithSegment which would load from deep storage
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
       final DataServerQueryResult<Object[]> dataServerQueryResult =
