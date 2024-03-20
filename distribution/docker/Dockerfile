@@ -67,6 +67,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     && wget ${BASH_URL} -O /bin/bash
 
 FROM busybox:1.35.0-glibc as busybox
+FROM curlimages/curl as curl
 
 FROM gcr.io/distroless/java$JDK_VERSION-debian12
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
@@ -74,6 +75,7 @@ LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
 
+COPY --from=curl /usr/bin/curl /usr/bin/curl
 
 RUN addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
@@ -96,9 +98,6 @@ RUN --mount=type=bind,from=builder,source=/opt,target=/builder/opt \
  && /deduplicate_jars.sh /opt/druid \
  && chown -R druid:druid /opt/druid \
  && chmod 775 /opt/druid/var /opt/shared
-
-RUN apt-get update -y \
- && apt-get -y install curl
 
 USER druid
 VOLUME /opt/druid/var
