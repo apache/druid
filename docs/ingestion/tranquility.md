@@ -26,5 +26,5 @@ title: "Tranquility"
 streams to Druid in real-time. It is not compatible with recent versions of Druid.
 
 For new projects that require streaming ingestion, we recommend using Druid's native support for
-[Apache Kafka](../development/extensions-core/kafka-ingestion.md) or
-[Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md).
+[Apache Kafka](../ingestion/kafka-ingestion.md) or
+[Amazon Kinesis](../ingestion/kinesis-ingestion.md).

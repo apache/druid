@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -214,11 +213,11 @@ public class BatchAppenderator implements Appenderator
     log.debug("There will be up to[%d] pending persists", maxPendingPersists);
 
     if (persistExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      log.info("Number of persist threads [%d]", tuningConfig.getNumPersistThreads());
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded(
+          Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-batch-appenderator-persist",
-              maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }
@@ -819,20 +818,17 @@ public class BatchAppenderator implements Appenderator
         closer.close();
       }
 
-      // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
-      final DataSegment segment = RetryUtils.retry(
-          // This appenderator is used only for the local indexing task so unique paths are not required
-          () -> dataSegmentPusher.push(
-              mergedFile,
-              sink.getSegment()
-                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(
+      // dataSegmentPusher retries internally when appropriate; no need for retries here.
+      final DataSegment segment = dataSegmentPusher.push(
+          mergedFile,
+          sink.getSegment()
+              .withDimensions(
+                  IndexMerger.getMergedDimensionsFromQueryableIndexes(
                       indexes,
                       schema.getDimensionsSpec()
-                  )),
-              false
-          ),
-          exception -> exception instanceof Exception,
-          5
+                  )
+              ),
+          false
       );
 
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their

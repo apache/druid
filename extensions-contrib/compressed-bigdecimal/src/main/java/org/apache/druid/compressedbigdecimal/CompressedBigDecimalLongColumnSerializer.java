@@ -49,7 +49,8 @@ public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSe
    */
   public static CompressedBigDecimalLongColumnSerializer create(
       SegmentWriteOutMedium segmentWriteOutMedium,
-      String filenameBase)
+      String filenameBase
+  )
   {
     return new CompressedBigDecimalLongColumnSerializer(
         CompressedVSizeColumnarIntsSerializer.create(
@@ -57,13 +58,17 @@ public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSe
             segmentWriteOutMedium,
             String.format(Locale.ROOT, "%s.scale", filenameBase),
             16,
-            CompressionStrategy.LZ4),
+            CompressionStrategy.LZ4,
+            segmentWriteOutMedium.getCloser()
+        ),
         V3CompressedVSizeColumnarMultiIntsSerializer.create(
             "dummy",
             segmentWriteOutMedium,
             String.format(Locale.ROOT, "%s.magnitude", filenameBase),
             Integer.MAX_VALUE,
-            CompressionStrategy.LZ4));
+            CompressionStrategy.LZ4
+        )
+    );
   }
 
   private final CompressedVSizeColumnarIntsSerializer scaleWriter;

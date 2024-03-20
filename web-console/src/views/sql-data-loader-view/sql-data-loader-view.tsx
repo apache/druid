@@ -45,6 +45,11 @@ import { TitleFrame } from './title-frame/title-frame';
 
 import './sql-data-loader-view.scss';
 
+const INITIAL_QUERY_CONTEXT: QueryContext = {
+  finalizeAggregations: false,
+  groupByEnableMultiValueUnnesting: false,
+};
+
 interface LoaderContent extends QueryWithContext {
   id?: string;
 }
@@ -180,34 +185,33 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
       ) : inputFormat && inputSource ? (
         <TitleFrame title="Load data" subtitle="Parse">
           <InputFormatStep
-            inputSource={inputSource}
+            initInputSource={inputSource}
             initInputFormat={inputFormat}
             doneButton={false}
-            onSet={({ inputFormat, signature, isArrays, timeExpression }) => {
+            onSet={({ inputSource, inputFormat, signature, timeExpression, arrayMode }) => {
+              const queryContext: QueryContext = { ...INITIAL_QUERY_CONTEXT };
+              if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
               setContent({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
                     { inputSource, inputFormat, signature },
-                    isArrays,
                     timeExpression,
                     undefined,
+                    arrayMode,
                   ),
                 ).toString(),
-                queryContext: {
-                  finalizeAggregations: false,
-                  groupByEnableMultiValueUnnesting: false,
-                },
+                queryContext,
               });
             }}
             altText="Skip the wizard and continue with custom SQL"
-            onAltSet={({ inputFormat, signature, isArrays, timeExpression }) => {
+            onAltSet={({ inputSource, inputFormat, signature, timeExpression, arrayMode }) => {
               goToQuery({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
                     { inputSource, inputFormat, signature },
-                    isArrays,
                     timeExpression,
                     undefined,
+                    arrayMode,
                   ),
                 ).toString(),
               });

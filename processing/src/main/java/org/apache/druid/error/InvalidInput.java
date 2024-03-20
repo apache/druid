@@ -19,7 +19,11 @@
 
 package org.apache.druid.error;
 
-public class InvalidInput extends DruidException.Failure
+/**
+ * A failure type used to make {@link DruidException}s of category
+ * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER}.
+ */
+public class InvalidInput extends BaseFailure
 {
   public static DruidException exception(String msg, Object... args)
   {
@@ -31,33 +35,18 @@ public class InvalidInput extends DruidException.Failure
     return DruidException.fromFailure(new InvalidInput(t, msg, args));
   }
 
-  private final Throwable t;
-  private final String msg;
-  private final Object[] args;
-
   public InvalidInput(
       Throwable t,
       String msg,
       Object... args
   )
   {
-    super("invalidInput");
-    this.t = t;
-    this.msg = msg;
-    this.args = args;
+    super(
+        "invalidInput",
+        DruidException.Persona.USER,
+        DruidException.Category.INVALID_INPUT,
+        t, msg, args
+    );
   }
 
-
-  @Override
-  public DruidException makeException(DruidException.DruidExceptionBuilder bob)
-  {
-    bob = bob.forPersona(DruidException.Persona.USER)
-             .ofCategory(DruidException.Category.INVALID_INPUT);
-
-    if (t == null) {
-      return bob.build(msg, args);
-    } else {
-      return bob.build(t, msg, args);
-    }
-  }
 }

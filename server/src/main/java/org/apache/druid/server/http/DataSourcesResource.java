@@ -39,6 +39,9 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -49,7 +52,6 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -66,6 +68,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -164,12 +167,12 @@ public class DataSourcesResource
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getDataSource(
+  public Response getQueryableDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("full") final String full
   )
   {
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
 
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
@@ -184,7 +187,7 @@ public class DataSourcesResource
 
   private interface SegmentUpdateOperation
   {
-    int perform() throws UnknownSegmentIdsException;
+    int perform();
   }
 
   @POST
@@ -193,8 +196,8 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    SegmentUpdateOperation operation = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
-        dataSourceName);
+    SegmentUpdateOperation operation = () -> segmentsMetadataManager
+        .markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
     return performSegmentUpdate(dataSourceName, operation);
   }
 
@@ -207,16 +210,41 @@ public class DataSourcesResource
       MarkDataSourceSegmentsPayload payload
   )
   {
-    SegmentUpdateOperation operation = () -> {
-      final Interval interval = payload.getInterval();
-      if (interval != null) {
-        return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
-      } else {
-        final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
-      }
-    };
-    return performSegmentUpdate(dataSourceName, payload, operation);
+    if (payload == null || !payload.isValid()) {
+      log.warn("Invalid request payload: [%s]", payload);
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .build();
+    } else {
+      SegmentUpdateOperation operation = () -> {
+
+        final Interval interval = payload.getInterval();
+        if (interval != null) {
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+        } else {
+          final Set<String> segmentIds = payload.getSegmentIds();
+          if (segmentIds == null || segmentIds.isEmpty()) {
+            return 0;
+          }
+
+          // Validate segmentIds
+          final List<String> invalidSegmentIds = new ArrayList<>();
+          for (String segmentId : segmentIds) {
+            if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
+              invalidSegmentIds.add(segmentId);
+            }
+          }
+          if (!invalidSegmentIds.isEmpty()) {
+            throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
+          }
+
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+        }
+      };
+
+      return performSegmentUpdate(dataSourceName, operation);
+    }
   }
 
   @POST
@@ -230,60 +258,46 @@ public class DataSourcesResource
       @Context final HttpServletRequest req
   )
   {
-    SegmentUpdateOperation operation = () -> {
-      final Interval interval = payload.getInterval();
-      final int numUpdatedSegments;
-      if (interval != null) {
-        numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
-      } else {
-        final Set<SegmentId> segmentIds =
-            payload.getSegmentIds()
-                   .stream()
-                   .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
-                   .filter(Objects::nonNull)
-                   .collect(Collectors.toSet());
-
-        // Filter out segmentIds that do not belong to this datasource
-        numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
-            segmentIds.stream()
-                      .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
-                      .collect(Collectors.toSet())
-        );
-      }
-      auditManager.doAudit(
-          AuditEntry.builder()
-                    .key(dataSourceName)
-                    .type("segment.markUnused")
-                    .payload(payload)
-                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
-                    .build()
-      );
-      return numUpdatedSegments;
-    };
-    return performSegmentUpdate(dataSourceName, payload, operation);
-  }
-
-  private Response performSegmentUpdate(
-      String dataSourceName,
-      MarkDataSourceSegmentsPayload payload,
-      SegmentUpdateOperation operation
-  )
-  {
     if (payload == null || !payload.isValid()) {
       log.warn("Invalid request payload: [%s]", payload);
       return Response
           .status(Response.Status.BAD_REQUEST)
           .entity("Invalid request payload, either interval or segmentIds array must be specified")
           .build();
-    }
+    } else {
+      SegmentUpdateOperation operation = () -> {
+        final Interval interval = payload.getInterval();
+        final int numUpdatedSegments;
+        if (interval != null) {
+          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        } else {
+          final Set<SegmentId> segmentIds =
+              payload.getSegmentIds()
+                  .stream()
+                  .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
+                  .filter(Objects::nonNull)
+                  .collect(Collectors.toSet());
 
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    if (dataSource == null) {
-      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+          // Filter out segmentIds that do not belong to this datasource
+          numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
+              segmentIds.stream()
+                  .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
+                  .collect(Collectors.toSet())
+          );
+        }
+        auditManager.doAudit(
+            AuditEntry.builder()
+                .key(dataSourceName)
+                .type("segment.markUnused")
+                .payload(payload)
+                .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                .build()
+        );
+        return numUpdatedSegments;
+      };
+      return performSegmentUpdate(dataSourceName, operation);
     }
-
-    return performSegmentUpdate(dataSourceName, operation);
   }
 
   private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
@@ -298,11 +312,10 @@ public class DataSourcesResource
       int numChangedSegments = operation.perform();
       return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
-    catch (UnknownSegmentIdsException e) {
-      log.warn("Could not find segmentIds[%s]", e.getUnknownSegmentIds());
+    catch (DruidException e) {
       return Response
-          .status(Response.Status.NOT_FOUND)
-          .entity(ImmutableMap.of("message", e.getMessage()))
+          .status(e.getStatusCode())
+          .entity(new ErrorResponse(e))
           .build();
     }
     catch (Exception e) {
@@ -380,7 +393,7 @@ public class DataSourcesResource
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       final String killTaskId = FutureUtils.getUnchecked(
-          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null),
+          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null, null),
           true
       );
       auditManager.doAudit(
@@ -418,7 +431,7 @@ public class DataSourcesResource
   )
   {
     if (simple == null && full == null) {
-      final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+      final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
       if (dataSource == null) {
         return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
@@ -444,7 +457,7 @@ public class DataSourcesResource
   {
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (simple == null && full == null) {
-      final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+      final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
       if (dataSource == null) {
         return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
@@ -601,7 +614,7 @@ public class DataSourcesResource
       Predicate<Interval> intervalFilter
   )
   {
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
 
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
@@ -651,7 +664,7 @@ public class DataSourcesResource
       @QueryParam("full") String full
   )
   {
-    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
@@ -673,7 +686,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getQueryableDataSource(dataSourceName);
     if (dataSource == null) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
@@ -731,7 +744,7 @@ public class DataSourcesResource
   }
 
   @Nullable
-  private ImmutableDruidDataSource getDataSource(final String dataSourceName)
+  private ImmutableDruidDataSource getQueryableDataSource(final String dataSourceName)
   {
     List<DruidDataSource> dataSources = serverInventoryView
         .getInventory()
@@ -1008,7 +1021,12 @@ public class DataSourcesResource
 
     public boolean isValid()
     {
-      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+      final boolean hasSegmentIds = !CollectionUtils.isNullOrEmpty(segmentIds);
+      if (interval == null) {
+        return hasSegmentIds;
+      } else {
+        return !hasSegmentIds;
+      }
     }
   }
 }

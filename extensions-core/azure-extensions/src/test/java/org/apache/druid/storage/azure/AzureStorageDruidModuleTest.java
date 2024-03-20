@@ -30,6 +30,8 @@ import com.google.inject.Module;
 import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
+import org.apache.druid.data.input.azure.AzureInputSource;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
@@ -63,12 +65,13 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_CONTAINER;
   private static final String AZURE_PREFIX;
   private static final int AZURE_MAX_LISTING_LENGTH;
-  private static final String PATH = "path";
+  private static final String PATH = "path/subpath";
   private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
   private static final Properties PROPERTIES;
 
   private CloudObjectLocation cloudObjectLocation1;
   private CloudObjectLocation cloudObjectLocation2;
+  private AzureStorage azureStorage;
   private Injector injector;
 
   static {
@@ -93,6 +96,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     cloudObjectLocation1 = createMock(CloudObjectLocation.class);
     cloudObjectLocation2 = createMock(CloudObjectLocation.class);
+    azureStorage = createMock(AzureStorage.class);
   }
 
   @Test
@@ -143,8 +147,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureByteSourceFactory factory = injector.getInstance(AzureByteSourceFactory.class);
-    Object object1 = factory.create("container1", "blob1");
-    Object object2 = factory.create("container2", "blob2");
+    Object object1 = factory.create("container1", "blob1", azureStorage);
+    Object object2 = factory.create("container2", "blob2", azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -155,17 +159,20 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     EasyMock.expect(cloudObjectLocation1.getBucket()).andReturn(AZURE_CONTAINER);
     EasyMock.expect(cloudObjectLocation2.getBucket()).andReturn(AZURE_CONTAINER);
-    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH);
+    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH).times(2);
     EasyMock.expect(cloudObjectLocation2.getPath()).andReturn(PATH);
     replayAll();
 
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureEntityFactory factory = injector.getInstance(AzureEntityFactory.class);
-    Object object1 = factory.create(cloudObjectLocation1);
-    Object object2 = factory.create(cloudObjectLocation2);
+    Object object1 = factory.create(cloudObjectLocation1, azureStorage, AzureInputSource.SCHEME);
+    Object object2 = factory.create(cloudObjectLocation2, azureStorage, AzureInputSource.SCHEME);
+    Object object3 = factory.create(cloudObjectLocation1, azureStorage, AzureStorageAccountInputSource.SCHEME);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
+    Assert.assertNotNull(object3);
     Assert.assertNotSame(object1, object2);
+    Assert.assertNotSame(object1, object3);
   }
 
   @Test
@@ -173,8 +180,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIteratorFactory factory = injector.getInstance(AzureCloudBlobIteratorFactory.class);
-    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
+    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -185,8 +192,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIterableFactory factory = injector.getInstance(AzureCloudBlobIterableFactory.class);
-    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
+    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -260,11 +267,26 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
+  public void testAccountUnset()
+  {
+    Properties properties = initializePropertes();
+    properties.remove("druid.azure.account");
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage("Set 'account' to the storage account that needs to be configured in the azure config. Please refer to azure documentation.");
+    makeInjectorWithProperties(properties).getInstance(
+        Key.get(new TypeLiteral<AzureClientFactory>()
+        {
+        })
+    );
+  }
+
+  @Test
   public void testGetBlobStorageEndpointWithDefaultProperties()
   {
     Properties properties = initializePropertes();
     AzureAccountConfig config = makeInjectorWithProperties(properties).getInstance(AzureAccountConfig.class);
-    Assert.assertEquals(config.getEndpointSuffix(), AzureUtils.DEFAULT_AZURE_ENDPOINT_SUFFIX);
+    Assert.assertNull(config.getEndpointSuffix());
+    Assert.assertEquals(config.getStorageAccountEndpointSuffix(), AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     Assert.assertEquals(config.getBlobStorageEndpoint(), AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
   }
 

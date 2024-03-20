@@ -27,6 +27,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -74,6 +75,10 @@ public class MetadataResourceTest
           .withNumPartitions(NUM_PARTITIONS)
           .eachOfSizeInMb(500)
           .toArray(new DataSegment[0]);
+
+  private final List<DataSegmentPlus> segmentsPlus = Arrays.stream(segments)
+          .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc(), null))
+          .collect(Collectors.toList());
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
   private IndexerMetadataStorageCoordinator storageCoordinator;
@@ -281,7 +286,7 @@ public class MetadataResourceTest
         null,
         null
     );
-    List<DataSegment> resultList = extractResponseList(response);
+    List<DataSegmentPlus> resultList = extractResponseList(response);
     Assert.assertTrue(resultList.isEmpty());
 
     // test valid datasource with bad limit - fails with expected invalid limit message
@@ -302,7 +307,7 @@ public class MetadataResourceTest
     response = metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null, null);
 
     resultList = extractResponseList(response);
-    Assert.assertEquals(Arrays.asList(segments), resultList);
+    Assert.assertEquals(segmentsPlus, resultList);
 
     // test valid datasource with interval filter - returns all unused segments for that datasource within interval
     int numDays = 2;
@@ -311,7 +316,10 @@ public class MetadataResourceTest
 
     resultList = extractResponseList(response);
     Assert.assertEquals(NUM_PARTITIONS * numDays, resultList.size());
-    Assert.assertEquals(Arrays.asList(segments[0], segments[1], segments[2], segments[3]), resultList);
+    Assert.assertEquals(
+        Arrays.asList(segmentsPlus.get(0), segmentsPlus.get(1), segmentsPlus.get(2), segmentsPlus.get(3)),
+        resultList
+    );
 
     // test valid datasource with interval filter limit and last segment id - returns unused segments for that
     // datasource within interval upto limit starting at last segment id
@@ -320,7 +328,7 @@ public class MetadataResourceTest
 
     resultList = extractResponseList(response);
     Assert.assertEquals(limit, resultList.size());
-    Assert.assertEquals(Arrays.asList(segments[0], segments[1], segments[2]), resultList);
+    Assert.assertEquals(Arrays.asList(segmentsPlus.get(0), segmentsPlus.get(1), segmentsPlus.get(2)), resultList);
 
     // test valid datasource with interval filter limit and offset - returns unused segments for that datasource within
     // interval upto limit starting at offset
@@ -334,10 +342,10 @@ public class MetadataResourceTest
     );
 
     resultList = extractResponseList(response);
-    Assert.assertEquals(Collections.singletonList(segments[3]), resultList);
+    Assert.assertEquals(Collections.singletonList(segmentsPlus.get(3)), resultList);
   }
 
-  Answer<Iterable<DataSegment>> mockIterateAllUnusedSegmentsForDatasource()
+  Answer<Iterable<DataSegmentPlus>> mockIterateAllUnusedSegmentsForDatasource()
   {
     return invocationOnMock -> {
       String dataSourceName = invocationOnMock.getArgument(0);
@@ -349,16 +357,17 @@ public class MetadataResourceTest
         return ImmutableList.of();
       }
 
-      return Arrays.stream(segments)
-          .filter(d -> d.getDataSource().equals(dataSourceName)
+      return segmentsPlus.stream()
+          .filter(d -> d.getDataSegment().getDataSource().equals(dataSourceName)
                        && (interval == null
-                           || (d.getInterval().getStartMillis() >= interval.getStartMillis()
-                               && d.getInterval().getEndMillis() <= interval.getEndMillis()))
+                           || (d.getDataSegment().getInterval().getStartMillis() >= interval.getStartMillis()
+                               && d.getDataSegment().getInterval().getEndMillis() <= interval.getEndMillis()))
                        && (lastSegmentId == null
-                           || (sortOrder == null && d.getId().toString().compareTo(lastSegmentId) > 0)
-                           || (sortOrder == SortOrder.ASC && d.getId().toString().compareTo(lastSegmentId) > 0)
-                           || (sortOrder == SortOrder.DESC && d.getId().toString().compareTo(lastSegmentId) < 0)))
-          .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.getInterval(), o2.getInterval()))
+                           || (sortOrder == null && d.getDataSegment().getId().toString().compareTo(lastSegmentId) > 0)
+                           || (sortOrder == SortOrder.ASC && d.getDataSegment().getId().toString().compareTo(lastSegmentId) > 0)
+                           || (sortOrder == SortOrder.DESC && d.getDataSegment().getId().toString().compareTo(lastSegmentId) < 0)))
+          .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd()
+              .compare(o1.getDataSegment().getInterval(), o2.getDataSegment().getInterval()))
           .limit(limit != null
               ? limit
               : segments.length)

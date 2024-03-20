@@ -57,7 +57,7 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
   {
     public BaseRegexpReplaceExpr(final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(RegexpReplaceExprMacro.this, args);
     }
 
     @Nullable
@@ -65,12 +65,6 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return ExpressionType.STRING;
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(apply(shuttle.visitAll(args)));
     }
   }
 

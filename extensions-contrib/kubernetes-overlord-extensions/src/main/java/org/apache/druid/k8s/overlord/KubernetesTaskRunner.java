@@ -221,7 +221,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         synchronized (tasks) {
           workItem = tasks.get(taskId);
           if (workItem == null) {
-            log.error("Task [%s] disappeared", taskId);
+            log.warn("Task [%s] disappeared. This could happen if the task was canceled or if it crashed.", taskId);
             return;
           }
         }
@@ -263,11 +263,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       return;
     }
 
+    workItem.shutdown();
+    if (!workItem.getResult().isDone()) {
+      return;
+    }
     synchronized (tasks) {
       tasks.remove(taskid);
     }
-
-    workItem.shutdown();
+    
   }
 
   @Override

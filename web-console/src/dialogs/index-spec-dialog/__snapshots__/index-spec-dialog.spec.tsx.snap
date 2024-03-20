@@ -17,21 +17,21 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
   >
     <AutoForm
       fields={
-        Array [
-          Object {
+        [
+          {
             "defaultValue": "utf8",
             "info": <React.Fragment>
               Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt; columns.
             </React.Fragment>,
             "label": "String dictionary encoding",
             "name": "stringDictionaryEncoding.type",
-            "suggestions": Array [
+            "suggestions": [
               "utf8",
               "frontCoded",
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": 4,
             "defined": [Function],
             "info": <React.Fragment>
@@ -43,26 +43,26 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
             "name": "stringDictionaryEncoding.bucketSize",
             "type": "number",
           },
-          Object {
+          {
             "defaultValue": "roaring",
             "info": <React.Fragment>
               Compression format for bitmap indexes.
             </React.Fragment>,
             "label": "Bitmap type",
             "name": "bitmap.type",
-            "suggestions": Array [
+            "suggestions": [
               "roaring",
               "concise",
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "lz4",
             "info": <React.Fragment>
               Compression format for dimension columns.
             </React.Fragment>,
             "name": "dimensionCompression",
-            "suggestions": Array [
+            "suggestions": [
               "lz4",
               "lzf",
               "zstd",
@@ -70,7 +70,7 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "longs",
             "info": <React.Fragment>
               Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
@@ -84,19 +84,19 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
                stores the value as-is with 8 bytes each.
             </React.Fragment>,
             "name": "longEncoding",
-            "suggestions": Array [
+            "suggestions": [
               "longs",
               "auto",
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "lz4",
             "info": <React.Fragment>
               Compression format for primitive type metric columns.
             </React.Fragment>,
             "name": "metricCompression",
-            "suggestions": Array [
+            "suggestions": [
               "lz4",
               "lzf",
               "zstd",
@@ -104,14 +104,14 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "lz4",
             "info": <React.Fragment>
               Compression format to use for nested column raw data. 
             </React.Fragment>,
             "label": "JSON compression",
             "name": "jsonCompression",
-            "suggestions": Array [
+            "suggestions": [
               "lz4",
               "lzf",
               "zstd",
@@ -122,7 +122,7 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
         ]
       }
       model={
-        Object {
+        {
           "dimensionCompression": "lzf",
         }
       }
@@ -167,21 +167,21 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
   >
     <AutoForm
       fields={
-        Array [
-          Object {
+        [
+          {
             "defaultValue": "utf8",
             "info": <React.Fragment>
               Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt; columns.
             </React.Fragment>,
             "label": "String dictionary encoding",
             "name": "stringDictionaryEncoding.type",
-            "suggestions": Array [
+            "suggestions": [
               "utf8",
               "frontCoded",
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": 4,
             "defined": [Function],
             "info": <React.Fragment>
@@ -193,26 +193,26 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
             "name": "stringDictionaryEncoding.bucketSize",
             "type": "number",
           },
-          Object {
+          {
             "defaultValue": "roaring",
             "info": <React.Fragment>
               Compression format for bitmap indexes.
             </React.Fragment>,
             "label": "Bitmap type",
             "name": "bitmap.type",
-            "suggestions": Array [
+            "suggestions": [
               "roaring",
               "concise",
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "lz4",
             "info": <React.Fragment>
               Compression format for dimension columns.
             </React.Fragment>,
             "name": "dimensionCompression",
-            "suggestions": Array [
+            "suggestions": [
               "lz4",
               "lzf",
               "zstd",
@@ -220,7 +220,7 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "longs",
             "info": <React.Fragment>
               Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
@@ -234,19 +234,19 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
                stores the value as-is with 8 bytes each.
             </React.Fragment>,
             "name": "longEncoding",
-            "suggestions": Array [
+            "suggestions": [
               "longs",
               "auto",
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "lz4",
             "info": <React.Fragment>
               Compression format for primitive type metric columns.
             </React.Fragment>,
             "name": "metricCompression",
-            "suggestions": Array [
+            "suggestions": [
               "lz4",
               "lzf",
               "zstd",
@@ -254,14 +254,14 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
             ],
             "type": "string",
           },
-          Object {
+          {
             "defaultValue": "lz4",
             "info": <React.Fragment>
               Compression format to use for nested column raw data. 
             </React.Fragment>,
             "label": "JSON compression",
             "name": "jsonCompression",
-            "suggestions": Array [
+            "suggestions": [
               "lz4",
               "lzf",
               "zstd",
@@ -271,7 +271,7 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
           },
         ]
       }
-      model={Object {}}
+      model={{}}
       onChange={[Function]}
     />
   </div>

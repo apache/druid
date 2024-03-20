@@ -224,7 +224,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     <div className="input-source-step">
       <div className="ingestion-cards">
         {renderIngestionCard('s3')}
-        {renderIngestionCard('azure')}
+        {renderIngestionCard('azureStorage')}
         {renderIngestionCard('google')}
         {renderIngestionCard('hdfs')}
         {renderIngestionCard('http')}
@@ -288,6 +288,9 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
                   </li>
                   <li>
                     <ExternalLink href="https://avro.apache.org">Avro</ExternalLink>
+                  </li>
+                  <li>
+                    <ExternalLink href="https://protobuf.dev">Protobuf</ExternalLink>
                   </li>
                   <li>
                     Any line format that can be parsed with a custom regular expression (regex)

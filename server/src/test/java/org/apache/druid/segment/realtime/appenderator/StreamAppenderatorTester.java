@@ -63,7 +63,6 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -174,8 +173,6 @@ public class StreamAppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
-      private boolean mustFail = true;
-
       @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
@@ -192,11 +189,8 @@ public class StreamAppenderatorTester implements AutoCloseable
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
       {
-        if (enablePushFailure && mustFail) {
-          mustFail = false;
+        if (enablePushFailure) {
           throw new IOException("Push failure test");
-        } else if (enablePushFailure) {
-          mustFail = true;
         }
         pushedSegments.add(segment);
         return segment;
@@ -240,7 +234,6 @@ public class StreamAppenderatorTester implements AutoCloseable
           announcer,
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
-          NoopJoinableFactory.INSTANCE,
           MapCache.create(2048),
           new CacheConfig(),
           new CachePopulatorStats(),
@@ -288,7 +281,6 @@ public class StreamAppenderatorTester implements AutoCloseable
           new NoopDataSegmentAnnouncer(),
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
-          NoopJoinableFactory.INSTANCE,
           MapCache.create(2048),
           new CacheConfig(),
           new CachePopulatorStats(),

@@ -39,6 +39,7 @@ Authorizer
 Avatica
 Avro
 Azul
+AzureDNSZone
 BCP
 Base64
 Base64-encoded
@@ -56,13 +57,16 @@ CloudWatch
 ColumnDescriptor
 Corretto
 CLI
+CUME_DIST
 DDL
+DENSE_RANK
 DML
 DNS
 DRUIDVERSION
 DataSketches
 DateTime
 DateType
+DeltaLakeInputSource
 dimensionsSpec
 DimensionSpec
 DimensionSpecs
@@ -79,6 +83,7 @@ downsamples
 downsampling
 Dropwizard
 dropwizard
+druid-deltalake-extensions
 DruidInputSource
 DruidSQL
 DynamicConfigProvider
@@ -91,6 +96,7 @@ ETL
 Elasticsearch
 Enums
 FirehoseFactory
+FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.NEGATIVE_INFINITY.
@@ -161,6 +167,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+Lakehouse
 LDAPS
 LRU
 LZ4
@@ -232,6 +239,7 @@ TopN
 TopNs
 UI
 UIs
+UPSERT
 URI
 URIs
 uris
@@ -412,6 +420,7 @@ nonfinalized
 non-null
 non-nullable
 noop
+NTILE
 numerics
 numShards
 parameterize
@@ -423,6 +432,7 @@ partitioner
 partitionFunction
 partitionsSpec
 pathParts
+PERCENT_RANK
 performant
 plaintext
 pluggable
@@ -485,6 +495,7 @@ repo
 requireSSL
 rollup
 rollups
+ROW_NUMBER
 rsync
 runtime
 schemas
@@ -525,6 +536,7 @@ SVG
 symlink
 syntaxes
 systemFields
+tablePath
 tiering
 timeseries
 Timeseries
@@ -559,6 +571,7 @@ useFilterCNF
 useJqSyntax
 useJsonNodeReader
 useSSL
+upsert
 uptime
 uris
 urls
@@ -571,6 +584,7 @@ varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
+versioned
 versioning
 virtualColumns
 w.r.t.
@@ -778,6 +792,10 @@ APPROX_COUNT_DISTINCT_DS_THETA
 APPROX_QUANTILE_DS
 DS_QUANTILES_SKETCH
 APPROX_QUANTILE_FIXED_BUCKETS
+# Operators
+pivoted
+UNPIVOT
+unpivoted
 # File specific overrides
 100x
 _common
@@ -791,9 +809,11 @@ multi-server
 BasicDataSource
 LeaderLatch
 2.x
-28.x 
+28.x
+3.0.x
 3.5.x
 3.4.x
+3.5.x.
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
@@ -1119,6 +1139,7 @@ taskDuration
 9.2dist
 KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
+RabbitMQ
 Resharding
 resharding
 LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringtypestreamendpointreplicastaskCounttaskCount
@@ -1296,9 +1317,11 @@ kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
+lowerOpen
 timestamp
 timestampColumnName
 timestampSpec
+upperOpen
 urls
 valueFormat
 1GB
@@ -2373,6 +2396,14 @@ markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+appRegistrationClientId
+appRegistrationClientSecret
+tenantId
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2382,3 +2413,8 @@ spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
+quantilesFromDDSketch
+quantileFromDDSketch
+collapsingLowestDense

@@ -31,35 +31,20 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.After;
-import org.junit.Before;
 
 /**
  * Runs {@link CalciteArraysQueryTest} but with MSQ engine
  */
 public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
-  private TestGroupByBuffers groupByBuffers;
-
-  @Before
-  public void setup2()
-  {
-    groupByBuffers = TestGroupByBuffers.createDefault();
-  }
-
-  @After
-  public void teardown2()
-  {
-    groupByBuffers.close();
-  }
-
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
+    builder.addModules(
+        CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+    );
   }
-
 
   @Override
   public SqlEngine createEngine(
@@ -93,8 +78,7 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
-        .msqCompatible(msqCompatible);
+        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 }
 

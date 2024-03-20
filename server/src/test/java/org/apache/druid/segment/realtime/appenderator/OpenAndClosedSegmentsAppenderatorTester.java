@@ -138,20 +138,19 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-    tuningConfig =
-        new TestAppenderatorConfig(
-            TuningConfig.DEFAULT_APPENDABLE_INDEX,
-            maxRowsInMemory,
-            maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
-            skipBytesInMemoryOverheadCheck,
-            IndexSpec.DEFAULT,
-            0,
-            false,
-            0L,
-            OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-            IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-            basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
-        );
+    tuningConfig = new TestAppenderatorConfig(
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        maxRowsInMemory,
+        maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
+        skipBytesInMemoryOverheadCheck,
+        IndexSpec.DEFAULT,
+        0,
+        false,
+        0L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+    );
 
     metrics = new SegmentGenerationMetrics();
 
@@ -172,8 +171,6 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
-      private boolean mustFail = true;
-
       @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
@@ -190,11 +187,8 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
       {
-        if (enablePushFailure && mustFail) {
-          mustFail = false;
+        if (enablePushFailure) {
           throw new IOException("Push failure test");
-        } else if (enablePushFailure) {
-          mustFail = true;
         }
         pushedSegments.add(segment);
         return segment;

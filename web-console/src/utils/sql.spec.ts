@@ -78,32 +78,34 @@ describe('sql', () => {
       const found = findAllSqlQueriesInText(text);
 
       expect(found).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "endOffset": 23,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 14,
               "row": 1,
             },
+            "index": 0,
             "sql": "SELECT *
         FROM wikipedia",
             "startOffset": 0,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 0,
             },
           },
-          Object {
+          {
             "endOffset": 49,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 7,
               "row": 5,
             },
+            "index": 1,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",
             "startOffset": 25,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 3,
             },
@@ -125,34 +127,36 @@ describe('sql', () => {
       const found = findAllSqlQueriesInText(text);
 
       expect(found).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "endOffset": 101,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 15,
               "row": 5,
             },
+            "index": 0,
             "sql": "SELECT
-          \\"channel\\",
-          COUNT(*) AS \\"Count\\"
-        FROM (SELECT * FROM \\"wikipedia\\")
+          "channel",
+          COUNT(*) AS "Count"
+        FROM (SELECT * FROM "wikipedia")
         GROUP BY 1
         ORDER BY 2 DESC",
             "startOffset": 0,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 0,
             },
           },
-          Object {
+          {
             "endOffset": 73,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 31,
               "row": 3,
             },
-            "sql": "SELECT * FROM \\"wikipedia\\"",
+            "index": 1,
+            "sql": "SELECT * FROM "wikipedia"",
             "startOffset": 48,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 6,
               "row": 3,
             },
@@ -177,55 +181,58 @@ describe('sql', () => {
       const found = findAllSqlQueriesInText(text);
 
       expect(found).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "endOffset": 124,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 15,
               "row": 8,
             },
+            "index": 0,
             "sql": "WITH w1 AS (
-          SELECT channel, page FROM \\"wikipedia\\"
+          SELECT channel, page FROM "wikipedia"
         )
         SELECT
           page,
-          COUNT(*) AS \\"cnt\\"
+          COUNT(*) AS "cnt"
         FROM w1
         GROUP BY 1
         ORDER BY 2 DESC",
             "startOffset": 0,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 0,
             },
           },
-          Object {
+          {
             "endOffset": 52,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 39,
               "row": 1,
             },
-            "sql": "SELECT channel, page FROM \\"wikipedia\\"",
+            "index": 1,
+            "sql": "SELECT channel, page FROM "wikipedia"",
             "startOffset": 15,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 2,
               "row": 1,
             },
           },
-          Object {
+          {
             "endOffset": 124,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 15,
               "row": 8,
             },
+            "index": 2,
             "sql": "SELECT
           page,
-          COUNT(*) AS \\"cnt\\"
+          COUNT(*) AS "cnt"
         FROM w1
         GROUP BY 1
         ORDER BY 2 DESC",
             "startOffset": 55,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 3,
             },
@@ -234,8 +241,10 @@ describe('sql', () => {
       `);
     });
 
-    it('works with replace query', () => {
+    it('works with select query followed by a replace query', () => {
       const text = sane`
+        SELECT * FROM "wiki"
+
         REPLACE INTO "wikipedia" OVERWRITE ALL
         WITH "ext" AS (
           SELECT *
@@ -257,95 +266,113 @@ describe('sql', () => {
       const found = findAllSqlQueriesInText(text);
 
       expect(found).toMatchInlineSnapshot(`
-        Array [
-          Object {
-            "endOffset": 379,
-            "endRowColumn": Object {
-              "column": 18,
-              "row": 15,
+        [
+          {
+            "endOffset": 29,
+            "endRowColumn": {
+              "column": 7,
+              "row": 2,
             },
-            "sql": "REPLACE INTO \\"wikipedia\\" OVERWRITE ALL
-        WITH \\"ext\\" AS (
-          SELECT *
-          FROM TABLE(
-            EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
-            )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
-        )
-        SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"
-        PARTITIONED BY DAY",
+            "index": 0,
+            "sql": "SELECT * FROM "wiki"",
             "startOffset": 0,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 0,
             },
           },
-          Object {
-            "endOffset": 360,
-            "endRowColumn": Object {
-              "column": 10,
-              "row": 14,
+          {
+            "endOffset": 401,
+            "endRowColumn": {
+              "column": 18,
+              "row": 17,
             },
-            "sql": "WITH \\"ext\\" AS (
+            "index": 1,
+            "sql": "REPLACE INTO "wikipedia" OVERWRITE ALL
+        WITH "ext" AS (
           SELECT *
           FROM TABLE(
             EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
             )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
         )
         SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"",
-            "startOffset": 39,
-            "startRowColumn": Object {
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"
+        PARTITIONED BY DAY",
+            "startOffset": 22,
+            "startRowColumn": {
               "column": 0,
-              "row": 1,
-            },
-          },
-          Object {
-            "endOffset": 276,
-            "endRowColumn": Object {
-              "column": 70,
-              "row": 8,
-            },
-            "sql": "SELECT *
-          FROM TABLE(
-            EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
-            )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
-            "startOffset": 57,
-            "startRowColumn": Object {
-              "column": 2,
               "row": 2,
             },
           },
-          Object {
-            "endOffset": 360,
-            "endRowColumn": Object {
+          {
+            "endOffset": 382,
+            "endRowColumn": {
               "column": 10,
-              "row": 14,
+              "row": 16,
             },
-            "sql": "SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"",
-            "startOffset": 279,
-            "startRowColumn": Object {
+            "index": 2,
+            "sql": "WITH "ext" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
+            )
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
+        )
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"",
+            "startOffset": 61,
+            "startRowColumn": {
               "column": 0,
+              "row": 3,
+            },
+          },
+          {
+            "endOffset": 298,
+            "endRowColumn": {
+              "column": 70,
               "row": 10,
+            },
+            "index": 3,
+            "sql": "SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
+            )
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)",
+            "startOffset": 79,
+            "startRowColumn": {
+              "column": 2,
+              "row": 4,
+            },
+          },
+          {
+            "endOffset": 382,
+            "endRowColumn": {
+              "column": 10,
+              "row": 16,
+            },
+            "index": 4,
+            "sql": "SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"",
+            "startOffset": 301,
+            "startRowColumn": {
+              "column": 0,
+              "row": 12,
             },
           },
         ]
@@ -377,124 +404,129 @@ describe('sql', () => {
       const found = findAllSqlQueriesInText(text);
 
       expect(found).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "endOffset": 404,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 22,
               "row": 17,
             },
+            "index": 0,
             "sql": "EXPLAIN PLAN FOR
-        INSERT INTO \\"wikipedia\\"
-        WITH \\"ext\\" AS (
+        INSERT INTO "wikipedia"
+        WITH "ext" AS (
           SELECT *
           FROM TABLE(
             EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
             )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
         )
         SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"
         PARTITIONED BY DAY
-        CLUSTERED BY \\"channel\\"",
+        CLUSTERED BY "channel"",
             "startOffset": 0,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 0,
             },
           },
-          Object {
+          {
             "endOffset": 404,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 22,
               "row": 17,
             },
-            "sql": "INSERT INTO \\"wikipedia\\"
-        WITH \\"ext\\" AS (
+            "index": 1,
+            "sql": "INSERT INTO "wikipedia"
+        WITH "ext" AS (
           SELECT *
           FROM TABLE(
             EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
             )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
         )
         SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"
         PARTITIONED BY DAY
-        CLUSTERED BY \\"channel\\"",
+        CLUSTERED BY "channel"",
             "startOffset": 17,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 1,
             },
           },
-          Object {
+          {
             "endOffset": 362,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 10,
               "row": 15,
             },
-            "sql": "WITH \\"ext\\" AS (
+            "index": 2,
+            "sql": "WITH "ext" AS (
           SELECT *
           FROM TABLE(
             EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
             )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
         )
         SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"",
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"",
             "startOffset": 41,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 2,
             },
           },
-          Object {
+          {
             "endOffset": 278,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 70,
               "row": 9,
             },
+            "index": 3,
             "sql": "SELECT *
           FROM TABLE(
             EXTERN(
-              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-              '{\\"type\\":\\"json\\"}'
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
             )
-          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)",
             "startOffset": 59,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 2,
               "row": 3,
             },
           },
-          Object {
+          {
             "endOffset": 362,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 10,
               "row": 15,
             },
+            "index": 4,
             "sql": "SELECT
-          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-          \\"isRobot\\",
-          \\"channel\\"
-        FROM \\"ext\\"",
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"",
             "startOffset": 281,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 11,
             },
@@ -519,63 +551,67 @@ describe('sql', () => {
       const found = findAllSqlQueriesInText(text);
 
       expect(found).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "endOffset": 40,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 14,
               "row": 2,
             },
+            "index": 0,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM wikipedia",
             "startOffset": 0,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 0,
             },
           },
-          Object {
+          {
             "endOffset": 40,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 14,
               "row": 2,
             },
+            "index": 1,
             "sql": "SELECT *
         FROM wikipedia",
             "startOffset": 17,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 1,
             },
           },
-          Object {
+          {
             "endOffset": 83,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 7,
               "row": 7,
             },
+            "index": 2,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM w2
         LIMIT 5",
             "startOffset": 42,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 4,
             },
           },
-          Object {
+          {
             "endOffset": 83,
-            "endRowColumn": Object {
+            "endRowColumn": {
               "column": 7,
               "row": 7,
             },
+            "index": 3,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",
             "startOffset": 59,
-            "startRowColumn": Object {
+            "startRowColumn": {
               "column": 0,
               "row": 5,
             },

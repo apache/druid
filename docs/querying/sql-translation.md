@@ -822,7 +822,6 @@ Druid does not support all SQL features. In particular, the following features a
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
 - JOIN conditions containing a constant value inside the condition.
 - JOIN conditions on a column which contains a multi-value dimension.
-- OVER clauses, and analytic functions such as `LAG` and `LEAD`.
 - ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, which are supported.
   This restriction only applies to non-aggregating queries; you can ORDER BY any column in an aggregating query.
 - DDL and DML.

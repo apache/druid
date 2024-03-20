@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -53,12 +54,17 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +94,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   {
     try (final StreamAppenderatorTester tester =
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
-                                                   .enablePushFailure(true)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
                                                    .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -174,6 +180,88 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testPushFailure() throws Exception
+  {
+    try (final StreamAppenderatorTester tester =
+             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                   .basePersistDirectory(temporaryFolder.newFolder())
+                                                   .enablePushFailure(true)
+                                                   .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+      boolean thrown;
+
+      final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
+      final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
+
+      // startJob
+      Assert.assertEquals(null, appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // add
+      commitMetadata.put("x", "1");
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier)
+                      .getNumRowsInSegment()
+      );
+
+      commitMetadata.put("x", "2");
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier)
+                      .getNumRowsInSegment()
+      );
+
+      commitMetadata.put("x", "3");
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), committerSupplier)
+                      .getNumRowsInSegment()
+      );
+
+      // getSegments
+      Assert.assertEquals(IDENTIFIERS.subList(0, 2), sorted(appenderator.getSegments()));
+
+      // getRowCount
+      Assert.assertEquals(2, appenderator.getRowCount(IDENTIFIERS.get(0)));
+      Assert.assertEquals(1, appenderator.getRowCount(IDENTIFIERS.get(1)));
+      thrown = false;
+      try {
+        appenderator.getRowCount(IDENTIFIERS.get(2));
+      }
+      catch (IllegalStateException e) {
+        thrown = true;
+      }
+      Assert.assertTrue(thrown);
+
+      // push all
+      final ListenableFuture<SegmentsAndCommitMetadata> segmentsAndCommitMetadata = appenderator.push(
+          appenderator.getSegments(),
+          committerSupplier.get(),
+          false
+      );
+
+      final ExecutionException e = Assert.assertThrows(
+          ExecutionException.class,
+          segmentsAndCommitMetadata::get
+      );
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IOException.class)))
+      );
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(
+              CoreMatchers.startsWith("Push failure test"))))
+      );
+    }
+  }
+
+  @Test
   public void testMaxBytesInMemoryWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
@@ -181,7 +269,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(1024)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .skipBytesInMemoryOverheadCheck(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -231,7 +318,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(1024)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .skipBytesInMemoryOverheadCheck(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -278,7 +364,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(15000)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
@@ -382,7 +467,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testTaskFailAsPersistCannotFreeAnyMoreMemory() throws Exception
   {
     try (
@@ -390,7 +475,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(5180)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
@@ -414,7 +498,10 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       };
 
       appenderator.startJob();
-      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+      Assert.assertThrows(
+          RuntimeException.class,
+          () -> appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier)
+      );
     }
   }
 
@@ -426,7 +513,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(10)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .skipBytesInMemoryOverheadCheck(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -474,7 +560,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(10000)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
@@ -525,7 +610,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(31100)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
@@ -671,7 +755,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
             new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
                                                   .maxSizeInBytes(-1)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
@@ -724,7 +807,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(3)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
@@ -831,7 +913,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       tuningConfig = tester.getTuningConfig();
@@ -878,8 +959,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           final StreamAppenderatorTester tester2 =
               new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                     .basePersistDirectory(tuningConfig.getBasePersistDirectory())
-                                                    .enablePushFailure(true)
-                                                    .build()) {
+                                                     .build()) {
         final Appenderator appenderator2 = tester2.getAppenderator();
         Assert.assertEquals(ImmutableMap.of("eventCount", 4), appenderator2.startJob());
         Assert.assertEquals(ImmutableList.of(IDENTIFIERS.get(0)), appenderator2.getSegments());
@@ -895,7 +975,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(3)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
@@ -991,7 +1070,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .withSegmentDropDelayInMilli(1000)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -1060,7 +1138,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
@@ -1201,7 +1278,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
-                                                  .enablePushFailure(true)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
@@ -1372,7 +1448,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
     try (final StreamAppenderatorTester tester =
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
-                                                   .enablePushFailure(true)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
                                                    .build(dataSegmentAnnouncer, CentralizedDatasourceSchemaConfig.create())) {
       final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();

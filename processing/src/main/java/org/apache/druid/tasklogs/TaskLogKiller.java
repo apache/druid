@@ -30,5 +30,11 @@ import java.io.IOException;
 public interface TaskLogKiller
 {
   void killAll() throws IOException;
+
+  /**
+   * Removes logs older than the provided timestamp
+   * @param timestamp Timestamp in milliseconds
+   * @throws IOException
+   */
   void killOlderThan(long timestamp) throws IOException;
 }

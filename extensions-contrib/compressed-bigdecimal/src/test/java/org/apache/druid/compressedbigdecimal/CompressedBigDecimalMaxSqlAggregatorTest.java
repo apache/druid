@@ -19,11 +19,17 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+
 public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecimalSqlAggregatorTestBase
 {
   private static final String FUNCTION_NAME = CompressedBigDecimalMaxSqlAggregator.NAME;
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggWithNumberParse()
   {
     testCompressedBigDecimalAggWithNumberParseHelper(
@@ -34,15 +40,19 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggWithStrictNumberParse()
   {
-    testCompressedBigDecimalAggWithStrictNumberParseHelper(
-        FUNCTION_NAME,
-        CompressedBigDecimalMaxAggregatorFactory::new
-    );
+    assertThrows(NumberFormatException.class, () -> {
+      testCompressedBigDecimalAggWithStrictNumberParseHelper(
+          FUNCTION_NAME,
+          CompressedBigDecimalMaxAggregatorFactory::new
+      );
+    });
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScale()
   {
     testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScaleHelper(
@@ -53,6 +63,7 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultScale()
   {
     testCompressedBigDecimalAggDefaultScaleHelper(
@@ -63,6 +74,7 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultSizeAndScale()
   {
     testCompressedBigDecimalAggDefaultSizeAndScaleHelper(

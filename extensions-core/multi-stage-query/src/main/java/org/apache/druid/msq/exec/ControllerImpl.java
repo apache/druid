@@ -69,7 +69,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
-import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -106,6 +106,7 @@ import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -165,9 +166,9 @@ import org.apache.druid.msq.querykit.DataSegmentTimelineView;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
-import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
+import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
@@ -201,6 +202,8 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -220,6 +223,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -458,9 +462,27 @@ public class ControllerImpl implements Controller
         log.warn("Worker: %s", MSQTasks.errorReportToLogMessage(workerError));
       }
     }
-
+    MSQResultsReport resultsReport = null;
     if (queryKernel != null && queryKernel.isSuccess()) {
       // If successful, encourage the tasks to exit successfully.
+      // get results before posting finish to the tasks.
+      if (resultsYielder != null) {
+        resultsReport = makeResultsTaskReport(
+            queryDef,
+            resultsYielder,
+            task.getQuerySpec().getColumnMappings(),
+            task.getSqlTypeNames(),
+            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
+        );
+        try {
+          resultsYielder.close();
+        }
+        catch (IOException e) {
+          throw new RuntimeException("Unable to fetch results of various worker tasks successfully", e);
+        }
+      } else {
+        resultsReport = null;
+      }
       postFinishToAllTasks();
       workerTaskLauncher.stop(false);
     } else {
@@ -505,7 +527,6 @@ public class ControllerImpl implements Controller
     try {
       // Write report even if something went wrong.
       final MSQStagesReport stagesReport;
-      final MSQResultsReport resultsReport;
 
       if (queryDef != null) {
         final Map<Integer, ControllerStagePhase> stagePhaseMap;
@@ -534,18 +555,6 @@ public class ControllerImpl implements Controller
         stagesReport = null;
       }
 
-      if (resultsYielder != null) {
-        resultsReport = makeResultsTaskReport(
-            queryDef,
-            resultsYielder,
-            task.getQuerySpec().getColumnMappings(),
-            task.getSqlTypeNames(),
-            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
-        );
-      } else {
-        resultsReport = null;
-      }
-
       final MSQTaskReportPayload taskReportPayload = new MSQTaskReportPayload(
           makeStatusReport(
               taskStateForReport,
@@ -560,7 +569,6 @@ public class ControllerImpl implements Controller
           countersSnapshot,
           resultsReport
       );
-
       context.writeReports(
           id(),
           TaskReport.buildTaskReports(new MSQTaskReport(id(), taskReportPayload))
@@ -775,18 +783,10 @@ public class ControllerImpl implements Controller
     addToKernelManipulationQueue(
         queryKernel -> {
           final StageId stageId = queryKernel.getStageId(stageNumber);
-
-          // We need a specially-decorated ObjectMapper to deserialize key statistics.
-          final StageDefinition stageDef = queryKernel.getStageDefinition(stageId);
-          final ObjectMapper mapper = MSQTasks.decorateObjectMapperForKeyCollectorSnapshot(
-              context.jsonMapper(),
-              stageDef.getShuffleSpec().clusterBy(),
-              stageDef.getShuffleSpec().doesAggregate()
-          );
-
           final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
+
           try {
-            partialKeyStatisticsInformation = mapper.convertValue(
+            partialKeyStatisticsInformation = context.jsonMapper().convertValue(
                 partialKeyStatisticsInformationObject,
                 PartialKeyStatisticsInformation.class
             );
@@ -1233,10 +1233,15 @@ public class ControllerImpl implements Controller
       // any segment created after the lock was acquired for its interval will not be considered.
       final Collection<DataSegment> publishedUsedSegments;
       try {
-        publishedUsedSegments = context.taskActionClient().submit(new RetrieveSegmentsToReplaceAction(
-            dataSource,
-            intervals
-        ));
+        // Additional check as the task action does not accept empty intervals
+        if (intervals.isEmpty()) {
+          publishedUsedSegments = Collections.emptySet();
+        } else {
+          publishedUsedSegments = context.taskActionClient().submit(new RetrieveUsedSegmentsAction(
+              dataSource,
+              intervals
+          ));
+        }
       }
       catch (IOException e) {
         throw new MSQException(e, UnknownFault.forException(e));
@@ -1751,7 +1756,8 @@ public class ControllerImpl implements Controller
     final ShuffleSpecFactory shuffleSpecFactory;
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(tuningConfig.getRowsPerSegment());
+      shuffleSpecFactory = querySpec.getDestination()
+                                    .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
 
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
@@ -1772,16 +1778,10 @@ public class ControllerImpl implements Controller
       } else {
         queryToPlan = querySpec.getQuery();
       }
-    } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
-      shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
-      queryToPlan = querySpec.getQuery();
-    } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
-      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(
-          MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
-      );
-      queryToPlan = querySpec.getQuery();
     } else {
-      throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
+      shuffleSpecFactory = querySpec.getDestination()
+                                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()));
+      queryToPlan = querySpec.getQuery();
     }
 
     final QueryDefinition queryDef;
@@ -1872,6 +1872,44 @@ public class ControllerImpl implements Controller
       } else {
         return queryDef;
       }
+    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
+      final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
+      final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
+
+      try {
+        // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
+        Iterator<String> filesIterator = exportStorageProvider.get().listDir("");
+        if (filesIterator.hasNext()) {
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build("Found files at provided export destination[%s]. Export is only allowed to "
+                                     + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
+                                     exportStorageProvider.getBasePath());
+        }
+      }
+      catch (IOException e) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Exception occurred while connecting to export destination.");
+      }
+
+
+      final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
+      final QueryDefinitionBuilder builder = QueryDefinition.builder();
+      builder.addAll(queryDef);
+      builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
+                                 .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
+                                 .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                                 .signature(queryDef.getFinalStageDefinition().getSignature())
+                                 .shuffleSpec(null)
+                                 .processorFactory(new ExportResultsFrameProcessorFactory(
+                                     queryId,
+                                     exportStorageProvider,
+                                     resultFormat,
+                                     columnMappings
+                                 ))
+      );
+      return builder.build();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
@@ -2090,9 +2128,13 @@ public class ControllerImpl implements Controller
     // deprecation and removal in future
     if (MultiStageQueryContext.getArrayIngestMode(query.context()) == ArrayIngestMode.MVD) {
       log.warn(
-          "'%s' is set to 'mvd' in the query's context. This ingests the string arrays as multi-value "
-          + "strings instead of arrays, and is preserved for legacy reasons when MVDs were the only way to ingest string "
-          + "arrays in Druid. It is incorrect behaviour and will likely be removed in the future releases of Druid",
+          "%s[mvd] is active for this task. This causes string arrays (VARCHAR ARRAY in SQL) to be ingested as "
+          + "multi-value strings rather than true arrays. This behavior may change in a future version of Druid. To be "
+          + "compatible with future behavior changes, we recommend setting %s to[array], which creates a clearer "
+          + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
+          + "out multi-value string dimensions using ARRAY_TO_MV. "
+          + "See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode for more details.",
+          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
           MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
       );
     }

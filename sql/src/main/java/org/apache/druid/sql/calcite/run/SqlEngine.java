@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 
@@ -38,9 +39,11 @@ public interface SqlEngine
   String name();
 
   /**
-   * Whether a feature applies to this engine or not.
+   * Whether a feature applies to this engine or not. Most callers should use
+   * {@link PlannerContext#featureAvailable(EngineFeature)} instead, which also checks feature flags in context
+   * parameters.
    */
-  boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext);
+  boolean featureAvailable(EngineFeature feature);
 
   /**
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
@@ -82,7 +85,7 @@ public interface SqlEngine
   /**
    * Create a {@link QueryMaker} for an INSERT ... SELECT query.
    *
-   * @param targetDataSource datasource for the INSERT portion of the query
+   * @param destination      destination for the INSERT portion of the query
    * @param relRoot          planned and validated rel for the SELECT portion of the query
    * @param plannerContext   context for this query
    *
@@ -92,7 +95,7 @@ public interface SqlEngine
    */
   @SuppressWarnings("RedundantThrows")
   QueryMaker buildQueryMakerForInsert(
-      String targetDataSource,
+      IngestDestination destination,
       RelRoot relRoot,
       PlannerContext plannerContext
   ) throws ValidationException;

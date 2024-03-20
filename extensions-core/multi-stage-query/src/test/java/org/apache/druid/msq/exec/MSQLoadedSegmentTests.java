@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -52,10 +51,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -89,14 +87,14 @@ public class MSQLoadedSegmentTests extends MSQTestBase
       2
   );
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     loadedSegmentsMetadata.add(new ImmutableSegmentLoadInfo(LOADED_SEGMENT_1, ImmutableSet.of(DATA_SERVER_1)));
   }
 
   @Test
-  public void testSelectWithLoadedSegmentsOnFoo() throws IOException
+  public void testSelectWithLoadedSegmentsOnFoo()
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -104,20 +102,20 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                                                .build();
 
     doReturn(
-        Pair.of(
-            LoadedSegmentDataProvider.DataServerQueryStatus.SUCCESS,
-            Yielders.each(
-                Sequences.simple(
-                    ImmutableList.of(
-                        new Object[]{1L, "qwe"},
-                        new Object[]{1L, "tyu"}
+        new DataServerQueryResult<>(
+            ImmutableList.of(
+                Yielders.each(
+                    Sequences.simple(
+                        ImmutableList.of(
+                            new Object[]{1L, "qwe"},
+                            new Object[]{1L, "tyu"}
+                        )
                     )
-                )
-            )
-        )
-    )
-        .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any());
+                )),
+            ImmutableList.of(),
+            "foo"
+        )).when(dataServerQueryHandler)
+          .fetchRowsFromDataServer(any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt, dim1 from foo")
@@ -139,10 +137,10 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         .setQueryContext(REALTIME_QUERY_CTX)
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, ""},
             new Object[]{1L, "qwe"},
-            new Object[]{1L, "tyu"},
+            new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
+            new Object[]{1L, "tyu"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
             new Object[]{1L, "def"},
@@ -152,7 +150,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   }
 
   @Test
-  public void testSelectWithLoadedSegmentsOnFooWithOrderBy() throws IOException
+  public void testSelectWithLoadedSegmentsOnFooWithOrderBy()
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -164,22 +162,23 @@ public class MSQLoadedSegmentTests extends MSQTestBase
           ScanQuery query = invocationOnMock.getArgument(0);
           ScanQuery.verifyOrderByForNativeExecution(query);
           Assert.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
-          return Pair.of(
-              LoadedSegmentDataProvider.DataServerQueryStatus.SUCCESS,
-              Yielders.each(
-                  Sequences.simple(
-                      ImmutableList.of(
-                          new Object[]{1L, "qwe"},
-                          new Object[]{1L, "tyu"}
+          return new DataServerQueryResult<>(
+              ImmutableList.of(
+                  Yielders.each(
+                      Sequences.simple(
+                          ImmutableList.of(
+                              new Object[]{1L, "qwe"},
+                              new Object[]{1L, "tyu"}
+                          )
                       )
-                  )
-              )
+                  )),
+              ImmutableList.of(),
+              "foo"
           );
         }
-
     )
-        .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any());
+        .when(dataServerQueryHandler)
+        .fetchRowsFromDataServer(any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt, dim1 from foo order by dim1")
@@ -215,7 +214,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   }
 
   @Test
-  public void testGroupByWithLoadedSegmentsOnFoo() throws IOException
+  public void testGroupByWithLoadedSegmentsOnFoo()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -223,18 +222,21 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                                             .build();
 
     doReturn(
-        Pair.of(LoadedSegmentDataProvider.DataServerQueryStatus.SUCCESS,
+        new DataServerQueryResult<>(
+            ImmutableList.of(
                 Yielders.each(
                     Sequences.simple(
                         ImmutableList.of(
                             ResultRow.of(1L, 2L)
                         )
                     )
-                )
+                )),
+            ImmutableList.of(),
+            "foo"
         )
     )
-        .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any());
+        .when(dataServerQueryHandler)
+        .fetchRowsFromDataServer(any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
@@ -272,7 +274,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   }
 
   @Test
-  public void testGroupByWithOnlyLoadedSegmentsOnFoo() throws IOException
+  public void testGroupByWithOnlyLoadedSegmentsOnFoo()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -280,13 +282,21 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                                             .build();
 
     doReturn(
-        Pair.of(LoadedSegmentDataProvider.DataServerQueryStatus.SUCCESS,
+        new DataServerQueryResult<>(
+            ImmutableList.of(
                 Yielders.each(
                     Sequences.simple(
                         ImmutableList.of(
-                            ResultRow.of(1L, 2L)))))
-    ).when(loadedSegmentDataProvider)
-     .fetchRowsFromDataServer(any(), any(), any(), any());
+                            ResultRow.of(1L, 2L)
+                        )
+                    )
+                )),
+            ImmutableList.of(),
+            "foo"
+        )
+    )
+        .when(dataServerQueryHandler)
+        .fetchRowsFromDataServer(any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
@@ -324,7 +334,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   }
 
   @Test
-  public void testDataServerQueryFailedShouldFail() throws IOException
+  public void testDataServerQueryFailedShouldFail()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -334,8 +344,8 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     doThrow(
         new ISE("Segment could not be found on data server, but segment was not handed off.")
     )
-        .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any());
+        .when(dataServerQueryHandler)
+        .fetchRowsFromDataServer(any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
