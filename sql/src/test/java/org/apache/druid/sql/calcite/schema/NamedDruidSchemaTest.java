@@ -20,14 +20,14 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class NamedDruidSchemaTest extends CalciteTestBase
 {
   private static final String SCHEMA_NAME = "SCHEMA_NAME";
@@ -37,7 +37,7 @@ public class NamedDruidSchemaTest extends CalciteTestBase
 
   private NamedDruidSchema target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new NamedDruidSchema(druidSchema, SCHEMA_NAME);

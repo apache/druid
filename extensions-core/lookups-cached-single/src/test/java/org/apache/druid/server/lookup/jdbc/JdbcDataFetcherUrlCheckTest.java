@@ -24,13 +24,10 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 
 import java.util.Set;
 
-@RunWith(Enclosed.class)
 public class JdbcDataFetcherUrlCheckTest
 {
   private static final String TABLE_NAME = "tableName";

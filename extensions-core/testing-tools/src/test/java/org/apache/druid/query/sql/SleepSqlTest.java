@@ -30,7 +30,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SleepSqlTest extends BaseCalciteQueryTest
 {

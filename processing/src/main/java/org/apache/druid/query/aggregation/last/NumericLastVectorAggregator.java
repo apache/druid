@@ -96,7 +96,7 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
 
     if (objectsWhichMightBeNumeric != null) {
       final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
-      if (inPair.lhs != null && inPair.lhs >= lastTime) {
+      if (inPair != null && inPair.lhs != null && inPair.lhs >= lastTime) {
         lastTime = inPair.lhs;
         if (useDefault || inPair.rhs != null) {
           updateTimeWithValue(buf, position, lastTime, index);

@@ -21,20 +21,20 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
-import static org.junit.Assume.assumeTrue;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * Collection of conditional disabler rules.
  */
 class DisableUnless
 {
-  public static final TestRule SQL_COMPATIBLE = new DisableUnlessRule("NullHandling::sqlCompatible", NullHandling::sqlCompatible);
+  public static final DisableUnlessRule SQL_COMPATIBLE = new DisableUnlessRule(
+      "NullHandling::sqlCompatible", NullHandling::sqlCompatible
+  );
 
-  public static class DisableUnlessRule implements TestRule
+  public static class DisableUnlessRule implements ExecutionCondition
   {
     private Supplier<Boolean> predicate;
     private String message;
@@ -46,10 +46,13 @@ class DisableUnless
     }
 
     @Override
-    public Statement apply(Statement base, Description description)
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context)
     {
-      assumeTrue("Testcase disabled; because condition not met: " + message, predicate.get());
-      return base;
+      if (predicate.get()) {
+        return ConditionEvaluationResult.enabled("condition not met");
+      } else {
+        return ConditionEvaluationResult.disabled(message);
+      }
     }
   }
 }

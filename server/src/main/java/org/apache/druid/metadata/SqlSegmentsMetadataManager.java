@@ -654,21 +654,25 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public int markAsUsedAllNonOvershadowedSegmentsInDataSource(final String dataSource)
   {
-    return doMarkAsUsedNonOvershadowedSegments(dataSource, null);
+    return doMarkAsUsedNonOvershadowedSegments(dataSource, null, null);
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegmentsInInterval(final String dataSource, final Interval interval)
+  public int markAsUsedNonOvershadowedSegmentsInInterval(
+      final String dataSource,
+      final Interval interval,
+      @Nullable final List<String> versions
+  )
   {
     Preconditions.checkNotNull(interval);
-    return doMarkAsUsedNonOvershadowedSegments(dataSource, interval);
+    return doMarkAsUsedNonOvershadowedSegments(dataSource, interval, versions);
   }
 
-  /**
-   * Implementation for both {@link #markAsUsedAllNonOvershadowedSegmentsInDataSource} (if the given interval is null)
-   * and {@link #markAsUsedNonOvershadowedSegmentsInInterval}.
-   */
-  private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
+  private int doMarkAsUsedNonOvershadowedSegments(
+      final String dataSourceName,
+      final @Nullable Interval interval,
+      final @Nullable List<String> versions
+  )
   {
     final List<DataSegment> unusedSegments = new ArrayList<>();
     final SegmentTimeline timeline = new SegmentTimeline();
@@ -682,12 +686,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               interval == null ? Intervals.ONLY_ETERNITY : Collections.singletonList(interval);
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUsedSegments(dataSourceName, intervals)) {
+                   queryTool.retrieveUsedSegments(dataSourceName, intervals, versions)) {
             timeline.addSegments(iterator);
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, versions, null, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -796,7 +800,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private int markSegmentsAsUsed(final List<SegmentId> segmentIds)
   {
     if (segmentIds.isEmpty()) {
-      log.info("No segments found to update!");
+      log.info("No segments found to mark as used.");
       return 0;
     }
 
@@ -856,13 +860,18 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUnusedSegmentsInInterval(String dataSourceName, Interval interval)
+  public int markAsUnusedSegmentsInInterval(
+      final String dataSource,
+      final Interval interval,
+      @Nullable final List<String> versions
+  )
   {
+    Preconditions.checkNotNull(interval);
     try {
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentsUnused(dataSourceName, interval)
+                                      .markSegmentsUnused(dataSource, interval, versions)
       );
     }
     catch (Exception e) {

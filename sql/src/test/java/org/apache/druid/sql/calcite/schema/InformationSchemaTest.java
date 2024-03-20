@@ -46,8 +46,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -62,7 +62,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   private InformationSchema informationSchema;
   private SqlTestFramework qf;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     qf = queryFramework();

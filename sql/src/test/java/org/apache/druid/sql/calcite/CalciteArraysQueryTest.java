@@ -71,7 +71,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -1160,7 +1160,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT ARRAY_CONTAINS(arrayStringNulls, ARRAY['a', 'b']), ARRAY_CONTAINS(arrayStringNulls, arrayString) FROM druid.arrays LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
-                .dataSource(DATA_SOURCE_ARRAYS)
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0", "v1")
                 .virtualColumns(
@@ -7324,6 +7324,166 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[1,0,null]"}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByNestedArrayInline()
+  {
+    cannotVectorize();
+    // msq does not support nested arrays currently
+    msqIncompatible();
+    testQuery(
+        "SELECT c1, ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) c5 \n"
+        + "FROM (VALUES (1,1),(2,2),(3,3)) t(c1,c2)\n"
+        + "GROUP BY 1 \n"
+        + "HAVING ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) <> ARRAY_PREPEND('0', ARRAY_AGG(ARRAY[1,c2], 100000))",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            InlineDataSource.fromIterable(
+                                ImmutableList.of(
+                                    new Object[]{1L, 1L},
+                                    new Object[]{2L, 2L},
+                                    new Object[]{3L, 3L}
+                                ),
+                                RowSignature.builder()
+                                            .add("c1", ColumnType.LONG)
+                                            .add("c2", ColumnType.LONG)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                            "v0",
+                            "array(1,\"c2\")",
+                            ColumnType.LONG_ARRAY
+                            )
+                        )
+                        .setDimensions(new DefaultDimensionSpec("c1", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(
+                            new ExpressionLambdaAggregatorFactory(
+                                "a0",
+                                ImmutableSet.of("v0"),
+                                "__acc",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                true,
+                                true,
+                                false,
+                                "array_append(\"__acc\", \"v0\")",
+                                "array_concat(\"__acc\", \"a0\")",
+                                null,
+                                null,
+                                HumanReadableBytes.valueOf(100000),
+                                TestExprMacroTable.INSTANCE
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg(
+                                "p0",
+                                "array_prepend('1',\"a0\")",
+                                ColumnType.ofArray(ColumnType.LONG_ARRAY)
+                            )
+                        )
+                        .setHavingSpec(
+                            new DimFilterHavingSpec(
+                                expressionFilter("(array_prepend('1',\"a0\") != array_prepend('0',\"a0\"))"),
+                                true
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1, ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 1L))},
+            new Object[]{2, ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 2L))},
+            new Object[]{3, ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 3L))}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByNestedArrayInlineCount()
+  {
+    cannotVectorize();
+    // msq does not support nested arrays currently
+    msqIncompatible();
+    testQuery(
+        "SELECT COUNT(*) c FROM (\n"
+        + "SELECT c1, ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) c5 \n"
+        + "FROM (VALUES (1,1),(2,2),(3,3)) t(c1,c2)\n"
+        + "GROUP BY 1 \n"
+        + "HAVING ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) <> ARRAY_PREPEND('0', ARRAY_AGG(ARRAY[1,c2], 100000))\n"
+        + ")",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(
+                                            InlineDataSource.fromIterable(
+                                                ImmutableList.of(
+                                                    new Object[]{1L, 1L},
+                                                    new Object[]{2L, 2L},
+                                                    new Object[]{3L, 3L}
+                                                ),
+                                                RowSignature.builder()
+                                                            .add("c1", ColumnType.LONG)
+                                                            .add("c2", ColumnType.LONG)
+                                                            .build()
+                                            )
+                                        )
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setVirtualColumns(
+                                            expressionVirtualColumn(
+                                                "v0",
+                                                "array(1,\"c2\")",
+                                                ColumnType.LONG_ARRAY
+                                            )
+                                        )
+                                        .setDimensions(new DefaultDimensionSpec("c1", "d0", ColumnType.LONG))
+                                        .setAggregatorSpecs(
+                                            new ExpressionLambdaAggregatorFactory(
+                                                "a0",
+                                                ImmutableSet.of("v0"),
+                                                "__acc",
+                                                "ARRAY<ARRAY<LONG>>[]",
+                                                "ARRAY<ARRAY<LONG>>[]",
+                                                true,
+                                                true,
+                                                false,
+                                                "array_append(\"__acc\", \"v0\")",
+                                                "array_concat(\"__acc\", \"a0\")",
+                                                null,
+                                                null,
+                                                HumanReadableBytes.valueOf(100000),
+                                                TestExprMacroTable.INSTANCE
+                                            )
+                                        )
+                                        .setHavingSpec(
+                                            new DimFilterHavingSpec(
+                                                expressionFilter(
+                                                    "(array_prepend('1',\"a0\") != array_prepend('0',\"a0\"))"),
+                                                true
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
         )
     );
   }
