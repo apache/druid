@@ -23,7 +23,7 @@
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-sql-query-view",
-      "tutorials/tutorial-ansi-sql-null",
+      "tutorials/tutorial-sql-null",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jdbc"
