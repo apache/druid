@@ -190,7 +190,9 @@ public class IndexerWorkerContext implements WorkerContext
         break;
       }
 
-      if (controllerLocations.isClosed() || controllerLocations.getLocations().isEmpty()) {
+      // Note: don't exit on empty location, because that may happen if the Overlord is slow to acknowledge the
+      // location of a task. Only exit on "closed", because that happens only if the task is really no longer running.
+      if (controllerLocations.isClosed()) {
         log.warn(
             "Periodic fetch of controller location returned [%s]. Worker task [%s] will exit.",
             controllerLocations,

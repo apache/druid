@@ -47,17 +47,15 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -73,26 +71,20 @@ public class DruidStatementTest extends CalciteTestBase
   private static String SELECT_STAR_FROM_FOO =
       "SELECT * FROM druid.foo";
 
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
-
   private static SpecificSegmentsQuerySegmentWalker walker;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
-  @BeforeClass
-  public static void setUpClass() throws Exception
+  @BeforeAll
+  public static void setUpClass(@TempDir File tempDir)
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(conglomerate, tempDir);
     resourceCloser.register(walker);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
@@ -100,7 +92,7 @@ public class DruidStatementTest extends CalciteTestBase
 
   private SqlStatementFactory sqlStatementFactory;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     final PlannerConfig plannerConfig = new PlannerConfig();
@@ -128,7 +120,7 @@ public class DruidStatementTest extends CalciteTestBase
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
 

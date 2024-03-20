@@ -32,8 +32,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
 
 import javax.annotation.Nullable;
 import javax.validation.Validation;
@@ -43,7 +41,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 
-@RunWith(Enclosed.class)
 public class DruidSecondaryModuleTest
 {
   private static final String PROPERTY_NAME = "druid.injected.val";

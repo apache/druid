@@ -26,14 +26,11 @@ import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(NotYetSupportedProcessor.class)
 public class DecoupledPlanningCalciteUnionQueryTest extends CalciteUnionQueryTest
 {
-
-  @Rule(order = 0)
-  public NotYetSupportedProcessor decoupledIgnoreProcessor = new NotYetSupportedProcessor();
-
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES =
       ImmutableMap.<String, Object>builder()
       .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)

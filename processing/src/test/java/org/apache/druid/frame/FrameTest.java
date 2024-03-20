@@ -45,7 +45,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
@@ -61,7 +60,6 @@ import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class FrameTest
 {
   // Tests that use good frames built from a standard test file.
