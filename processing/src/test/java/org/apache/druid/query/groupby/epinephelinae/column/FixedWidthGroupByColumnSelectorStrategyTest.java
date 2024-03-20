@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.converters.Nullable;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByColumnSelectorStrategyFactory;
@@ -36,6 +35,7 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -173,26 +173,327 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     @Test
     public void testMultiValueHandling()
     {
-      // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore even index-0 is
-      // flagged
+      // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore it returns false
       Assert.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1L, 0, BUFFER1));
       Assert.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1L, 10, BUFFER1));
+    }
+
+    @Test
+    public void testInitGroupingKeyColumnValue()
+    {
+      GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+      Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
+      int[] stack = new int[1];
+      ResultRow resultRow = ResultRow.create(1);
+
+      STRATEGY.initGroupingKeyColumnValue(0, 0, 1001L, BUFFER1, stack);
+      Assert.assertEquals(1, stack[0]);
+      STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(1001L, resultRow.get(0));
 
 
+      STRATEGY.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
+      Assert.assertEquals(0, stack[0]);
+      STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(null, resultRow.get(0));
+    }
+  }
 
+  public static class FloatGroupByColumnSelectorStrategyTest
+  {
+    private static final GroupByColumnSelectorStrategy STRATEGY =
+        STRATEGY_FACTORY.makeColumnSelectorStrategy(
+            createCursor().getColumnSelectorFactory().getColumnCapabilities(FLOAT_COLUMN),
+            createCursor().getColumnSelectorFactory().makeColumnValueSelector(FLOAT_COLUMN)
+        );
+
+    @Test
+    public void testKeySize()
+    {
+      Assert.assertEquals(Byte.BYTES + Float.BYTES, STRATEGY.getGroupingKeySizeBytes());
+    }
+
+    @Test
+    public void testWriteToKeyBuffer()
+    {
+      Cursor cursor = createCursor();
+      ResultRow resultRow = ResultRow.create(1);
+      ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(FLOAT_COLUMN);
+      GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+      Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
+
+      int rowNum = 0;
+      while (!cursor.isDone()) {
+        int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
+        STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+        Assert.assertEquals(0, sizeIncrease);
+        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], resultRow.get(0));
+        cursor.advance();
+        ++rowNum;
+      }
+    }
+
+    @Test
+    public void testInitColumnValues()
+    {
+      Cursor cursor = createCursor();
+      ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(FLOAT_COLUMN);
+      Object[] valuess = new Object[1];
+
+      int rowNum = 0;
+      while (!cursor.isDone()) {
+        int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
+        Assert.assertEquals(0, sizeIncrease);
+        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], valuess[0]);
+        cursor.advance();
+        ++rowNum;
+      }
+    }
+
+    @Test
+    public void testBufferComparator()
+    {
+      // lhs < rhs
+      writeGroupingKeyToBuffer(BUFFER1, 100.0F);
+      writeGroupingKeyToBuffer(BUFFER2, 200.0F);
+      Assert.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs == rhs
+      writeGroupingKeyToBuffer(BUFFER1, 100.0F);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0F);
+      Assert.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs > rhs
+      writeGroupingKeyToBuffer(BUFFER1, 200.0F);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0F);
+      Assert.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs is null
+      writeGroupingKeyToBuffer(BUFFER1, null);
+      writeGroupingKeyToBuffer(BUFFER2, 0.0F);
+      Assert.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // rhs is null
+      writeGroupingKeyToBuffer(BUFFER1, 0.0F);
+      writeGroupingKeyToBuffer(BUFFER2, null);
+      Assert.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs and rhs are null
+      writeGroupingKeyToBuffer(BUFFER1, null);
+      writeGroupingKeyToBuffer(BUFFER2, null);
+      Assert.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // stringComparator is provided, for lexicographic comparator "2.0" > "100.0"
+      writeGroupingKeyToBuffer(BUFFER1, 2.0F);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0F);
+      Assert.assertEquals(
+          1,
+          STRATEGY.bufferComparator(0, StringComparators.LEXICOGRAPHIC)
+                  .compare(BUFFER1, BUFFER2, 0, 0)
+      );
+
+      // stringComparator is provided, for alphanumeric comparator number("2") < number("100")
+      writeGroupingKeyToBuffer(BUFFER1, 2.0F);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0F);
+      Assert.assertEquals(
+          -1,
+          STRATEGY.bufferComparator(0, StringComparators.ALPHANUMERIC)
+                  .compare(BUFFER1, BUFFER2, 0, 0)
+      );
+    }
+
+    private static void writeGroupingKeyToBuffer(final ByteBuffer buffer, @Nullable Float key)
+    {
+      ColumnValueSelector columnValueSelector1 = Mockito.mock(ColumnValueSelector.class);
+
+      Mockito.when(columnValueSelector1.getObject()).thenReturn(key);
+      Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
+
+      Assert.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
+    }
+
+    @Test
+    public void testMultiValueHandling()
+    {
+      // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore it returns false
+      Assert.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0F, 0, BUFFER1));
+      Assert.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0F, 10, BUFFER1));
+    }
+
+    @Test
+    public void testInitGroupingKeyColumnValue()
+    {
+      GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+      Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
+      int[] stack = new int[1];
+      ResultRow resultRow = ResultRow.create(1);
+
+      STRATEGY.initGroupingKeyColumnValue(0, 0, 1001.0F, BUFFER1, stack);
+      Assert.assertEquals(1, stack[0]);
+      STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(1001.0F, resultRow.get(0));
+
+
+      STRATEGY.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
+      Assert.assertEquals(0, stack[0]);
+      STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(null, resultRow.get(0));
+    }
+  }
+
+  public static class DoubleGroupByColumnSelectorStrategyTest
+  {
+    private static final GroupByColumnSelectorStrategy STRATEGY =
+        STRATEGY_FACTORY.makeColumnSelectorStrategy(
+            createCursor().getColumnSelectorFactory().getColumnCapabilities(DOUBLE_COLUMN),
+            createCursor().getColumnSelectorFactory().makeColumnValueSelector(DOUBLE_COLUMN)
+        );
+
+    @Test
+    public void testKeySize()
+    {
+      Assert.assertEquals(Byte.BYTES + Double.BYTES, STRATEGY.getGroupingKeySizeBytes());
+    }
+
+    @Test
+    public void testWriteToKeyBuffer()
+    {
+      Cursor cursor = createCursor();
+      ResultRow resultRow = ResultRow.create(1);
+      ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory()
+                                                      .makeColumnValueSelector(DOUBLE_COLUMN);
+      GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+      Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
+
+      int rowNum = 0;
+      while (!cursor.isDone()) {
+        int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
+        STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+        Assert.assertEquals(0, sizeIncrease);
+        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[2], resultRow.get(0));
+        cursor.advance();
+        ++rowNum;
+      }
+    }
+
+    @Test
+    public void testInitColumnValues()
+    {
+      Cursor cursor = createCursor();
+      ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory()
+                                                      .makeColumnValueSelector(DOUBLE_COLUMN);
+      Object[] valuess = new Object[1];
+
+      int rowNum = 0;
+      while (!cursor.isDone()) {
+        int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
+        Assert.assertEquals(0, sizeIncrease);
+        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[2], valuess[0]);
+        cursor.advance();
+        ++rowNum;
+      }
+    }
+
+    @Test
+    public void testBufferComparator()
+    {
+      // lhs < rhs
+      writeGroupingKeyToBuffer(BUFFER1, 100.0D);
+      writeGroupingKeyToBuffer(BUFFER2, 200.0D);
+      Assert.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs == rhs
+      writeGroupingKeyToBuffer(BUFFER1, 100.0D);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0D);
+      Assert.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs > rhs
+      writeGroupingKeyToBuffer(BUFFER1, 200.0D);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0D);
+      Assert.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs is null
+      writeGroupingKeyToBuffer(BUFFER1, null);
+      writeGroupingKeyToBuffer(BUFFER2, 0.0D);
+      Assert.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // rhs is null
+      writeGroupingKeyToBuffer(BUFFER1, 0.0D);
+      writeGroupingKeyToBuffer(BUFFER2, null);
+      Assert.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // lhs and rhs are null
+      writeGroupingKeyToBuffer(BUFFER1, null);
+      writeGroupingKeyToBuffer(BUFFER2, null);
+      Assert.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+
+      // stringComparator is provided, for lexicographic comparator "2.0" > "100.0"
+      writeGroupingKeyToBuffer(BUFFER1, 2.0D);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0D);
+      Assert.assertEquals(
+          1,
+          STRATEGY.bufferComparator(0, StringComparators.LEXICOGRAPHIC)
+                  .compare(BUFFER1, BUFFER2, 0, 0)
+      );
+
+      // stringComparator is provided, for alphanumeric comparator number("2.0D") < number("100.0D")
+      writeGroupingKeyToBuffer(BUFFER1, 2.0D);
+      writeGroupingKeyToBuffer(BUFFER2, 100.0D);
+      Assert.assertEquals(
+          -1,
+          STRATEGY.bufferComparator(0, StringComparators.ALPHANUMERIC)
+                  .compare(BUFFER1, BUFFER2, 0, 0)
+      );
+    }
+
+    private static void writeGroupingKeyToBuffer(final ByteBuffer buffer, @Nullable Double key)
+    {
+      ColumnValueSelector columnValueSelector1 = Mockito.mock(ColumnValueSelector.class);
+
+      Mockito.when(columnValueSelector1.getObject()).thenReturn(key);
+      Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
+
+      Assert.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
+    }
+
+    @Test
+    public void testMultiValueHandling()
+    {
+      // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore it returns false
+      Assert.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0D, 0, BUFFER1));
+      Assert.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0D, 10, BUFFER1));
+    }
+
+    @Test
+    public void testInitGroupingKeyColumnValue()
+    {
+      GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+      Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
+      int[] stack = new int[1];
+      ResultRow resultRow = ResultRow.create(1);
+
+      STRATEGY.initGroupingKeyColumnValue(0, 0, 1001.0D, BUFFER1, stack);
+      Assert.assertEquals(1, stack[0]);
+      STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(1001.0D, resultRow.get(0));
+
+
+      STRATEGY.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
+      Assert.assertEquals(0, stack[0]);
+      STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(null, resultRow.get(0));
     }
   }
 
   private static Cursor createCursor()
   {
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
+    return IterableRowsCursorHelper.getCursorFromIterable(
         DATASOURCE_ROWS,
         RowSignature.builder()
-                    .add("long", ColumnType.LONG)
-                    .add("float", ColumnType.FLOAT)
-                    .add("double", ColumnType.DOUBLE)
+                    .add(LONG_COLUMN, ColumnType.LONG)
+                    .add(FLOAT_COLUMN, ColumnType.FLOAT)
+                    .add(DOUBLE_COLUMN, ColumnType.DOUBLE)
                     .build()
     ).lhs;
-    return cursor;
   }
 }

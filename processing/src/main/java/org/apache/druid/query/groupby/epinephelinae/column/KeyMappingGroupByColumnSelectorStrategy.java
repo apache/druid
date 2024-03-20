@@ -38,18 +38,27 @@ import java.nio.ByteBuffer;
  * require an additional step of mapping them to an integer index. The integer index can be materialized on the buffer within
  * a fixed width, and is often backed by a dictionary representing the actual dimension object. It is used for arrays,
  * strings, and complex types.
- *
+ * <p>
  * The visibility of the class is limited, and the callers must use one of the two variants of the mapping strategy:
  * 1. {@link PrebuiltDictionaryStringGroupByColumnSelectorStrategy}
  * 2. {@link DictionaryBuildingGroupByColumnSelectorStrategy}
+ * <p>
+ * TODO(laksh): Vet this change
+ * {@code null} can be represented by either -1 or the position of null in the dictionary it was stored when it was
+ * encountered. This is fine, because most of the time, the dictionary id has no value of its own, and is converted back to
+ * the value it represents, before doing further operations. The only place where it would matter would be when
+ * {@link IdToDimensionConverter#canCompareIds()} is true, and we compare directly on the dictionary ids for prebuilt
+ * dictionaries (we can't compare ids for the dictionaries built on the fly in the grouping strategy). However, in that case,
+ * it is guaranteed that the dictionaryId of null represented by the pre-built dictionary would be the lowest (most likely 0)
+ * and therefore nulls (-1) would be adjacent to nulls (represented by the lowest non-negative dictionary id), and would get
+ * grouped in the later merge stages.
  *
- * @param <DimensionType>> Class of the dimension
+ * @param <DimensionType>>      Class of the dimension
  * @param <DimensionHolderType> Class of the "dimension holder". For single-value dimensions, the holder's type and the
- *                             holder's object are equivalent to the dimension. For multi-value dimensions (only strings),
- *                             the holder's type and the object are different, where the type would be {@link org.apache.druid.segment.data.IndexedInts}
- *                             representing all the values in the multi-valued string, while the dimension type would be
- *                             String
- *
+ *                              holder's object are equivalent to the dimension. For multi-value dimensions (only strings),
+ *                              the holder's type and the object are different, where the type would be {@link org.apache.druid.segment.data.IndexedInts}
+ *                              representing all the values in the multi-valued string, while the dimension type would be
+ *                              String
  * @see DimensionToIdConverter encoding logic for converting value to dictionary
  * @see IdToDimensionConverter decoding logic for converting back dictionary to value
  */
@@ -188,7 +197,10 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType
     MemoryEstimate<DimensionHolderType> multiValueHolder = dimensionToIdConverter.getMultiValueHolder(selector, null);
     int multiValueSize = dimensionToIdConverter.multiValueSize(multiValueHolder.value());
     Preconditions.checkState(multiValueSize < 2, "Not supported for multi-value dimensions");
-    MemoryEstimate<Integer> dictIdAndSizeIncrease = dimensionToIdConverter.getIndividualValueDictId(multiValueHolder.value(), 0);
+    MemoryEstimate<Integer> dictIdAndSizeIncrease = dimensionToIdConverter.getIndividualValueDictId(
+        multiValueHolder.value(),
+        0
+    );
     final int dictId = multiValueSize == 1 ? dictIdAndSizeIncrease.value() : GROUP_BY_MISSING_VALUE;
     keyBuffer.putInt(keyBufferPosition, dictId);
 

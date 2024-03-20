@@ -286,6 +286,8 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
         reverseDictionary.put(multiValueHolder, size);
         dictId = size;
         // TODO(laksh): confirm if this is the same for sorted dictionaries as well
+        // MultiValueHOlder is always expected to handle the type, once the coercion is complete
+        //noinspection unchecked
         footprintIncrease = DictionaryBuilding.estimateEntryFootprint(
             nullableTypeStrategy.estimateSizeBytes(multiValueHolder)
         );

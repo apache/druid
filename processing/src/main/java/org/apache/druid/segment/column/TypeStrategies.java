@@ -27,6 +27,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -47,6 +49,9 @@ public class TypeStrategies
   public static final StringTypeStrategy STRING = new StringTypeStrategy();
   public static final ConcurrentHashMap<String, TypeStrategy<?>> COMPLEX_STRATEGIES = new ConcurrentHashMap<>();
 
+  static {
+    ComplexMetrics.registerSerde(ColumnType.NESTED_DATA.getComplexTypeName(), new NestedDataComplexTypeSerde());
+  }
   /**
    * Get an {@link TypeStrategy} registered to some {@link TypeSignature#getComplexTypeName()}.
    */

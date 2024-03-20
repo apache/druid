@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy;
@@ -41,6 +42,9 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
       ColumnValueSelector selector
   )
   {
+    if (capabilities == null || capabilities.getType() == null) {
+      throw DruidException.defensive("Unable to deduce type for the grouping dimension");
+    }
     switch (capabilities.getType()) {
       case STRING:
         DimensionSelector dimSelector = (DimensionSelector) selector;
@@ -74,17 +78,17 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
       case ARRAY:
         switch (capabilities.getElementType().getType()) {
           case LONG:
-            return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.LONG_ARRAY);
           case STRING:
-            return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.STRING_ARRAY);
           case DOUBLE:
-            return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.DOUBLE_ARRAY);
+            return DictionaryBuildingGroupByColumnSelectorStrategy.forType(capabilities.toColumnType());
           case FLOAT:
             // Array<Float> not supported in expressions, ingestion
           default:
             throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
 
         }
+      case COMPLEX:
+        return DictionaryBuildingGroupByColumnSelectorStrategy.forType(capabilities.toColumnType());
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
     }
