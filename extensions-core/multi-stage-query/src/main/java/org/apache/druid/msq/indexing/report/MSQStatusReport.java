@@ -59,6 +59,9 @@ public class MSQStatusReport
   @Nullable
   private final SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus;
 
+  @Nullable
+  private final MSQSegmentReport msqSegmentReport;
+
   @JsonCreator
   public MSQStatusReport(
       @JsonProperty("status") TaskState status,
@@ -69,7 +72,8 @@ public class MSQStatusReport
       @JsonProperty("workers") Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
-      @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus
+      @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus,
+      @JsonProperty("msqSegmentReport") @Nullable MSQSegmentReport msqSegmentReport
   )
   {
     this.status = Preconditions.checkNotNull(status, "status");
@@ -81,6 +85,7 @@ public class MSQStatusReport
     this.pendingTasks = pendingTasks;
     this.runningTasks = runningTasks;
     this.segmentLoadWaiterStatus = segmentLoadWaiterStatus;
+    this.msqSegmentReport = msqSegmentReport;
   }
 
   @JsonProperty
@@ -142,6 +147,14 @@ public class MSQStatusReport
   public SegmentLoadStatusFetcher.SegmentLoadWaiterStatus getSegmentLoadWaiterStatus()
   {
     return segmentLoadWaiterStatus;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public MSQSegmentReport getMsqSegmentReport()
+  {
+    return msqSegmentReport;
   }
 
   @Override
