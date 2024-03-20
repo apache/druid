@@ -55,20 +55,6 @@ public class IndexerWorkerContextTest
   }
 
   @Test
-  public void testControllerCheckerRunnableExitsWhenEmptyStatus()
-  {
-    final ServiceLocator controllerLocatorMock = Mockito.mock(ServiceLocator.class);
-    Mockito.when(controllerLocatorMock.locate())
-           .thenReturn(Futures.immediateFuture(ServiceLocations.forLocations(Collections.emptySet())));
-
-    final Worker workerMock = Mockito.mock(Worker.class);
-
-    indexerWorkerContext.controllerCheckerRunnable(controllerLocatorMock, workerMock);
-    Mockito.verify(controllerLocatorMock, Mockito.times(1)).locate();
-    Mockito.verify(workerMock, Mockito.times(1)).controllerFailed();
-  }
-
-  @Test
   public void testControllerCheckerRunnableExitsOnlyWhenClosedStatus()
   {
     final ServiceLocator controllerLocatorMock = Mockito.mock(ServiceLocator.class);
@@ -76,12 +62,13 @@ public class IndexerWorkerContextTest
            .thenReturn(Futures.immediateFuture(ServiceLocations.forLocation(new ServiceLocation("h", 1, -1, "/"))))
            // Done to check the behavior of the runnable, the situation of exiting after success might not occur actually
            .thenReturn(Futures.immediateFuture(ServiceLocations.forLocation(new ServiceLocation("h", 1, -1, "/"))))
+           .thenReturn(Futures.immediateFuture(ServiceLocations.forLocations(Collections.emptySet())))
            .thenReturn(Futures.immediateFuture(ServiceLocations.closed()));
 
     final Worker workerMock = Mockito.mock(Worker.class);
 
     indexerWorkerContext.controllerCheckerRunnable(controllerLocatorMock, workerMock);
-    Mockito.verify(controllerLocatorMock, Mockito.times(3)).locate();
+    Mockito.verify(controllerLocatorMock, Mockito.times(4)).locate();
     Mockito.verify(workerMock, Mockito.times(1)).controllerFailed();
   }
 }

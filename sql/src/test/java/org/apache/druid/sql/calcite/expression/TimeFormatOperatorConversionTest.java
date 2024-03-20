@@ -28,11 +28,13 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests for TIME_FORMAT
@@ -51,7 +53,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   private TimeFormatOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new TimeFormatOperatorConversion();
@@ -91,15 +93,17 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
     );
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testConversionToUnknownTimezoneShouldThrowException()
   {
-    testExpression(
-        "2000-02-02 20:05:06",
-        "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/NO_TZ')",
-        "yyyy-MM-dd HH:mm:ss",
-        "America/NO_TZ"
-    );
+    assertThrows(IAE.class, () -> {
+      testExpression(
+          "2000-02-02 20:05:06",
+          "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/NO_TZ')",
+          "yyyy-MM-dd HH:mm:ss",
+          "America/NO_TZ"
+      );
+    });
   }
 
   private void testExpression(

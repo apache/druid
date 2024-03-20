@@ -387,7 +387,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         segments.size(),
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            Intervals.of("2018-01-01/2020-01-01")
+            Intervals.of("2018-01-01/2020-01-01"),
+            null
         )
     );
 
@@ -434,7 +435,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            segment1.getInterval()
+            segment1.getInterval(),
+            null
         )
     );
 
@@ -442,7 +444,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            segment4.getInterval()
+            segment4.getInterval(),
+            null
         )
     );
 
@@ -450,7 +453,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            segment3.getInterval()
+            segment3.getInterval(),
+            null
         )
     );
 
@@ -508,7 +512,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            segment1.getInterval()
+            segment1.getInterval(),
+            null
         )
     );
 
@@ -516,7 +521,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            segment4.getInterval()
+            segment4.getInterval(),
+            null
         )
     );
 
@@ -529,7 +535,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
             DATA_SOURCE,
-            segment3.getInterval()
+            segment3.getInterval(),
+            null
         )
     );
 

@@ -41,7 +41,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -50,7 +49,6 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 
-@RunWith(Enclosed.class)
 public class DruidLogicalValuesRuleTest
 {
   private static final PlannerContext DEFAULT_CONTEXT = Mockito.mock(PlannerContext.class);

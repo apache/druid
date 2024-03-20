@@ -41,9 +41,7 @@ import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -51,7 +49,6 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class OperatorConversionsTest
 {
   public static class DefaultOperandTypeCheckerTest
