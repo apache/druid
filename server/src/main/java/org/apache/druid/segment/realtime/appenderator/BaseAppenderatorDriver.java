@@ -614,12 +614,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
     final Object callerMetadata = metadata == null
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
+    final Set<DataSegment> upgradedSegments = new HashSet<>();
     return executor.submit(
       () -> {
         try {
           RetryUtils.retry(
               () -> {
-              SegmentsAndCommitMetadata retVal = segmentsAndCommitMetadata;
               try {
                 final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
                 final SegmentPublishResult publishResult = publisher.publishSegments(
@@ -628,7 +628,6 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     outputSegmentsAnnotateFunction,
                     callerMetadata
                 );
-                Set<DataSegment> upgradedSegments;
                 if (publishResult.isSuccess()) {
                   log.info(
                       "Published [%s] segments with commit metadata [%s]",
@@ -636,12 +635,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
                       callerMetadata
                   );
                   log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
-                  upgradedSegments = new HashSet<>(publishResult.getSegments());
+                  upgradedSegments.addAll(publishResult.getSegments());
                   segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {
                     log.info("Published [%d] upgraded segments.", upgradedSegments.size());
                     log.infoSegments(upgradedSegments, "Upgraded segments");
-                    retVal = retVal.withUpgradedSegments(upgradedSegments);
                   }
                 } else {
                   // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
@@ -705,7 +703,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 Throwables.propagateIfPossible(e);
                 throw new RuntimeException(e);
               }
-              return retVal;
+              return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
             },
               e -> (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")),
               RetryUtils.DEFAULT_MAX_TRIES
@@ -719,7 +717,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
           Throwables.propagateIfPossible(e);
           throw new RuntimeException(e);
         }
-        return segmentsAndCommitMetadata;
+        return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
       }
     );
   }

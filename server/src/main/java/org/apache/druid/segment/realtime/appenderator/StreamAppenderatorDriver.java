@@ -371,19 +371,25 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
                         List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
+                        Set<DataSegment> upgradedSegments = segmentsAndCommitMetadata.getUpgradedSegments();
                         log.info("Successfully handed off [%d] segments.", segments.size());
+                        if (upgradedSegments != null) {
+                          log.info("Successfully handed off [%d] upgraded segments.", upgradedSegments.size());
+                        }
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
                         if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
                           log.warn("Slow segment handoff! Time taken for [%d] segments is %d ms",
                                    segments.size(), handoffTotalTime);
                         }
-                        resultFuture.set(
-                            new SegmentsAndCommitMetadata(
-                                segments,
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
-                            )
+                        SegmentsAndCommitMetadata retVal = new SegmentsAndCommitMetadata(
+                            segments,
+                            ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
                         );
+                        if (upgradedSegments != null) {
+                          retVal = retVal.withUpgradedSegments(upgradedSegments);
+                        }
+                        resultFuture.set(retVal);
                       }
                     }
 
