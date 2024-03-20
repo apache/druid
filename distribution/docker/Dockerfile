@@ -97,6 +97,9 @@ RUN --mount=type=bind,from=builder,source=/opt,target=/builder/opt \
  && chown -R druid:druid /opt/druid \
  && chmod 775 /opt/druid/var /opt/shared
 
+RUN apt-get update -y \
+ && apt-get -y install curl
+
 USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
