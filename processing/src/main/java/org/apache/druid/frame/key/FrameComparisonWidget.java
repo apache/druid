@@ -36,18 +36,25 @@ public interface FrameComparisonWidget
   RowKey readKey(int row);
 
   /**
-   * Whether a particular row has no null fields in its comparison key.
+   * Whether particular key parts in a particular row are non-null.
    *
    * When {@link org.apache.druid.common.config.NullHandling#replaceWithDefault()}, default values (like empty strings
    * and numeric zeroes) are considered null for purposes of this method. This behavior is inherited from
    * {@link org.apache.druid.frame.field.FieldReader#isNull(Memory, long)} and enables join code to behave
    * similarly in MSQ and native queries.
+   *
+   * @param row      row number
+   * @param keyParts parts to check
    */
-  boolean isCompletelyNonNullKey(int row);
+  boolean hasNonNullKeyParts(int row, int[] keyParts);
 
   /**
    * Compare a specific row of this frame to the provided key. The key must have been created with sortColumns
    * that match the ones used to create this widget, or else results are undefined.
+   *
+   * Comparison considers null to be equal to null. Callers that need to determine if key parts are null
+   * (perhaps because they *don't* want to consider null to be equal to null) should use
+   * {@link #hasNonNullKeyParts(int, int[])} to check the relevant parts.
    */
   int compare(int row, RowKey key);
 
@@ -55,6 +62,10 @@ public interface FrameComparisonWidget
    * Compare a specific row of this frame to a specific row of another frame. The other frame must have the same
    * sort key, or else results are undefined. The other frame may be the same object as this frame; for example,
    * this is used by {@link org.apache.druid.frame.write.FrameSort} to sort frames in-place.
+   *
+   * Comparison considers null to be equal to null. Callers that need to determine if key parts are null
+   * (perhaps because they *don't* want to consider null to be equal to null) should use
+   * {@link #hasNonNullKeyParts(int, int[])} to check the relevant parts.
    */
   int compare(int row, FrameComparisonWidget otherWidget, int otherRow);
 }
