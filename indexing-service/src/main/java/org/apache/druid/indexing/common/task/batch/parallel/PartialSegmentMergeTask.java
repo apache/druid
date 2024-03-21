@@ -48,6 +48,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -191,7 +192,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
     FileUtils.mkdirp(persistDir);
 
-    final Pair<Set<DataSegment>, MinimalSegmentSchemas> pushedSegments = mergeAndPushSegments(
+    final SegmentAndSchemas segmentAndSchemas = mergeAndPushSegments(
         toolbox,
         getDataSchema(),
         getTuningConfig(),
@@ -200,7 +201,16 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         intervalToUnzippedFiles
     );
 
-    taskClient.report(new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments.lhs, ImmutableMap.of(), pushedSegments.rhs));
+
+    taskClient.report(
+        new PushedSegmentsReport(
+            getId(),
+            Collections.emptySet(),
+            segmentAndSchemas.getSegments(),
+            ImmutableMap.of(),
+            segmentAndSchemas.getMinimalSegmentSchemas()
+        )
+    );
 
     return TaskStatus.success(getId());
   }
@@ -243,7 +253,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
    */
   abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int bucketId);
 
-  private Pair<Set<DataSegment>, MinimalSegmentSchemas> mergeAndPushSegments(
+  private SegmentAndSchemas mergeAndPushSegments(
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
@@ -332,7 +342,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       LOG.info("SegmentSchema for the pushed segments is [%s]", minimalSegmentSchemas);
     }
-    return Pair.of(pushedSegments, minimalSegmentSchemas);
+    return new SegmentAndSchemas(pushedSegments, minimalSegmentSchemas);
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(

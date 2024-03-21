@@ -1041,7 +1041,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @GuardedBy("pollLock")
   private void doPoll()
   {
-<<<<<<< HEAD
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       doPollSegmentAndSchema();
     } else {
@@ -1229,8 +1228,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     log.debug("SchemaMap polled from the database is [%s]", schemaMap);
 
     if (lastSchemaIdPrePoll == null) {
+      // full refresh
       segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
     } else {
+      // delta update
       schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
     }
     segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);

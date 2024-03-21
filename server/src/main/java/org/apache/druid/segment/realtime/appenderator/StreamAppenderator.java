@@ -64,6 +64,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentAndSchema;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -791,15 +792,15 @@ public class StreamAppenderator implements Appenderator
               continue;
             }
 
-            final Pair<DataSegment, SegmentSchemaMetadata> segmentAndSchema = mergeAndPush(
+            final SegmentAndSchema segmentAndSchema = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
             );
             if (segmentAndSchema != null) {
-              DataSegment segment = segmentAndSchema.lhs;
+              DataSegment segment = segmentAndSchema.getDataSegment();
               dataSegments.add(segment);
-              SegmentSchemaMetadata segmentSchemaMetadata = segmentAndSchema.rhs;
+              SegmentSchemaMetadata segmentSchemaMetadata = segmentAndSchema.getSegmentSchemaMetadata();
               if (segmentSchemaMetadata != null) {
                 SchemaPayload schemaPayload = segmentSchemaMetadata.getSchemaPayload();
                 minimalSegmentSchemas.addSchema(
@@ -845,7 +846,7 @@ public class StreamAppenderator implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private Pair<DataSegment, SegmentSchemaMetadata> mergeAndPush(
+  private SegmentAndSchema mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean useUniquePath
@@ -889,7 +890,7 @@ public class StreamAppenderator implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return Pair.of(
+          return new SegmentAndSchema(
               objectMapper.readValue(descriptorFile, DataSegment.class),
               centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
                   mergedTarget,
@@ -967,7 +968,7 @@ public class StreamAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return Pair.of(
+      return new SegmentAndSchema(
           segment,
           centralizedDatasourceSchemaConfig.isEnabled()
           ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
