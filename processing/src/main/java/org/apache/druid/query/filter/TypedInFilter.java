@@ -404,7 +404,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       }
     }
 
-    return new CacheKeyBuilder(DimFilterUtils.NEW_IN_CACHE_ID)
+    return new CacheKeyBuilder(DimFilterUtils.TYPED_IN_CACHE_ID)
         .appendString(column)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendString(matchValueType.asTypeString())
