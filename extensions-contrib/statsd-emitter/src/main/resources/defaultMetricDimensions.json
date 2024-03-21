@@ -60,12 +60,20 @@
   "ingest/kafka/avgLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/partitionLag" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
 
+  "ingest/kinesis/lag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kinesis/maxLag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kinesis/avgLag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kinesis/partitionLag/time" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
+
   "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/running/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
+  "worker/task/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "worker/task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "worker/task/completed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
   "worker/task/success/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
   "worker/taskSlot/idle/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
