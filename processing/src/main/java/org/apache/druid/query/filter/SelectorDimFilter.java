@@ -39,8 +39,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- *
+ * @deprecated use {@link EqualityFilter} or {@link NullFilter} instead.
  */
+@Deprecated
 public class SelectorDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;

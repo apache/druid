@@ -133,18 +133,24 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
 
   @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
-  public BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8)
+  public BitmapColumnIndex forSortedValuesUtf8(List<ByteBuffer> sortedValuesUtf8)
   {
-    final SortedSet<ByteBuffer> tailSet;
+    final boolean matchNull = sortedValuesUtf8.get(0) == null;
+    final List<ByteBuffer> tailSet;
 
-    if (valuesUtf8.size() >= SIZE_WORTH_CHECKING_MIN) {
+    if (sortedValuesUtf8.size() >= SIZE_WORTH_CHECKING_MIN) {
       final ByteBuffer minValueInColumn = dictionary.get(0);
-      tailSet = valuesUtf8.tailSet(minValueInColumn);
+      final int position = Collections.binarySearch(
+          sortedValuesUtf8,
+          minValueInColumn,
+          ByteBufferUtils.utf8Comparator()
+      );
+      tailSet = sortedValuesUtf8.subList(position, sortedValuesUtf8.size());
     } else {
-      tailSet = valuesUtf8;
+      tailSet = sortedValuesUtf8;
     }
 
-    return getBitmapColumnIndexForSortedIterableUtf8(tailSet, tailSet.size(), valuesUtf8.contains(null));
+    return getBitmapColumnIndexForSortedIterableUtf8(tailSet, tailSet.size(), matchNull);
   }
 
   private ImmutableBitmap getBitmap(int idx)
@@ -168,7 +174,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   {
     // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
     if (size > SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-      return ValueSetIndexes.getIndexFromSortedIteratorSortedMerged(
+      return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
           bitmapFactory,
           COMPARATOR,
           valuesUtf8,
@@ -185,7 +191,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
 
     // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
     // based lookup per value. The algorithm works well for smaller number of values.
-    return ValueSetIndexes.getIndexFromSortedIterator(
+    return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
         bitmapFactory,
         valuesUtf8,
         dictionary,
@@ -225,8 +231,8 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       } else {
         tailSet = baseSet;
       }
-      if (tailSet.size() > ValueSetIndexes.SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-        return ValueSetIndexes.getIndexFromSortedIteratorSortedMerged(
+      if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+        return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
             bitmapFactory,
             ByteBufferUtils.utf8Comparator(),
             Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
@@ -236,7 +242,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
         );
       }
       // fall through to value iteration
-      return ValueSetIndexes.getIndexFromSortedIterator(
+      return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
           bitmapFactory,
           Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
           dictionary,
@@ -244,7 +250,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
           unknownsIndex
       );
     } else {
-      return ValueSetIndexes.getIndexFromIterator(
+      return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
           bitmapFactory,
           Iterables.transform(
               sortedValues,

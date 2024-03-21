@@ -296,8 +296,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         } else {
           tailSet = baseSet;
         }
-        if (tailSet.size() > ValueSetIndexes.SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-          return ValueSetIndexes.getIndexFromSortedIteratorSortedMerged(
+        if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+          return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
               bitmapFactory,
               ColumnType.LONG.getNullableStrategy(),
               tailSet,
@@ -307,7 +307,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
           );
         }
         // fall through to sort value iteration
-        return ValueSetIndexes.getIndexFromSortedIterator(
+        return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
             dictionary,
@@ -316,7 +316,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         );
       } else {
         // values in set are not sorted in double order, transform them on the fly and iterate them all
-        return ValueSetIndexes.getIndexFromIterator(
+        return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
             Iterables.transform(
                 sortedValues,

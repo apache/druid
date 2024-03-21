@@ -29,6 +29,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
@@ -38,11 +39,9 @@ import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 import it.unimi.dsi.fastutil.floats.FloatOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
-import it.unimi.dsi.fastutil.objects.ObjectArrays;
+import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Evals;
@@ -66,28 +65,58 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedSet;
 
+/**
+ * Approximately like the SQL 'IN' filter, with the main difference being that this will match NULL values if contained
+ * in the values list instead of ignoring them.
+ * <p>
+ * This is a typed version of {@link InDimFilter}, which allows the match values to exist in their native type and
+ * sorted in their type native order for better performance matching against all column types.
+ */
 public class TypedInFilter extends AbstractOptimizableDimFilter implements Filter
 {
+  /**
+   * Column to match {@link #sortedMatchValues} or {@link #sortedUtf8MatchValueBytes} against.
+   */
   private final String column;
+
+  /**
+   * Type of values contained in {@link #sortedMatchValues}. This might be the same or different than the
+   * {@link ColumnType} of {@link #column}, but is encouraged to be the same there are several optimizations available
+   * if they match.
+   */
   private final ColumnType matchValueType;
+
+  /**
+   * Unsorted values. This will be null if the values are found to be sorted, or have been already sorted "upstream".
+   * Otherwise, this set of values will be lazily computed into {@link #sortedMatchValues} as needed, e.g. for
+   * JSON serialization, cache key building, building a hashcode, or checking equality.
+   */
   @Nullable
   private final List<?> unsortedValues;
-  private final Supplier<List<?>> lazyMatchValues;
+
+  /**
+   * Supplier for list of values sorted by {@link #matchValueType}. This is lazily computed if
+   * {@link #unsortedValues} is not null and previously sorted.
+   */
+  private final Supplier<List<?>> sortedMatchValues;
+
+  /**
+   * Supplier for list of utf8 byte values sorted by {@link #matchValueType}. If {@link #sortedMatchValues} was supplied
+   * directly instead of lazily computed, and {@link #matchValueType} is {@link ColumnType#STRING}, the backing list
+   * will be eagerly computed. If {@link #sortedMatchValues} is lazily computed, this value will be null.
+   */
   @Nullable
-  private final Supplier<SortedSet<ByteBuffer>> lazyMatchValueBytes;
+  private final Supplier<List<ByteBuffer>> sortedUtf8MatchValueBytes;
   @Nullable
   private final FilterTuning filterTuning;
   private final Supplier<DruidPredicateFactory> predicateFactorySupplier;
-
   @JsonIgnore
   private final Supplier<byte[]> cacheKeySupplier;
 
@@ -95,10 +124,12 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
    * Creates a new filter.
    *
    * @param column         column to search
-   * @param values         set of values to match. This collection may be reused to avoid copying a big collection.
-   *                       Therefore, callers should <b>not</b> modify the collection after it is passed to this
-   *                       constructor.
-   * @param matchValueType type of values contained in set
+   * @param values         set of values to match, may or may not be sorted.
+   * @param sortedValues   set of values to match this is sorted in matchValueType order. These values absolutely must
+   *                       be sorted in the specified order for proper operation. This value is computed from values to
+   *                       be used 'downstream' to avoid repeating the work of sorting and checking for sortedness over
+   *                       and over.
+   * @param matchValueType type of values contained in values/sortedValues
    * @param filterTuning   optional tuning
    */
   @JsonCreator
@@ -110,11 +141,6 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
-    if (NullHandling.replaceWithDefault()) {
-      throw InvalidInput.exception(
-          "Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter"
-      );
-    }
     this.column = column;
     if (column == null) {
       throw InvalidInput.exception("Invalid IN filter, column cannot be null");
@@ -125,7 +151,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       throw InvalidInput.exception("Invalid IN filter on column [%s], matchValueType cannot be null", column);
     }
     // one of sorted or not sorted
-    if (values == null && sortedValues == null) {
+    if ((values == null && sortedValues == null) || (values != null && sortedValues != null)) {
       throw InvalidInput.exception(
           "Invalid IN filter on column [%s], exactly one of values or sortedValues must be non-null",
           column
@@ -133,30 +159,29 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     }
     if (sortedValues != null) {
       this.unsortedValues = null;
-      this.lazyMatchValues = () -> sortedValues;
+      this.sortedMatchValues = () -> sortedValues;
+      if (matchValueType.is(ValueType.STRING)) {
+        final List<ByteBuffer> matchValueBytes = Lists.newArrayListWithCapacity(sortedValues.size());
+        for (Object s : sortedMatchValues.get()) {
+          matchValueBytes.add(StringUtils.toUtf8ByteBuffer(Evals.asString(s)));
+        }
+        this.sortedUtf8MatchValueBytes = () -> matchValueBytes;
+      } else {
+        this.sortedUtf8MatchValueBytes = null;
+      }
     } else {
       if (checkSorted(values, matchValueType)) {
         this.unsortedValues = null;
-        this.lazyMatchValues = () -> values;
+        this.sortedMatchValues = () -> values;
       } else {
         this.unsortedValues = values;
-        this.lazyMatchValues = Suppliers.memoize(() -> sortValues(unsortedValues, matchValueType));
+        this.sortedMatchValues = Suppliers.memoize(() -> sortValues(unsortedValues, matchValueType));
       }
-    }
-    if (matchValueType.is(ValueType.STRING)) {
-      this.lazyMatchValueBytes = Suppliers.memoize(() -> {
-        final SortedSet<ByteBuffer> matchValueBytes = new ObjectAVLTreeSet<>(ByteBufferUtils.utf8Comparator());
-        for (Object s : lazyMatchValues.get()) {
-          matchValueBytes.add(StringUtils.toUtf8ByteBuffer(Evals.asString(s)));
-        }
-        return matchValueBytes;
-      });
-    } else {
-      this.lazyMatchValueBytes = null;
+      this.sortedUtf8MatchValueBytes = null;
     }
 
     this.predicateFactorySupplier = Suppliers.memoize(
-        () -> new PredicateFactory(lazyMatchValues.get(), matchValueType)
+        () -> new PredicateFactory(sortedMatchValues.get(), matchValueType)
     );
     this.cacheKeySupplier = Suppliers.memoize(this::computeCacheKey);
   }
@@ -170,7 +195,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @JsonProperty
   public List<?> getSortedValues()
   {
-    return lazyMatchValues.get();
+    return sortedMatchValues.get();
   }
 
   @JsonProperty
@@ -196,7 +221,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    final List<?> matchValues = lazyMatchValues.get();
+    final List<?> matchValues = this.sortedMatchValues.get();
     if (matchValues.isEmpty()) {
       return FalseDimFilter.instance();
     } else if (matchValues.size() == 1) {
@@ -216,6 +241,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public Filter toFilter()
   {
+    if (NullHandling.replaceWithDefault()) {
+      throw InvalidInput.exception(
+          "Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter"
+      );
+    }
     return this;
   }
 
@@ -227,12 +257,9 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    for (Object value : lazyMatchValues.get()) {
-      String valueEquivalent = NullHandling.nullToEmptyIfNeeded(Evals.asString(value));
+    for (Object value : sortedMatchValues.get()) {
+      String valueEquivalent = Evals.asString(value);
       if (valueEquivalent == null) {
-        // Case when SQL compatible null handling is enabled
-        // Range.singleton(null) is invalid, so use the fact that
-        // only null values are less than empty string.
         retSet.add(Range.lessThan(""));
       } else {
         retSet.add(Range.singleton(valueEquivalent));
@@ -262,16 +289,16 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       return Filters.makeMissingColumnNullIndex(match, selector);
     }
 
-    if (lazyMatchValueBytes != null) {
+    if (sortedUtf8MatchValueBytes != null) {
       final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);
       if (utf8ValueSetIndexes != null) {
-        return utf8ValueSetIndexes.forSortedValuesUtf8(lazyMatchValueBytes.get());
+        return utf8ValueSetIndexes.forSortedValuesUtf8(sortedUtf8MatchValueBytes.get());
       }
     }
 
     final ValueSetIndexes valueSetIndexes = indexSupplier.as(ValueSetIndexes.class);
     if (valueSetIndexes != null) {
-      return valueSetIndexes.forSortedValues(lazyMatchValues.get(), matchValueType);
+      return valueSetIndexes.forSortedValues(sortedMatchValues.get(), matchValueType);
     }
 
     return Filters.makePredicateIndex(
@@ -324,7 +351,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
           rewriteDimensionTo,
           matchValueType,
           null,
-          lazyMatchValues.get(),
+          sortedMatchValues.get(),
           filterTuning
       );
     }
@@ -336,7 +363,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     final DimFilter.DimFilterToStringBuilder builder = new DimFilter.DimFilterToStringBuilder();
     return builder.appendDimension(column, null)
                   .append(" IN (")
-                  .append(Joiner.on(", ").join(Iterables.transform(lazyMatchValues.get(), String::valueOf)))
+                  .append(Joiner.on(", ").join(Iterables.transform(sortedMatchValues.get(), String::valueOf)))
                   .append(")")
                   .append(" (" + matchValueType + ")")
                   .appendFilterTuning(filterTuning)
@@ -355,21 +382,21 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     TypedInFilter that = (TypedInFilter) o;
     return column.equals(that.column) &&
            Objects.equals(matchValueType, that.matchValueType) &&
-           compareValues(lazyMatchValues.get(), that.lazyMatchValues.get(), matchValueType) &&
+           compareValues(sortedMatchValues.get(), that.sortedMatchValues.get(), matchValueType) &&
            Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(lazyMatchValues.get(), column, matchValueType, filterTuning);
+    return Objects.hash(sortedMatchValues.get(), column, matchValueType, filterTuning);
   }
 
   private byte[] computeCacheKey()
   {
     // Hash all values, in sorted order, as their length followed by their content.
     final Hasher hasher = Hashing.sha256().newHasher();
-    for (Object v : lazyMatchValues.get()) {
+    for (Object v : sortedMatchValues.get()) {
       if (v == null) {
         // Encode null as length -1, no content.
         hasher.putInt(-1);
@@ -393,15 +420,13 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   {
     final Comparator<Object> comparator = matchValueType.getNullableStrategy();
     Object prev = null;
-    boolean needsCoerceCheck = true;
     for (Object o : unsortedValues) {
-      if (needsCoerceCheck && o != null) {
+      if (o != null) {
         Object coerced = coerceValue(o, matchValueType);
         //noinspection ObjectEquality
         if (coerced != o) {
           return false;
         }
-        needsCoerceCheck = false;
       }
       if (prev != null && comparator.compare(prev, o) >= 0) {
         return false;
@@ -415,7 +440,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   private static Object coerceValue(@Nullable Object o, ColumnType matchValueType)
   {
     if (o == null) {
-      return o;
+      return null;
     }
     switch (matchValueType.getType()) {
       case STRING:
@@ -433,19 +458,13 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
 
   private static List<?> sortValues(List<?> unsortedValues, ColumnType matchValueType)
   {
-    final Object[] array = unsortedValues.toArray(new Object[0]);
-    // check if values need coerced
-    for (int i = 0; i < array.length; i++) {
-      Object coerced = coerceValue(array[i], matchValueType);
-      //noinspection ObjectEquality
-      if (coerced != null && array[i] == coerced) {
-        // assume list is all same type objects...
-        break;
-      }
-      array[i] = coerced;
+    final ObjectRBTreeSet<Object> sortedSet = new ObjectRBTreeSet<>(matchValueType.getNullableStrategy());
+    for (Object value : unsortedValues) {
+      sortedSet.add(coerceValue(value, matchValueType));
     }
-    ObjectArrays.quickSort(array, matchValueType.getNullableStrategy());
-    return Arrays.asList(array);
+    final List<Object> sortedList = Lists.newArrayListWithCapacity(unsortedValues.size());
+    sortedList.addAll(sortedSet);
+    return sortedList;
   }
 
   /**
@@ -454,7 +473,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
    */
   private static boolean compareValues(List<?> o1, List<?> o2, ColumnType matchValueType)
   {
-    final NullableTypeStrategy comparator = matchValueType.getNullableStrategy();
+    final NullableTypeStrategy<Object> comparator = matchValueType.getNullableStrategy();
     //noinspection ObjectEquality
     if (o1 == o2) {
       return true;
@@ -465,25 +484,29 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     if (o2 == null) {
       return false;
     }
-    final int iter = Math.min(o1.size(), o2.size());
-    for (int i = 0; i < iter; i++) {
+    final int size1 = o1.size();
+    final int size2 = o2.size();
+    if (size1 != size2) {
+      return false;
+    }
+    for (int i = 0; i < size1; i++) {
       final int cmp = comparator.compare(o1.get(i), o2.get(i));
       if (cmp == 0) {
         continue;
       }
       return false;
     }
-    return o1.size() == o2.size();
+    return true;
   }
 
   private static DruidObjectPredicate<String> createStringPredicate(
-      final List sortedValues,
+      final List<?> sortedValues,
       final ColumnType matchValueType
   )
   {
     Preconditions.checkNotNull(sortedValues, "values");
     final boolean containsNull = sortedValues.get(0) == null;
-    final Comparator comparator = matchValueType.getNullableStrategy();
+    final Comparator<Object> comparator = matchValueType.getNullableStrategy();
     if (matchValueType.is(ValueType.STRING)) {
       return value -> {
         if (value == null) {
@@ -506,11 +529,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     };
   }
 
-  private static DruidLongPredicate createLongPredicate(final List sortedValues, ColumnType matchValueType)
+  private static DruidLongPredicate createLongPredicate(final List<?> sortedValues, ColumnType matchValueType)
   {
     boolean matchNulls = sortedValues.get(0) == null;
     if (matchValueType.is(ValueType.LONG)) {
-      final Comparator<Long> comparator = matchValueType.getNullableStrategy();
+      final Comparator<Object> comparator = matchValueType.getNullableStrategy();
       return new DruidLongPredicate()
       {
         @Override
@@ -551,11 +574,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     };
   }
 
-  private static DruidFloatPredicate createFloatPredicate(final List sortedValues, ColumnType matchValueType)
+  private static DruidFloatPredicate createFloatPredicate(final List<?> sortedValues, ColumnType matchValueType)
   {
     boolean matchNulls = sortedValues.get(0) == null;
     if (matchValueType.is(ValueType.FLOAT)) {
-      final Comparator<Float> comparator = matchValueType.getNullableStrategy();
+      final Comparator<Object> comparator = matchValueType.getNullableStrategy();
       return new DruidFloatPredicate()
       {
         @Override
@@ -596,11 +619,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     };
   }
 
-  private static DruidDoublePredicate createDoublePredicate(final List sortedValues, ColumnType matchValueType)
+  private static DruidDoublePredicate createDoublePredicate(final List<?> sortedValues, ColumnType matchValueType)
   {
     boolean matchNulls = sortedValues.get(0) == null;
     if (matchValueType.is(ValueType.DOUBLE)) {
-      final Comparator<Double> comparator = matchValueType.getNullableStrategy();
+      final Comparator<Object> comparator = matchValueType.getNullableStrategy();
       return new DruidDoublePredicate()
       {
         @Override

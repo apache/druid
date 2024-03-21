@@ -39,7 +39,18 @@ import java.util.NoSuchElementException;
 
 public interface ValueSetIndexes
 {
-  double SORTED_MERGE_RATIO_THRESHOLD = 0.12D;
+  /**
+   * threshold of sorted match value iterator size compared to dictionary size to use
+   * {@link #buildBitmapColumnIndexFromSortedIteratorScan} instead of
+   * {@link #buildBitmapColumnIndexFromSortedIteratorBinarySearch}.
+   */
+  double SORTED_SCAN_RATIO_THRESHOLD = 0.12D;
+
+  /**
+   * minimum sorted match value iterator size to trim the initial values from the iterator to seek to the start of the
+   * value dictionary when using {@link #buildBitmapColumnIndexFromSortedIteratorScan} or
+   * {@link #buildBitmapColumnIndexFromSortedIteratorBinarySearch}.
+   */
   int SIZE_WORTH_CHECKING_MIN = 8;
 
   /**
@@ -55,7 +66,23 @@ public interface ValueSetIndexes
   @Nullable
   BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType);
 
-  static <T> BitmapColumnIndex getIndexFromSortedIteratorSortedMerged(
+
+  /**
+   * Helper method for implementing {@link #forSortedValues} for a value set that is sorted the same as the column
+   * dictionary.
+   * <p>
+   * Builds a {@link BitmapColumnIndex} from an {@link Iterable<T>} that is sorted the same as the columns
+   * {@link Indexed<T>} value dictionary. Uses a strategy that does zipping similar to the merge step of a sort-merge,
+   * where we step forward on both the iterator and the dictionary to find matches to build a
+   * {@link Iterable<ImmutableBitmap>}.
+   * <p> 
+   * If sorted match value iterator size is greater than (dictionary size * {@link #SORTED_SCAN_RATIO_THRESHOLD}),
+   * consider using this method instead of {@link #buildBitmapColumnIndexFromSortedIteratorBinarySearch}.
+   * <p> 
+   * If the values in the iterator are NOT sorted the same as the dictionary, do NOT use this method, use
+   * {@link #buildBitmapColumnIndexFromIteratorBinarySearch} instead.
+   */
+  static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorScan(
       BitmapFactory bitmapFactory,
       Comparator<T> comparator,
       Iterable<T> values,
@@ -122,7 +149,22 @@ public interface ValueSetIndexes
     };
   }
 
-  static <T> BitmapColumnIndex getIndexFromSortedIterator(
+  /**
+   * Helper method for implementing {@link #forSortedValues} for a value set that is sorted the same as the column
+   * dictionary.
+   * <p>
+   * Builds a {@link BitmapColumnIndex} from an {@link Iterable<T>} that is sorted the same as the columns
+   * {@link Indexed<T>} value dictionary. This algorithm iterates the values to match and does a binary search for
+   * matching values using {@link Indexed#indexOf(Object)} to build a {@link Iterable<ImmutableBitmap>} short-circuiting
+   * the iteration if we reach the end of the {@link Indexed} before the values to match are exhausted.
+   * <p>
+   * If sorted match value iterator size is less than (dictionary size * {@link #SORTED_SCAN_RATIO_THRESHOLD}),
+   * consider using this method instead of {@link #buildBitmapColumnIndexFromSortedIteratorScan}.
+   * <p> 
+   * If the values in the iterator are not sorted the same as the dictionary, do not use this method, use
+   * {@link #buildBitmapColumnIndexFromIteratorBinarySearch} instead.
+   */
+  static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorBinarySearch(
       BitmapFactory bitmapFactory,
       Iterable<T> values,
       Indexed<T> dictionary,
@@ -172,8 +214,8 @@ public interface ValueSetIndexes
 
               if (next == -dictionarySize - 1) {
                 // nextValue is past the end of the dictionary so we can break early
-                // Note: we can rely on indexOf returning (-(insertion point) - 1), because of the earlier check
-                // for Indexed.isSorted(), which guarantees this behavior
+                // Note: we can rely on indexOf returning (-(insertion point) - 1), because the Indexed
+                // is sorted, which guarantees this behavior
                 break;
               }
             }
@@ -183,7 +225,20 @@ public interface ValueSetIndexes
     };
   }
 
-  static <T> BitmapColumnIndex getIndexFromIterator(
+  /**
+   * Helper method for implementing {@link #forSortedValues} for a value set that is NOT sorted the same as the column
+   * dictionary.
+   * <p>
+   * Builds a {@link BitmapColumnIndex} from an {@link Iterable<T>} that is NOT sorted the same as the columns
+   * {@link Indexed<T>} value dictionary. This algorithm iterates the values to match and does a binary search for
+   * matching values using {@link Indexed#indexOf(Object)} to build a {@link Iterable<ImmutableBitmap>} until the match
+   * values iterator is exhausted.
+   * <p> 
+   * If values of the iterator are sorted the same as the dictionary, use
+   * {@link #buildBitmapColumnIndexFromSortedIteratorScan} or
+   * {@link #buildBitmapColumnIndexFromSortedIteratorBinarySearch} instead.
+   */
+  static <T> BitmapColumnIndex buildBitmapColumnIndexFromIteratorBinarySearch(
       BitmapFactory bitmapFactory,
       Iterable<T> values,
       Indexed<T> dictionary,

@@ -23,7 +23,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import java.nio.ByteBuffer;
-import java.util.SortedSet;
+import java.util.List;
 
 public interface Utf8ValueSetIndexes
 {
@@ -32,5 +32,5 @@ public interface Utf8ValueSetIndexes
    * underlying column). The set must be sorted using
    * {@link org.apache.druid.java.util.common.ByteBufferUtils#utf8Comparator()}.
    */
-  BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
+  BitmapColumnIndex forSortedValuesUtf8(List<ByteBuffer> sortedValuesUtf8);
 }

@@ -53,6 +53,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Classic {@link InDimFilter} test. Consider adding tests to {@link TypedInFilterTests} in addition to, or instead of
+ * here.
+ */
 @RunWith(Parameterized.class)
 public class InFilterTest extends BaseFilterTest
 {

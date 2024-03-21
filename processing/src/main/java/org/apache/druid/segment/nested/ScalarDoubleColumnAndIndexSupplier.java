@@ -298,8 +298,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         } else {
           tailSet = baseSet;
         }
-        if (tailSet.size() > ValueSetIndexes.SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-          return ValueSetIndexes.getIndexFromSortedIteratorSortedMerged(
+        if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+          return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
               bitmapFactory,
               ColumnType.DOUBLE.getNullableStrategy(),
               tailSet,
@@ -309,7 +309,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
           );
         }
         // fall through to sorted value iteration
-        return ValueSetIndexes.getIndexFromSortedIterator(
+        return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
             dictionary,
@@ -318,7 +318,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         );
       } else {
         // values in set are not sorted in double order, transform them on the fly and iterate them all
-        return ValueSetIndexes.getIndexFromIterator(
+        return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
             Iterables.transform(sortedValues, DimensionHandlerUtils::convertObjectToDouble),
             dictionary,
