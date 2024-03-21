@@ -23,8 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.collections.spatial.ImmutableNode;
 import org.apache.druid.collections.spatial.ImmutableFloatPoint;
+import org.apache.druid.collections.spatial.ImmutableNode;
 
 /**
  */

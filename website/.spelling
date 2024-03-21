@@ -2162,6 +2162,9 @@ jackson-jq
 missingValue
 skipBytesInMemoryOverheadCheck
 spatialDimensions
+radiusUnit
+euclidean
+kilometers
 useFieldDiscovery
 4CPU
 cityName

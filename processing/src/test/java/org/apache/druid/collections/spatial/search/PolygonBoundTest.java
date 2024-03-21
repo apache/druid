@@ -80,6 +80,24 @@ public class PolygonBoundTest
   }
 
   @Test
+  public void testHighPrecisions()
+  {
+    //37.82460331205531, -122.50851323395436 Black Sand Beach
+    //37.79378584960722, -122.48344917652936 Bakers Beach
+    //37.82872192254861, -122.48597242173493 Golden Gate view point
+
+    final PolygonBound triangle = PolygonBound.from(
+        new float[]{37.82460331205531f, 37.79378584960722f, 37.82872192254861f},
+        new float[]{-122.50851323395436f, -122.48344917652936f, -122.48597242173493f}
+    );
+    // points near triangle edges
+    Assert.assertTrue(triangle.contains(new float[]{37.82668550138975f, -122.48783179067323f}));
+    Assert.assertTrue(triangle.contains(new float[]{37.813408325545275f, -122.48605838780342f}));
+    Assert.assertFalse(triangle.contains(new float[]{37.80812634358083f, -122.49676991156807f}));
+    Assert.assertFalse(triangle.contains(new float[]{37.81832968852414f, -122.4843583756818f}));
+  }
+
+  @Test
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(PolygonBound.class)
