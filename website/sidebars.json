@@ -22,7 +22,7 @@
         "tutorials/tutorial-msq-convert-spec"
               ]},
       {"type": "category",
-       "label": "Ingestion tutorials",
+       "label": "Data management tutorials",
        "items": [
         "tutorials/tutorial-retention",
         "tutorials/tutorial-append-data",
