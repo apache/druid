@@ -474,7 +474,7 @@ public class TypedInFilterTests
                         "column",
                         "matchValueType",
                         "unsortedValues",
-                        "lazyMatchValues",
+                        "sortedMatchValues",
                         "optimizedFilterIncludeUnknown",
                         "optimizedFilterNoIncludeUnknown"
                     )
@@ -486,7 +486,7 @@ public class TypedInFilterTests
                     )
                     .withIgnoredFields(
                         "unsortedValues",
-                        "lazyMatchValueBytes",
+                        "sortedUtf8MatchValueBytes",
                         "predicateFactorySupplier",
                         "cacheKeySupplier",
                         "optimizedFilterIncludeUnknown",
