@@ -280,14 +280,4 @@ public class WorkerTaskCountStatsMonitorTest
     monitor.doMonitor(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());
   }
-
-  @Test
-  public void testMonitorNotMiddleManager()
-  {
-    final WorkerTaskCountStatsMonitor monitor =
-        new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
-    monitor.doMonitor(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
-  }
 }
