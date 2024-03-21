@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.segment.index.semantic;
+package org.apache.druid.collections.spatial;
 
-import org.apache.druid.collections.spatial.BaseImmutableRTee;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.collections.spatial.search.Bound;
 
-/**
- */
-public interface SpatialIndex
+public interface BaseImmutableRTee
 {
-  BaseImmutableRTee getRTree();
+  Iterable<ImmutableBitmap> search(Bound bound);
 }
