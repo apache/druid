@@ -65,24 +65,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     this.jsonMapper = jsonMapper;
   }
 
-  /**
-   * Intermediate signature of a particular {@link GroupByQuery}. Does not include post-aggregators, and all
-   * aggregations are nonfinalized.
-   */
-  private static RowSignature computeIntermediateSignature(final GroupByQuery query)
-  {
-    final RowSignature postAggregationSignature = query.getResultRowSignature(RowSignature.Finalization.NO);
-    final RowSignature.Builder builder = RowSignature.builder();
-
-    for (int i = 0; i < query.getResultRowSizeWithoutPostAggregators(); i++) {
-      builder.add(
-          postAggregationSignature.getColumnName(i),
-          postAggregationSignature.getColumnType(i).orElse(null)
-      );
-    }
-
-    return builder.build();
-  }
 
   @Override
   public QueryDefinition makeQueryDefinition(
@@ -258,6 +240,25 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       nextShuffleWindowSpec = null;
     }
     return nextShuffleWindowSpec;
+  }
+
+  /**
+   * Intermediate signature of a particular {@link GroupByQuery}. Does not include post-aggregators, and all
+   * aggregations are nonfinalized.
+   */
+  private static RowSignature computeIntermediateSignature(final GroupByQuery query)
+  {
+    final RowSignature postAggregationSignature = query.getResultRowSignature(RowSignature.Finalization.NO);
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (int i = 0; i < query.getResultRowSizeWithoutPostAggregators(); i++) {
+      builder.add(
+          postAggregationSignature.getColumnName(i),
+          postAggregationSignature.getColumnType(i).orElse(null)
+      );
+    }
+
+    return builder.build();
   }
 
   /**

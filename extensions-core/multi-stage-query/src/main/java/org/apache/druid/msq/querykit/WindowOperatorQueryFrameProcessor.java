@@ -124,7 +124,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
                                         .containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
       maxRowsMaterialized = (int) query.context().get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
     } else {
-      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_FRAMES;
+      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW;
     }
   }
 
@@ -228,9 +228,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       // let all operators run on the giant rac when channel is finished
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        if (frame.numRows() > maxRowsMaterialized) {
-          throw new MSQException(new TooManyRowsInAWindowFault(frame.numRows(), maxRowsMaterialized));
-        }
         convertRowFrameToRowsAndColumns(frame);
       } else if (inputChannel.isFinished()) {
         runAllOpsOnMultipleRac(frameRowsAndCols);
@@ -500,9 +497,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null
     );
     frameRowsAndCols.add(ldrc);
-    if (frameRowsAndColumns.numRows() > maxRowsMaterialized) {
-      throw new MSQException(new TooManyRowsInAWindowFault(frameRowsAndColumns.numRows(), maxRowsMaterialized));
-    }
   }
 
   private List<Integer> findPartitionColumns(RowSignature rowSignature)

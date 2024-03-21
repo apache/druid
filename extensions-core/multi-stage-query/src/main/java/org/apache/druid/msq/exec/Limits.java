@@ -101,6 +101,6 @@ public class Limits
    * Max number of rows with the same key in a window. This acts as a guardrail for
    * data distribution with high cardinality
    */
-  public static final int MAX_ROWS_MATERIALIZED_IN_FRAMES = 100_000;
+  public static final int MAX_ROWS_MATERIALIZED_IN_WINDOW = 100_000;
 
 }

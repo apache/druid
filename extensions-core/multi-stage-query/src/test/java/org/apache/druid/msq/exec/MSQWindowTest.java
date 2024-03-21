@@ -1219,14 +1219,24 @@ public class MSQWindowTest extends MSQTestBase
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .build())
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{null, 8.0},
-            new Object[]{null, 8.0},
-            new Object[]{"", 3.0},
-            new Object[]{"a", 5.0},
-            new Object[]{"a", 5.0},
-            new Object[]{"abc", 5.0}
-        ))
+        .setExpectedResultRows(
+            NullHandling.replaceWithDefault() ?
+            ImmutableList.of(
+                new Object[]{"", 11.0},
+                new Object[]{"", 11.0},
+                new Object[]{"", 11.0},
+                new Object[]{"a", 5.0},
+                new Object[]{"a", 5.0},
+                new Object[]{"abc", 5.0}
+            ) :
+            ImmutableList.of(
+                new Object[]{null, 8.0},
+                new Object[]{null, 8.0},
+                new Object[]{"", 3.0},
+                new Object[]{"a", 5.0},
+                new Object[]{"a", 5.0},
+                new Object[]{"abc", 5.0}
+            ))
         .setQueryContext(context)
         .verifyResults();
   }
@@ -1773,7 +1783,7 @@ public class MSQWindowTest extends MSQTestBase
         .setSql(
             "select cityName, added, SUM(added) OVER () cc from wikipedia")
         .setQueryContext(customContext)
-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15676, 200))
+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(39244, 200))
         .verifyResults();
   }
 
