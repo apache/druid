@@ -335,6 +335,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
       {
         receiver.push(singleRac);
+        if (singleRac.numRows() > maxRowsMaterialized) {
+          throw new MSQException(new TooManyRowsInAWindowFault(singleRac.numRows(), maxRowsMaterialized));
+        }
         receiver.completed();
         return null;
       }
@@ -354,6 +357,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
       {
         RowsAndColumns rac = new ConcatRowsAndColumns(listOfRacs);
+        if (rac.numRows() > maxRowsMaterialized) {
+          throw new MSQException(new TooManyRowsInAWindowFault(rac.numRows(), maxRowsMaterialized));
+        }
         receiver.push(rac);
         receiver.completed();
         return null;
@@ -478,6 +484,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   /**
    * @param frame Row based frame to be converted to a {@link RowsAndColumns} object
+   * Throw an exception if the resultant rac used goes above the guardrail value
    */
   private void convertRowFrameToRowsAndColumns(Frame frame)
   {
@@ -511,6 +518,12 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     return indexList;
   }
 
+  /**
+   *
+   * Compare two rows based only the columns in the partitionIndices
+   * In case the parition indices is empty or null compare entire row
+   *
+   */
   private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<Integer> partitionIndices)
   {
     if (partitionIndices == null || partitionIndices.isEmpty()) {

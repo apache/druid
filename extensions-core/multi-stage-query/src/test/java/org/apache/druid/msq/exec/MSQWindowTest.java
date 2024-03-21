@@ -31,6 +31,7 @@ import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -1661,6 +1662,7 @@ public class MSQWindowTest extends MSQTestBase
                      .verifyResults();
   }
 
+  // Bigger dataset tests
   @Test
   public void testSelectWithWikipedia()
   {
@@ -1749,5 +1751,210 @@ public class MSQWindowTest extends MSQTestBase
         .setQueryContext(customContext)
         .setExpectedMSQFault(new TooManyRowsInAWindowFault(15676, 200))
         .verifyResults();
+  }
+
+  @Test
+  public void testSelectWithWikipediaWithPartitionKeyNotInSelect()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cityName", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("cc", ColumnType.LONG)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new LongSumAggregatorFactory("w0", "added")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final Map<String, Object> innerContextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"}]"
+                    )
+                    .build();
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.WIKIPEDIA)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(notNull("cityName"))
+                .columns("added", "cityName", "countryIsoCode")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(innerContextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("cityName", ColumnType.STRING)
+                    .add("added", ColumnType.LONG)
+                    .add("w0", ColumnType.LONG).build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("countryIsoCode"))),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("countryIsoCode")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+
+    final Map<String, Object> outerContextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"w0\",\"type\":\"LONG\"}]"
+                    )
+                    .build();
+    final Query scanQuery = Druids.newScanQueryBuilder()
+                                  .dataSource(new QueryDataSource(query))
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .columns("added", "cityName", "w0")
+                                  .limit(5)
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .context(outerContextWithRowSignature)
+                                  .legacy(false)
+                                  .build();
+
+    testSelectQuery()
+        .setSql(
+            "select cityName, added, SUM(added) OVER (PARTITION BY countryIsoCode) cc from wikipedia \n"
+            + "where cityName is NOT NULL\n"
+            + "LIMIT 5")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(scanQuery)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("cityName", "cityName"),
+                                           new ColumnMapping("added", "added"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{"Al Ain", 8L, 6334L},
+            new Object[]{"Dubai", 3L, 6334L},
+            new Object[]{"Dubai", 6323L, 6334L},
+            new Object[]{"Tirana", 26L, 26L},
+            new Object[]{"Benguela", 0L, 0L}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
+  public void testGroupByWithWikipedia()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cityName", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("cc", ColumnType.LONG)
+                                            .build();
+
+    final Query groupByQuery = GroupByQuery.builder()
+                                           .setDataSource(CalciteTests.WIKIPEDIA)
+                                           .setInterval(querySegmentSpec(Filtration.eternity()))
+                                           .setDimFilter(new InDimFilter(
+                                               "cityName",
+                                               ImmutableSet.of("Ahmedabad", "Albuquerque")
+                                           ))
+                                           .setGranularity(Granularities.ALL)
+                                           .setDimensions(dimensions(
+                                               new DefaultDimensionSpec(
+                                                   "cityName",
+                                                   "d0",
+                                                   ColumnType.STRING
+                                               ),
+                                               new DefaultDimensionSpec(
+                                                   "added",
+                                                   "d1",
+                                                   ColumnType.LONG
+                                               )
+                                           ))
+                                           .setContext(context)
+                                           .build();
+
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new LongSumAggregatorFactory("w0", "d1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(groupByQuery),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("d0", ColumnType.STRING)
+                    .add("d1", ColumnType.LONG)
+                    .add("w0", ColumnType.LONG).build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql(
+            "select cityName, added, SUM(added) OVER (PARTITION BY cityName) cc from wikipedia \n"
+            + "where cityName IN ('Ahmedabad', 'Albuquerque')\n"
+            + "GROUP BY cityName,added")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "cityName"),
+                                           new ColumnMapping("d1", "added"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{"Ahmedabad", 0L, 0L},
+            new Object[]{"Albuquerque", 2L, 140L},
+            new Object[]{"Albuquerque", 9L, 140L},
+            new Object[]{"Albuquerque", 129L, 140L}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
+  public void testReplaceGroupByOnWikipedia()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("added", ColumnType.LONG)
+                                            .add("cityName", ColumnType.STRING)
+                                            .add("cc", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL\n"
+                             + "select cityName, added, SUM(added) OVER (PARTITION BY cityName) cc from wikipedia \n"
+                             + "where cityName IN ('Ahmedabad', 'Albuquerque')\n"
+                             + "GROUP BY cityName,added\n"
+                             + "PARTITIONED BY ALL CLUSTERED BY added")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{0L, 0L, "Ahmedabad", 0L},
+                             new Object[]{0L, 2L, "Albuquerque", 140L},
+                             new Object[]{0L, 9L, "Albuquerque", 140L},
+                             new Object[]{0L, 129L, "Albuquerque", 140L}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .verifyResults();
   }
 }

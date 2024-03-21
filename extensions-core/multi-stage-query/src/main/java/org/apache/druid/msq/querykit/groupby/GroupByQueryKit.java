@@ -242,7 +242,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   /**
    * @param originalQuery  which has the context for the next shuffle if that's present in the next window
    * @param maxWorkerCount max worker count
-   * @return shuffle spec without partition boosting for next stage
+   * @return shuffle spec without partition boosting for next stage, null if there is no partition by for next window
    */
   private ShuffleSpec getShuffleSpecForNextWindow(GroupByQuery originalQuery, int maxWorkerCount)
   {
