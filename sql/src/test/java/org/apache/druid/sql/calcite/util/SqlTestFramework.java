@@ -151,7 +151,7 @@ public class SqlTestFramework
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
         Injector injector
-    ) throws IOException;
+    );
 
     SqlEngine createEngine(
         QueryLifecycleFactory qlf,
@@ -527,18 +527,13 @@ public class SqlTestFramework
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
     {
-      try {
-        SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
-            injector.getInstance(QueryRunnerFactoryConglomerate.class),
-            injector.getInstance(JoinableFactoryWrapper.class),
-            injector
-        );
-        resourceCloser.register(walker);
-        return walker;
-      }
-      catch (IOException e) {
-        throw new RE(e);
-      }
+      SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
+          injector.getInstance(QueryRunnerFactoryConglomerate.class),
+          injector.getInstance(JoinableFactoryWrapper.class),
+          injector
+      );
+      resourceCloser.register(walker);
+      return walker;
     }
 
     @Provides

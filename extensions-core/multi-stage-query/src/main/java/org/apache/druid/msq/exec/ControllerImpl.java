@@ -783,18 +783,10 @@ public class ControllerImpl implements Controller
     addToKernelManipulationQueue(
         queryKernel -> {
           final StageId stageId = queryKernel.getStageId(stageNumber);
-
-          // We need a specially-decorated ObjectMapper to deserialize key statistics.
-          final StageDefinition stageDef = queryKernel.getStageDefinition(stageId);
-          final ObjectMapper mapper = MSQTasks.decorateObjectMapperForKeyCollectorSnapshot(
-              context.jsonMapper(),
-              stageDef.getShuffleSpec().clusterBy(),
-              stageDef.getShuffleSpec().doesAggregate()
-          );
-
           final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
+
           try {
-            partialKeyStatisticsInformation = mapper.convertValue(
+            partialKeyStatisticsInformation = context.jsonMapper().convertValue(
                 partialKeyStatisticsInformationObject,
                 PartialKeyStatisticsInformation.class
             );
@@ -1913,7 +1905,8 @@ public class ControllerImpl implements Controller
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
                                      queryId,
                                      exportStorageProvider,
-                                     resultFormat
+                                     resultFormat,
+                                     columnMappings
                                  ))
       );
       return builder.build();

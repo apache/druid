@@ -35,8 +35,11 @@ import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
@@ -47,7 +50,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
+    builder.addModules(CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
   }
 
 
@@ -86,77 +89,88 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testCannotInsertWithNativeEngine()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testCannotReplaceWithNativeEngine()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testRequireTimeConditionSimpleQueryNegative()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testRequireTimeConditionSubQueryNegative()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testExactCountDistinctWithFilter()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testUnplannableScanOrderByNonTime()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testQueryWithMoreThanMaxNumericInFilter()
   {
 
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testUnSupportedNullsFirst()
   {
   }
 
-  @Ignore
+  @Disabled
   @Override
+  @Test
   public void testUnSupportedNullsLast()
   {
   }
@@ -180,7 +194,8 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
     }
   }
 
-  @Test(timeout = 40000)
+  @Test
+  @Timeout(value = 40000, unit = TimeUnit.MILLISECONDS)
   public void testJoinMultipleTablesWithWhereCondition()
   {
     testBuilder()
@@ -217,6 +232,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   }
 
   @Override
+  @Test
   public void testFilterParseLongNullable()
   {
     // this isn't really correct in default value mode, the result should be ImmutableList.of(new Object[]{0L})

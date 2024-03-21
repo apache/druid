@@ -1,0 +1,224 @@
+{
+  "type": "query_controller",
+  "id": "%%QUERY_ID%%",
+  "spec": {
+    "query": {
+      "queryType": "scan",
+      "dataSource": {
+        "type": "external",
+        "inputSource": {
+          "type": "local",
+          "files": [
+            "/resources/data/batch_index/json/wikipedia_index_data1.json"
+          ]
+        },
+        "inputFormat": {
+          "type": "json",
+          "keepNullColumns": false,
+          "assumeNewlineDelimited": false,
+          "useJsonNodeReader": false
+        },
+        "signature": [
+          {
+            "name": "timestamp",
+            "type": "STRING"
+          },
+          {
+            "name": "isRobot",
+            "type": "STRING"
+          },
+          {
+            "name": "diffUrl",
+            "type": "STRING"
+          },
+          {
+            "name": "added",
+            "type": "LONG"
+          },
+          {
+            "name": "countryIsoCode",
+            "type": "STRING"
+          },
+          {
+            "name": "regionName",
+            "type": "STRING"
+          },
+          {
+            "name": "channel",
+            "type": "STRING"
+          },
+          {
+            "name": "flags",
+            "type": "STRING"
+          },
+          {
+            "name": "delta",
+            "type": "LONG"
+          },
+          {
+            "name": "isUnpatrolled",
+            "type": "STRING"
+          },
+          {
+            "name": "isNew",
+            "type": "STRING"
+          },
+          {
+            "name": "deltaBucket",
+            "type": "DOUBLE"
+          },
+          {
+            "name": "isMinor",
+            "type": "STRING"
+          },
+          {
+            "name": "isAnonymous",
+            "type": "STRING"
+          },
+          {
+            "name": "deleted",
+            "type": "LONG"
+          },
+          {
+            "name": "cityName",
+            "type": "STRING"
+          },
+          {
+            "name": "metroCode",
+            "type": "LONG"
+          },
+          {
+            "name": "namespace",
+            "type": "STRING"
+          },
+          {
+            "name": "comment",
+            "type": "STRING"
+          },
+          {
+            "name": "page",
+            "type": "STRING"
+          },
+          {
+            "name": "commentLength",
+            "type": "LONG"
+          },
+          {
+            "name": "countryName",
+            "type": "STRING"
+          },
+          {
+            "name": "user",
+            "type": "STRING"
+          },
+          {
+            "name": "regionIsoCode",
+            "type": "STRING"
+          }
+        ]
+      },
+      "intervals": {
+        "type": "intervals",
+        "intervals": [
+          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+        ]
+      },
+      "resultFormat": "compactedList",
+      "columns": [
+        "added",
+        "delta",
+        "page"
+      ],
+      "legacy": false,
+      "context": {
+        "__exportFileFormat": "CSV",
+        "__resultFormat": "array",
+        "__user": "allowAll",
+        "executionMode": "async",
+        "finalize": false,
+        "finalizeAggregations": false,
+        "groupByEnableMultiValueUnnesting": false,
+        "maxNumTasks": 4,
+        "maxParseExceptions": 0,
+        "queryId": "b1491ce2-7d2a-4a7a-baa6-25a1a77135e5",
+        "scanSignature": "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"page\",\"type\":\"STRING\"}]",
+        "sqlQueryId": "b1491ce2-7d2a-4a7a-baa6-25a1a77135e5",
+        "sqlStringifyArrays": false,
+        "waitUntilSegmentsLoad": true
+      },
+      "columnTypes": [
+        "LONG",
+        "LONG",
+        "STRING"
+      ],
+      "granularity": {
+        "type": "all"
+      }
+    },
+    "columnMappings": [
+      {
+        "queryColumn": "page",
+        "outputColumn": "page"
+      },
+      {
+        "queryColumn": "added",
+        "outputColumn": "added"
+      },
+      {
+        "queryColumn": "delta",
+        "outputColumn": "delta"
+      }
+    ],
+    "destination": {
+      "type": "export",
+      "exportStorageProvider": {
+        "type": "local",
+        "exportPath": "/shared/export/"
+      },
+      "resultFormat": "csv"
+    },
+    "assignmentStrategy": "max",
+    "tuningConfig": {
+      "maxNumWorkers": 3,
+      "maxRowsInMemory": 100000,
+      "rowsPerSegment": 3000000
+    }
+  },
+  "sqlQuery": "    INSERT INTO extern(local(exportPath => '/shared/export/'))\n    AS CSV\n    SELECT page, added, delta\n    FROM TABLE(\n      EXTERN(\n          '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n          '{\"type\":\"json\"}',\n          '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n      )\n  )\n",
+  "sqlQueryContext": {
+    "__exportFileFormat": "CSV",
+    "finalizeAggregations": false,
+    "sqlQueryId": "b1491ce2-7d2a-4a7a-baa6-25a1a77135e5",
+    "groupByEnableMultiValueUnnesting": false,
+    "maxNumTasks": 4,
+    "waitUntilSegmentsLoad": true,
+    "executionMode": "async",
+    "__resultFormat": "array",
+    "sqlStringifyArrays": false,
+    "queryId": "b1491ce2-7d2a-4a7a-baa6-25a1a77135e5"
+  },
+  "sqlResultsContext": {
+    "timeZone": "UTC",
+    "serializeComplexValues": true,
+    "stringifyArrays": false
+  },
+  "sqlTypeNames": [
+    "VARCHAR",
+    "BIGINT",
+    "BIGINT"
+  ],
+  "nativeTypeNames": [
+    "STRING",
+    "LONG",
+    "LONG"
+  ],
+  "context": {
+    "forceTimeChunkLock": true
+  },
+  "groupId": "%%QUERY_ID%%",
+  "dataSource": "__query_select",
+  "resource": {
+    "availabilityGroup": "%%QUERY_ID%%",
+    "requiredCapacity": 1
+  }
+}
