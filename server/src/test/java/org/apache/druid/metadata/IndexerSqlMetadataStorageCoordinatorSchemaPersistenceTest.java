@@ -349,7 +349,6 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
 
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
     final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
     final Map<String, Pair<Long, Long>> segmentStatsMap = new HashMap<>();
     Random random = new Random(5);
@@ -369,18 +368,18 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
           100
       );
 
-      int randomNum = random.nextInt();
-      RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
+      RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       schemaPayloadMap.put(fingerprintGenerator.generateFingerprint(schemaPayload), schemaPayload);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, 6));
 
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
 
     Map<String, Long> fingerprintSchemaMap = segmentSchemaTestUtils.insertSegmentSchema(schemaPayloadMap);
+
     for (Map.Entry<String, Pair<SchemaPayload, Integer>> entry : segmentIdSchemaMap.entrySet()) {
       String segmentId = entry.getKey();
       String fingerprint = fingerprintGenerator.generateFingerprint(entry.getValue().lhs);
@@ -392,6 +391,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
     segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, segmentStatsMap);
     insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
 
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
@@ -442,6 +442,9 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
           break;
         }
       }
+      RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
+      SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
+      segmentIdSchemaMap.put(segmentReplicaWithNewVersion.getId().toString(), Pair.of(schemaPayload, 6));
       Assert.assertTrue(hasBeenCarriedForward);
     }
 
