@@ -1681,6 +1681,74 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     });
   }
 
+  /**
+   * Segment metadata query is disabled in this test.
+   * foo2 datasource has only 1 segment, we add its schema to the cache.
+   * This segment is added again.
+   * In the end we verify the schema for foo2 datasource.
+   */
+  @Test
+  public void testSameSegmentAddedOnMultipleServer() throws InterruptedException, IOException
+  {
+    SegmentMetadataCacheConfig config = SegmentMetadataCacheConfig.create("PT1S");
+    config.setDisableSegmentMetadataQueries(true);
+    CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(config);
+
+    QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
+
+    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
+    segmentStatsMap.put(segment3.getId(), new SegmentSchemaCache.SegmentStats(1L, (long) adapter.getNumRows()));
+    segmentSchemaCache.addFinalizedSegmentSchema(1L, new SchemaPayload(adapter.getRowSignature()));
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap);
+
+    Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    List<DataSegment> segments = segmentsMetadata.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+    // find the only segment with datasource "foo2"
+    final DataSegment existingSegment = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(existingSegment);
+    final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
+    // update AvailableSegmentMetadata of existingSegment with numRows=5
+    AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
+    schema.setAvailableSegmentMetadata(existingSegment.getId(), updatedMetadata);
+
+    // find a druidServer holding existingSegment
+    final Pair<DruidServer, DataSegment> pair = druidServers
+        .stream()
+        .flatMap(druidServer ->
+                     serverView.getSegmentsOfServer(druidServer).stream()
+                               .filter(segment -> segment.getId().equals(existingSegment.getId()))
+                               .map(segment -> Pair.of(druidServer, segment))
+        )
+        .findAny()
+        .orElse(null);
+
+    Assert.assertNotNull(pair);
+    final DruidServer server = pair.lhs;
+    Assert.assertNotNull(server);
+    final DruidServerMetadata druidServerMetadata = server.getMetadata();
+    // invoke SegmentMetadataCache#addSegment on existingSegment
+    schema.addSegment(druidServerMetadata, existingSegment);
+
+    segmentsMetadata = schema.getSegmentMetadataSnapshot();
+
+    segments = segmentsMetadata.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), new HashSet<>());
+
+    verifyFoo2DSSchema(schema);
+  }
+
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema)
   {
     final DataSourceInformation fooDs = schema.getDatasource("foo");

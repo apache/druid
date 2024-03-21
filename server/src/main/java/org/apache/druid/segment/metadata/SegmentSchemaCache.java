@@ -64,7 +64,7 @@ public class SegmentSchemaCache
   /**
    * Mapping from schemaId to payload. Gets updated after DB poll.
    */
-  private final ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
+  private volatile ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
 
   /**
    * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
@@ -110,6 +110,11 @@ public class SegmentSchemaCache
   public void addFinalizedSegmentSchema(long schemaId, SchemaPayload schemaPayload)
   {
     finalizedSegmentSchema.put(schemaId, schemaPayload);
+  }
+
+  public void updateFinalizedSegmentSchemaReference(ConcurrentMap<Long, SchemaPayload> schemaPayloadMap)
+  {
+    finalizedSegmentSchema = schemaPayloadMap;
   }
 
   public void addRealtimeSegmentSchema(SegmentId segmentId, RowSignature rowSignature, long numRows)
@@ -216,8 +221,21 @@ public class SegmentSchemaCache
     realtimeSegmentSchemaMap.remove(segmentId);
     inTransitSMQResults.remove(segmentId);
     inTransitSMQPublishedResults.remove(segmentId);
+
+    // Stale schema payload from {@code finalizedSegmentSchema} is not removed
+    // as it could be referenced by other segments.
+    // Stale schema from the cache would get cleared on full schema refresh from the DB,
+    // which would be triggered after any stale schema is deleted from the DB.
     finalizedSegmentStats.remove(segmentId);
     return true;
+  }
+
+  /**
+   * Remove schema for realtime segment.
+   */
+  public boolean realtimeSegmentRemoved(SegmentId segmentId)
+  {
+    return realtimeSegmentSchemaMap.remove(segmentId) != null;
   }
 
   /**

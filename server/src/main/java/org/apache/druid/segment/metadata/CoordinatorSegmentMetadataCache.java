@@ -184,7 +184,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     synchronized (lock) {
       log.debug("SegmentId [%s] is marked as finalized.", segmentId);
       mutableSegments.remove(segmentId);
-      segmentSchemaCache.segmentRemoved(segmentId);
+      // remove it from the realtime schema cache
+      segmentSchemaCache.realtimeSegmentRemoved(segmentId);
     }
   }
 

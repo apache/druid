@@ -85,6 +85,11 @@ public class SegmentMetadataCacheConfig
     return metadataRefreshPeriod;
   }
 
+  public void setDisableSegmentMetadataQueries(boolean disableSegmentMetadataQueries)
+  {
+    this.disableSegmentMetadataQueries = disableSegmentMetadataQueries;
+  }
+
   @Override
   public String toString()
   {
