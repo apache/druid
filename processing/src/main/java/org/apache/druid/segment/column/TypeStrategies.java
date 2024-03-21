@@ -49,9 +49,6 @@ public class TypeStrategies
   public static final StringTypeStrategy STRING = new StringTypeStrategy();
   public static final ConcurrentHashMap<String, TypeStrategy<?>> COMPLEX_STRATEGIES = new ConcurrentHashMap<>();
 
-  static {
-    ComplexMetrics.registerSerde(ColumnType.NESTED_DATA.getComplexTypeName(), new NestedDataComplexTypeSerde());
-  }
   /**
    * Get an {@link TypeStrategy} registered to some {@link TypeSignature#getComplexTypeName()}.
    */

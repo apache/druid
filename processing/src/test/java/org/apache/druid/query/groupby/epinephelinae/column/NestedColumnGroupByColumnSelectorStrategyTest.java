@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.IterableRowsCursorHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByColumnSelectorStrategyFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -31,6 +32,7 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -59,10 +61,15 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
   private static final ByteBuffer BUFFER2 = ByteBuffer.allocate(10);
 
   @Test
+  public void testKeySize()
+  {
+    Assert.assertEquals(Integer.BYTES, createStrategy().getGroupingKeySizeBytes());
+  }
+
+  @Test
   public void testInitColumnValues()
   {
-    final GroupByColumnSelectorStrategy strategy = createStrategy();
-
+    GroupByColumnSelectorStrategy strategy = createStrategy();
     Cursor cursor = createCursor();
     ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(NESTED_COLUMN);
     Object[] valuess = new Object[1];
@@ -94,8 +101,10 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
   @Test
   public void testWriteToKeyBuffer()
   {
-    final GroupByColumnSelectorStrategy strategy = createStrategy();
-
+    GroupByColumnSelectorStrategy strategy = createStrategy();
+    ResultRow resultRow = ResultRow.create(1);
+    GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+    Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
     Cursor cursor = createCursor();
     ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(NESTED_COLUMN);
 
@@ -105,16 +114,29 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
       Assert.assertTrue(sz > 0);
       // null is represented by GROUP_BY_MISSING_VALUE on the buffer, even though it gets its own dictionaryId in the dictionary
       Assert.assertEquals(rowNum == NULL_ROW_NUMBER ? -1 : rowNum, BUFFER1.getInt(0));
+      // Readback the value
+      strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+      Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
+
       cursor.advance();
       ++rowNum;
     }
   }
 
   @Test
-  public void testKeySize()
+  public void testInitGroupingKeyColumnValue()
   {
-    Assert.assertEquals(Integer.BYTES, createStrategy().getGroupingKeySizeBytes());
+    GroupByColumnSelectorStrategy strategy = createStrategy();
+    GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+    Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
+    int[] stack = new int[1];
+    ResultRow resultRow = ResultRow.create(1);
+
+    // strategy.initGroupingKeyColumnValue( 0, 0, StructuredData.wrap(ImmutableList.of("x", "y", "z")), BUFFER1, );
+
   }
+
+  // test reset works fine
 
   private static GroupByColumnSelectorStrategy createStrategy()
   {
