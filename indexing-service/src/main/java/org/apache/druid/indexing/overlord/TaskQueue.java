@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -56,6 +59,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -152,6 +157,8 @@ public class TaskQueue
   private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
   private final AtomicInteger handledStatusUpdates = new AtomicInteger();
 
+  private final ObjectMapper jsonMapper;
+
   public TaskQueue(
       TaskLockConfig lockConfig,
       TaskQueueConfig config,
@@ -174,6 +181,11 @@ public class TaskQueue
     this.taskCompleteCallbackExecutor = Execs.multiThreaded(
         config.getTaskCompleteHandlerNumThreads(),
         "TaskQueue-OnComplete-%d"
+    );
+    // Add mixin to redact passwords.
+    this.jsonMapper = (new JsonMapper()).addMixIn(
+        PasswordProvider.class,
+        PasswordProviderRedactionMixIn.class
     );
   }
 
@@ -970,15 +982,32 @@ public class TaskQueue
     return stats;
   }
 
-  public Optional<Task> getActiveTask(String id)
+  /**
+   * Returns an optional containing the task payload after successfully redacting credentials.
+   * Returns an absent optional if there is no task payload corresponding to the taskId in memory.
+   * Throws JsonProcessingException if password could not be redacted due to serialization / deserialization failure
+   */
+  public Optional<Task> getActiveTask(String id) throws JsonProcessingException
   {
+    Task task;
     giant.lock();
     try {
-      return Optional.fromNullable(tasks.get(id));
+      task = tasks.get(id);
     }
     finally {
       giant.unlock();
     }
+    if (task != null) {
+      try {
+        // Write and read the value using a mapper with password redaction mixin.
+        task = jsonMapper.readValue(jsonMapper.writeValueAsString(task), Task.class);
+      }
+      catch (JsonProcessingException e) {
+        log.error(e, "Failed to  serialize or deserialize task with id [%s].", task.getId());
+        throw e;
+      }
+    }
+    return Optional.fromNullable(task);
   }
 
   @VisibleForTesting

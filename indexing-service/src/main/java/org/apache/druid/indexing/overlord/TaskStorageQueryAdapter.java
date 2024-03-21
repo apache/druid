@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
@@ -107,9 +108,14 @@ public class TaskStorageQueryAdapter
   public Optional<Task> getTask(final String taskid)
   {
     if (taskQueue.isPresent()) {
-      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
-      if (activeTask.isPresent()) {
-        return activeTask;
+      try {
+        Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
+        if (activeTask.isPresent()) {
+          return activeTask;
+        }
+      }
+      catch (JsonProcessingException e) {
+        // do nothing
       }
     }
     return storage.getTask(taskid);
