@@ -113,7 +113,7 @@ public class Pac4jFilter implements Filter
       // Changed the Authorizer from null to "none".
       // In the older version, if it is null, it simply grant access and returns authorized.
       // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
-      if (profile != null) {
+      if (profile != null && profile.getId() != null) {
         AuthenticationResult authenticationResult = new AuthenticationResult(profile.getId(), authorizerName, name, profile.getAttributes());
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
