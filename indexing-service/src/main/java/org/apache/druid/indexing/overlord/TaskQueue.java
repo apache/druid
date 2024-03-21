@@ -32,6 +32,8 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.EntryAlreadyExists;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -54,7 +56,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -494,16 +495,14 @@ public class TaskQueue
    * @param task task to add
    *
    * @return true
-   *
-   * @throws EntryExistsException if the task already exists
    */
-  public boolean add(final Task task) throws EntryExistsException
+  public boolean add(final Task task)
   {
     // Before adding the task, validate the ID, so it can be safely used in file paths, znodes, etc.
     IdUtils.validateId("Task ID", task.getId());
 
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw new EntryExistsException("Task", task.getId());
+      throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
@@ -671,6 +670,8 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
+      //The code block is only called when a task completes,
+      //and we need to check to make sure the metadata store has the correct status stored.
       final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
       if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
@@ -942,6 +943,16 @@ public class TaskQueue
     }
     finally {
       giant.unlock();
+    }
+  }
+
+  public Optional<TaskStatus> getTaskStatus(final String taskId)
+  {
+    RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
+    if (runnerTaskState != null && runnerTaskState != RunnerTaskState.NONE) {
+      return Optional.of(TaskStatus.running(taskId).withLocation(taskRunner.getTaskLocation(taskId)));
+    } else {
+      return taskStorage.getStatus(taskId);
     }
   }
 

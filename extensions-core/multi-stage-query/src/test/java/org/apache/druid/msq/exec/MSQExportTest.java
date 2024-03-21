@@ -51,7 +51,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     File exportDir = temporaryFolder.newFolder("export/");
-    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath());
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 as dim from foo", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
@@ -69,8 +69,40 @@ public class MSQExportTest extends MSQTestBase
     File resultFile = new File(exportDir, "query-test-query-worker0-partition0.csv");
     List<String> results = readResultsFromFile(resultFile);
     Assert.assertEquals(
-        results,
-        expectedFooFileContents(true)
+        expectedFooFileContents(true),
+        results
+    );
+  }
+
+  @Test
+  public void testExport2() throws IOException
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    File exportDir = temporaryFolder.newFolder("export/");
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select dim1 as table_dim, count(*) as table_count from foo where dim1 = 'abc' group by 1", exportDir.getAbsolutePath());
+
+    testIngestQuery().setSql(sql)
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+
+    Assert.assertEquals(
+        2,
+        Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
+    );
+
+
+    File resultFile = new File(exportDir, "query-test-query-worker0-partition0.csv");
+    List<String> results = readResultsFromFile(resultFile);
+    Assert.assertEquals(
+        expectedFoo2FileContents(true),
+        results
     );
 
     verifyManifestFile(exportDir, ImmutableList.of(resultFile));
@@ -109,7 +141,7 @@ public class MSQExportTest extends MSQTestBase
   {
     ArrayList<String> expectedResults = new ArrayList<>();
     if (withHeader) {
-      expectedResults.add("cnt,dim1");
+      expectedResults.add("cnt,dim");
     }
     expectedResults.addAll(ImmutableList.of(
         "1,",
@@ -118,8 +150,17 @@ public class MSQExportTest extends MSQTestBase
         "1,1",
         "1,def",
         "1,abc"
-        )
-    );
+    ));
+    return expectedResults;
+  }
+
+  private List<String> expectedFoo2FileContents(boolean withHeader)
+  {
+    ArrayList<String> expectedResults = new ArrayList<>();
+    if (withHeader) {
+      expectedResults.add("table_dim,table_count");
+    }
+    expectedResults.addAll(ImmutableList.of("abc,1"));
     return expectedResults;
   }
 

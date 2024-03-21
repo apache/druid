@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
+import com.google.errorprone.annotations.Immutable;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -29,6 +30,8 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -39,9 +42,12 @@ import java.util.Objects;
  * {@link Expr.ObjectBinding}. {@link ConstantExpr} are terminal nodes of an expression tree, and have no children
  * {@link Expr}.
  */
+@Immutable
 abstract class ConstantExpr<T> implements Expr
 {
   final ExpressionType outputType;
+
+  @SuppressWarnings("Immutable")
   @Nullable
   final T value;
 
@@ -53,38 +59,38 @@ abstract class ConstantExpr<T> implements Expr
 
   @Nullable
   @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
+  public final ExpressionType getOutputType(InputBindingInspector inspector)
   {
     // null isn't really a type, so don't claim anything
     return value == null ? null : outputType;
   }
 
   @Override
-  public boolean isLiteral()
+  public final boolean isLiteral()
   {
     return true;
   }
 
   @Override
-  public boolean isNullLiteral()
+  public final boolean isNullLiteral()
   {
     return value == null;
   }
 
   @Override
-  public Object getLiteralValue()
+  public final Object getLiteralValue()
   {
     return value;
   }
 
   @Override
-  public Expr visit(Shuttle shuttle)
+  public final Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);
   }
 
   @Override
-  public BindingAnalysis analyzeInputs()
+  public final BindingAnalysis analyzeInputs()
   {
     return BindingAnalysis.EMTPY;
   }
@@ -99,6 +105,84 @@ abstract class ConstantExpr<T> implements Expr
   public String stringify()
   {
     return toString();
+  }
+
+  @Override
+  public final ExprEval eval(ObjectBinding bindings)
+  {
+    return realEval();
+  }
+
+  protected abstract ExprEval<T> realEval();
+
+  @Override
+  public String toString()
+  {
+    return String.valueOf(value);
+  }
+
+  @Override
+  public Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return new ExprEvalBasedConstantExpr<T>(realEval());
+  }
+
+  /**
+   * Constant expression based on a concreate ExprEval.
+   *
+   * Not multi-thread safe.
+   */
+  @NotThreadSafe
+  @SuppressWarnings("Immutable")
+  private static final class ExprEvalBasedConstantExpr<T> extends ConstantExpr<T>
+  {
+    private final ExprEval<T> eval;
+
+    private ExprEvalBasedConstantExpr(ExprEval<T> eval)
+    {
+      super(eval.type(), eval.value);
+      this.eval = eval;
+    }
+
+    @Override
+    protected ExprEval<T> realEval()
+    {
+      return eval;
+    }
+
+    @Override
+    public String stringify()
+    {
+      return eval.toExpr().stringify();
+    }
+
+    @Override
+    public String toString()
+    {
+      return eval.toExpr().toString();
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(eval);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      ExprEvalBasedConstantExpr<?> other = (ExprEvalBasedConstantExpr<?>) obj;
+      return Objects.equals(eval, other.eval);
+    }
   }
 }
 
@@ -121,7 +205,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
     // Eval succeeds if the BigInteger is in long range.
     // Callers that need to process out-of-long-range values, like UnaryMinusExpr, must use getLiteralValue().
@@ -157,12 +241,9 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
 
 class LongExpr extends ConstantExpr<Long>
 {
-  private final ExprEval expr;
-
   LongExpr(Long value)
   {
     super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
-    expr = ExprEval.ofLong(value);
   }
 
   @Override
@@ -172,9 +253,9 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
-    return expr;
+    return ExprEval.ofLong(value);
   }
 
   @Override
@@ -211,7 +292,7 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
     return ExprEval.ofLong(null);
   }
@@ -243,12 +324,9 @@ class NullLongExpr extends ConstantExpr<Long>
 
 class DoubleExpr extends ConstantExpr<Double>
 {
-  private final ExprEval expr;
-
   DoubleExpr(Double value)
   {
     super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
-    expr = ExprEval.ofDouble(value);
   }
 
   @Override
@@ -258,9 +336,9 @@ class DoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
-    return expr;
+    return ExprEval.ofDouble(value);
   }
 
   @Override
@@ -297,7 +375,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
     return ExprEval.ofDouble(null);
   }
@@ -329,12 +407,9 @@ class NullDoubleExpr extends ConstantExpr<Double>
 
 class StringExpr extends ConstantExpr<String>
 {
-  private final ExprEval expr;
-
   StringExpr(@Nullable String value)
   {
     super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
-    expr = ExprEval.of(value);
   }
 
   @Override
@@ -344,9 +419,9 @@ class StringExpr extends ConstantExpr<String>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
-    return expr;
+    return ExprEval.of(value);
   }
 
   @Override
@@ -391,7 +466,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
     return ExprEval.ofArray(outputType, value);
   }
@@ -473,18 +548,15 @@ class ArrayExpr extends ConstantExpr<Object[]>
 
 class ComplexExpr extends ConstantExpr<Object>
 {
-  private final ExprEval expr;
-
   protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
   {
     super(outputType, value);
-    expr = ExprEval.ofComplex(outputType, value);
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  protected ExprEval realEval()
   {
-    return expr;
+    return ExprEval.ofComplex(outputType, value);
   }
 
   @Override

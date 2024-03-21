@@ -125,9 +125,12 @@ public class DruidPeonClientIntegrationTest
         null
     );
     String taskBasePath = "/home/taskDir";
-    PeonCommandContext context = new PeonCommandContext(Collections.singletonList(
-        "sleep 10;  for i in `seq 1 1000`; do echo $i; done; exit 0"
-    ), new ArrayList<>(), new File(taskBasePath));
+    PeonCommandContext context = new PeonCommandContext(
+        Collections.singletonList("sleep 10;  for i in `seq 1 1000`; do echo $i; done; exit 0"),
+        new ArrayList<>(),
+        new File(taskBasePath),
+        config.getCpuCoreInMicro()
+    );
 
     Job job = adapter.createJobFromPodSpec(podSpec, task, context);
 

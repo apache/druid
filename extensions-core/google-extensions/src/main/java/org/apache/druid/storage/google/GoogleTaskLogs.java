@@ -190,13 +190,13 @@ public class GoogleTaskLogs implements TaskLogs
   }
 
   @Override
-  public void killOlderThan(long timestamp) throws IOException
+  public void killOlderThan(long timestampMs) throws IOException
   {
     LOG.info(
         "Deleting all task logs from gs location [bucket: '%s' prefix: '%s'] older than %s.",
         config.getBucket(),
         config.getPrefix(),
-        new Date(timestamp)
+        new Date(timestampMs)
     );
     try {
       GoogleUtils.deleteObjectsInPath(
@@ -204,7 +204,7 @@ public class GoogleTaskLogs implements TaskLogs
           inputDataConfig,
           config.getBucket(),
           config.getPrefix(),
-          (object) -> object.getLastUpdateTime() < timestamp
+          (object) -> object.getLastUpdateTimeMillis() < timestampMs
       );
     }
     catch (Exception e) {

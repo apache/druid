@@ -241,7 +241,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
 
       final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
-          targetDataSource.getType(),
+          targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks

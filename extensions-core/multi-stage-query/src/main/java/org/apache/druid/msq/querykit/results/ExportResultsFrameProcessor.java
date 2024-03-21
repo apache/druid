@@ -21,6 +21,8 @@ package org.apache.druid.msq.querykit.results;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -34,13 +36,14 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
 
@@ -59,6 +62,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final ObjectMapper jsonMapper;
   private final ChannelCounters channelCounter;
   final String exportFilePath;
+  private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
+  private final RowSignature exportRowSignature;
 
   public ExportResultsFrameProcessor(
       final ReadableFrameChannel inputChannel,
@@ -67,7 +72,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       final StorageConnector storageConnector,
       final ObjectMapper jsonMapper,
       final ChannelCounters channelCounter,
-      final String exportFilePath
+      final String exportFilePath,
+      final ColumnMappings columnMappings
   )
   {
     this.inputChannel = inputChannel;
@@ -77,6 +83,30 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
+    this.outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
+    final RowSignature inputRowSignature = frameReader.signature();
+
+    if (columnMappings == null) {
+      // If the column mappings wasn't sent, fail the query to avoid inconsistency in file format.
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Received null columnMappings from controller. This might be due to an upgrade.");
+    }
+    for (final ColumnMapping columnMapping : columnMappings.getMappings()) {
+      this.outputColumnNameToFrameColumnNumberMap.put(
+          columnMapping.getOutputColumn(),
+          frameReader.signature().indexOf(columnMapping.getQueryColumn())
+      );
+    }
+    final RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
+
+    for (String outputColumn : columnMappings.getOutputColumnNames()) {
+      exportRowSignatureBuilder.add(
+          outputColumn,
+          inputRowSignature.getColumnType(outputColumnNameToFrameColumnNumberMap.getInt(outputColumn)).orElse(null)
+      );
+    }
+    this.exportRowSignature = exportRowSignatureBuilder.build();
   }
 
   @Override
@@ -108,8 +138,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private void exportFrame(final Frame frame) throws IOException
   {
-    final RowSignature exportRowSignature = createRowSignatureForExport(frameReader.signature());
-
     final Sequence<Cursor> cursorSequence =
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
@@ -134,7 +162,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
               //noinspection rawtypes
               @SuppressWarnings("rawtypes")
               final List<BaseObjectColumnValueSelector> selectors =
-                  exportRowSignature
+                  frameReader.signature()
                              .getColumnNames()
                              .stream()
                              .map(columnSelectorFactory::makeColumnValueSelector)
@@ -143,7 +171,9 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
               while (!cursor.isDone()) {
                 formatter.writeRowStart();
                 for (int j = 0; j < exportRowSignature.size(); j++) {
-                  formatter.writeRowField(exportRowSignature.getColumnName(j), selectors.get(j).getObject());
+                  String columnName = exportRowSignature.getColumnName(j);
+                  BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
+                  formatter.writeRowField(columnName, selector.getObject());
                 }
                 channelCounter.incrementRowCount();
                 formatter.writeRowEnd();
@@ -159,16 +189,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       );
       formatter.writeResponseEnd();
     }
-  }
-
-  private static RowSignature createRowSignatureForExport(RowSignature inputRowSignature)
-  {
-    RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
-    inputRowSignature.getColumnNames()
-                     .stream()
-                     .filter(name -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(name))
-                     .forEach(name -> exportRowSignatureBuilder.add(name, inputRowSignature.getColumnType(name).orElse(null)));
-    return exportRowSignatureBuilder.build();
   }
 
   @Override

@@ -180,6 +180,16 @@ class FunctionExpr implements Expr
   }
 
   @Override
+  public Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return new FunctionExpr(
+        function.asSingleThreaded(args, inspector),
+        name,
+        args
+    );
+  }
+
+  @Override
   public String toString()
   {
     return StringUtils.format("(%s %s)", name, args);

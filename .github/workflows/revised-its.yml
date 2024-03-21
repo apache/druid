@@ -33,7 +33,7 @@ jobs:
       # the common extension in revised ITs is different from the one in standard ITs
       common-extensions: ${{ steps.filter.outputs.common-extensions }}
     steps:
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3.0.0
         if: github.event_name == 'pull_request'
         id: filter
         with:
@@ -50,7 +50,7 @@ jobs:
       matrix:
         #jdk: [8, 11, 17]
         jdk: [8]
-        it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat]
+        it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat, Security]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml

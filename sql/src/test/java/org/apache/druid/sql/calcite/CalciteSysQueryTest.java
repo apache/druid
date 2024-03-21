@@ -30,7 +30,7 @@ import org.junit.Test;
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
   @Rule(order = 0)
-  public NotYetSupportedProcessor NegativeTestProcessor = new NotYetSupportedProcessor();
+  public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
 
   @Test
   public void testTasksSum()

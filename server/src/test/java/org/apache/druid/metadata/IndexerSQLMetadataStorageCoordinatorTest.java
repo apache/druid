@@ -383,17 +383,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
           1,
-          (int) derbyConnector.getDBI().<Integer>withHandle(
-              handle -> {
-                String request = StringUtils.format(
-                    "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
-                    derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
-                );
-                return handle.createStatement(request)
-                             .bind("id", segment.getId().toString())
-                             .bind("used_status_last_updated", usedStatusLastUpdatedTime.toString()
-                ).execute();
-              }
+          derbyConnectorRule.segments().update(
+              "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",
+              usedStatusLastUpdatedTime.toString(),
+              segment.getId().toString()
           )
       );
     }
@@ -1203,6 +1196,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalVersionAndLimitInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
+
+    final int requestedLimit = 10;
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        Intervals.of("1900/3000"),
+        ImmutableList.of("version"),
+        requestedLimit,
+        null
+    );
+
+    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
   public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitOutOfRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
@@ -1681,6 +1693,83 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testRetrieveUnusedSegmentsWithVersions() throws IOException
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.plusDays(2).toString();
+    final String v3 = now.plusDays(3).toString();
+    final String v4 = now.plusDays(4).toString();
+
+    final DataSegment segment1 = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        v1,
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment2 = createSegment(
+        Intervals.of("2023-01-02/2023-01-03"),
+        v2,
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment3 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        v3,
+        new LinearShardSpec(0)
+    );
+    final DataSegment segment4 = createSegment(
+        Intervals.of("2023-01-03/2023-01-04"),
+        v4,
+        new LinearShardSpec(0)
+    );
+
+    final ImmutableSet<DataSegment> unusedSegments = ImmutableSet.of(segment1, segment2, segment3, segment4);
+    Assert.assertEquals(unusedSegments, coordinator.commitSegments(unusedSegments));
+    markAllSegmentsUnused(unusedSegments, DateTimes.nowUtc());
+
+    for (DataSegment unusedSegment : unusedSegments) {
+      Assertions.assertThat(
+          coordinator.retrieveUnusedSegmentsForInterval(
+              DS.WIKI,
+              Intervals.of("2023-01-01/2023-01-04"),
+              ImmutableList.of(unusedSegment.getVersion()),
+              null,
+              null
+          )
+      ).contains(unusedSegment);
+    }
+
+    Assertions.assertThat(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            DS.WIKI,
+            Intervals.of("2023-01-01/2023-01-04"),
+            ImmutableList.of(v1, v2),
+            null,
+            null
+        )
+    ).contains(segment1, segment2);
+
+    Assertions.assertThat(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            DS.WIKI,
+            Intervals.of("2023-01-01/2023-01-04"),
+            null,
+            null,
+            null
+        )
+    ).containsAll(unusedSegments);
+
+    Assertions.assertThat(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            DS.WIKI,
+            Intervals.of("2023-01-01/2023-01-04"),
+            ImmutableList.of("some-non-existent-version"),
+              null,
+              null
+          )
+    ).containsAll(ImmutableSet.of());
+  }
+
+  @Test
   public void testSimpleUnusedListWithLimit() throws IOException
   {
     coordinator.commitSegments(SEGMENTS);
@@ -1690,6 +1779,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
             defaultSegment.getInterval(),
+            null,
             limit,
             null
         )
@@ -3168,6 +3258,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 existingSegment1.getDataSource(),
                 existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1)),
                 null,
+                null,
                 null
             )
         )
@@ -3496,7 +3587,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                       .retrieveUnusedSegments(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -3520,7 +3611,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                       .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }

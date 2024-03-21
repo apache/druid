@@ -23,15 +23,92 @@ exports[`ColumnTree matches snapshot 1`] = `
       sys
     </option>
   </HTMLSelect>
+  <Blueprint4.InputGroup
+    className="search-box"
+    onChange={[Function]}
+    placeholder="Search"
+    rightElement={
+      <Blueprint4.ButtonGroup
+        minimal={true}
+      >
+        <Blueprint4.Popover2
+          boundary="clippingParents"
+          captureDismiss={false}
+          content={
+            <Blueprint4.Menu>
+              <Blueprint4.MenuDivider
+                title="Search in"
+              />
+              <Blueprint4.MenuItem
+                active={false}
+                disabled={false}
+                icon="tick"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                selected={false}
+                shouldDismissPopover={true}
+                text="Tables and columns"
+              />
+              <Blueprint4.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                selected={false}
+                shouldDismissPopover={true}
+                text="Tables only"
+              />
+              <Blueprint4.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                selected={false}
+                shouldDismissPopover={true}
+                text="Columns only"
+              />
+            </Blueprint4.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
+          minimal={false}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+        >
+          <Blueprint4.Button
+            icon="settings"
+          />
+        </Blueprint4.Popover2>
+      </Blueprint4.ButtonGroup>
+    }
+    value=""
+  />
   <div
     className="tree-container"
   >
     <Blueprint4.Tree
       contents={
-        Array [
-          Object {
-            "childNodes": Array [
-              Object {
+        [
+          {
+            "childNodes": [
+              {
                 "icon": <Blueprint4.Icon
                   aria-hidden={true}
                   className="bp4-tree-node-icon"
@@ -70,7 +147,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   __time
                 </Blueprint4.Popover2>,
               },
-              Object {
+              {
                 "icon": <Blueprint4.Icon
                   aria-hidden={true}
                   className="bp4-tree-node-icon"
@@ -109,7 +186,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   added
                 </Blueprint4.Popover2>,
               },
-              Object {
+              {
                 "icon": <Blueprint4.Icon
                   aria-hidden={true}
                   className="bp4-tree-node-icon"

@@ -295,7 +295,7 @@ public class WorkerImpl implements Worker
   {
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
-    closer.register(context.loadedSegmentDataProviderFactory());
+    closer.register(context.dataServerQueryHandlerFactory());
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
 
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
@@ -498,20 +498,16 @@ public class WorkerImpl implements Worker
   @Override
   public void stopGracefully()
   {
-    log.info("Stopping gracefully for taskId [%s]", task.getId());
-    kernelManipulationQueue.add(
-        kernel -> {
-          // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
-          throw new MSQException(CanceledFault.INSTANCE);
-        }
-    );
+    // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
+    log.info("Worker task[%s] canceled.", task.getId());
+    doCancel();
   }
 
   @Override
   public void controllerFailed()
   {
-    controllerAlive = false;
-    stopGracefully();
+    log.info("Controller task[%s] for worker task[%s] failed. Canceling.", task.getControllerTaskId(), task.getId());
+    doCancel();
   }
 
   @Override
@@ -907,6 +903,31 @@ public class WorkerImpl implements Worker
         log.warn(e, "Error while cleaning up folder at path " + folderName);
       }
     }
+  }
+
+  /**
+   * Called by {@link #stopGracefully()} (task canceled, or containing process shut down) and
+   * {@link #controllerFailed()}.
+   */
+  private void doCancel()
+  {
+    // Set controllerAlive = false so we don't try to contact the controller after being canceled. If it canceled us,
+    // it doesn't need to know that we were canceled. If we were canceled by something else, the controller will
+    // detect this as part of its monitoring of workers.
+    controllerAlive = false;
+
+    // Close controller client to cancel any currently in-flight calls to the controller.
+    if (controllerClient != null) {
+      controllerClient.close();
+    }
+
+    // Clear the main loop event queue, then throw a CanceledFault into the loop to exit it promptly.
+    kernelManipulationQueue.clear();
+    kernelManipulationQueue.add(
+        kernel -> {
+          throw new MSQException(CanceledFault.INSTANCE);
+        }
+    );
   }
 
   /**
