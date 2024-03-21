@@ -31,7 +31,6 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -296,11 +295,6 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected RangeRefKey getCollectionKey(EqualityFilter selector)
     {
-      if (!selector.getMatchValueType().is(ValueType.STRING)) {
-        // skip non-string equality filters since InDimFilter uses a sorted string set, which is a different sort
-        // than numbers or other types might use
-        return null;
-      }
       return RangeRefKey.from(selector);
     }
 

@@ -130,15 +130,22 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         // to create an empty array with no argument, we just return null.
         return null;
       } else if (arrayElements.length == 1) {
-        if (plannerContext.isUseBoundsAndSelectors() || (!simpleExtractionExpr.isDirectColumnAccess() && virtualColumnRegistry == null)) {
+        if (plannerContext.isUseBoundsAndSelectors()) {
           return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
-          final String column = simpleExtractionExpr.isDirectColumnAccess()
-                                ? simpleExtractionExpr.getSimpleExtraction().getColumn()
-                                : virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-                                    simpleExtractionExpr,
-                                    simpleExtractionExpr.getDruidType()
-                                );
+          final String column;
+          if (simpleExtractionExpr.isDirectColumnAccess()) {
+            column = simpleExtractionExpr.getDirectColumn();
+          } else {
+            if (virtualColumnRegistry == null) {
+              // fall back to expression filter
+              return toExpressionFilter(plannerContext, druidExpressions);
+            }
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                simpleExtractionExpr,
+                simpleExtractionExpr.getDruidType()
+            );
+          }
           final Object elementValue = arrayElements[0];
           if (elementValue == null) {
             return NullFilter.forColumn(column);

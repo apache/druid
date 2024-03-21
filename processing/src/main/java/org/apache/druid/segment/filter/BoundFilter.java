@@ -58,10 +58,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * @deprecated use {@link org.apache.druid.query.filter.RangeFilter} instead
- */
-@Deprecated
 public class BoundFilter implements Filter
 {
   private final BoundDimFilter boundDimFilter;

@@ -51,10 +51,7 @@ import java.util.Set;
  * or {@code dimension IS NULL} when the value is null.
  * In default null handling mode, this filter is equivalent to {@code dimension = value} or
  * {@code dimension = ''} when the value is null.
- * @deprecated use {@link org.apache.druid.query.filter.EqualityFilter} or
- *            {@link org.apache.druid.query.filter.NullFilter} instead.
  */
-@Deprecated
 public class SelectorFilter implements Filter
 {
   private final String dimension;

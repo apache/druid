@@ -273,6 +273,9 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     @Override
     public BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType)
     {
+      if (sortedValues.isEmpty()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
       final boolean matchNull = sortedValues.get(0) == null;
       final Supplier<ImmutableBitmap> unknownsIndex = () -> {
         if (!matchNull && dictionary.get(0) == null) {

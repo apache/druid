@@ -83,7 +83,6 @@ import java.util.TreeSet;
  * This filter specifies all match values as a sorted string set; matching against other column types must incur the
  * cost of converting values to check for matches. For the most part, {@link TypedInFilter} should be used instead.
  */
-@Deprecated
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
   /**

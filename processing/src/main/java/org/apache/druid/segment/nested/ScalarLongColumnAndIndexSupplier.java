@@ -274,6 +274,9 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType)
     {
+      if (sortedValues.isEmpty()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
       final boolean matchNull = sortedValues.get(0) == null;
       final Supplier<ImmutableBitmap> unknownsIndex = () -> {
         if (!matchNull && dictionary.get(0) == null) {
@@ -395,7 +398,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             if (value == null) {
               needNullCheck = true;
             } else {
-              Long theValue = GuavaUtils.tryParseLong(value);
+              Long theValue = DimensionHandlerUtils.convertObjectToLong(value);
               if (theValue != null) {
                 longs.add(theValue.longValue());
                 if (NullHandling.replaceWithDefault() && theValue.equals(NullHandling.defaultLongValue())) {

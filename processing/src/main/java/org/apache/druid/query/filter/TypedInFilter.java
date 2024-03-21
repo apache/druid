@@ -221,6 +221,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public DimFilter optimize(final boolean mayIncludeUnknown)
   {
+    checkSqlCompatible();
     final List<?> matchValues = this.sortedMatchValues.get();
     if (matchValues.isEmpty()) {
       return FalseDimFilter.instance();
@@ -241,11 +242,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public Filter toFilter()
   {
-    if (NullHandling.replaceWithDefault()) {
-      throw InvalidInput.exception(
-          "Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter"
-      );
-    }
+    checkSqlCompatible();
     return this;
   }
 
@@ -416,6 +413,15 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
         .build();
   }
 
+  private void checkSqlCompatible()
+  {
+    if (NullHandling.replaceWithDefault()) {
+      throw InvalidInput.exception(
+          "Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter"
+      );
+    }
+  }
+
   private static boolean checkSorted(List<?> unsortedValues, ColumnType matchValueType)
   {
     final Comparator<Object> comparator = matchValueType.getNullableStrategy();
@@ -505,7 +511,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   )
   {
     Preconditions.checkNotNull(sortedValues, "values");
-    final boolean containsNull = sortedValues.get(0) == null;
+    final boolean containsNull = !sortedValues.isEmpty() && sortedValues.get(0) == null;
     final Comparator<Object> comparator = matchValueType.getNullableStrategy();
     if (matchValueType.is(ValueType.STRING)) {
       return value -> {
@@ -531,7 +537,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
 
   private static DruidLongPredicate createLongPredicate(final List<?> sortedValues, ColumnType matchValueType)
   {
-    boolean matchNulls = sortedValues.get(0) == null;
+    boolean matchNulls = !sortedValues.isEmpty() && sortedValues.get(0) == null;
     if (matchValueType.is(ValueType.LONG)) {
       final Comparator<Object> comparator = matchValueType.getNullableStrategy();
       return new DruidLongPredicate()
@@ -576,7 +582,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
 
   private static DruidFloatPredicate createFloatPredicate(final List<?> sortedValues, ColumnType matchValueType)
   {
-    boolean matchNulls = sortedValues.get(0) == null;
+    boolean matchNulls = !sortedValues.isEmpty() && sortedValues.get(0) == null;
     if (matchValueType.is(ValueType.FLOAT)) {
       final Comparator<Object> comparator = matchValueType.getNullableStrategy();
       return new DruidFloatPredicate()
@@ -621,7 +627,7 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
 
   private static DruidDoublePredicate createDoublePredicate(final List<?> sortedValues, ColumnType matchValueType)
   {
-    boolean matchNulls = sortedValues.get(0) == null;
+    boolean matchNulls = !sortedValues.isEmpty() && sortedValues.get(0) == null;
     if (matchValueType.is(ValueType.DOUBLE)) {
       final Comparator<Object> comparator = matchValueType.getNullableStrategy();
       return new DruidDoublePredicate()

@@ -48,9 +48,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * @deprecated use {@link RangeFilter} instead
+ * Recommended to use {@link RangeFilter} instead
  */
-@Deprecated
 public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;

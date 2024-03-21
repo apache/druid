@@ -135,6 +135,9 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   @Override
   public BitmapColumnIndex forSortedValuesUtf8(List<ByteBuffer> sortedValuesUtf8)
   {
+    if (sortedValuesUtf8.isEmpty()) {
+      return new AllFalseBitmapColumnIndex(bitmapFactory);
+    }
     final boolean matchNull = sortedValuesUtf8.get(0) == null;
     final List<ByteBuffer> tailSet;
 
@@ -145,7 +148,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
           minValueInColumn,
           ByteBufferUtils.utf8Comparator()
       );
-      tailSet = sortedValuesUtf8.subList(position, sortedValuesUtf8.size());
+      tailSet = sortedValuesUtf8.subList(position >= 0 ? position : -(position + 1), sortedValuesUtf8.size());
     } else {
       tailSet = sortedValuesUtf8;
     }
@@ -209,6 +212,9 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   @Override
   public BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType)
   {
+    if (sortedValues.isEmpty()) {
+      return new AllFalseBitmapColumnIndex(bitmapFactory);
+    }
     final boolean matchNull = sortedValues.get(0) == null;
     final Supplier<ImmutableBitmap> unknownsIndex = () -> {
       if (!matchNull && dictionary.get(0) == null) {
