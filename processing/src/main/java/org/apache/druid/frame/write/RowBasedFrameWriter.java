@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write;
 
+import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
@@ -32,6 +33,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -297,6 +299,9 @@ public class RowBasedFrameWriter implements FrameWriter
         throw InvalidNullByteException.builder(inbe)
                                       .column(signature.getColumnName(i))
                                       .build();
+      }
+      catch (ParseException pe){
+        throw Throwables.propagate(pe);
       }
       catch (Exception e) {
         throw FrameFieldWriterException.builder().column(signature.getColumnName(i))
