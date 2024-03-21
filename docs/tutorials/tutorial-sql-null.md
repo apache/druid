@@ -30,13 +30,13 @@ The tutorial focuses on filters using the logical NOT operation on columns with 
 ## Prerequisites
 
 Before starting this tutorial, download and run Apache Druid on your local machine as described in
-the [single-machine quickstart](index.md).
+the [Local quickstart](index.md).
 
 The tutorial assumes you are familiar with using the [Query view](./tutorial-sql-query-view.md) to ingest and query data.
 
 ## Load data with null values
 
-The tutorial loads some data with null values for various data types as follows:
+The tutorial loads some data with null values for string and numeric columns as follows:
 
 ```json
 {"date": "1/1/2024 1:02:00","title": "example_1","string_value": "some_value","numeric_value": 1}
@@ -48,7 +48,7 @@ The tutorial loads some data with null values for various data types as follows:
 Run the following query in the Druid Console to load the data:
 
 ```sql
-REPLACE INTO "inline_data" OVERWRITE ALL
+REPLACE INTO "null_example" OVERWRITE ALL
 WITH "ext" AS (
   SELECT *
   FROM TABLE(
@@ -67,7 +67,7 @@ FROM "ext"
 PARTITIONED BY DAY
 ```
 
-After Druid finishes loading the data, run the following query to see the data in Druid:
+After Druid finishes loading the data, run the following query to see the table:
 
 ```sql
 SELECT * FROM null_data_example
@@ -84,14 +84,16 @@ Note the difference in the empty string value for example 3 and the null string 
 
 ## String query example
 
-The following query illustrates null handling with strings:
+The queries in this section illustrate null handling with strings.
+The following query filters rows where the string value is not equal to "some_value":
 
 ```sql
 SELECT COUNT(*)
 FROM "null_data_example2"
 WHERE "string_value" != 'some_value'
 ```
-Returns 2 for "another_value" and the empty string "". The null value is not counted.
+
+Druid returns 2 for "another_value" and the empty string "". The null value is not counted.
 
 Note that the null value is included in COUNT(*) but not as a count of the values in the column as follows:
 
@@ -103,7 +105,7 @@ FROM "inline_data"
 GROUP BY 1
 ```
 
-Returns the folloaing data:
+Druid returns the following data:
 
 |`string_value`|`count_all_rows`|`count_values`|
 |---|---|---|
@@ -112,9 +114,37 @@ Returns the folloaing data:
 |`another_value`|1|1|
 |`some_value`|1|1|
 
+Also note that GROUP BY expressions yields distinct entries for null and the empty string.
+
+### Filter for emplty strings in addition to null
+
+If your queries rely on treating empty strings and null values the same, you can use an OR operator in the filter. For example to select all rows with null values or empty strings:
+
+```sql
+SELECT *
+FROM "null_example"
+WHERE "string_value" IS NULL OR "string_value" = ''
+```
+
+Druid returns the following:
+
+|`__time`|`title`|`string_value`|`numeric_value`|
+|---|---|---|---|---|---|
+|`2024-01-01T01:04:00.000Z`|`example_3`|`empty`|`null`|
+|`2024-01-01T01:05:00.000Z`|`example_4`|`null`|`null`|
+
+For another example, if you do not want to count empty strings, use a FILTER to exclude them. For example:
+
+```sql
+SELECT COUNT("string_value") FILTER(WHERE "string_value" <> '')
+FROM "null_example"
+```
+
+Druid returns 2. Both the empty string and null values are excluded.
+
 ## Numeric query example
 
-Using three-valued logic, Druid treats `null` values as "unknown" and does not count them in comparisons.
+Druid does does not count null values in numeric comparisons.
 
 ```sql
 SELECT COUNT(*)
@@ -127,7 +157,7 @@ Druid returns 1. The `null` values for examples 3 and 4 are excluded.
 ## Ingestion time filtering
 
 The same null handling rules apply at ingestion time.
-The following query uses a WHERE clause filter and replaces the example data:
+The following query replaces the example data with data filtered with a WHERE clause:
 
 ```sql
 REPLACE INTO "inline_data" OVERWRITE ALL
@@ -150,7 +180,18 @@ WHERE "string_value" != 'some_value'
 PARTITIONED BY DAY
 ```
 
-The resulting data set only includes two rows. Druid has filtered out example 1 (`some_value`) and  example 4 (`null`).
+The resulting data set only includes two rows. Druid has filtered out example 1 (`some_value`) and example 4 (`null`):
+
+|`__time`|`title`|`string_value`|`numeric_value`|
+|---|---|---|---|---|---|
+|`2024-01-01T01:03:00.000Z`|`example_2`|`another_value`|2|
+|`2024-01-01T01:04:00.000Z`|`example_3`|`empty`|`null`|
+
+## Learn more
+
+See the following for more information:
+- [Null values](../querying/sql-data-types.md#null-values)
+
 
 
 
