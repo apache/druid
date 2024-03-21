@@ -277,64 +277,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
   }
 
-  /**
-   * This tests that {@link AvailableSegmentMetadata#getNumRows()} is correct in case
-   * of multiple replicas i.e. when {@link AbstractSegmentMetadataCache#addSegment(DruidServerMetadata, DataSegment)}
-   * is called more than once for same segment
-   * @throws InterruptedException
-   */
-  @Test
-  public void testAvailableSegmentMetadataNumRows() throws InterruptedException
-  {
-    CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-
-    Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
-    final List<DataSegment> segments = segmentsMetadata.values()
-                                                       .stream()
-                                                       .map(AvailableSegmentMetadata::getSegment)
-                                                       .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
-    // find the only segment with datasource "foo2"
-    final DataSegment existingSegment = segments.stream()
-                                                .filter(segment -> segment.getDataSource().equals("foo2"))
-                                                .findFirst()
-                                                .orElse(null);
-    Assert.assertNotNull(existingSegment);
-    final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
-    // update AvailableSegmentMetadata of existingSegment with numRows=5
-    AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
-    schema.setAvailableSegmentMetadata(existingSegment.getId(), updatedMetadata);
-
-    // find a druidServer holding existingSegment
-    final Pair<DruidServer, DataSegment> pair = druidServers
-        .stream()
-        .flatMap(druidServer ->
-                     serverView.getSegmentsOfServer(druidServer).stream()
-                               .filter(segment -> segment.getId().equals(existingSegment.getId()))
-                               .map(segment -> Pair.of(druidServer, segment))
-        )
-        .findAny()
-        .orElse(null);
-
-    Assert.assertNotNull(pair);
-    final DruidServer server = pair.lhs;
-    Assert.assertNotNull(server);
-    final DruidServerMetadata druidServerMetadata = server.getMetadata();
-    // invoke SegmentMetadataCache#addSegment on existingSegment
-    schema.addSegment(druidServerMetadata, existingSegment);
-    segmentsMetadata = schema.getSegmentMetadataSnapshot();
-    // get the only segment with datasource "foo2"
-    final DataSegment currentSegment = segments.stream()
-                                               .filter(segment -> segment.getDataSource().equals("foo2"))
-                                               .findFirst()
-                                               .orElse(null);
-    final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(updatedMetadata.getSegment().getId(), currentMetadata.getSegment().getId());
-    Assert.assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
-    // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
-    Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
-  }
-
   @Test
   public void testNullDatasource() throws IOException, InterruptedException
   {
@@ -1713,10 +1655,13 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                 .findFirst()
                                                 .orElse(null);
     Assert.assertNotNull(existingSegment);
-    final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
-    // update AvailableSegmentMetadata of existingSegment with numRows=5
-    AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
-    schema.setAvailableSegmentMetadata(existingSegment.getId(), updatedMetadata);
+
+    AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
+
+    segmentStatsMap.put(
+        existingSegment.getId(),
+        new SegmentSchemaCache.SegmentStats(1L, 5L)
+    );
 
     // find a druidServer holding existingSegment
     final Pair<DruidServer, DataSegment> pair = druidServers
@@ -1747,6 +1692,20 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), new HashSet<>());
 
     verifyFoo2DSSchema(schema);
+
+    // invoke SegmentMetadataCache#addSegment on existingSegment
+    schema.addSegment(druidServerMetadata, existingSegment);
+    segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    // get the only segment with datasource "foo2"
+    final DataSegment currentSegment = segments.stream()
+                                               .filter(segment -> segment.getDataSource().equals("foo2"))
+                                               .findFirst()
+                                               .orElse(null);
+    final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
+    Assert.assertEquals(currentSegment.getId(), currentMetadata.getSegment().getId());
+    Assert.assertEquals(5L, currentMetadata.getNumRows());
+    // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
+    Assert.assertEquals(existingMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema)
