@@ -17,15 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.frame.write;
+package org.apache.druid.msq.indexing.error;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
-public class FrameFieldWriterException extends RuntimeException
+public class FrameFieldWriterFault extends BaseMSQFault
 {
+  static final String CODE = "FrameFieldWriterError";
+
   @Nullable
   private final String source;
   @Nullable
@@ -35,20 +39,23 @@ public class FrameFieldWriterException extends RuntimeException
   @Nullable
   private final String errorMsg;
 
-  private FrameFieldWriterException(
+  public FrameFieldWriterFault(
       @Nullable @JsonProperty("source") String source,
       @Nullable @JsonProperty("column") String column,
       @Nullable @JsonProperty("rowNumber") Integer rowNumber,
-      @Nullable @JsonProperty("message") String errorMsg
+      @Nullable @JsonProperty("errorMsg") String errorMsg
   )
   {
-    super(StringUtils.format(
-        "Error[%s] while writing frame for source[%s], rowNumber[%d] column[%s]",
-        errorMsg,
-        source,
-        rowNumber,
-        column
-    ));
+    super(
+        CODE,
+        StringUtils.format(
+            "Error[%s] while writing frame for source[%s], rowNumber[%d] column[%s]",
+            errorMsg,
+            source,
+            rowNumber,
+            column
+        )
+    );
     this.column = column;
     this.rowNumber = rowNumber;
     this.source = source;
@@ -56,89 +63,59 @@ public class FrameFieldWriterException extends RuntimeException
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getColumn()
   {
     return column;
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getRowNumber()
   {
     return rowNumber;
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getSource()
   {
     return source;
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getErrorMsg()
   {
     return errorMsg;
   }
 
-  public static Builder builder()
+  @Override
+  public boolean equals(Object o)
   {
-    return new Builder();
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    FrameFieldWriterFault that = (FrameFieldWriterFault) o;
+    return Objects.equals(column, that.column)
+           && Objects.equals(rowNumber, that.rowNumber)
+           && Objects.equals(source, that.source)
+           && Objects.equals(errorMsg, that.errorMsg);
   }
 
-  public static Builder builder(FrameFieldWriterException frameFieldWriterException)
+  @Override
+  public int hashCode()
   {
-    return new Builder(frameFieldWriterException);
-  }
-
-  public static class Builder
-  {
-    @Nullable
-    private String column;
-    @Nullable
-    private Integer rowNumber;
-    @Nullable
-    private String source;
-    @Nullable
-    private String errorMsg;
-
-    public Builder()
-    {
-    }
-
-    public Builder(FrameFieldWriterException frameFieldWriterException)
-    {
-      source = frameFieldWriterException.source;
-      rowNumber = frameFieldWriterException.rowNumber;
-      column = frameFieldWriterException.column;
-      errorMsg = frameFieldWriterException.errorMsg;
-    }
-
-    public FrameFieldWriterException build()
-    {
-      return new FrameFieldWriterException(source, column, rowNumber, errorMsg);
-    }
-
-    public Builder column(String val)
-    {
-      column = val;
-      return this;
-    }
-
-    public Builder rowNumber(Integer val)
-    {
-      rowNumber = val;
-      return this;
-    }
-
-    public Builder source(String val)
-    {
-      source = val;
-      return this;
-    }
-
-    public Builder errorMsg(String val)
-    {
-      errorMsg = val;
-      return this;
-    }
+    return Objects.hash(super.hashCode(), column, rowNumber, source, errorMsg);
   }
 }

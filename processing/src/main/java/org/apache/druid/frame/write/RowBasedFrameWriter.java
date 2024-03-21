@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write;
 
-import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
@@ -300,7 +299,9 @@ public class RowBasedFrameWriter implements FrameWriter
                                       .build();
       }
       catch (Exception e) {
-        throw new FrameFieldWriterException(signature.getColumnName(i), e.getMessage(), e.getCause());
+        throw FrameFieldWriterException.builder().column(signature.getColumnName(i))
+                                                     .errorMsg(e.getMessage())
+                                                     .build();
       }
 
       if (writeResult < 0) {

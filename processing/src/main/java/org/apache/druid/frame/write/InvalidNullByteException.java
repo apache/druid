@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
  * Exception thrown by {@link FrameWriterUtils#copyByteBufferToMemory} if configured to check for null bytes
  * and a null byte is encountered.
  */
-public class InvalidNullByteException extends FrameFieldWriterException
+public class InvalidNullByteException extends RuntimeException
 {
 
   @Nullable
@@ -35,6 +35,9 @@ public class InvalidNullByteException extends FrameFieldWriterException
 
   @Nullable
   private final Integer rowNumber;
+
+  @Nullable
+  private final String column;
 
   @Nullable
   private final String value;
@@ -50,16 +53,17 @@ public class InvalidNullByteException extends FrameFieldWriterException
       @Nullable final Integer position
   )
   {
-    super(column, StringUtils.format(
+    super(StringUtils.format(
         "Encountered null byte at source[%s], rowNumber[%d], column[%s], value[%s], position[%s]",
         source,
         rowNumber,
         column,
         value,
         position
-    ), null);
+    ));
     this.source = source;
     this.rowNumber = rowNumber;
+    this.column = column;
     this.value = value;
     this.position = position;
   }
@@ -79,6 +83,12 @@ public class InvalidNullByteException extends FrameFieldWriterException
   public Integer getRowNumber()
   {
     return rowNumber;
+  }
+
+  @Nullable
+  public String getColumn()
+  {
+    return column;
   }
 
   @Nullable
