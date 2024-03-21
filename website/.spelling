@@ -239,6 +239,7 @@ TopN
 TopNs
 UI
 UIs
+UPSERT
 URI
 URIs
 uris
@@ -570,6 +571,7 @@ useFilterCNF
 useJqSyntax
 useJsonNodeReader
 useSSL
+upsert
 uptime
 uris
 urls

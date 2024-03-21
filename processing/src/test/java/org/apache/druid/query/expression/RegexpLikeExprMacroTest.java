@@ -151,9 +151,10 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testEmptyStringPatternOnNull()
   {
     final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.nilBindings());
-    Assert.assertEquals(
-        ExprEval.ofLongBoolean(NullHandling.replaceWithDefault()).value(),
-        result.value()
-    );
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals(ExprEval.ofLongBoolean(true).value(), result.value());
+    }
   }
 }

@@ -26,7 +26,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 
@@ -42,10 +41,8 @@ public interface TaskStorage
    *
    * @param task   task to add
    * @param status task status
-   *
-   * @throws EntryExistsException if the task ID already exists
    */
-  void insert(Task task, TaskStatus status) throws EntryExistsException;
+  void insert(Task task, TaskStatus status);
 
   /**
    * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle

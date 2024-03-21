@@ -69,8 +69,8 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.Period;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -132,7 +132,7 @@ public class ExpressionsTest extends CalciteTestBase
 
   final DruidOperatorTable operatorTable = new DruidOperatorTable(Collections.emptySet(), Collections.emptySet());
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
@@ -581,7 +581,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("(.)")
         ),
         makeExpression("regexp_like(null,'(.)')"),
-        0L
+        NullHandling.sqlCompatible() ? null : 0L
     );
 
     testHelper.testExpressionString(
@@ -593,7 +593,7 @@ public class ExpressionsTest extends CalciteTestBase
         makeExpression("regexp_like(null,'')"),
 
         // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
-        NullHandling.sqlCompatible() ? 0L : 1L
+        NullHandling.sqlCompatible() ? null : 1L
     );
 
     testHelper.testExpressionString(
@@ -603,7 +603,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("null")
         ),
         makeExpression("regexp_like(null,'null')"),
-        0L
+        NullHandling.sqlCompatible() ? null : 0L
     );
   }
 

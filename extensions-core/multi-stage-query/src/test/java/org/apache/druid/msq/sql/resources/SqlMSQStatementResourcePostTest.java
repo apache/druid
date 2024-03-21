@@ -39,7 +39,6 @@ import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.ExecutionMode;
@@ -50,11 +49,12 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +69,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   private SqlStatementResource resource;
 
 
-  @Before
+  @BeforeEach
   public void init()
   {
     resource = new SqlStatementResource(
@@ -445,7 +445,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
     context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
 
