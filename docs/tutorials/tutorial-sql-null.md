@@ -26,7 +26,6 @@ description: Introduction to null handling in Druid
 
 This tutorial introduces the basic concepts of null handling for string and numeric columns in Apache Druid.
 The tutorial focuses on filters using the logical NOT operation on columns with NULL values.
-This applies to both query and ingestion time filtering.
 
 ## Prerequisites
 
@@ -83,7 +82,6 @@ SELECT * FROM null_data_example
 
 Note the difference in the empty string value for example 3 and the null string value for example 4.
 
-
 ## String query example
 
 The following query illustrates null handling with strings:
@@ -125,6 +123,36 @@ WHERE "numeric_value" < 2
 ```
 
 Druid returns 1. The `null` values for examples 3 and 4 are excluded.
+
+## Ingestion time filtering
+
+The same null handling rules apply at ingestion time.
+The following query uses a WHERE clause filter and replaces the example data:
+
+```sql
+REPLACE INTO "inline_data" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"date\": \"1/1/2024 1:02:00\",\"title\": \"example_1\",\"string_value\": \"some_value\",\"numeric_value\": 1}\n{\"date\": \"1/1/2024 1:03:00\",\"title\": \"example_2\",\"string_value\": \"another_value\",\"numeric_value\": 2}\n{\"date\": \"1/1/2024 1:04:00\",\"title\": \"example_3\",\"string_value\": \"\", \"numeric_value\": null}\n{\"date\": \"1/1/2024 1:05:00\",\"title\": \"example_4\",\"string_value\": null, \"numeric_value\": null}"}',
+      '{"type":"json"}'
+    )
+  ) EXTEND ("date" VARCHAR, "title" VARCHAR, "string_value" VARCHAR, "numeric_value" BIGINT)
+)
+SELECT
+  TIME_PARSE("date", 'd/M/yyyy H:mm:ss') AS "__time",
+  "title",
+  "string_value",
+  "numeric_value"
+FROM "ext"
+WHERE "string_value" != 'some_value'
+PARTITIONED BY DAY
+```
+
+The resulting data set only includes two rows. Druid has filtered out example 1 (`some_value`) and  example 4 (`null`).
+
+
 
 
 
