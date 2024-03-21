@@ -64,12 +64,16 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       new SerializablePairLongFloat(2345300L, 4.2F)
   };
 
+  private final SerializablePairLongFloat[] nullPairs = {null, null, null, null};
+
 
 
   private VectorObjectSelector selector;
+  private VectorObjectSelector selector1;
   private BaseLongVectorValueSelector timeSelector;
   private ByteBuffer buf;
   private FloatFirstVectorAggregator target;
+  private FloatFirstVectorAggregator target1;
 
   private FloatFirstAggregatorFactory floatFirstAggregatorFactory;
   private VectorColumnSelectorFactory selectorFactory;
@@ -104,6 +108,27 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       public Object[] getObjectVector()
       {
         return pairs;
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 0;
+      }
+    };
+
+    selector1 = new VectorObjectSelector()
+    {
+      @Override
+      public Object[] getObjectVector()
+      {
+        return nullPairs;
       }
 
       @Override
@@ -219,6 +244,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     };
 
     target = new FloatFirstVectorAggregator(timeSelector, selector);
+    target1 = new FloatFirstVectorAggregator(timeSelector, selector1);
     clearBufferForPositions(0, 0);
 
     floatFirstAggregatorFactory = new FloatFirstAggregatorFactory(NAME, FIELD_NAME, TIME_COL);
@@ -250,6 +276,16 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
     Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
     Assert.assertEquals(pairs[0].rhs, result.rhs, EPSILON);
+  }
+
+  @Test
+  public void aggregateNulls1()
+  {
+    target1.init(buf, 0);
+    target1.aggregate(buf, 0, 0, VALUES.length);
+    Pair<Long, Float> result = (Pair<Long, Float>) target1.get(buf, 0);
+    Assert.assertEquals(Long.MAX_VALUE, result.lhs.longValue());
+    Assert.assertEquals(NullHandling.defaultFloatValue(), result.rhs);
   }
 
   @Test

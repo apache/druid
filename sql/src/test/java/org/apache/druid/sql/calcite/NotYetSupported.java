@@ -20,27 +20,21 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
-import junitparams.JUnitParamsRunner;
-import org.apache.commons.lang3.RegExUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.AssumptionViolatedException;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runner.RunWith;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
+import org.opentest4j.IncompleteExecutionException;
 
-import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThrows;
 
@@ -48,22 +42,27 @@ import static org.junit.Assert.assertThrows;
  * Can be used to mark tests which are not-yet supported for some reason.
  *
  * In case a testcase marked with this annotation fails - it means that the
- * testcase no longer fails with the annotated expectation. This means that a code change affected this test either
+ * testcase no longer fails with the annotated expectation. This means that a
+ * code change affected this test either
  *
  * <ol>
- * <li>it suddenly passes: yay, assuming it makes sense that it suddenly passes, remove the annotation and move on</li>
- * <li>it suddenly fails with a different error: validate that the new error is expected and either fix to continue failing with the old error or update the expected error.</li>
+ * <li>it suddenly passes: yay, assuming it makes sense that it suddenly passes,
+ * remove the annotation and move on</li>
+ * <li>it suddenly fails with a different error: validate that the new error is
+ * expected and either fix to continue failing with the old error or update the
+ * expected error.</li>
  * </ol>
  *
- * During usage; the annotation process have to be added to the testclass.
- * Ensure that it's loaded as the most outer-rule by using order=0 - otherwise
- * it may interfere with other rules:
+ * During usage; the annotation process have to be added to registered with the testclass.
+ * Ensure that it's loaded as the most outer-rule by using the right ExtendWith order - or by
+ * specifying Order:
  * <code>
- *   @Rule(order = 0)
+ *   @Order(0)
+ *   @RegisterExtension
  *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor();
  *
  *   @NotYetSupported(NOT_ENOUGH_RULES)
- *   @Test
+ *   &#64;Test
  *   public void testA() {
  *   }
  * </code>
@@ -77,6 +76,7 @@ public @interface NotYetSupported
 
   enum Modes
   {
+    // @formatter:off
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     ERROR_HANDLING(AssertionError.class, "targetPersona: is <[A-Z]+> and category: is <[A-Z_]+> and errorCode: is"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
@@ -103,6 +103,7 @@ public @interface NotYetSupported
     SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     STACK_OVERFLOW(StackOverflowError.class, ""),
     CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key");
+    // @formatter:on
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -125,32 +126,37 @@ public @interface NotYetSupported
    * Ensures that test cases disabled with that annotation can still not pass.
    * If the error is as expected; the testcase is marked as "ignored".
    */
-  class NotYetSupportedProcessor implements TestRule
+  class NotYetSupportedProcessor implements InvocationInterceptor
   {
     @Override
-    public Statement apply(Statement base, Description description)
+    public void interceptTestMethod(Invocation<Void> invocation,
+        ReflectiveInvocationContext<Method> invocationContext,
+        ExtensionContext extensionContext) throws Throwable
     {
-      NotYetSupported annotation = getAnnotation(description, NotYetSupported.class);
+      Method method = extensionContext.getTestMethod().get();
+      NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
 
       if (annotation == null) {
-        return base;
+        invocation.proceed();
+        return;
       }
-      return new Statement()
       {
-        @Override
-        public void evaluate()
         {
           Modes ignoreMode = annotation.value();
           Throwable e = null;
           try {
-            base.evaluate();
+            invocation.proceed();
           }
           catch (Throwable t) {
             e = t;
           }
-          // If the base test case is supposed to be ignored already, just skip the further evaluation
+          // If the base test case is supposed to be ignored already, just skip
+          // the further evaluation
           if (e instanceof AssumptionViolatedException) {
             throw (AssumptionViolatedException) e;
+          }
+          if (e instanceof IncompleteExecutionException) {
+            throw (IncompleteExecutionException) e;
           }
           Throwable finalE = e;
           assertThrows(
@@ -171,40 +177,15 @@ public @interface NotYetSupported
           }
           throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
-      };
-    }
-
-    private static Method getMethodForName(Class<?> testClass, String realMethodName)
-    {
-      List<Method> matches = Stream.of(testClass.getMethods())
-          .filter(m -> realMethodName.equals(m.getName()))
-          .collect(Collectors.toList());
-      switch (matches.size()) {
-        case 0:
-          throw new IllegalArgumentException("Expected to find method...but there is none?");
-        case 1:
-          return matches.get(0);
-        default:
-          throw new IllegalArgumentException("method overrides are not supported");
       }
     }
 
-    public static <T extends Annotation> T getAnnotation(Description description, Class<T> annotationType)
+    @Override
+    public void interceptTestTemplateMethod(Invocation<Void> invocation,
+        ReflectiveInvocationContext<Method> invocationContext,
+        ExtensionContext extensionContext) throws Throwable
     {
-      T annotation = description.getAnnotation(annotationType);
-      if (annotation != null) {
-        return annotation;
-      }
-      Class<?> testClass = description.getTestClass();
-      RunWith runWith = testClass.getAnnotation(RunWith.class);
-      if (runWith == null || !runWith.value().equals(JUnitParamsRunner.class)) {
-        return null;
-      }
-      String mehodName = description.getMethodName();
-      String realMethodName = RegExUtils.replaceAll(mehodName, "\\(.*", "");
-
-      Method m = getMethodForName(testClass, realMethodName);
-      return m.getAnnotation(annotationType);
+      interceptTestMethod(invocation, invocationContext, extensionContext);
     }
   }
 }

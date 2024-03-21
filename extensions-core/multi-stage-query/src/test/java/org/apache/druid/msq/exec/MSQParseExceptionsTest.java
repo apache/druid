@@ -32,7 +32,6 @@ import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.querykit.scan.ExternalColumnSelectorFactory;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -44,7 +43,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,15 +52,11 @@ import java.util.Map;
 
 public class MSQParseExceptionsTest extends MSQTestBase
 {
-  
+
   @Test
   public void testIngestWithNullByte() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
-        temporaryFolder,
-        this,
-        "/unparseable-null-byte-string.csv"
-    );
+    final File toRead = getResourceAsTemporaryFile("/unparseable-null-byte-string.csv");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -145,11 +140,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
   @Test
   public void testIngestWithSanitizedNullByte() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
-        temporaryFolder,
-        this,
-        "/unparseable-null-byte-string.csv"
-    );
+    final File toRead = getResourceAsTemporaryFile("/unparseable-null-byte-string.csv");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -243,11 +234,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
-        temporaryFolder,
-        this,
-        "/unparseable-mv-string-array.json"
-    );
+    final File toRead = getResourceAsTemporaryFile("/unparseable-mv-string-array.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()

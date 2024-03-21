@@ -19,13 +19,8 @@
 
 package org.apache.druid.msq.statistics;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import org.apache.druid.frame.key.RowKey;
 
-import java.io.IOException;
 import java.util.Comparator;
 import java.util.Optional;
 
@@ -51,46 +46,6 @@ public class DelegateOrMinKeyCollectorFactory<TDelegate extends KeyCollector<TDe
   public DelegateOrMinKeyCollector<TDelegate> newKeyCollector()
   {
     return new DelegateOrMinKeyCollector<>(comparator, delegateFactory.newKeyCollector(), null);
-  }
-
-  @Override
-  public JsonDeserializer<DelegateOrMinKeyCollectorSnapshot<TSnapshot>> snapshotDeserializer()
-  {
-    final JsonDeserializer<TSnapshot> delegateDeserializer = delegateFactory.snapshotDeserializer();
-
-    return new JsonDeserializer<DelegateOrMinKeyCollectorSnapshot<TSnapshot>>()
-    {
-      @Override
-      public DelegateOrMinKeyCollectorSnapshot<TSnapshot> deserialize(JsonParser jp, DeserializationContext ctxt)
-          throws IOException
-      {
-        TSnapshot delegateSnapshot = null;
-        RowKey minKey = null;
-
-        if (!jp.isExpectedStartObjectToken()) {
-          ctxt.reportWrongTokenException(this, JsonToken.START_OBJECT, null);
-        }
-
-        JsonToken token;
-
-        while ((token = jp.nextToken()) != JsonToken.END_OBJECT) {
-          if (token != JsonToken.FIELD_NAME) {
-            ctxt.reportWrongTokenException(this, JsonToken.FIELD_NAME, null);
-          }
-
-          final String fieldName = jp.getText();
-          jp.nextToken();
-
-          if (DelegateOrMinKeyCollectorSnapshot.FIELD_SNAPSHOT.equals(fieldName)) {
-            delegateSnapshot = delegateDeserializer.deserialize(jp, ctxt);
-          } else if (DelegateOrMinKeyCollectorSnapshot.FIELD_MIN_KEY.equals(fieldName)) {
-            minKey = jp.readValueAs(RowKey.class);
-          }
-        }
-
-        return new DelegateOrMinKeyCollectorSnapshot<>(delegateSnapshot, minKey);
-      }
-    };
   }
 
   @Override

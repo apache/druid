@@ -17,18 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.msq.statistics;
+package org.apache.druid.server.metrics;
 
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import java.util.Map;
 
 /**
- * A module for deserialization of {@link KeyCollectorSnapshot}.
+ * Provides task count metrics for the indexers
+ * These metrics are reported by indexers
  */
-public class KeyCollectorSnapshotDeserializerModule extends SimpleModule
+public interface IndexerTaskCountStatsProvider
 {
-  public KeyCollectorSnapshotDeserializerModule(final KeyCollectorFactory<?, ?> keyCollectorFactory)
-  {
-    addDeserializer(KeyCollectorSnapshot.class, keyCollectorFactory.snapshotDeserializer());
-  }
-}
+  /**
+   * Map from datasource name to the number of running tasks on the Indexer.
+   */
+  Map<String, Long> getWorkerRunningTasks();
 
+  /**
+   * Map from datasource name to the number of assigned tasks to the Indexer.
+   */
+  Map<String, Long> getWorkerAssignedTasks();
+
+  /**
+   * Map from datasource name to the number of completed tasks by the Indexer.
+   */
+  Map<String, Long> getWorkerCompletedTasks();
+}
