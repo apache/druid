@@ -60,7 +60,7 @@ public class MSQStatusReport
   private final SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus;
 
   @Nullable
-  private final MSQSegmentReport msqSegmentReport;
+  private final MSQSegmentReport segmentReport;
 
   @JsonCreator
   public MSQStatusReport(
@@ -73,7 +73,7 @@ public class MSQStatusReport
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
       @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus,
-      @JsonProperty("msqSegmentReport") @Nullable MSQSegmentReport msqSegmentReport
+      @JsonProperty("segmentReport") @Nullable MSQSegmentReport segmentReport
   )
   {
     this.status = Preconditions.checkNotNull(status, "status");
@@ -85,7 +85,7 @@ public class MSQStatusReport
     this.pendingTasks = pendingTasks;
     this.runningTasks = runningTasks;
     this.segmentLoadWaiterStatus = segmentLoadWaiterStatus;
-    this.msqSegmentReport = msqSegmentReport;
+    this.segmentReport = segmentReport;
   }
 
   @JsonProperty
@@ -149,12 +149,12 @@ public class MSQStatusReport
     return segmentLoadWaiterStatus;
   }
 
-  @JsonProperty
+  @JsonProperty("segmentReport")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
-  public MSQSegmentReport getMsqSegmentReport()
+  public MSQSegmentReport getSegmentReport()
   {
-    return msqSegmentReport;
+    return segmentReport;
   }
 
   @Override

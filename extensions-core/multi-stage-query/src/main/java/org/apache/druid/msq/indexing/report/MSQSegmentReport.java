@@ -25,13 +25,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class MSQSegmentReport
 {
   String shardSpec;
-  String reason;
+  String details;
 
   @JsonCreator
-  public MSQSegmentReport(@JsonProperty("shardSpec") String shardSpec, @JsonProperty("reason") String reason)
+  public MSQSegmentReport(@JsonProperty("shardSpec") String shardSpec, @JsonProperty("details") String reason)
   {
     this.shardSpec = shardSpec;
-    this.reason = reason;
+    this.details = reason;
   }
 
   @JsonProperty
@@ -41,8 +41,8 @@ public class MSQSegmentReport
   }
 
   @JsonProperty
-  public String getReason()
+  public String getDetails()
   {
-    return reason;
+    return details;
   }
 }
