@@ -53,10 +53,25 @@ public interface SegmentsMetadataManager
    */
   int markAsUsedAllNonOvershadowedSegmentsInDataSource(String dataSource);
 
-  int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval);
+  /**
+   * Marks non-overshadowed unused segments for the given interval and optional list of versions
+   * as used. If versions are not specified, all versions of non-overshadowed unused segments in the interval
+   * will be marked as used.
+   * @return Number of segments updated
+   */
+  int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions);
 
-  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
-      throws UnknownSegmentIdsException;
+  /**
+   * Marks the given segment IDs as "used" only if there are not already overshadowed
+   * by other used segments. Qualifying segment IDs that are already marked as
+   * "used" are not updated.
+   *
+   * @return Number of segments updated
+   * @throws org.apache.druid.error.DruidException of category INVALID_INPUT if
+   *                                               any of the given segment IDs
+   *                                               do not exist in the metadata store.
+   */
+  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
@@ -72,7 +87,13 @@ public interface SegmentsMetadataManager
    */
   int markAsUnusedAllSegmentsInDataSource(String dataSource);
 
-  int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
+  /**
+   * Marks segments as unused that are <b>fully contained</b> in the given interval for an optional list of versions.
+   * If versions are not specified, all versions of segments in the interval will be marked as unused.
+   * Segments that are already marked as unused are not updated.
+   * @return The number of segments updated
+   */
+  int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions);
 
   int markSegmentsAsUnused(Set<SegmentId> segmentIds);
 

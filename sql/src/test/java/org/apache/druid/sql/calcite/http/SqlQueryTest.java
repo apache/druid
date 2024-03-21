@@ -30,7 +30,7 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SqlQueryTest extends CalciteTestBase
 {

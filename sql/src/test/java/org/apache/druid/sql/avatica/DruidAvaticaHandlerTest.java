@@ -88,24 +88,23 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.guice.SqlModule;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.ResultIterator;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Array;
 import java.sql.Connection;
@@ -129,6 +128,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests the Avatica-based JDBC implementation using JSON serialization. See
@@ -153,32 +153,26 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
 
   private final boolean nullNumeric = !NullHandling.replaceWithDefault();
 
-  @BeforeClass
-  public static void setUpClass() throws Exception
+  @BeforeAll
+  public static void setUpClass(@TempDir File tempDir)
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(conglomerate, tempDir);
     resourceCloser.register(walker);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
   }
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
 
   private final PlannerConfig plannerConfig = new PlannerConfig();
   private final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
@@ -266,7 +260,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     final DruidSchemaCatalog rootSchema = makeRootSchema();
@@ -328,7 +322,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     clientLosAngeles = DriverManager.getConnection(server.url, propertiesLosAngeles);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     if (server != null) {
@@ -526,6 +520,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.ARRAYS_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.BROADCAST_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -605,6 +605,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = superuserClient.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.ARRAYS_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.BROADCAST_DATASOURCE),
@@ -846,49 +852,45 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
-  @Test(timeout = 90_000L)
+  @Test
+  @Timeout(value = 90_000L, unit = TimeUnit.MILLISECONDS)
   public void testConcurrentQueries()
   {
-    queryLogHook.withSkippedLog(
-        v -> {
-          final List<ListenableFuture<Integer>> futures = new ArrayList<>();
-          final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-              Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "DruidAvaticaHandlerTest-%d")
-          );
-          for (int i = 0; i < 2000; i++) {
-            final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
-            futures.add(
-                exec.submit(() -> {
-                  try (
-                      final Statement statement = client.createStatement();
-                      final ResultSet resultSet = statement.executeQuery(query)
-                  ) {
-                    final List<Map<String, Object>> rows = getRows(resultSet);
-                    return ((Number) Iterables.getOnlyElement(rows).get("ci")).intValue();
-                  }
-                  catch (SQLException e) {
-                    throw new RuntimeException(e);
-                  }
-                })
-            );
-          }
-
-          final List<Integer> integers;
-          try {
-            integers = Futures.allAsList(futures).get();
-          }
-          catch (InterruptedException e) {
-            throw new RE(e);
-          }
-          catch (ExecutionException e) {
-            throw new RE(e);
-          }
-          for (int i = 0; i < 2000; i++) {
-            Assert.assertEquals(i + 6, (int) integers.get(i));
-          }
-          exec.shutdown();
-        }
+    final List<ListenableFuture<Integer>> futures = new ArrayList<>();
+    final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "DruidAvaticaHandlerTest-%d")
     );
+    for (int i = 0; i < 2000; i++) {
+      final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
+      futures.add(
+          exec.submit(() -> {
+            try (
+                final Statement statement = client.createStatement();
+                final ResultSet resultSet = statement.executeQuery(query)) {
+              final List<Map<String, Object>> rows = getRows(resultSet);
+              return ((Number) Iterables.getOnlyElement(rows).get("ci")).intValue();
+            }
+            catch (SQLException e) {
+              throw new RuntimeException(e);
+            }
+          })
+      );
+    }
+
+    final List<Integer> integers;
+    try {
+      integers = Futures.allAsList(futures).get();
+    }
+    catch (InterruptedException e) {
+      throw new RE(e);
+    }
+    catch (ExecutionException e) {
+      throw new RE(e);
+    }
+    for (int i = 0; i < 2000; i++) {
+      Assert.assertEquals(i + 6, (int) integers.get(i));
+    }
+    exec.shutdown();
   }
 
   @Test

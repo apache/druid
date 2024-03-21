@@ -27,6 +27,8 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -47,7 +49,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
@@ -443,8 +444,15 @@ public class MaterializedViewSupervisor implements Supervisor
             runningTasks.put(entry.getKey(), task);
           }
         }
-        catch (EntryExistsException e) {
-          log.error("task %s already exsits", task);
+        catch (DruidException e) {
+          if (EntryAlreadyExists.ERROR_CODE.equals(e.getErrorCode())) {
+            log.error("Task[%s] already exists", task.getId());
+          } else {
+            throw e;
+          }
+        }
+        catch (RuntimeException e) {
+          throw e;
         }
         catch (Exception e) {
           throw new RuntimeException(e);

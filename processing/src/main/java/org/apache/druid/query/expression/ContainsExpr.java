@@ -71,7 +71,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
 
     if (s == null) {
       // same behavior as regexp_like.
-      return ExprEval.ofLongBoolean(false);
+      return ExprEval.ofLong(null);
     } else {
       final boolean doesContain = searchFunction.apply(s);
       return ExprEval.ofLongBoolean(doesContain);

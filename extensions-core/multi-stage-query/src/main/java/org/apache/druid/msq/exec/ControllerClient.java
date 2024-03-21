@@ -73,8 +73,12 @@ public interface ControllerClient extends AutoCloseable
   void postWorkerWarning(
       List<MSQErrorReport> MSQErrorReports
   ) throws IOException;
+
   List<String> getTaskList() throws IOException;
 
+  /**
+   * Close this client. Idempotent.
+   */
   @Override
   void close();
 }

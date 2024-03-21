@@ -208,7 +208,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1].toLowerCase();
+  if (parts.length === 2) return parts[1];
   return ingestionType;
 }
 
@@ -297,7 +297,10 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+export function getArrayMode(
+  spec: Partial<IngestionSpec>,
+  whenUnclear: ArrayMode = 'arrays',
+): ArrayMode {
   const schemaMode = getSchemaMode(spec);
   switch (schemaMode) {
     case 'type-aware-discovery':
@@ -332,7 +335,7 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
         return 'multi-values';
       }
 
-      return 'arrays';
+      return whenUnclear;
     }
   }
 }
@@ -2068,6 +2071,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
+    defaultValue: 0,
     hideInMore: true,
     info: (
       <>

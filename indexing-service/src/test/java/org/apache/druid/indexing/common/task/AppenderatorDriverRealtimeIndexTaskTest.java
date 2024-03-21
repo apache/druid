@@ -48,6 +48,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -92,7 +93,6 @@ import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -1302,8 +1302,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
-    catch (EntryExistsException e) {
-      // suppress
+    catch (DruidException e) {
+      log.noStackTrace().info(e, "Suppressing exception while inserting task [%s]", task.getId());
     }
     taskLockbox.syncFromStorage();
     final TaskToolbox toolbox = taskToolboxFactory.build(task);

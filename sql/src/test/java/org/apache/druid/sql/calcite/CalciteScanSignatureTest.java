@@ -37,7 +37,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.IngestDestination;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -138,9 +138,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+    public boolean featureAvailable(EngineFeature feature)
     {
-      return feature == EngineFeature.SCAN_NEEDS_SIGNATURE || parent.featureAvailable(feature, plannerContext);
+      return feature == EngineFeature.SCAN_NEEDS_SIGNATURE || parent.featureAvailable(feature);
     }
 
     @Override

@@ -14,6 +14,7 @@
       "tutorials/tutorial-rollup",
       "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
+      "tutorials/tutorial-append-data",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
       "tutorials/tutorial-delete-data",

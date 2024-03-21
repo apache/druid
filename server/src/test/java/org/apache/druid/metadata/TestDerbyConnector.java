@@ -23,12 +23,17 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
+import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.UUID;
 
 public class TestDerbyConnector extends DerbyConnector
@@ -134,6 +139,74 @@ public class TestDerbyConnector extends DerbyConnector
     public Supplier<MetadataStorageTablesConfig> metadataTablesConfigSupplier()
     {
       return dbTables;
+    }
+
+    public SegmentsTable segments()
+    {
+      return new SegmentsTable(this);
+    }
+  }
+
+  /**
+   * A wrapper class for updating the segments table.
+   */
+  public static class SegmentsTable
+  {
+    private final DerbyConnectorRule rule;
+
+    public SegmentsTable(DerbyConnectorRule rule)
+    {
+      this.rule = rule;
+    }
+
+    /**
+     * Updates the segments table with the supplied SQL query format and arguments.
+     *
+     * @param sqlFormat the SQL query format with %s placeholder for the table name and ? for each query {@code args}
+     * @param args the arguments to be substituted into the SQL query
+     * @return the number of rows affected by the update operation
+     */
+    public int update(String sqlFormat, Object... args)
+    {
+      return this.rule.getConnector().retryWithHandle(
+          handle -> handle.update(
+              StringUtils.format(sqlFormat, getTableName()),
+              args
+          )
+      );
+    }
+
+    public int updateUsedStatusLastUpdated(String segmentId, DateTime lastUpdatedTime)
+    {
+      return update(
+          "UPDATE %1$s SET USED_STATUS_LAST_UPDATED = ? WHERE ID = ?",
+          lastUpdatedTime.toString(),
+          segmentId
+      );
+    }
+
+    public String getTableName()
+    {
+      return this.rule.metadataTablesConfigSupplier()
+                 .get()
+                 .getSegmentsTable()
+                 .toUpperCase(Locale.ENGLISH);
+    }
+  }
+
+  public static class DerbyConnectorRule5 extends DerbyConnectorRule implements BeforeAllCallback, AfterAllCallback
+  {
+
+    @Override
+    public void beforeAll(ExtensionContext context)
+    {
+      before();
+    }
+
+    @Override
+    public void afterAll(ExtensionContext context)
+    {
+      after();
     }
   }
 }
