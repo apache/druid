@@ -223,6 +223,8 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
+
+    static final String OVERSHADOWED_COUNT = "segment/overshadowed/count";
   }
 
   static class Segments
