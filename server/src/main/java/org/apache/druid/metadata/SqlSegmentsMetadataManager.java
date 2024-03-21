@@ -79,7 +79,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -221,8 +220,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @Nullable DatabasePoll latestDatabasePoll = null;
 
-  // Last schema id polled from the DB.
-  private volatile @Nullable Long latestSchemaId = null;
+  /**
+   * Last schema id polled from the DB.
+   * It is updated after each poll in {@code doPollSegmentAndSchema}.
+   * The schema cleanup duty {@link org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemas} can reset it.
+   */
+  private AtomicReference<Long> latestSchemaId = new AtomicReference<>(null);
 
   /** Used to cancel periodic poll task in {@link #stopPollingDatabasePeriodically}. */
   @GuardedBy("startStopPollLock")
@@ -521,7 +524,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
       periodicPollTaskFuture.cancel(false);
       latestDatabasePoll = null;
-      latestSchemaId = null;
+      latestSchemaId.set(null);
       segmentSchemaCache.uninitialize();
 
       // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadataManager
@@ -931,7 +934,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @VisibleForTesting
   Long getLatestSchemaId()
   {
-    return latestSchemaId;
+    return latestSchemaId.get();
   }
 
   @Override
@@ -1114,7 +1117,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private void doPollSegmentAndSchema()
   {
-    log.info("Starting polling of segment and schema table");
+    log.info("Starting polling of segment and schema table.");
 
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
 
@@ -1163,21 +1166,23 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         }
     );
 
-    Map<Long, SchemaPayload> schemaMap = new HashMap<>();
+    ConcurrentMap<Long, SchemaPayload> schemaMap = new ConcurrentHashMap<>();
 
     String schemaPollQuery;
-    if (latestSchemaId == null) {
+
+    Long lastSchemaIdPrePoll = latestSchemaId.get();
+    if (lastSchemaIdPrePoll == null) {
       schemaPollQuery = StringUtils.format("SELECT id, payload FROM %s", getSegmentSchemaTable());
     } else {
       schemaPollQuery = StringUtils.format(
           "SELECT id, payload FROM %1$s where id > '%2$s'",
           getSegmentSchemaTable(),
-          latestSchemaId);
+          lastSchemaIdPrePoll);
     }
     String finalSchemaPollQuery = schemaPollQuery;
 
     final AtomicReference<Long> maxPolledId = new AtomicReference<>();
-    maxPolledId.set(latestSchemaId);
+    maxPolledId.set(lastSchemaIdPrePoll);
 
     connector.inReadOnlyTransaction(new TransactionCallback<Object>()
     {
@@ -1191,7 +1196,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                        public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
                        {
                          try {
-                           Long id = r.getLong("id");
+                           long id = r.getLong("id");
 
                            if (maxPolledId.get() == null || id > maxPolledId.get()) {
                              maxPolledId.set(id);
@@ -1213,14 +1218,21 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     log.debug("SchemaMap polled from the database is [%s]", schemaMap);
 
-    schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
+    if (lastSchemaIdPrePoll == null) {
+      segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
+    } else {
+      schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
+    }
     segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
     segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
 
-    if (latestSchemaId == null) {
+    if (lastSchemaIdPrePoll == null) {
       segmentSchemaCache.setInitialized();
     }
-    latestSchemaId = maxPolledId.get();
+
+    // It is possible that the schema cleanup duty resets the {@code latestSchemaId}.
+    // In that case, we shouldn't update this value with the latest polled schemaId.
+    latestSchemaId.compareAndSet(lastSchemaIdPrePoll, maxPolledId.get());
 
     Preconditions.checkNotNull(
         segments,
@@ -1241,10 +1253,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       log.info("No segments found in the database!");
     } else {
       log.info(
-          "Polled and found total %,d segments and [%d] new schema since [%s] in the database",
+          "Polled and found total %,d segments and [%d] new schema since schemaId [%s] in the database",
           segments.size(),
           schemaMap.size(),
-          latestSchemaId
+          latestSchemaId.get()
       );
     }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
@@ -1359,6 +1371,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public void resetLatestSchemaId()
   {
-    latestSchemaId = null;
+    latestSchemaId.set(null);
   }
 }
