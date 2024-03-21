@@ -70,7 +70,7 @@ PARTITIONED BY DAY
 After Druid finishes loading the data, run the following query to see the table:
 
 ```sql
-SELECT * FROM null_data_example
+SELECT * FROM "null_example"
 ```
 
 |`__time`|`title`|`string_value`|`numeric_value`|
@@ -89,7 +89,7 @@ The following query filters rows where the string value is not equal to "some_va
 
 ```sql
 SELECT COUNT(*)
-FROM "null_data_example2"
+FROM "null_example"
 WHERE "string_value" != 'some_value'
 ```
 
@@ -148,7 +148,7 @@ Druid does does not count null values in numeric comparisons.
 
 ```sql
 SELECT COUNT(*)
-FROM "null_data_example"
+FROM "null_example"
 WHERE "numeric_value" < 2
 ```
 
@@ -160,7 +160,7 @@ The same null handling rules apply at ingestion time.
 The following query replaces the example data with data filtered with a WHERE clause:
 
 ```sql
-REPLACE INTO "inline_data" OVERWRITE ALL
+REPLACE INTO "null_example" OVERWRITE ALL
 WITH "ext" AS (
   SELECT *
   FROM TABLE(
