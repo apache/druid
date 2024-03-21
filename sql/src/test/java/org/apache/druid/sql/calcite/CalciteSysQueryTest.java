@@ -22,14 +22,12 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(NotYetSupportedProcessor.class)
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
-  @Rule(order = 0)
-  public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
-
   @Test
   public void testTasksSum()
   {

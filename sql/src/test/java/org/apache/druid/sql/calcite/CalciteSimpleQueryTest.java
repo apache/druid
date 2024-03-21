@@ -36,7 +36,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests simple aggregation SQL queries, i.e., no joins and no nested queries.

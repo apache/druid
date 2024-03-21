@@ -44,7 +44,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param status status object associated wit this object, can be null
    * @param type entry type
    * @param groupId entry group id
-   * @throws EntryExistsException
    */
   void insert(
       @NotNull String id,
@@ -55,7 +54,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @Nullable StatusType status,
       @NotNull String type,
       @NotNull String groupId
-  ) throws EntryExistsException;
+  );
 
   /**
    * Sets or updates the status for any active entry with the given id.

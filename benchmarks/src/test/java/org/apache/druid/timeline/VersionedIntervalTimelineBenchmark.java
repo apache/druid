@@ -253,6 +253,23 @@ public class VersionedIntervalTimelineBenchmark
   }
 
   @Benchmark
+  public void benchIsOvershadowedTotal(Blackhole blackhole)
+  {
+    blackhole.consume(isOvershadowedTotal());
+  }
+
+  private int isOvershadowedTotal()
+  {
+    int overshadowedCount = 0;
+    for (DataSegment segment : segments) {
+      if (timeline.isOvershadowed(segment.getInterval(), segment.getVersion(), segment)) {
+        overshadowedCount++;
+      }
+    }
+    return overshadowedCount;
+  }
+
+  @Benchmark
   public void benchFindFullyOvershadowed(Blackhole blackhole)
   {
     blackhole.consume(timeline.findFullyOvershadowed());

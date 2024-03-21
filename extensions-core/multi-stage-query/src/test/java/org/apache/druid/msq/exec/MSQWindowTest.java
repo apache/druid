@@ -61,24 +61,17 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
+
 public class MSQWindowTest extends MSQTestBase
 {
-  @Parameterized.Parameter(0)
-  public String contextName;
-  @Parameterized.Parameter(1)
-  public Map<String, Object> context;
-
-  @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
@@ -92,8 +85,9 @@ public class MSQWindowTest extends MSQTestBase
   }
 
 
-  @Test
-  public void testWindowOnFooWithPartitionByAndInnerGroupBy()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithPartitionByAndInnerGroupBy(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -174,8 +168,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithFirstWindowPartitionNextWindowEmpty()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithFirstWindowPartitionNextWindowEmpty(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -280,8 +275,12 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWith2WindowsBothWindowsHavingPartitionByInnerGroupBy()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWith2WindowsBothWindowsHavingPartitionByInnerGroupBy(
+      String contextName,
+      Map<String, Object> context
+  )
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -390,8 +389,12 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWith2WindowsBothPartitionByWithOrderReversed()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWith2WindowsBothPartitionByWithOrderReversed(
+      String contextName,
+      Map<String, Object> context
+  )
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -499,8 +502,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithEmptyOverWithGroupBy()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithEmptyOverWithGroupBy(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -580,8 +584,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithNoGroupByAndPartition()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithNoGroupByAndPartition(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -645,8 +650,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithNoGroupByAndPartitionOnTwoElements()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithNoGroupByAndPartitionOnTwoElements(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -716,8 +722,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithNoGroupByAndPartitionByAnother()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithNoGroupByAndPartitionByAnother(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -784,8 +791,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithNoGroupByAndPartitionAndVirtualColumns()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithNoGroupByAndPartitionAndVirtualColumns(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -860,8 +868,9 @@ public class MSQWindowTest extends MSQTestBase
   }
 
 
-  @Test
-  public void testWindowOnFooWithNoGroupByAndEmptyOver()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithNoGroupByAndEmptyOver(String contextName, Map<String, Object> context)
   {
 
     final Map<String, Object> contextWithRowSignature =
@@ -925,8 +934,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithPartitionByOrderBYWithJoin()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithPartitionByOrderBYWithJoin(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -1040,8 +1050,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithEmptyOverWithJoin()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithEmptyOverWithJoin(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -1151,8 +1162,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithDim2()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithDim2(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("dim2", ColumnType.STRING)
@@ -1219,8 +1231,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithEmptyOverWithUnnest()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithEmptyOverWithUnnest(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -1309,8 +1322,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testWindowOnFooWithPartitionByAndWithUnnest()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithPartitionByAndWithUnnest(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -1401,8 +1415,9 @@ public class MSQWindowTest extends MSQTestBase
   }
 
   // Insert Tests
-  @Test
-  public void testInsertWithWindow()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertWithWindow(String contextName, Map<String, Object> context)
   {
     List<Object[]> expectedRows = ImmutableList.of(
         new Object[]{946684800000L, 1.0f, 1.0},
@@ -1433,8 +1448,9 @@ public class MSQWindowTest extends MSQTestBase
 
   }
 
-  @Test
-  public void testInsertWithWindowEmptyOver()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertWithWindowEmptyOver(String contextName, Map<String, Object> context)
   {
     List<Object[]> expectedRows = ImmutableList.of(
         new Object[]{946684800000L, 1.0f, 21.0},
@@ -1465,8 +1481,9 @@ public class MSQWindowTest extends MSQTestBase
 
   }
 
-  @Test
-  public void testInsertWithWindowPartitionByOrderBy()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertWithWindowPartitionByOrderBy(String contextName, Map<String, Object> context)
   {
     List<Object[]> expectedRows = ImmutableList.of(
         new Object[]{946684800000L, 1.0f, 1.0},
@@ -1499,8 +1516,9 @@ public class MSQWindowTest extends MSQTestBase
 
 
   // Replace Tests
-  @Test
-  public void testReplaceWithWindowsAndUnnest()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceWithWindowsAndUnnest(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1532,8 +1550,9 @@ public class MSQWindowTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testSimpleWindowWithPartitionBy()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSimpleWindowWithPartitionBy(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1562,8 +1581,9 @@ public class MSQWindowTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testSimpleWindowWithEmptyOver()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSimpleWindowWithEmptyOver(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1592,8 +1612,9 @@ public class MSQWindowTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testSimpleWindowWithEmptyOverNoGroupBy()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSimpleWindowWithEmptyOverNoGroupBy(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1622,8 +1643,9 @@ public class MSQWindowTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testSimpleWindowWithJoins()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSimpleWindowWithJoins(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1663,8 +1685,9 @@ public class MSQWindowTest extends MSQTestBase
   }
 
   // Bigger dataset tests
-  @Test
-  public void testSelectWithWikipedia()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithWikipedia(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cityName", ColumnType.STRING)
@@ -1736,8 +1759,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testSelectWithWikipediaEmptyOverWithCustomContext()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithWikipediaEmptyOverWithCustomContext(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> customContext =
         ImmutableMap.<String, Object>builder()
@@ -1753,8 +1777,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testSelectWithWikipediaWithPartitionKeyNotInSelect()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithWikipediaWithPartitionKeyNotInSelect(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cityName", ColumnType.STRING)
@@ -1847,8 +1872,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByWithWikipedia()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithWikipedia(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cityName", ColumnType.STRING)
@@ -1927,8 +1953,9 @@ public class MSQWindowTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testReplaceGroupByOnWikipedia()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceGroupByOnWikipedia(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
