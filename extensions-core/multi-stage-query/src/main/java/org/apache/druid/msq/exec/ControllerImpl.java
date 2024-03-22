@@ -207,7 +207,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -1745,8 +1744,8 @@ public class ControllerImpl implements Controller
       }
 
       if (!segments.isEmpty() && storeCompactionState) {
-        DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
-                                                                                    .getProcessorFactory()).getDataSchema();
+        DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
+            .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
 
 
         ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
@@ -1773,15 +1772,7 @@ public class ControllerImpl implements Controller
     DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
     if (!destination.isReplaceTimeChunks()) {
       // Only do this for replace queries, whether originating directly or via compaction
-      log.error("Query [%s] skipping storing compaction state in segments as query not of type REPLACE.", queryId);
-      return Function.identity();
-    }
-
-    GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-
-    if (task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) == null) {
-      // This is a defensive check. Should never enter here.
-      log.error("Query [%s] skipping storing compaction state in segments as segment granularity not set.", queryId);
+      log.error("storeCompactionState flag set for a non-REPLACE query [%s]", queryId);
       return Function.identity();
     }
 
@@ -1793,17 +1784,15 @@ public class ControllerImpl implements Controller
             .getContext()
     );
 
-    granularitySpec = new UniformGranularitySpec(
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        granularitySpec.getQueryGranularity(),
-        granularitySpec.isRollup(),
-        granularitySpec.inputIntervals()
+        dataSchema.getGranularitySpec().getQueryGranularity(),
+        dataSchema.getGranularitySpec().isRollup(),
+        dataSchema.getGranularitySpec().inputIntervals()
     );
 
-
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-    Map<String, Object> transformSpec = dataSchema.getTransformSpec() == null
-                                        || TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+    Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                                         ? null
                                         : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
                                                                                           .getFilter()).asMap(
