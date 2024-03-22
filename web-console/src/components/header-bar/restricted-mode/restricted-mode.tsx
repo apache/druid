@@ -127,7 +127,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
           <p>The console is running in restricted mode.</p>
           {message}
           <p>
-            For more info check out the{' '}
+            For more info refer to the{' '}
             <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
               web console documentation
             </ExternalLink>
