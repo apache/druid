@@ -968,7 +968,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDatasourceMetadataSingleTopicToMultiTopicMatch() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
+    multiTopic = true;
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(100);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -1016,7 +1017,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDatasourceMetadataSingleTopicToMultiTopicNotMatch() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
+    multiTopic = true;
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(100);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -1063,7 +1065,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDatasourceMetadataMultiTopicToSingleTopic() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(100);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -1072,9 +1074,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     ImmutableMap.Builder<KafkaTopicPartition, Long> partitionSequenceNumberMap = ImmutableMap.builder();
     // these should match
-    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
+    partitionSequenceNumberMap.putAll(multiTopicPartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
     // these should not match
-    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
+    partitionSequenceNumberMap.putAll(multiTopicPartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(topicPattern, partitionSequenceNumberMap.build(), ImmutableSet.of())
@@ -1112,7 +1114,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDatasourceMetadataMultiTopicToMultiTopic() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
+    multiTopic = true;
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(100);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -1121,9 +1124,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     ImmutableMap.Builder<KafkaTopicPartition, Long> partitionSequenceNumberMap = ImmutableMap.builder();
     // these should match
-    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
+    partitionSequenceNumberMap.putAll(multiTopicPartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
     // these should not match
-    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
+    partitionSequenceNumberMap.putAll(multiTopicPartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(topic, partitionSequenceNumberMap.build(), ImmutableSet.of())
@@ -3202,7 +3205,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
   {
     addSomeEvents(2);
-    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null, false);
+    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -4732,30 +4735,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         duration,
         lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        false
-    );
-  }
-
-  private TestableKafkaSupervisor getTestableSupervisor(
-      int replicas,
-      int taskCount,
-      boolean useEarliestOffset,
-      String duration,
-      Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod,
-      boolean multiTopic
-  )
-  {
-    return getTestableSupervisor(
-        replicas,
-        taskCount,
-        useEarliestOffset,
-        false,
-        duration,
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        multiTopic
+        earlyMessageRejectionPeriod
     );
   }
 
@@ -4766,8 +4746,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean resetOffsetAutomatically,
       String duration,
       Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod,
-      boolean multiTopic
+      Period earlyMessageRejectionPeriod
   )
   {
     return getTestableSupervisor(
@@ -4780,8 +4759,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         false,
         kafkaHost,
-        null,
-        multiTopic
+        null
     );
   }
 
@@ -4806,8 +4784,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
-        null,
-        false
+        null
     );
   }
 
@@ -4832,8 +4809,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
-        idleConfig,
-        false
+        idleConfig
     );
   }
 
@@ -4847,8 +4823,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period earlyMessageRejectionPeriod,
       boolean suspended,
       String kafkaHost,
-      IdleConfig idleConfig,
-      boolean multiTopic
+      IdleConfig idleConfig
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
@@ -5272,8 +5247,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
                            offset2, new KafkaTopicPartition(false, topic, partition3), offset3);
   }
 
-  private static ImmutableMap<KafkaTopicPartition, Long> singleMultiTopicPartitionMap(String topic, int partition1, long offset1,
-                                                                            int partition2, long offset2, int partition3, long offset3)
+  private static ImmutableMap<KafkaTopicPartition, Long> multiTopicPartitionMap(String topic, int partition1, long offset1,
+                                                                                int partition2, long offset2, int partition3, long offset3)
   {
     return ImmutableMap.of(new KafkaTopicPartition(true, topic, partition1), offset1, new KafkaTopicPartition(true, topic, partition2),
         offset2, new KafkaTopicPartition(true, topic, partition3), offset3);
