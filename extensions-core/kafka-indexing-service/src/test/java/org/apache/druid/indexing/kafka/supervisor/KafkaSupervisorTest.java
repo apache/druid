@@ -166,6 +166,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private SeekableStreamIndexTaskClient<KafkaTopicPartition, Long> taskClient;
   private TaskQueue taskQueue;
   private String topic;
+  private String topicPattern;
+  private boolean multiTopic;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private StubServiceEmitter serviceEmitter;
   private SupervisorStateManagerConfig supervisorConfig;
@@ -174,7 +176,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static String getTopic()
   {
     //noinspection StringConcatenationMissingWhitespace
-    return TOPIC_PREFIX + topicPostfix++;
+    return TOPIC_PREFIX + topicPostfix;
+  }
+
+  private static String getTopicPattern()
+  {
+    //noinspection StringConcatenationMissingWhitespace
+    return TOPIC_PREFIX + topicPostfix + ".*";
   }
 
   @Parameterized.Parameters(name = "numThreads = {0}")
@@ -222,6 +230,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskQueue = createMock(TaskQueue.class);
 
     topic = getTopic();
+    topicPattern = getTopicPattern();
+    topicPostfix++;
+    multiTopic = false; // assign to true in test if you wish to test multi-topic
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new StubServiceEmitter("KafkaSupervisorTest", "localhost");
     EmittingLogger.registerEmitter(serviceEmitter);
@@ -906,11 +917,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   /**
-   * Test generating the starting offsets from the partition data stored in druid_dataSource which contains the
-   * offsets of the last built segments.
+   * Test generating the starting offsets for single-topic config from the partition data stored in druid_dataSource which
+   * contains the offsets from previous single-topic config of the last built segments, where the previous topic does
+   * match the new configuration.
    */
   @Test
-  public void testDatasourceMetadata() throws Exception
+  public void testDatasourceMetadataSingleTopicToSingleTopicMatch() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(100);
@@ -946,6 +958,200 @@ public class KafkaSupervisorTest extends EasyMockSupport
         30L,
         taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
+  }
+
+  /**
+   * Test generating the starting offsets for multi-topic config from the partition data stored in druid_dataSource which
+   * contains the offsets from previous single-topic config of the last built segments, where the previous topic does
+   * match the new configuration.
+   */
+  @Test
+  public void testDatasourceMetadataSingleTopicToMultiTopicMatch() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
+    addSomeEvents(100);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    ImmutableMap.Builder<KafkaTopicPartition, Long> partitionSequenceNumberMap = ImmutableMap.builder();
+    // these should match
+    partitionSequenceNumberMap.putAll(singlePartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(topic, partitionSequenceNumberMap.build(), ImmutableSet.of())
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaIndexTask task = captured.getValue();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assert.assertEquals(
+        10L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 0)).longValue()
+    );
+    Assert.assertEquals(
+        20L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 1)).longValue()
+    );
+    Assert.assertEquals(
+        30L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 2)).longValue()
+    );
+    Assert.assertEquals(3, taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+  }
+
+  /**
+   * Test generating the starting offsets for multi-topic config from the partition data stored in druid_dataSource which
+   * contains the offsets from previous single-topic config of the last built segments, where the previous topic does
+   * not match the new configuration.
+   */
+  @Test
+  public void testDatasourceMetadataSingleTopicToMultiTopicNotMatch() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
+    addSomeEvents(100);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    ImmutableMap.Builder<KafkaTopicPartition, Long> partitionSequenceNumberMap = ImmutableMap.builder();
+    // these should not match
+    partitionSequenceNumberMap.putAll(singlePartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>("notMatch", partitionSequenceNumberMap.build(), ImmutableSet.of())
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaIndexTask task = captured.getValue();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assert.assertEquals(
+        0L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 0)).longValue()
+    );
+    Assert.assertEquals(
+        0L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 1)).longValue()
+    );
+    Assert.assertEquals(
+        0L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 2)).longValue()
+    );
+    Assert.assertEquals(3, taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+  }
+
+  /**
+   * Test generating the starting offsets for single-topic config from the partition data stored in druid_dataSource which
+   * contains the offsets from previous multi-topic config of the last built segments.
+   */
+  @Test
+  public void testDatasourceMetadataMultiTopicToSingleTopic() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, false);
+    addSomeEvents(100);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    ImmutableMap.Builder<KafkaTopicPartition, Long> partitionSequenceNumberMap = ImmutableMap.builder();
+    // these should match
+    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
+    // these should not match
+    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(topicPattern, partitionSequenceNumberMap.build(), ImmutableSet.of())
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaIndexTask task = captured.getValue();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assert.assertEquals(
+        10L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
+    );
+    Assert.assertEquals(
+        20L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
+    );
+    Assert.assertEquals(
+        30L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
+    );
+    Assert.assertEquals(3, taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+  }
+
+  /**
+   * Test generating the starting offsets for muti-topic config from the partition data stored in druid_dataSource which
+   * contains the offsets from previous multi-topic config of the last built segments.
+   */
+  @Test
+  public void testDatasourceMetadataMultiTopicToMultiTopic() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
+    addSomeEvents(100);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    ImmutableMap.Builder<KafkaTopicPartition, Long> partitionSequenceNumberMap = ImmutableMap.builder();
+    // these should match
+    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap(topic, 0, 10L, 1, 20L, 2, 30L));
+    // these should not match
+    partitionSequenceNumberMap.putAll(singleMultiTopicPartitionMap("notMatch", 0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(topic, partitionSequenceNumberMap.build(), ImmutableSet.of())
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaIndexTask task = captured.getValue();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assert.assertEquals(
+        10L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 0)).longValue()
+    );
+    Assert.assertEquals(
+        20L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 1)).longValue()
+    );
+    Assert.assertEquals(
+        30L,
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(true, topic, 2)).longValue()
+    );
+    Assert.assertEquals(3, taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
   }
 
   @Test
@@ -2996,7 +3202,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
   {
     addSomeEvents(2);
-    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null, false);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -4526,7 +4732,30 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         duration,
         lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod
+        earlyMessageRejectionPeriod,
+        false
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean multiTopic
+  )
+  {
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        multiTopic
     );
   }
 
@@ -4537,7 +4766,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean resetOffsetAutomatically,
       String duration,
       Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod
+      Period earlyMessageRejectionPeriod,
+      boolean multiTopic
   )
   {
     return getTestableSupervisor(
@@ -4550,7 +4780,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         false,
         kafkaHost,
-        null
+        null,
+        multiTopic
     );
   }
 
@@ -4575,7 +4806,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
-        null
+        null,
+        false
     );
   }
 
@@ -4600,7 +4832,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
-        idleConfig
+        idleConfig,
+        false
     );
   }
 
@@ -4614,15 +4847,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period earlyMessageRejectionPeriod,
       boolean suspended,
       String kafkaHost,
-      IdleConfig idleConfig
+      IdleConfig idleConfig,
+      boolean multiTopic
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
+        multiTopic ? null : topic,
+        multiTopic ? topicPattern : null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -5038,6 +5272,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
                            offset2, new KafkaTopicPartition(false, topic, partition3), offset3);
   }
 
+  private static ImmutableMap<KafkaTopicPartition, Long> singleMultiTopicPartitionMap(String topic, int partition1, long offset1,
+                                                                            int partition2, long offset2, int partition3, long offset3)
+  {
+    return ImmutableMap.of(new KafkaTopicPartition(true, topic, partition1), offset1, new KafkaTopicPartition(true, topic, partition2),
+        offset2, new KafkaTopicPartition(true, topic, partition3), offset3);
+  }
+
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final String taskType;
@@ -5109,7 +5350,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Deserializer valueDeserializerObject = new ByteArrayDeserializer();
       return new KafkaRecordSupplier(
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject),
-          false
+          getIoConfig().isMultiTopic()
       );
     }
 

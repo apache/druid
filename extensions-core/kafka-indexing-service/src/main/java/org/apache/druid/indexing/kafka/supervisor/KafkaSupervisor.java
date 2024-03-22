@@ -44,6 +44,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -63,12 +64,14 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -443,5 +446,79 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   public KafkaSupervisorTuningConfig getTuningConfig()
   {
     return spec.getTuningConfig();
+  }
+
+  @Override
+  protected Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorage()
+  {
+    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
+    if (dataSourceMetadata instanceof KafkaDataSourceMetadata
+        && checkSourceMetadataMatch(dataSourceMetadata)) {
+      @SuppressWarnings("unchecked")
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> partitions = ((KafkaDataSourceMetadata) dataSourceMetadata)
+          .getSeekableStreamSequenceNumbers();
+      if (partitions != null && partitions.getPartitionSequenceNumberMap() != null) {
+        Map<KafkaTopicPartition, Long> partitionOffsets = new HashMap<>();
+        Set<String> topicMisMatchLogged = new HashSet<>();
+        if (getIoConfig().isMultiTopic()) {
+          Pattern pattern = Pattern.compile(getIoConfig().getStream());
+          partitions.getPartitionSequenceNumberMap().forEach((kafkaTopicPartition, value) -> {
+            final boolean match;
+            final String matchValue;
+            // previous offsets are from multi-topic config
+            if (kafkaTopicPartition.topic().isPresent()) {
+              matchValue = kafkaTopicPartition.topic().get();
+            } else {
+              // previous offsets are from single topic config
+              matchValue = partitions.getStream();
+            }
+
+            match = pattern.matcher(matchValue).matches();
+
+            if (!match && !topicMisMatchLogged.contains(matchValue)) {
+              log.warn(
+                  "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored sequences",
+                  matchValue,
+                  getIoConfig().getStream()
+              );
+              topicMisMatchLogged.add(matchValue);
+            }
+            if (match) {
+              partitionOffsets.put(new KafkaTopicPartition(true, matchValue, kafkaTopicPartition.partition()), value);
+            }
+          });
+          return partitionOffsets;
+        } else {
+          partitions.getPartitionSequenceNumberMap().forEach((kafkaTopicPartition, value) -> {
+            final boolean match;
+            final String matchValue;
+            // previous offsets are from multi-topic config
+            if (kafkaTopicPartition.topic().isPresent()) {
+              matchValue = kafkaTopicPartition.topic().get();
+            } else {
+              // previous offsets are from single topic config
+              matchValue = partitions.getStream();
+            }
+
+            match = getIoConfig().getStream().equals(matchValue);
+
+            if (!match && !topicMisMatchLogged.contains(matchValue)) {
+              log.warn(
+                  "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored sequences",
+                  matchValue,
+                  getIoConfig().getStream()
+              );
+              topicMisMatchLogged.add(matchValue);
+            }
+            if (match) {
+              partitionOffsets.put(new KafkaTopicPartition(false, matchValue, kafkaTopicPartition.partition()), value);
+            }
+          });
+          return partitionOffsets;
+        }
+      }
+    }
+
+    return Collections.emptyMap();
   }
 }
