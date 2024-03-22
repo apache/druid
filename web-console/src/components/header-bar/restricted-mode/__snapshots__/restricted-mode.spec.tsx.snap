@@ -23,7 +23,7 @@ exports[`RestrictedMode matches snapshot 1`] = `
         .
       </p>
       <p>
-        It is possible that there is an issue with the capability detection. You can enable the unrestricted console but certain features might not work if the underlying APIs are not available.
+        It is possible that the console is experiencing an issue with the capability detection. You can enable the unrestricted console, but certain features might not work if the underlying APIs are not available.
       </p>
       <p>
         <Blueprint4.Button
