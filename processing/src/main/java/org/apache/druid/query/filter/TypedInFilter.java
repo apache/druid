@@ -39,7 +39,7 @@ import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 import it.unimi.dsi.fastutil.floats.FloatOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
@@ -468,12 +468,21 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
 
   private static List<?> sortValues(List<?> unsortedValues, ColumnType matchValueType)
   {
-    final ObjectRBTreeSet<Object> sortedSet = new ObjectRBTreeSet<>(matchValueType.getNullableStrategy());
-    for (Object value : unsortedValues) {
-      sortedSet.add(coerceValue(value, matchValueType));
+    final Object[] array = unsortedValues.toArray(new Object[0]);
+    // check if values need coerced
+    for (int i = 0; i < array.length; i++) {
+      Object coerced = coerceValue(array[i], matchValueType);
+      array[i] = coerced;
     }
-    final List<Object> sortedList = Lists.newArrayListWithCapacity(unsortedValues.size());
-    sortedList.addAll(sortedSet);
+    Comparator<Object> comparator = matchValueType.getNullableStrategy();
+    ObjectArrays.quickSort(array, comparator);
+    final List<Object> sortedList = Lists.newArrayListWithCapacity(array.length);
+    for (int i = 0; i < array.length; i++) {
+      if (i > 0 && comparator.compare(array[i - 1], array[i]) == 0) {
+        continue;
+      }
+      sortedList.add(array[i]);
+    }
     return sortedList;
   }
 
