@@ -48,10 +48,17 @@ public class KafkaStringHeaderReader implements KafkaHeaderReader
   public List<Pair<String, Object>> read()
   {
     List<Pair<String, Object>> events = new ArrayList<>();
+
     for (Header hdr : headers) {
-      String s = new String(hdr.value(), this.encoding);
-      String newKey = this.headerLabelPrefix + hdr.key();
-      events.add(Pair.of(newKey, s));
+      byte[] value = hdr.value();
+
+      if(value != null) {
+        String s = new String(hdr.value(), this.encoding);
+        String newKey = this.headerLabelPrefix + hdr.key();
+        events.add(Pair.of(newKey, s));
+      } else {
+        log.warn("Header '" + hdr.key() + "' skipped because it had no value");
+      }
     }
     return events;
   }
