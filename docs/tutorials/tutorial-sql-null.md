@@ -191,15 +191,3 @@ The resulting data set only includes two rows. Druid has filtered out example 1 
 
 See the following for more information:
 - [Null values](../querying/sql-data-types.md#null-values)
-
-
-
-
-
-
-
-
-
-
-
-
