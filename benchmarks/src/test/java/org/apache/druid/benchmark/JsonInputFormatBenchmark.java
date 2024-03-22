@@ -20,11 +20,11 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.ColumnsFilter;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -32,20 +32,24 @@ import org.apache.druid.data.input.impl.JsonLineReader;
 import org.apache.druid.data.input.impl.JsonNodeReader;
 import org.apache.druid.data.input.impl.JsonReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OperationsPerInvocation;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -62,13 +66,21 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+/**
+ * Tests {@link JsonInputFormat} delegates, one per {@link ReaderType}.
+ *
+ * Output is in nanoseconds per parse (or parse and read) of {@link #DATA_STRING}.
+ */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
-@Warmup(iterations = 3)
-@Measurement(iterations = 5)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@OperationsPerInvocation(JsonInputFormatBenchmark.NUM_EVENTS)
+@Warmup(iterations = 5)
+@Measurement(iterations = 10)
 @Fork(value = 1)
 public class JsonInputFormatBenchmark
 {
@@ -106,7 +118,34 @@ public class JsonInputFormatBenchmark
     public abstract JsonInputFormat createFormat(JSONPathSpec flattenSpec);
   }
 
-  private static final int NUM_EVENTS = 1000;
+  public static final int NUM_EVENTS = 1000;
+
+  private static final String DATA_STRING =
+      "{" +
+      "\"stack\":\"mainstack\"," +
+      "\"metadata\":" +
+      "{" +
+      "\"application\":\"applicationname\"," +
+      "\"detail\":\"tm\"," +
+      "\"id\":\"123456789012345678901234567890346973eb4c30eca8a4df79c8219d152cfe0d7d6bdb11a12e609c0c\"," +
+      "\"idtwo\":\"123456789012345678901234567890346973eb4c30eca8a4df79c8219d152cfe0d7d6bdb11a12e609c0c\"," +
+      "\"sequence\":\"v008\"," +
+      "\"stack\":\"mainstack\"," +
+      "\"taskId\":\"12345678-1234-1234-1234-1234567890ab\"," +
+      "\"taskIdTwo\":\"12345678-1234-1234-1234-1234567890ab\"" +
+      "}," +
+      "\"_cluster_\":\"kafka\"," +
+      "\"_id_\":\"12345678-1234-1234-1234-1234567890ab\"," +
+      "\"_offset_\":12111398526," +
+      "\"type\":\"CUMULATIVE_DOUBLE\"," +
+      "\"version\":\"v1\"," +
+      "\"timestamp\":1670425782281," +
+      "\"point\":{\"seconds\":1670425782,\"nanos\":217000000,\"value\":0}," +
+      "\"_kafka_timestamp_\":1670425782304," +
+      "\"_partition_\":60," +
+      "\"ec2_instance_id\":\"i-1234567890\"," +
+      "\"name\":\"packets_received\"," +
+      "\"_topic_\":\"test_topic\"}";
 
   private static final List<String> FIELDS_TO_READ =
       ImmutableList.of(
@@ -127,81 +166,67 @@ public class JsonInputFormatBenchmark
       );
 
   ReaderType readerType;
+  InputRowSchema inputRowSchema;
   InputEntityReader reader;
   JsonInputFormat format;
-  List<Function<Row, Object>> fieldFunctions;
-  byte[] data;
+  List<Function<InputRow, Object>> fieldFunctions;
+  ByteEntity data;
 
   @Param({"reader", "node_reader", "line_reader"})
   private String readerTypeString;
 
-  @Setup(Level.Invocation)
-  public void prepareReader()
-  {
-    ByteEntity source = new ByteEntity(data);
-
-    reader = format.createReader(
-            new InputRowSchema(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-                    ColumnsFilter.all()
-            ),
-            source,
-            null
-    );
-
-    if (reader.getClass() != readerType.clazz) {
-      throw new ISE(
-          "Expected class[%s] for readerType[%s], got[%s]",
-          readerType.clazz,
-          readerTypeString,
-          reader.getClass()
-      );
-    }
-  }
+  /**
+   * If false: only read {@link #FIELDS_TO_READ}. If true: discover and read all fields.
+   */
+  @Param({"false", "true"})
+  private boolean discovery;
 
   @Setup
-  public void prepareData() throws Exception
+  public void setUpTrial() throws Exception
   {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final byte[] dataUtf8 = StringUtils.toUtf8(DATA_STRING);
 
-    String dataString = "{" +
-            "\"stack\":\"mainstack\"," +
-            "\"metadata\":" +
-            "{" +
-            "\"application\":\"applicationname\"," +
-            "\"detail\":\"tm\"," +
-            "\"id\":\"123456789012345678901234567890346973eb4c30eca8a4df79c8219d152cfe0d7d6bdb11a12e609c0c\"," +
-            "\"idtwo\":\"123456789012345678901234567890346973eb4c30eca8a4df79c8219d152cfe0d7d6bdb11a12e609c0c\"," +
-            "\"sequence\":\"v008\"," +
-            "\"stack\":\"mainstack\"," +
-            "\"taskId\":\"12345678-1234-1234-1234-1234567890ab\"," +
-            "\"taskIdTwo\":\"12345678-1234-1234-1234-1234567890ab\"" +
-            "}," +
-            "\"_cluster_\":\"kafka\"," +
-            "\"_id_\":\"12345678-1234-1234-1234-1234567890ab\"," +
-            "\"_offset_\":12111398526," +
-            "\"type\":\"CUMULATIVE_DOUBLE\"," +
-            "\"version\":\"v1\"," +
-            "\"timestamp\":1670425782281," +
-            "\"point\":{\"seconds\":1670425782,\"nanos\":217000000,\"value\":0}," +
-            "\"_kafka_timestamp_\":1670425782304," +
-            "\"_partition_\":60," +
-            "\"ec2_instance_id\":\"i-1234567890\"," +
-            "\"name\":\"packets_received\"," +
-            "\"_topic_\":\"test_topic\"}";
     for (int i = 0; i < NUM_EVENTS; i++) {
-      baos.write(StringUtils.toUtf8(dataString));
+      baos.write(dataUtf8);
       baos.write(new byte[]{'\n'});
     }
 
-    data = baos.toByteArray();
-  }
+    final TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
+    final DimensionsSpec dimensionsSpec;
 
-  @Setup
-  public void prepareFormat()
-  {
+    if (discovery) {
+      // Discovered schema, excluding uninteresting fields that are not in FIELDS_TO_READ.
+      final Set<String> exclusions = Sets.difference(
+          TestHelper.makeJsonMapper()
+                    .readValue(DATA_STRING, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+                    .keySet(),
+          ImmutableSet.copyOf(FIELDS_TO_READ)
+      );
+
+      dimensionsSpec = DimensionsSpec.builder()
+                                     .useSchemaDiscovery(true)
+                                     .setDimensionExclusions(ImmutableList.copyOf(exclusions))
+                                     .build();
+    } else {
+      // Fully defined schema.
+      dimensionsSpec = DimensionsSpec.builder()
+                                     .setDimensions(DimensionsSpec.getDefaultSchemas(FIELDS_TO_READ))
+                                     .build();
+    }
+
+    data = new ByteEntity(baos.toByteArray());
     readerType = ReaderType.valueOf(StringUtils.toUpperCase(readerTypeString));
+    inputRowSchema = new InputRowSchema(
+        timestampSpec,
+        dimensionsSpec,
+        InputRowSchemas.createColumnsFilter(
+            timestampSpec,
+            dimensionsSpec,
+            TransformSpec.NONE,
+            new AggregatorFactory[0]
+        )
+    );
     format = readerType.createFormat(
         new JSONPathSpec(
             true,
@@ -213,20 +238,33 @@ public class JsonInputFormatBenchmark
         )
     );
 
-    // Replace with format.rowAdapter if https://github.com/apache/druid/pull/15681 is merged
-    final RowAdapter<Row> rowAdapter = RowAdapters.standardRow();
+    final RowAdapter<InputRow> rowAdapter = format.createRowAdapter(inputRowSchema);
     fieldFunctions = new ArrayList<>(FIELDS_TO_READ.size());
 
     for (final String field : FIELDS_TO_READ) {
       fieldFunctions.add(rowAdapter.columnFunction(field));
     }
+
+    reader = format.createReader(inputRowSchema, data, null);
+
+    if (reader.getClass() != readerType.clazz) {
+      throw new ISE(
+          "Expected class[%s] for readerType[%s], got[%s]",
+          readerType.clazz,
+          readerTypeString,
+          reader.getClass()
+      );
+    }
   }
 
+  /**
+   * Benchmark parsing, but not reading fields.
+   */
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void parse(final Blackhole blackhole) throws IOException
   {
+    data.getBuffer().rewind();
+
     int counted = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
@@ -243,17 +281,20 @@ public class JsonInputFormatBenchmark
     }
   }
 
+  /**
+   * Benchmark parsing and reading {@link #FIELDS_TO_READ}. More realistic than {@link #parse(Blackhole)}.
+   */
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void parseAndRead(final Blackhole blackhole) throws IOException
   {
+    data.getBuffer().rewind();
+
     int counted = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
         if (row != null) {
-          for (Function<Row, Object> fieldFunction : fieldFunctions) {
+          for (Function<InputRow, Object> fieldFunction : fieldFunctions) {
             blackhole.consume(fieldFunction.apply(row));
           }
 
