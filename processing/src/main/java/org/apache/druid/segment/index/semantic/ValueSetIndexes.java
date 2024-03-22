@@ -37,6 +37,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+/**
+ * Construct a {@link BitmapColumnIndex} for a set of values which might be present in the column.
+ */
 public interface ValueSetIndexes
 {
   /**

@@ -25,6 +25,9 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+/**
+ * Construct a {@link BitmapColumnIndex} for a set of utf8 byte values which might be present in the column.
+ */
 public interface Utf8ValueSetIndexes
 {
   /**

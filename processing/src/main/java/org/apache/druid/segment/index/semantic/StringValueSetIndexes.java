@@ -27,7 +27,9 @@ import java.util.SortedSet;
 
 /**
  * Index on individual values, and provides bitmaps for the rows which contain these values
+ * @deprecated use {@link ValueIndexes}, {@link ValueSetIndexes}, or {@link Utf8ValueSetIndexes} instead
  */
+@Deprecated
 public interface StringValueSetIndexes
 {
   /**
