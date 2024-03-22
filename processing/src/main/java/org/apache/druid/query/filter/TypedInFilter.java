@@ -103,7 +103,9 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
 
   /**
    * Supplier for list of values sorted by {@link #matchValueType}. This is lazily computed if
-   * {@link #unsortedValues} is not null and previously sorted.
+   * {@link #unsortedValues} is not null and previously sorted. Data will be deduplicated upon sorting if computed.
+   * Manually set this value with unsorted or duplicated values at your own risk. Duplicated values are unlikely to
+   * cause a problem, but unsorted values can result in incorrect results.
    */
   private final Supplier<List<?>> sortedMatchValues;
 
@@ -257,6 +259,8 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     for (Object value : sortedMatchValues.get()) {
       String valueEquivalent = Evals.asString(value);
       if (valueEquivalent == null) {
+        // Range.singleton(null) is invalid, so use the fact that
+        // only null values are less than empty string.
         retSet.add(Range.lessThan(""));
       } else {
         retSet.add(Range.singleton(valueEquivalent));

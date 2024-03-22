@@ -56,7 +56,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -68,7 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@RunWith(Enclosed.class)
+
 public class InFilterTests
 {
   @RunWith(Parameterized.class)
@@ -698,7 +697,9 @@ public class InFilterTests
 
       filter = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "b", null, "c"));
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
+      TypedInFilter deserialized = mapper.readValue(s, TypedInFilter.class);
+      Assert.assertEquals(Arrays.asList(null, "a", "b", "c"), deserialized.getSortedValues());
+      Assert.assertEquals(filter, deserialized);
 
       filter = inFilter("column", ColumnType.LONG, Arrays.asList(1L, 2L, 2L, null, 3L));
       s = mapper.writeValueAsString(filter);
