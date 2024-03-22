@@ -583,7 +583,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return tuningConfig.isForceGuaranteedRollup();
   }
 
-  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+  public static Function<Set<DataSegment>, Set<DataSegment>> prepareCompactionStateAnnotateFunction(
       boolean storeCompactionState,
       TaskToolbox toolbox,
       IngestionSpec ingestionSpec
@@ -604,7 +604,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                  ? null
                                  : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<List<Object>>() {});
 
-      final CompactionState compactionState = new CompactionState(
+      return CompactionState.compactionStateAnnotateFunction(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
           metricsSpec,
@@ -612,10 +612,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
           granularitySpec.asMap(toolbox.getJsonMapper())
       );
-      return segments -> segments
-          .stream()
-          .map(s -> s.withLastCompactionState(compactionState))
-          .collect(Collectors.toSet());
     } else {
       return Function.identity();
     }

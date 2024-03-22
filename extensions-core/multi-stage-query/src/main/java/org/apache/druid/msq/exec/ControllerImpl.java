@@ -1729,10 +1729,11 @@ public class ControllerImpl implements Controller
 
       Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = Function.identity();
 
-      Boolean storeCompactionState = (Boolean) task.getQuerySpec()
-                                                   .getQuery()
-                                                   .getContext()
-                                                   .get(Tasks.STORE_COMPACTION_STATE_KEY);
+      Boolean storeCompactionState = QueryContext.of(task.getQuerySpec().getQuery().getContext())
+                                                 .getBoolean(
+                                                     Tasks.STORE_COMPACTION_STATE_KEY,
+                                                     Tasks.DEFAULT_STORE_COMPACTION_STATE
+                                                 );
 
       if (storeCompactionState == null) {
         storeCompactionState = Tasks.DEFAULT_STORE_COMPACTION_STATE;
@@ -1740,20 +1741,26 @@ public class ControllerImpl implements Controller
       }
 
       if (!segments.isEmpty() && storeCompactionState) {
-        DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
-            .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
 
+        DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
+        if (!destination.isReplaceTimeChunks()) {
+          // Only do this for replace queries, whether originating directly or via compaction
+          log.error("storeCompactionState flag set for a non-REPLACE query [%s]", queryDef.getQueryId());
+        } else {
 
-        ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
+          DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
+              .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
 
-        compactionStateAnnotateFunction = compactionStateAnnotateFunction(
-            task(),
-            context.jsonMapper(),
-            dataSchema,
-            shardSpec,
-            queryDef.getQueryId()
-        );
+          ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
 
+          compactionStateAnnotateFunction = prepareCompactionStateAnnotateFunction(
+              task(),
+              context.jsonMapper(),
+              dataSchema,
+              shardSpec,
+              queryDef.getQueryId()
+          );
+        }
       }
 
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
@@ -1761,45 +1768,10 @@ public class ControllerImpl implements Controller
     }
   }
 
-  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+  public static Function<Set<DataSegment>, Set<DataSegment>> prepareCompactionStateAnnotateFunction(
       MSQControllerTask task, ObjectMapper jsonMapper, DataSchema dataSchema, ShardSpec shardSpec, String queryId
   )
   {
-    DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    if (!destination.isReplaceTimeChunks()) {
-      // Only do this for replace queries, whether originating directly or via compaction
-      log.error("storeCompactionState flag set for a non-REPLACE query [%s]", queryId);
-      return Function.identity();
-    }
-
-    // In case of MSQ, the segment granularity comes as the context parameter SQL_INSERT_SEGMENT_GRANULARITY
-    Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
-        jsonMapper,
-        task.getQuerySpec()
-            .getQuery()
-            .getContext()
-    );
-
-    GranularitySpec granularitySpec = new UniformGranularitySpec(
-        segmentGranularity,
-        dataSchema.getGranularitySpec().getQueryGranularity(),
-        dataSchema.getGranularitySpec().isRollup(),
-        dataSchema.getGranularitySpec().inputIntervals()
-    );
-
-    DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-    Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
-                                        ? null
-                                        : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
-                                                                                          .getFilter()).asMap(
-                                            jsonMapper);
-    List<Object> metricsSpec = dataSchema.getAggregators() == null
-                               ? null
-                               : jsonMapper.convertValue(
-                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
-                                   {
-                                   });
-
     PartitionsSpec partitionSpec;
 
     if ((Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
@@ -1822,9 +1794,35 @@ public class ControllerImpl implements Controller
       return Function.identity();
     }
 
+    Granularity segmentGranularity = ((DataSourceMSQDestination) task.getQuerySpec()
+                                                                     .getDestination()).getSegmentGranularity();
+
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
+        segmentGranularity,
+        dataSchema.getGranularitySpec().getQueryGranularity(),
+        dataSchema.getGranularitySpec().isRollup(),
+        dataSchema.getGranularitySpec().inputIntervals()
+    );
+
+    DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
+    Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                                        ? null
+                                        : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
+                                                                                          .getFilter()).asMap(
+                                            jsonMapper);
+    List<Object> metricsSpec = dataSchema.getAggregators() == null
+                               ? null
+                               : jsonMapper.convertValue(
+                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
+                                   {
+                                   });
+
+
     IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
 
-    final CompactionState compactionState = new CompactionState(
+    log.info("Query [%s] storing compaction state in segments.", queryId);
+
+    return CompactionState.compactionStateAnnotateFunction(
         partitionSpec,
         dimensionsSpec,
         metricsSpec,
@@ -1832,13 +1830,6 @@ public class ControllerImpl implements Controller
         indexSpec.asMap(jsonMapper),
         granularitySpec.asMap(jsonMapper)
     );
-
-    log.info("Query [%s] storing compaction state in segments.", queryId);
-
-    return segments -> segments
-        .stream()
-        .map(s -> s.withLastCompactionState(compactionState))
-        .collect(Collectors.toSet());
   }
 
   /**
@@ -1901,7 +1892,8 @@ public class ControllerImpl implements Controller
       }
     } else {
       shuffleSpecFactory = querySpec.getDestination()
-                                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()));
+                                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery()
+                                                                                                          .context()));
       queryToPlan = querySpec.getQuery();
     }
 
@@ -2003,9 +1995,11 @@ public class ControllerImpl implements Controller
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build("Found files at provided export destination[%s]. Export is only allowed to "
-                                     + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
-                                     exportStorageProvider.getBasePath());
+                              .build(
+                                  "Found files at provided export destination[%s]. Export is only allowed to "
+                                  + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
+                                  exportStorageProvider.getBasePath()
+                              );
         }
       }
       catch (IOException e) {
@@ -2035,7 +2029,6 @@ public class ControllerImpl implements Controller
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
   }
-
 
 
   private static DataSchema generateDataSchema(
@@ -2486,7 +2479,9 @@ public class ControllerImpl implements Controller
       workerStatsMap = taskLauncher.getWorkerStats();
     }
 
-    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null
+                                                              ? null
+                                                              : segmentLoadWaiter.status();
 
     return new MSQStatusReport(
         taskState,
