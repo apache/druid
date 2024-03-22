@@ -183,6 +183,16 @@ public interface Expr extends Cacheable
   }
 
   /**
+   * Possibly convert the {@link Expr} into an optimized, possibly not thread-safe {@link Expr}. Does not convert
+   * child {@link Expr}. Most callers should use {@link Expr#singleThreaded(Expr, InputBindingInspector)} to convert
+   * an entire tree, which delegates to this method to translate individual nodes.
+   */
+  default Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return this;
+  }
+
+  /**
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
    *
@@ -207,6 +217,11 @@ public interface Expr extends Cacheable
 
       final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
       if (delegateIndexSupplier == null) {
+        // if the column doesn't exist, check to see if the expression evaluates to a non-null result... if so, we might
+        // need to make a value matcher anyway
+        if (eval(InputBindings.nilBindings()).valueOrDefault() != null) {
+          return NoIndexesColumnIndexSupplier.getInstance();
+        }
         return null;
       }
       final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
@@ -757,5 +772,16 @@ public interface Expr extends Cacheable
       }
       return results;
     }
+  }
+
+
+  /**
+   * Returns the single-threaded version of the given expression tree.
+   *
+   * Nested expressions in the subtree are also optimized.
+   */
+  static Expr singleThreaded(Expr expr, InputBindingInspector inspector)
+  {
+    return expr.visit(node -> node.asSingleThreaded(inspector));
   }
 }

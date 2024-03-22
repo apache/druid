@@ -41,11 +41,6 @@
                 <artifactId>woodstox-core</artifactId>
                 <version>6.4.0</version>
             </dependency>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bundle</artifactId>
-                <version>${aws.sdk.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -178,6 +173,11 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
                 </exclusion>
+                <!-- removing the complete bundle sdk to be replaced with only logs-sdk  -->
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-bundle</artifactId>
+                </exclusion>
                 <exclusion>
                     <groupId>org.elasticsearch</groupId>
                     <artifactId>*</artifactId>
@@ -193,7 +193,14 @@
             </exclusions>
             <scope>compile</scope>
         </dependency>
-
+        <!-- This is a transitive dependency of ranger-plugins-audit
+             added here to replace bloated bundle sdk, remove this if /when
+             apache ranger replaces bundle-skd with logs-sdk  -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-logs</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -254,6 +261,10 @@
                         <!-- These are needed for scope: compile -->
                         <dependency>org.apache.ranger:ranger-plugins-audit</dependency>
                     </usedDependencies>
+                    <!-- this is due to replacement of aws-bundle-sdk with aws-logs-sdk  -->
+                    <ignoredDependencies>
+                        <ignoredDependency>com.amazonaws:aws-java-sdk-logs</ignoredDependency>
+                    </ignoredDependencies>
                 </configuration>
             </plugin>
         </plugins>

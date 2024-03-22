@@ -193,6 +193,9 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     inputSourceAndFormat.inputSource,
   );
 
+  const needsResample = inputSourceAndFormatToSample !== inputSourceAndFormat;
+  const nextDisabled = !inputSourceFormatAndMore || needsResample;
+
   return (
     <div className="input-format-step">
       <div className="preview">
@@ -246,7 +249,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               onChange={setInputSourceAndFormat as any}
             />
           )}
-          {inputSourceAndFormatToSample !== inputSourceAndFormat && (
+          {needsResample && (
             <FormGroup className="control-buttons">
               <Button
                 text="Preview changes"
@@ -283,7 +286,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
                   text={altText}
                   rightIcon={IconNames.ARROW_TOP_RIGHT}
                   minimal
-                  disabled={!inputSourceFormatAndMore}
+                  disabled={nextDisabled}
                   onClick={() => {
                     if (!inputSourceFormatAndMore) return;
                     onAltSet(inputSourceFormatAndMore);
@@ -299,7 +302,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               text={doneButton ? 'Done' : 'Next'}
               rightIcon={doneButton ? IconNames.TICK : IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
-              disabled={!inputSourceFormatAndMore}
+              disabled={nextDisabled}
               onClick={() => {
                 if (!inputSourceFormatAndMore) return;
                 onSet(inputSourceFormatAndMore);

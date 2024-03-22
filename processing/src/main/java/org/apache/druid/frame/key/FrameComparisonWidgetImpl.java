@@ -28,6 +28,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -138,21 +139,29 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   }
 
   @Override
-  public boolean isCompletelyNonNullKey(int row)
+  public boolean hasNonNullKeyParts(int row, int[] keyParts)
   {
-    if (keyFieldCount == 0) {
+    if (keyParts.length == 0) {
       return true;
     }
 
     final long rowPosition = getRowPositionInDataRegion(row);
-    long keyFieldPosition = rowPosition + (long) signature.size() * Integer.BYTES;
 
-    for (int i = 0; i < keyFieldCount; i++) {
-      final boolean isNull = keyFieldReaders.get(i).isNull(dataRegion, keyFieldPosition);
-      if (isNull) {
-        return false;
+    for (int i : keyParts) {
+      if (i < 0 || i >= keyFieldCount) {
+        throw new IAE("Invalid key part[%d]", i);
+      }
+
+      final long keyFieldPosition;
+
+      if (i == 0) {
+        keyFieldPosition = rowPosition + (long) signature.size() * Integer.BYTES;
       } else {
-        keyFieldPosition = rowPosition + dataRegion.getInt(rowPosition + (long) i * Integer.BYTES);
+        keyFieldPosition = rowPosition + dataRegion.getInt(rowPosition + (long) (i - 1) * Integer.BYTES);
+      }
+
+      if (keyFieldReaders.get(i).isNull(dataRegion, keyFieldPosition)) {
+        return false;
       }
     }
 

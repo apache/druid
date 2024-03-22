@@ -20,28 +20,15 @@
 package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class RichSegmentDescriptorTest
 {
-  private static final DruidServerMetadata DRUID_SERVER_1 = new DruidServerMetadata(
-      "name1",
-      "host1",
-      null,
-      100L,
-      ServerType.REALTIME,
-      "tier1",
-      0
-  );
-
   @Test
   public void testSerdeWithFullIntervalDifferentFromInterval() throws Exception
   {
@@ -50,8 +37,7 @@ public class RichSegmentDescriptorTest
         Intervals.of("2000/2002"),
         Intervals.of("2000/2001"),
         "2",
-        3,
-        ImmutableSet.of(DRUID_SERVER_1)
+        3
     );
 
     Assert.assertEquals(
@@ -68,8 +54,7 @@ public class RichSegmentDescriptorTest
         Intervals.of("2000/2001"),
         Intervals.of("2000/2001"),
         "2",
-        3,
-        ImmutableSet.of(DRUID_SERVER_1)
+        3
     );
 
     Assert.assertEquals(
@@ -86,8 +71,7 @@ public class RichSegmentDescriptorTest
         Intervals.of("2000/2002"),
         Intervals.of("2000/2001"),
         "2",
-        3,
-        ImmutableSet.of(DRUID_SERVER_1)
+        3
     );
 
     Assert.assertEquals(

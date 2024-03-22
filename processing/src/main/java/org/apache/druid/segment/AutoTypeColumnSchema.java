@@ -76,7 +76,14 @@ public class AutoTypeColumnSchema extends DimensionSchema
   )
   {
     super(name, null, true);
-    this.castToType = castToType;
+    // auto doesn't currently do FLOAT since expressions only support DOUBLE
+    if (ColumnType.FLOAT.equals(castToType)) {
+      this.castToType = ColumnType.DOUBLE;
+    } else if (ColumnType.FLOAT_ARRAY.equals(castToType)) {
+      this.castToType = ColumnType.DOUBLE_ARRAY;
+    } else {
+      this.castToType = castToType;
+    }
   }
 
   @Override

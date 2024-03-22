@@ -87,23 +87,38 @@ public class SupervisorManager
       final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec supervisorSpec = entry.getValue().rhs;
 
-      TaskLockType taskLockType = null;
+      boolean hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
       if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
         SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
         Map<String, Object> context = seekableStreamSupervisorSpec.getContext();
         if (context != null) {
-          taskLockType = QueryContexts.getAsEnum(
-              Tasks.TASK_LOCK_TYPE,
-              context.get(Tasks.TASK_LOCK_TYPE),
-              TaskLockType.class
+          Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
+              Tasks.USE_CONCURRENT_LOCKS,
+              context.get(Tasks.USE_CONCURRENT_LOCKS)
           );
+          if (useConcurrentLocks == null) {
+            TaskLockType taskLockType = QueryContexts.getAsEnum(
+                Tasks.TASK_LOCK_TYPE,
+                context.get(Tasks.TASK_LOCK_TYPE),
+                TaskLockType.class
+            );
+            if (taskLockType == null) {
+              hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
+            } else if (taskLockType == TaskLockType.APPEND) {
+              hasAppendLock = true;
+            } else {
+              hasAppendLock = false;
+            }
+          } else {
+            hasAppendLock = useConcurrentLocks;
+          }
         }
       }
 
       if (supervisor instanceof SeekableStreamSupervisor
           && !supervisorSpec.isSuspended()
           && supervisorSpec.getDataSources().contains(datasource)
-          && TaskLockType.APPEND.equals(taskLockType)) {
+          && (hasAppendLock)) {
         return Optional.of(supervisorId);
       }
     }

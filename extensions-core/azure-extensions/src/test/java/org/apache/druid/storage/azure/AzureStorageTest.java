@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.http.rest.PagedResponse;
+import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.batch.BlobBatchClient;
@@ -32,11 +33,16 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +52,7 @@ public class AzureStorageTest
 {
 
   AzureStorage azureStorage;
+  BlobClient blobClient = Mockito.mock(BlobClient.class);
   BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
   BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
   AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
@@ -54,6 +61,9 @@ public class AzureStorageTest
   private final String CONTAINER = "container";
   private final String BLOB_NAME = "blobName";
   private final Integer MAX_ATTEMPTS = 3;
+
+  @Rule
+  public TemporaryFolder tempFolder = new TemporaryFolder();
 
   @Before
   public void setup() throws BlobStorageException
@@ -200,6 +210,26 @@ public class AzureStorageTest
     Assert.assertEquals(deletedValues.get(0).size(), 256);
     Assert.assertEquals(deletedValues.get(1).size(), 2);
     Assert.assertTrue(deleteSuccessful);
+  }
+
+  @Test
+  public void testUploadBlob_usesOverwrite() throws BlobStorageException, IOException
+  {
+    File tempFile = tempFolder.newFile("tempFile.txt");
+    String blobPath = "blob";
+
+    ArgumentCaptor<InputStream> captor = ArgumentCaptor.forClass(InputStream.class);
+    ArgumentCaptor<Long> captor2 = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<Boolean> overrideArgument = ArgumentCaptor.forClass(Boolean.class);
+
+
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
+    Mockito.doReturn(blobClient).when(blobContainerClient).getBlobClient(blobPath);
+    azureStorage.uploadBlockBlob(tempFile, CONTAINER, blobPath, null);
+
+    Mockito.verify(blobClient).upload(captor.capture(), captor2.capture(), overrideArgument.capture());
+    Assert.assertTrue(overrideArgument.getValue());
   }
 }
 

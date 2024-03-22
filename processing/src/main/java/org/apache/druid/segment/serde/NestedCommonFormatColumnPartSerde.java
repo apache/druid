@@ -196,8 +196,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           byteOrder,
           bitmapSerdeFactory,
           buffer,
-          builder,
-          columnConfig
+          builder
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       capabilitiesBuilder.setDictionaryEncoded(true);
@@ -264,8 +263,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           byteOrder,
           bitmapSerdeFactory,
           buffer,
-          builder,
-          columnConfig
+          builder
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // if we are a mixed type, don't call ourself dictionary encoded for now so we don't end up doing the wrong thing

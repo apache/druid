@@ -48,7 +48,6 @@ import './sql-data-loader-view.scss';
 const INITIAL_QUERY_CONTEXT: QueryContext = {
   finalizeAggregations: false,
   groupByEnableMultiValueUnnesting: false,
-  arrayIngestMode: 'array',
 };
 
 interface LoaderContent extends QueryWithContext {
@@ -190,6 +189,8 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
             initInputFormat={inputFormat}
             doneButton={false}
             onSet={({ inputSource, inputFormat, signature, timeExpression, arrayMode }) => {
+              const queryContext: QueryContext = { ...INITIAL_QUERY_CONTEXT };
+              if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
               setContent({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
@@ -199,7 +200,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
                     arrayMode,
                   ),
                 ).toString(),
-                queryContext: INITIAL_QUERY_CONTEXT,
+                queryContext,
               });
             }}
             altText="Skip the wizard and continue with custom SQL"

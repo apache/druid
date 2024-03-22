@@ -55,10 +55,11 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.DictionaryRangeScanningBitmapIndex;
+import org.apache.druid.segment.index.DictionaryScanningBitmapIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
-import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
@@ -128,17 +129,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             bitmapSerdeFactory.getObjectStrategy(),
             columnBuilder.getFileMapper()
         );
-        final int size;
-        try (ColumnarDoubles throwAway = doubles.get()) {
-          size = throwAway.size();
-        }
         return new ScalarDoubleColumnAndIndexSupplier(
             doubleDictionarySupplier,
             doubles,
             rBitmaps,
             bitmapSerdeFactory.getBitmapFactory(),
-            columnConfig,
-            size
+            columnConfig
         );
       }
       catch (IOException ex) {
@@ -158,15 +154,13 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   private final BitmapFactory bitmapFactory;
   private final ImmutableBitmap nullValueBitmap;
   private final ColumnConfig columnConfig;
-  private final int numRows;
 
   private ScalarDoubleColumnAndIndexSupplier(
       Supplier<FixedIndexed<Double>> longDictionary,
       Supplier<ColumnarDoubles> valueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapFactory bitmapFactory,
-      ColumnConfig columnConfig,
-      int numRows
+      ColumnConfig columnConfig
   )
   {
     this.doubleDictionarySupplier = longDictionary;
@@ -175,7 +169,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     this.bitmapFactory = bitmapFactory;
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
     this.columnConfig = columnConfig;
-    this.numRows = numRows;
   }
 
   @Override
@@ -424,10 +417,10 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
-      if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
-        return null;
-      }
-      return new SimpleImmutableBitmapDelegatingIterableIndex()
+      return new DictionaryRangeScanningBitmapIndex(
+          columnConfig.skipValueRangeIndexScale(),
+          endIndex - startIndex
+      )
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -467,10 +460,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
-      if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
-        return null;
-      }
-      return new SimpleImmutableBitmapIterableIndex()
+      return new DictionaryScanningBitmapIndex(dictionary.size())
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)

@@ -159,8 +159,7 @@ public class ExternalInputSliceReader implements InputSliceReader
           );
           return new SegmentWithDescriptor(
               () -> ResourceHolder.fromCloseable(segment),
-              null,
-              new RichSegmentDescriptor(segmentId.toDescriptor(), null, null)
+              new RichSegmentDescriptor(segmentId.toDescriptor(), null)
           );
         }
     );

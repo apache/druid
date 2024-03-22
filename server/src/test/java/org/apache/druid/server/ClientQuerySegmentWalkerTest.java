@@ -73,8 +73,6 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -802,7 +800,13 @@ public class ClientQuerySegmentWalkerTest
                                 .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage("Subquery generated results beyond maximum[2] rows");
+    expectedException.expectMessage(
+        "Cannot issue the query, subqueries generated results beyond maximum[2] rows. Try setting the "
+        + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
+        + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
+        + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to go out "
+        + "of memory."
+    );
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
@@ -897,7 +901,12 @@ public class ClientQuerySegmentWalkerTest
                                 .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage("Subquery generated results beyond maximum[1] bytes");
+    expectedException.expectMessage(
+        "Cannot issue the query, subqueries generated results beyond maximum[1] bytes. Increase the "
+        + "JVM's memory or set the 'maxSubqueryBytes' in the query context to increase the space "
+        + "allocated for subqueries to materialize their results. Manually alter the value carefully as it can cause "
+        + "the broker to go out of memory."
+    );
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
@@ -923,10 +932,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{new ComparableList(ImmutableList.of(1.0, 2.0))},
-            new Object[]{new ComparableList(ImmutableList.of(2.0, 4.0))},
-            new Object[]{new ComparableList(ImmutableList.of(3.0, 6.0))},
-            new Object[]{new ComparableList(ImmutableList.of(4.0, 8.0))}
+            new Object[]{new Object[]{1.0, 2.0}},
+            new Object[]{new Object[]{2.0, 4.0}},
+            new Object[]{new Object[]{3.0, 6.0}},
+            new Object[]{new Object[]{4.0, 8.0}}
         )
     );
   }
@@ -947,10 +956,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{new ComparableList(ImmutableList.of(1.0, 2.0)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(2.0, 4.0)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(3.0, 6.0)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(4.0, 8.0)).toString()}
+            new Object[]{Arrays.toString(new Object[]{1.0, 2.0})},
+            new Object[]{Arrays.toString(new Object[]{2.0, 4.0})},
+            new Object[]{Arrays.toString(new Object[]{3.0, 6.0})},
+            new Object[]{Arrays.toString(new Object[]{4.0, 8.0})}
         )
     );
   }
@@ -1010,10 +1019,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{new ComparableList(ImmutableList.of(1L, 2L))},
-            new Object[]{new ComparableList(ImmutableList.of(2L, 4L))},
-            new Object[]{new ComparableList(ImmutableList.of(3L, 6L))},
-            new Object[]{new ComparableList(ImmutableList.of(4L, 8L))}
+            new Object[]{new Object[]{1L, 2L}},
+            new Object[]{new Object[]{2L, 4L}},
+            new Object[]{new Object[]{3L, 6L}},
+            new Object[]{new Object[]{4L, 8L}}
         )
     );
   }
@@ -1030,15 +1039,15 @@ public class ClientQuerySegmentWalkerTest
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
 
-    // when we donot define an outputType, convert {@link ComparableList} to a string
+    // when we donot define an outputType, convert {@code Object[]} to a string
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{new ComparableList(ImmutableList.of(1L, 2L)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(2L, 4L)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(3L, 6L)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(4L, 8L)).toString()}
+            new Object[]{Arrays.toString(new Object[]{1L, 2L})},
+            new Object[]{Arrays.toString(new Object[]{2L, 4L})},
+            new Object[]{Arrays.toString(new Object[]{3L, 6L})},
+            new Object[]{Arrays.toString(new Object[]{4L, 8L})}
         )
     );
   }
@@ -1093,10 +1102,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{ComparableStringArray.of("1.0", "2.0")},
-            new Object[]{ComparableStringArray.of("2.0", "4.0")},
-            new Object[]{ComparableStringArray.of("3.0", "6.0")},
-            new Object[]{ComparableStringArray.of("4.0", "8.0")}
+            new Object[]{new Object[]{"1.0", "2.0"}},
+            new Object[]{new Object[]{"2.0", "4.0"}},
+            new Object[]{new Object[]{"3.0", "6.0"}},
+            new Object[]{new Object[]{"4.0", "8.0"}}
         )
     );
   }
@@ -1117,10 +1126,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{ComparableStringArray.of("1.0", "2.0").toString()},
-            new Object[]{ComparableStringArray.of("2.0", "4.0").toString()},
-            new Object[]{ComparableStringArray.of("3.0", "6.0").toString()},
-            new Object[]{ComparableStringArray.of("4.0", "8.0").toString()}
+            new Object[]{Arrays.toString(new Object[]{"1.0", "2.0"})},
+            new Object[]{Arrays.toString(new Object[]{"2.0", "4.0"})},
+            new Object[]{Arrays.toString(new Object[]{"3.0", "6.0"})},
+            new Object[]{Arrays.toString(new Object[]{"4.0", "8.0"})}
         )
     );
   }

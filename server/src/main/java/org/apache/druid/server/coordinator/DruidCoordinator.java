@@ -242,7 +242,7 @@ public class DruidCoordinator
     final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
       SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && replicaCount.totalLoaded() > 0) {
+      if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
         datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
       } else {
         datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
@@ -250,6 +250,25 @@ public class DruidCoordinator
     }
 
     return datasourceToUnavailableSegments;
+  }
+
+  public Object2IntMap<String> getDatasourceToDeepStorageQueryOnlySegmentCount()
+  {
+    if (segmentReplicationStatus == null) {
+      return Object2IntMaps.emptyMap();
+    }
+
+    final Object2IntOpenHashMap<String> datasourceToDeepStorageOnlySegments = new Object2IntOpenHashMap<>();
+
+    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
+    for (DataSegment segment : dataSegments) {
+      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
+      if (replicaCount != null && replicaCount.totalLoaded() == 0 && replicaCount.required() == 0) {
+        datasourceToDeepStorageOnlySegments.addTo(segment.getDataSource(), 1);
+      }
+    }
+
+    return datasourceToDeepStorageOnlySegments;
   }
 
   public Map<String, Double> getDatasourceToLoadStatus()
@@ -538,10 +557,9 @@ public class DruidCoordinator
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.add(compactSegments);
     }
-    log.debug(
-        "Initialized indexing service duties [%s].",
-        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
-    );
+    if (log.isDebugEnabled()) {
+      log.debug("Initialized indexing service duties [%s].", duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList()));
+    }
     return ImmutableList.copyOf(duties);
   }
 
@@ -761,6 +779,13 @@ public class DruidCoordinator
           (tier, countsPerDatasource) -> countsPerDatasource.forEach(
               (dataSource, underReplicatedCount) ->
                   stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
+          )
+      );
+      getDatasourceToDeepStorageQueryOnlySegmentCount().forEach(
+          (dataSource, numDeepStorageOnly) -> stats.add(
+              Stats.Segments.DEEP_STORAGE_ONLY,
+              RowKey.of(Dimension.DATASOURCE, dataSource),
+              numDeepStorageOnly
           )
       );
 

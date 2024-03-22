@@ -25,30 +25,30 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.junit.Rule;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(NotYetSupportedProcessor.class)
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
-
-  @Rule(order = 0)
-  public NotYetSupportedProcessor decoupledIgnoreProcessor = new NotYetSupportedProcessor();
-
-  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.of(
-      PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
-      QueryContexts.ENABLE_DEBUG, true
-  );
+  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES =
+      ImmutableMap.<String, Object>builder()
+      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+      .put(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+      .put(QueryContexts.ENABLE_DEBUG, true)
+      .build();
 
   @Override
   protected QueryTestBuilder testBuilder()
   {
-
+    PlannerComponentSupplier componentSupplier = this;
     CalciteTestConfig testConfig = new CalciteTestConfig(CONTEXT_OVERRIDES)
     {
       @Override
       public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
       {
         plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
-        return queryFramework().plannerFixture(DecoupledPlanningCalciteQueryTest.this, plannerConfig, authConfig);
+        return queryFramework().plannerFixture(componentSupplier, plannerConfig, authConfig);
       }
     };
 
@@ -56,7 +56,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
 
-    DecoupledTestConfig decTestConfig = queryFrameworkRule.getDescription().getAnnotation(DecoupledTestConfig.class);
+    DecoupledTestConfig decTestConfig = queryFrameworkRule.getAnnotation(DecoupledTestConfig.class);
 
     if (decTestConfig != null && decTestConfig.nativeQueryIgnore().isPresent()) {
       builder.verifyNativeQueries(x -> false);

@@ -21,19 +21,24 @@ package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
+import java.util.Objects;
 
 /**
  * Stores the configuration for an Azure account.
  */
 public class AzureAccountConfig
 {
+  static final String DEFAULT_PROTOCOL = "https";
+  static final int DEFAULT_MAX_TRIES = 3;
+
   @JsonProperty
-  private String protocol = "https";
+  private String protocol = DEFAULT_PROTOCOL;
 
   @JsonProperty
   @Min(1)
-  private int maxTries = 3;
+  private int maxTries = DEFAULT_MAX_TRIES;
 
   @JsonProperty
   private String account;
@@ -50,8 +55,13 @@ public class AzureAccountConfig
   @JsonProperty
   private Boolean useAzureCredentialsChain = Boolean.FALSE;
 
+  @Deprecated
+  @Nullable
   @JsonProperty
-  private String endpointSuffix = AzureUtils.DEFAULT_AZURE_ENDPOINT_SUFFIX;
+  private String endpointSuffix = null;
+
+  @JsonProperty
+  private String storageAccountEndpointSuffix = AzureUtils.AZURE_STORAGE_HOST_ADDRESS;
 
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
@@ -80,6 +90,12 @@ public class AzureAccountConfig
   public void setEndpointSuffix(String endpointSuffix)
   {
     this.endpointSuffix = endpointSuffix;
+  }
+
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
+  public void setStorageAccountEndpointSuffix(String storageAccountEndpointSuffix)
+  {
+    this.storageAccountEndpointSuffix = storageAccountEndpointSuffix;
   }
 
   public String getProtocol()
@@ -124,18 +140,77 @@ public class AzureAccountConfig
     this.sharedAccessStorageToken = sharedAccessStorageToken;
   }
 
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
+  public void setManagedIdentityClientId(String managedIdentityClientId)
+  {
+    this.managedIdentityClientId = managedIdentityClientId;
+  }
+
   public void setUseAzureCredentialsChain(Boolean useAzureCredentialsChain)
   {
     this.useAzureCredentialsChain = useAzureCredentialsChain;
   }
 
+  @Nullable
+  @Deprecated
   public String getEndpointSuffix()
   {
     return endpointSuffix;
   }
 
+  public String getStorageAccountEndpointSuffix()
+  {
+    return storageAccountEndpointSuffix;
+  }
+
   public String getBlobStorageEndpoint()
   {
-    return "blob." + endpointSuffix;
+    // this is here to support the legacy runtime property.
+    if (endpointSuffix != null) {
+      return AzureUtils.BLOB + "." + endpointSuffix;
+    }
+    return storageAccountEndpointSuffix;
+  }
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AzureAccountConfig that = (AzureAccountConfig) o;
+    return Objects.equals(protocol, that.protocol)
+           && Objects.equals(maxTries, that.maxTries)
+           && Objects.equals(account, that.account)
+           && Objects.equals(key, that.key)
+           && Objects.equals(sharedAccessStorageToken, that.sharedAccessStorageToken)
+           && Objects.equals(managedIdentityClientId, that.managedIdentityClientId)
+           && Objects.equals(useAzureCredentialsChain, that.useAzureCredentialsChain)
+           && Objects.equals(endpointSuffix, that.endpointSuffix)
+           && Objects.equals(storageAccountEndpointSuffix, that.storageAccountEndpointSuffix);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(protocol, maxTries, account, key, sharedAccessStorageToken, managedIdentityClientId, useAzureCredentialsChain, endpointSuffix, storageAccountEndpointSuffix);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AzureAccountConfig{" +
+           "protocol=" + protocol +
+           ", maxTries=" + maxTries +
+           ", account=" + account +
+           ", key=" + key +
+           ", sharedAccessStorageToken=" + sharedAccessStorageToken +
+           ", managedIdentityClientId=" + managedIdentityClientId +
+           ", useAzureCredentialsChain=" + useAzureCredentialsChain +
+           ", endpointSuffix=" + endpointSuffix +
+           ", storageAccountEndpointSuffix=" + storageAccountEndpointSuffix +
+           '}';
   }
 }

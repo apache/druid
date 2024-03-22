@@ -37,7 +37,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -45,7 +44,6 @@ import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
 
-@RunWith(Enclosed.class)
 public class NullFilterTests
 {
   @RunWith(Parameterized.class)

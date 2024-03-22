@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -45,8 +44,8 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,10 +63,10 @@ public class MSQWarningsTest extends MSQTestBase
   private Query<?> defaultQuery;
   private ColumnMappings defaultColumnMappings;
 
-  @Before
+  @BeforeEach
   public void setUp3() throws IOException
   {
-    File tempFile = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/unparseable.gz");
+    File tempFile = getResourceAsTemporaryFile("/unparseable.gz");
 
     // Rename the file and the file's extension from .tmp to .gz to prevent issues with 'parsing' the file
     toRead = new File(tempFile.getParentFile(), "unparseable.gz");
