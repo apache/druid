@@ -19,20 +19,17 @@
 
 package org.apache.druid.error;
 
-public class InternalServerError extends DruidException.Failure
+public class InternalServerError extends BaseFailure
 {
   public static DruidException exception(String errorCode, String msg, Object... args)
   {
     return exception(null, errorCode, msg, args);
   }
+
   public static DruidException exception(Throwable t, String errorCode, String msg, Object... args)
   {
     return DruidException.fromFailure(new InternalServerError(t, errorCode, msg, args));
   }
-
-  private final Throwable t;
-  private final String msg;
-  private final Object[] args;
 
   private InternalServerError(
       Throwable t,
@@ -41,22 +38,11 @@ public class InternalServerError extends DruidException.Failure
       Object... args
   )
   {
-    super(errorCode);
-    this.t = t;
-    this.msg = msg;
-    this.args = args;
-  }
-
-  @Override
-  public DruidException makeException(DruidException.DruidExceptionBuilder bob)
-  {
-    bob = bob.forPersona(DruidException.Persona.OPERATOR)
-        .ofCategory(DruidException.Category.RUNTIME_FAILURE);
-
-    if (t == null) {
-      return bob.build(msg, args);
-    } else {
-      return bob.build(t, msg, args);
-    }
+    super(
+        errorCode,
+        DruidException.Persona.OPERATOR,
+        DruidException.Category.RUNTIME_FAILURE,
+        t, msg, args
+    );
   }
 }

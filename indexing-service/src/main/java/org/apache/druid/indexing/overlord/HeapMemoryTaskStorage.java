@@ -28,6 +28,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -37,7 +38,6 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -76,7 +76,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(Task task, TaskStatus status) throws EntryExistsException
+  public void insert(Task task, TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -88,12 +88,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
     );
 
     TaskStuff newTaskStuff = new TaskStuff(task, status, DateTimes.nowUtc(), task.getDataSource());
-    TaskStuff alreadyExisted = tasks.putIfAbsent(task.getId(), newTaskStuff);
-    if (alreadyExisted != null) {
-      throw new EntryExistsException("Task", task.getId());
+    TaskStuff existingTaskStuff = tasks.putIfAbsent(task.getId(), newTaskStuff);
+    if (existingTaskStuff != null) {
+      throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
 
-    log.info("Inserted task %s with status: %s", task.getId(), status);
+    log.info("Inserted task[%s] with status[%s]", task.getId(), status);
   }
 
   @Override

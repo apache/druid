@@ -49,12 +49,14 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -248,10 +250,7 @@ public class QueryTestRunner
         vectorizeValues.add("force");
       }
 
-      final QueryLogHook queryLogHook = builder.config.queryLogHook();
       for (final String vectorize : vectorizeValues) {
-        queryLogHook.clearRecordedQueries();
-
         final Map<String, Object> theQueryContext = new HashMap<>(builder.queryContext);
         theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
         theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
@@ -278,13 +277,19 @@ public class QueryTestRunner
         final PlannerCaptureHook capture = getCaptureHook();
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
-        final Sequence<Object[]> results = stmt.execute().getResults();
+        AtomicReference<List<Object[]>> resultListRef = new AtomicReference<>();
+        QueryLogHook queryLogHook = new QueryLogHook(builder().config.jsonMapper());
+        queryLogHook.logQueriesFor(
+            () -> {
+              resultListRef.set(stmt.execute().getResults().toList());
+            }
+        );
         return new QueryResults(
             query.context(),
             vectorize,
             stmt.prepareResult().getReturnedRowType(),
-            results.toList(),
-            builder().config.queryLogHook().getRecordedQueries(),
+            resultListRef.get(),
+            queryLogHook.getRecordedQueries(),
             capture
         );
       }
