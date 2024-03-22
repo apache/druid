@@ -3,7 +3,7 @@
 exports[`ExecutionSubmitDialog matches snapshot 1`] = `
 <Blueprint4.Dialog
   backdropProps={
-    Object {
+    {
       "onDragLeave": [Function],
       "onDragOver": [Function],
       "onDrop": [Function],
@@ -36,7 +36,7 @@ exports[`ExecutionSubmitDialog matches snapshot 1`] = `
         fill={true}
         hasSelection={false}
         inputProps={
-          Object {
+          {
             "accept": ".json",
           }
         }

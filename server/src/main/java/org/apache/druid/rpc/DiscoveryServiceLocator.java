@@ -157,5 +157,11 @@ public class DiscoveryServiceLocator implements ServiceLocator
         }
       }
     }
+
+    @Override
+    public void nodeViewInitializedTimedOut()
+    {
+      nodeViewInitialized();
+    }
   }
 }

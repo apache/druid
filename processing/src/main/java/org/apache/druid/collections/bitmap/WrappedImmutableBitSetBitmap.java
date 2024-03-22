@@ -80,6 +80,7 @@ public class WrappedImmutableBitSetBitmap implements ImmutableBitmap
     return bitmap.isEmpty();
   }
 
+  @Override
   public ImmutableBitmap union(ImmutableBitmap otherBitmap)
   {
     WrappedBitSetBitmap retval = new WrappedBitSetBitmap((BitSet) bitmap.clone());

@@ -736,7 +736,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     Cursor cursor = cursorAndCloseable.lhs;
     Closeable closeble = cursorAndCloseable.rhs;
 
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).withBaggage(closeble);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeble);
 
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }

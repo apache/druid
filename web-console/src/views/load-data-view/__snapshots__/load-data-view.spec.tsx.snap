@@ -182,7 +182,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
           >
             <img
               alt="Ingestion tile for index_parallel:azureStorage"
-              src="/some/base_url/assets/azurestorage.png"
+              src="/some/base_url/assets/azureStorage.png"
             />
             <p>
               Azure Data Lake

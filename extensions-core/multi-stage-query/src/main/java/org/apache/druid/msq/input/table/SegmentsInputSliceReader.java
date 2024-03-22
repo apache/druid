@@ -57,7 +57,8 @@ public class SegmentsInputSliceReader implements InputSliceReader
   public int numReadableInputs(InputSlice slice)
   {
     final SegmentsInputSlice segmentsInputSlice = (SegmentsInputSlice) slice;
-    return segmentsInputSlice.getDescriptors().size() + segmentsInputSlice.getServedSegments().size();
+    final int servedSegmentsSize = segmentsInputSlice.getServedSegments() == null ? 0 : segmentsInputSlice.getServedSegments().size();
+    return segmentsInputSlice.getDescriptors().size() + servedSegmentsSize;
   }
 
   @Override
@@ -78,15 +79,19 @@ public class SegmentsInputSliceReader implements InputSliceReader
                 counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
             ), ReadableInput::segment);
 
-    Iterator<ReadableInput> dataServerIterator =
-        Iterators.transform(
-            dataServerIterator(
-                segmentsInputSlice.getDataSource(),
-                segmentsInputSlice.getServedSegments(),
-                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
-            ), ReadableInput::dataServerQuery);
+    if (segmentsInputSlice.getServedSegments() == null) {
+      return ReadableInputs.segments(() -> segmentIterator);
+    } else {
+      Iterator<ReadableInput> dataServerIterator =
+          Iterators.transform(
+              dataServerIterator(
+                  segmentsInputSlice.getDataSource(),
+                  segmentsInputSlice.getServedSegments(),
+                  counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
+              ), ReadableInput::dataServerQuery);
 
-    return ReadableInputs.segments(() -> Iterators.concat(dataServerIterator, segmentIterator));
+      return ReadableInputs.segments(() -> Iterators.concat(dataServerIterator, segmentIterator));
+    }
   }
 
   private Iterator<SegmentWithDescriptor> dataSegmentIterator(

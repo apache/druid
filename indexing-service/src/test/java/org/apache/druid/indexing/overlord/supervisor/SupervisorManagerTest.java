@@ -468,6 +468,21 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
+    SeekableStreamSupervisorSpec activeSpecWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor activeSupervisorWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(activeSpecWithConcurrentLocks.getId()).andReturn("activeSpecWithConcurrentLocks").anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.getDataSources())
+            .andReturn(ImmutableList.of("activeConcurrentLocksDS")).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.createSupervisor())
+            .andReturn(activeSupervisorWithConcurrentLocks).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.createAutoscaler(activeSupervisorWithConcurrentLocks))
+            .andReturn(null).anyTimes();
+    EasyMock.expect(activeSpecWithConcurrentLocks.getContext())
+            .andReturn(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true)).anyTimes();
+    EasyMock.replay(activeSpecWithConcurrentLocks);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
     SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
     Supervisor activeAppendSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeAppendSpec.getId()).andReturn("activeAppendSpec").anyTimes();
@@ -480,6 +495,25 @@ public class SupervisorManagerTest extends EasyMockSupport
         TaskLockType.APPEND.name()
     )).anyTimes();
     EasyMock.replay(activeAppendSpec);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
+    // A supervisor with useConcurrentLocks set to false explicitly must not use an append lock
+    SeekableStreamSupervisorSpec specWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor supervisorWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(specWithUseConcurrentLocksFalse.getId()).andReturn("useConcurrentLocksFalse").anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.getDataSources())
+            .andReturn(ImmutableList.of("dsWithuseConcurrentLocksFalse")).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.createSupervisor()).andReturn(supervisorWithUseConcurrentLocksFalse).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.createAutoscaler(supervisorWithUseConcurrentLocksFalse))
+            .andReturn(null).anyTimes();
+    EasyMock.expect(specWithUseConcurrentLocksFalse.getContext()).andReturn(ImmutableMap.of(
+        Tasks.USE_CONCURRENT_LOCKS,
+        false,
+        Tasks.TASK_LOCK_TYPE,
+        TaskLockType.APPEND.name()
+    )).anyTimes();
+    EasyMock.replay(specWithUseConcurrentLocksFalse);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
     replayAll();
@@ -498,6 +532,14 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.createOrUpdateAndStartSupervisor(activeAppendSpec);
     Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeAppendDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks);
+    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeConcurrentLocksDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(specWithUseConcurrentLocksFalse);
+    Assert.assertFalse(
+        manager.getActiveSupervisorIdForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isPresent()
+    );
 
     verifyAll();
   }

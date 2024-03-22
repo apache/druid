@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptRule;
@@ -47,6 +48,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
@@ -84,7 +86,7 @@ public class DruidJoinRule extends RelOptRule
   {
     return new DruidJoinRule(plannerContext);
   }
-  
+
   @Override
   public boolean matches(RelOptRuleCall call)
   {
@@ -125,6 +127,7 @@ public class DruidJoinRule extends RelOptRule
         join.getLeft().getRowType(),
         rexBuilder
     );
+    plannerContext.setPlanningError(conditionAnalysis.errorStr);
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
     if (!plannerContext.getJoinAlgorithm().requiresSubquery()
@@ -247,6 +250,7 @@ public class DruidJoinRule extends RelOptRule
   )
   {
     ConditionAnalysis conditionAnalysis = analyzeCondition(condition, leftRowType, rexBuilder);
+    plannerContext.setPlanningError(conditionAnalysis.errorStr);
     // if the right side requires a subquery, then even lookup will be transformed to a QueryDataSource
     // thereby allowing join conditions on both k and v columns of the lookup
     if (right != null
@@ -275,7 +279,7 @@ public class DruidJoinRule extends RelOptRule
       // for an example.
       return conditionAnalysis.getUnsupportedOnSubConditions().isEmpty();
     }
-    
+
     return true;
   }
 
@@ -304,12 +308,15 @@ public class DruidJoinRule extends RelOptRule
 
     private final Set<RexInputRef> rightColumns;
 
+    public final String errorStr;
+
     ConditionAnalysis(
         int numLeftFields,
         List<RexEquality> equalitySubConditions,
         List<RexLiteral> literalSubConditions,
         List<RexNode> unsupportedOnSubConditions,
-        Set<RexInputRef> rightColumns
+        Set<RexInputRef> rightColumns,
+        String errorStr
     )
     {
       this.numLeftFields = numLeftFields;
@@ -317,6 +324,7 @@ public class DruidJoinRule extends RelOptRule
       this.literalSubConditions = literalSubConditions;
       this.unsupportedOnSubConditions = unsupportedOnSubConditions;
       this.rightColumns = rightColumns;
+      this.errorStr = errorStr;
     }
 
     public ConditionAnalysis pushThroughLeftProject(final Project leftProject)
@@ -340,7 +348,8 @@ public class DruidJoinRule extends RelOptRule
               .collect(Collectors.toList()),
           literalSubConditions,
           unsupportedOnSubConditions,
-          rightColumns
+          rightColumns,
+          null
       );
     }
 
@@ -369,7 +378,8 @@ public class DruidJoinRule extends RelOptRule
               .collect(Collectors.toList()),
           literalSubConditions,
           unsupportedOnSubConditions,
-          rightColumns
+          rightColumns,
+          null
       );
     }
 
@@ -429,7 +439,7 @@ public class DruidJoinRule extends RelOptRule
    * that can be extracted into post join filter.
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  public ConditionAnalysis analyzeCondition(
+  public static ConditionAnalysis analyzeCondition(
       final RexNode condition,
       final RelDataType leftRowType,
       final RexBuilder rexBuilder
@@ -441,6 +451,7 @@ public class DruidJoinRule extends RelOptRule
     final List<RexNode> unSupportedSubConditions = new ArrayList<>();
     final Set<RexInputRef> rightColumns = new HashSet<>();
     final int numLeftFields = leftRowType.getFieldCount();
+    final List<String> errors = new ArrayList<String>();
 
     for (RexNode subCondition : subConditions) {
       if (RexUtil.isLiteral(subCondition, true)) {
@@ -475,10 +486,12 @@ public class DruidJoinRule extends RelOptRule
         comparisonKind = SqlKind.EQUALS;
 
         if (!SqlTypeName.BOOLEAN_TYPES.contains(secondOperand.getType().getSqlTypeName())) {
-          plannerContext.setPlanningError(
-              "SQL requires a join with '%s' condition where the column is of the type %s, that is not supported",
-              subCondition.getKind(),
-              secondOperand.getType().getSqlTypeName()
+          errors.add(
+              StringUtils.format(
+                  "SQL requires a join with '%s' condition where the column is of the type %s, that is not supported",
+                  subCondition.getKind(),
+                  secondOperand.getType().getSqlTypeName()
+              )
           );
           unSupportedSubConditions.add(subCondition);
           continue;
@@ -492,9 +505,11 @@ public class DruidJoinRule extends RelOptRule
         comparisonKind = subCondition.getKind();
       } else {
         // If it's not EQUALS or a BOOLEAN input ref, it's not supported.
-        plannerContext.setPlanningError(
-            "SQL requires a join with '%s' condition that is not supported.",
-            subCondition.getKind()
+        errors.add(
+            StringUtils.format(
+                "SQL requires a join with '%s' condition that is not supported.",
+                subCondition.getKind()
+            )
         );
         unSupportedSubConditions.add(subCondition);
         continue;
@@ -509,17 +524,27 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) firstOperand);
       } else {
         // Cannot handle this condition.
-        plannerContext.setPlanningError("SQL is resulting in a join that has unsupported operand types.");
+        errors.add(
+            StringUtils.format(
+                "SQL is resulting in a join that has unsupported operand types."
+            )
+        );
         unSupportedSubConditions.add(subCondition);
       }
     }
-
+    final String errorStr;
+    if (errors.size() > 0) {
+      errorStr = Joiner.on('\n').join(errors);
+    } else {
+      errorStr = null;
+    }
     return new ConditionAnalysis(
         numLeftFields,
         equalitySubConditions,
         literalSubConditions,
         unSupportedSubConditions,
-        rightColumns
+        rightColumns,
+        errorStr
     );
   }
 

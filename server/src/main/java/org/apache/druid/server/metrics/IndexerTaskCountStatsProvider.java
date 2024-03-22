@@ -17,32 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.server.metrics;
 
-import org.apache.druid.common.exception.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
+import java.util.Map;
 
 /**
- * A non-transient Druid metadata exception thrown when trying to insert a
- * duplicate entry in the metadata.
- *
- * @deprecated Usages of this exception will be replaced by the new
- * {@link org.apache.druid.error.DruidException} in a future release.
+ * Provides task count metrics for the indexers
+ * These metrics are reported by indexers
  */
-@Deprecated
-public class EntryExistsException extends DruidException
+public interface IndexerTaskCountStatsProvider
 {
+  /**
+   * Map from datasource name to the number of running tasks on the Indexer.
+   */
+  Map<String, Long> getWorkerRunningTasks();
 
-  private static final int HTTP_BAD_REQUEST = 400;
+  /**
+   * Map from datasource name to the number of assigned tasks to the Indexer.
+   */
+  Map<String, Long> getWorkerAssignedTasks();
 
-  public EntryExistsException(String entryType, String entryId)
-  {
-    this(entryType, entryId, null);
-  }
-
-  public EntryExistsException(String entryType, String entryId, Throwable t)
-  {
-    super(StringUtils.format("%s [%s] already exists.", entryType, entryId), HTTP_BAD_REQUEST, t, false);
-  }
-
+  /**
+   * Map from datasource name to the number of completed tasks by the Indexer.
+   */
+  Map<String, Long> getWorkerCompletedTasks();
 }

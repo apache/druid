@@ -184,7 +184,8 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
         segmentWriteOutMedium,
         filenameBase,
         dictionaryWriter.getCardinality(),
-        compressionToUse
+        compressionToUse,
+        segmentWriteOutMedium.getCloser()
     );
     encodedValueSerializer.open();
 

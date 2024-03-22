@@ -217,12 +217,16 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     // Regex pattern that describes matching strings.
     private final Pattern pattern;
 
+    private final String likePattern;
+
     private LikeMatcher(
+        final String likePattern,
         final SuffixMatch suffixMatch,
         final String prefix,
         final Pattern pattern
     )
     {
+      this.likePattern = likePattern;
       this.suffixMatch = Preconditions.checkNotNull(suffixMatch, "suffixMatch");
       this.prefix = NullHandling.nullToEmptyIfNeeded(prefix);
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
@@ -263,7 +267,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         }
       }
 
-      return new LikeMatcher(suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
+      return new LikeMatcher(likePattern, suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
     }
 
     private static void addPatternCharacter(final StringBuilder patternBuilder, final char c)
@@ -412,6 +416,12 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     public int hashCode()
     {
       return Objects.hash(getSuffixMatch(), getPrefix(), pattern.toString());
+    }
+
+    @Override
+    public String toString()
+    {
+      return likePattern;
     }
   }
 }

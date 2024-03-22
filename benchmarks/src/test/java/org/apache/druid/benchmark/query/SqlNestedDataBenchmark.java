@@ -22,6 +22,7 @@ package org.apache.druid.benchmark.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -76,9 +77,11 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -193,7 +196,9 @@ public class SqlNestedDataBenchmark
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
       // 44, 45 big cardinality like filter + selector filter
       "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'"
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
+      "SELECT SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') = '1000' AND JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'"
   );
 
   @Param({"5000000"})
@@ -211,6 +216,12 @@ public class SqlNestedDataBenchmark
       "front-coded-16"
   })
   private String stringEncoding;
+
+  @Param({
+      "explicit",
+      "auto"
+  })
+  private String schema;
 
   @Param({
       "0",
@@ -258,7 +269,9 @@ public class SqlNestedDataBenchmark
       "42",
       "43",
       "44",
-      "45"
+      "45",
+      "46",
+      "47"
   })
   private String query;
 
@@ -296,11 +309,7 @@ public class SqlNestedDataBenchmark
             )
         )
     );
-    List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
-                                              .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new AutoTypeColumnSchema("nested", null))
-                                              .build();
-    DimensionsSpec dimsSpec = new DimensionsSpec(dims);
+
 
 
     StringEncodingStrategy encodingStrategy;
@@ -311,15 +320,37 @@ public class SqlNestedDataBenchmark
     } else {
       encodingStrategy = new StringEncodingStrategy.Utf8();
     }
-    final QueryableIndex index = segmentGenerator.generate(
-        dataSegment,
-        schemaInfo,
-        dimsSpec,
-        transformSpec,
-        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
-        Granularities.NONE,
-        rowsPerSegment
-    );
+    final QueryableIndex index;
+    if ("auto".equals(schema)) {
+      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                      .getDimensions()
+                                                      .stream()
+                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                      .collect(Collectors.toList());
+      index = segmentGenerator.generate(
+          dataSegment,
+          schemaInfo,
+          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
+          TransformSpec.NONE,
+          IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
+          Granularities.NONE,
+          rowsPerSegment
+      );
+    } else {
+      Iterable<DimensionSchema> columnSchemas = Iterables.concat(
+          schemaInfo.getDimensionsSpec().getDimensions(),
+          Collections.singletonList(new AutoTypeColumnSchema("nested", null))
+      );
+      index = segmentGenerator.generate(
+          dataSegment,
+          schemaInfo,
+          DimensionsSpec.builder().setDimensions(ImmutableList.copyOf(columnSchemas.iterator())).build(),
+          TransformSpec.NONE,
+          IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
+          Granularities.NONE,
+          rowsPerSegment
+      );
+    }
 
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         closer,

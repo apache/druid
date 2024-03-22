@@ -39,6 +39,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -246,6 +247,21 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
+
+    List<IngestionStatsAndErrorsTaskReportData> reports = getIngestionReports();
+    Assert.assertEquals(reports.size(), 3); // since three index tasks are run by single compaction task
+
+    // this test reads 3 segments and publishes 6 segments
+    Assert.assertEquals(
+        3,
+        reports.stream().mapToLong(IngestionStatsAndErrorsTaskReportData::getSegmentsRead).sum()
+    );
+    Assert.assertEquals(
+        6,
+        reports.stream()
+               .mapToLong(IngestionStatsAndErrorsTaskReportData::getSegmentsPublished)
+               .sum()
+    );
   }
 
   @Test

@@ -164,6 +164,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.LEFT,
         MAX_BUFFERED_BYTES
     );
@@ -209,6 +210,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.LEFT,
         MAX_BUFFERED_BYTES
     );
@@ -285,6 +287,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.INNER,
         MAX_BUFFERED_BYTES
     );
@@ -326,6 +329,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.LEFT,
         MAX_BUFFERED_BYTES
     );
@@ -397,6 +401,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         makeFrameWriterFactory(joinSignature),
         "j0.",
         ImmutableList.of(Collections.emptyList(), Collections.emptyList()),
+        new int[0],
         JoinType.INNER,
         MAX_BUFFERED_BYTES
     );
@@ -510,6 +515,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
                 new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)
             )
         ),
+        new int[]{0, 1},
         JoinType.LEFT,
         MAX_BUFFERED_BYTES
     );
@@ -589,6 +595,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.RIGHT,
         MAX_BUFFERED_BYTES
     );
@@ -671,6 +678,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.FULL,
         MAX_BUFFERED_BYTES
     );
@@ -717,6 +725,165 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testInnerJoinRegionCodeOnly() throws Exception
+  {
+    // This join generates duplicates.
+
+    final ReadableInput factChannel =
+        buildFactInput(
+            ImmutableList.of(
+                new KeyColumn("regionIsoCode", KeyOrder.ASCENDING),
+                new KeyColumn("page", KeyOrder.ASCENDING)
+            )
+        );
+
+    final ReadableInput regionsChannel =
+        buildRegionsInput(
+            ImmutableList.of(
+                new KeyColumn("regionIsoCode", KeyOrder.ASCENDING),
+                new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)
+            )
+        );
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("j0.page", ColumnType.STRING)
+                    .add("regionName", ColumnType.STRING)
+                    .add("j0.countryIsoCode", ColumnType.STRING)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        regionsChannel,
+        factChannel,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
+        ),
+        new int[]{0},
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
+    );
+
+    final List<List<Object>> expectedRows = Arrays.asList(
+        Arrays.asList("유희왕 GX", "Seoul", "KR"),
+        Arrays.asList("青野武", "Tōkyō", "JP"),
+        Arrays.asList("Алиса в Зазеркалье", "Finnmark Fylke", "NO"),
+        Arrays.asList("Saison 9 de Secret Story", "Val d'Oise", "FR"),
+        Arrays.asList("Cream Soda", "Ainigriv", "SU"),
+        Arrays.asList("Carlo Curti", "California", "US"),
+        Arrays.asList("Otjiwarongo Airport", "California", "US"),
+        Arrays.asList("President of India", "California", "US"),
+        Arrays.asList("Mathis Bolly", "Mexico City", "MX"),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "Provincia del Guayas", "EC"),
+        Arrays.asList("Diskussion:Sebastian Schulz", "Hesse", "DE"),
+        Arrays.asList("Glasgow", "Kingston upon Hull", "GB"),
+        Arrays.asList("History of Fourems", "Fourems Province", "MMMM"),
+        Arrays.asList("DirecTV", "North Carolina", "US"),
+        Arrays.asList("Peremptory norm", "New South Wales", "AU"),
+        Arrays.asList("Didier Leclair", "Ontario", "CA"),
+        Arrays.asList("Sarah Michelle Gellar", "Ontario", "CA"),
+        Arrays.asList("Les Argonautes", "Quebec", "CA"),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "Santiago Metropolitan", "CL"),
+        Arrays.asList("Wendigo", "Departamento de San Salvador", "SV"),
+        Arrays.asList("Giusy Ferreri discography", "Provincia di Varese", "IT"),
+        Arrays.asList("Giusy Ferreri discography", "Virginia", "IT"),
+        Arrays.asList("Old Anatolian Turkish", "Provincia di Varese", "US"),
+        Arrays.asList("Old Anatolian Turkish", "Virginia", "US"),
+        Arrays.asList("Roma-Bangkok", "Provincia di Varese", "IT"),
+        Arrays.asList("Roma-Bangkok", "Virginia", "IT")
+    );
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
+  public void testInnerJoinRegionCodeOnlyIsNotDistinctFrom() throws Exception
+  {
+    // This join generates duplicates.
+
+    final ReadableInput factChannel =
+        buildFactInput(
+            ImmutableList.of(
+                new KeyColumn("regionIsoCode", KeyOrder.ASCENDING),
+                new KeyColumn("page", KeyOrder.ASCENDING)
+            )
+        );
+
+    final ReadableInput regionsChannel =
+        buildRegionsInput(
+            ImmutableList.of(
+                new KeyColumn("regionIsoCode", KeyOrder.ASCENDING),
+                new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)
+            )
+        );
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("j0.page", ColumnType.STRING)
+                    .add("regionName", ColumnType.STRING)
+                    .add("j0.countryIsoCode", ColumnType.STRING)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        regionsChannel,
+        factChannel,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
+        ),
+        new int[0], // empty array: act as if IS NOT DISTINCT FROM
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
+    );
+
+    final List<List<Object>> expectedRows = Arrays.asList(
+        Arrays.asList("Agama mossambica", "Nulland", null),
+        Arrays.asList("Apamea abruzzorum", "Nulland", null),
+        Arrays.asList("Atractus flammigerus", "Nulland", null),
+        Arrays.asList("Rallicula", "Nulland", null),
+        Arrays.asList("Talk:Oswald Tilghman", "Nulland", null),
+        Arrays.asList("유희왕 GX", "Seoul", "KR"),
+        Arrays.asList("青野武", "Tōkyō", "JP"),
+        Arrays.asList("Алиса в Зазеркалье", "Finnmark Fylke", "NO"),
+        Arrays.asList("Saison 9 de Secret Story", "Val d'Oise", "FR"),
+        Arrays.asList("Cream Soda", "Ainigriv", "SU"),
+        Arrays.asList("Carlo Curti", "California", "US"),
+        Arrays.asList("Otjiwarongo Airport", "California", "US"),
+        Arrays.asList("President of India", "California", "US"),
+        Arrays.asList("Mathis Bolly", "Mexico City", "MX"),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "Provincia del Guayas", "EC"),
+        Arrays.asList("Diskussion:Sebastian Schulz", "Hesse", "DE"),
+        Arrays.asList("Glasgow", "Kingston upon Hull", "GB"),
+        Arrays.asList("History of Fourems", "Fourems Province", "MMMM"),
+        Arrays.asList("DirecTV", "North Carolina", "US"),
+        Arrays.asList("Peremptory norm", "New South Wales", "AU"),
+        Arrays.asList("Didier Leclair", "Ontario", "CA"),
+        Arrays.asList("Sarah Michelle Gellar", "Ontario", "CA"),
+        Arrays.asList("Les Argonautes", "Quebec", "CA"),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "Santiago Metropolitan", "CL"),
+        Arrays.asList("Wendigo", "Departamento de San Salvador", "SV"),
+        Arrays.asList("Giusy Ferreri discography", "Provincia di Varese", "IT"),
+        Arrays.asList("Giusy Ferreri discography", "Virginia", "IT"),
+        Arrays.asList("Old Anatolian Turkish", "Provincia di Varese", "US"),
+        Arrays.asList("Old Anatolian Turkish", "Virginia", "US"),
+        Arrays.asList("Roma-Bangkok", "Provincia di Varese", "IT"),
+        Arrays.asList("Roma-Bangkok", "Virginia", "IT")
+    );
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
   public void testLeftJoinCountryNumber() throws Exception
   {
     final ReadableInput factChannel = buildFactInput(
@@ -750,6 +917,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.LEFT,
         MAX_BUFFERED_BYTES
     );
@@ -844,6 +1012,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.RIGHT,
         MAX_BUFFERED_BYTES
     );
@@ -938,6 +1107,75 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
+        JoinType.INNER,
+        MAX_BUFFERED_BYTES
+    );
+
+    final List<List<Object>> expectedRows = Arrays.asList(
+        Arrays.asList("Peremptory norm", "AU", "AU", "Australia", 0L),
+        Arrays.asList("Didier Leclair", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Les Argonautes", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Sarah Michelle Gellar", "CA", "CA", "Canada", 1L),
+        Arrays.asList("Golpe de Estado en Chile de 1973", "CL", "CL", "Chile", 2L),
+        Arrays.asList("Diskussion:Sebastian Schulz", "DE", "DE", "Germany", 3L),
+        Arrays.asList("Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L),
+        Arrays.asList("Saison 9 de Secret Story", "FR", "FR", "France", 5L),
+        Arrays.asList("Glasgow", "GB", "GB", "United Kingdom", 6L),
+        Arrays.asList("Giusy Ferreri discography", "IT", "IT", "Italy", 7L),
+        Arrays.asList("Roma-Bangkok", "IT", "IT", "Italy", 7L),
+        Arrays.asList("青野武", "JP", "JP", "Japan", 8L),
+        Arrays.asList("유희왕 GX", "KR", "KR", "Republic of Korea", 9L),
+        Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L),
+        Arrays.asList("Mathis Bolly", "MX", "MX", "Mexico", 10L),
+        Arrays.asList("Алиса в Зазеркалье", "NO", "NO", "Norway", 11L),
+        Arrays.asList("Cream Soda", "SU", "SU", "States United", 15L),
+        Arrays.asList("Wendigo", "SV", "SV", "El Salvador", 12L),
+        Arrays.asList("Carlo Curti", "US", "US", "United States", 13L),
+        Arrays.asList("DirecTV", "US", "US", "United States", 13L),
+        Arrays.asList("Old Anatolian Turkish", "US", "US", "United States", 13L),
+        Arrays.asList("Otjiwarongo Airport", "US", "US", "United States", 13L),
+        Arrays.asList("President of India", "US", "US", "United States", 13L)
+    );
+
+    assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
+  }
+
+  @Test
+  public void testInnerJoinCountryIsoCodeNotDistinctFrom() throws Exception
+  {
+    final ReadableInput factChannel = buildFactInput(
+        ImmutableList.of(
+            new KeyColumn("countryIsoCode", KeyOrder.ASCENDING),
+            new KeyColumn("page", KeyOrder.ASCENDING)
+        )
+    );
+
+    final ReadableInput countriesChannel =
+        buildCountriesInput(ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)));
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    final RowSignature joinSignature =
+        RowSignature.builder()
+                    .add("page", ColumnType.STRING)
+                    .add("countryIsoCode", ColumnType.STRING)
+                    .add("j0.countryIsoCode", ColumnType.STRING)
+                    .add("j0.countryName", ColumnType.STRING)
+                    .add("j0.countryNumber", ColumnType.LONG)
+                    .build();
+
+    final SortMergeJoinFrameProcessor processor = new SortMergeJoinFrameProcessor(
+        factChannel,
+        countriesChannel,
+        outputChannel.writable(),
+        makeFrameWriterFactory(joinSignature),
+        "j0.",
+        ImmutableList.of(
+            ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
+            ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
+        ),
+        new int[0], // empty array: act as if IS NOT DISTINCT FROM
         JoinType.INNER,
         MAX_BUFFERED_BYTES
     );
@@ -1005,6 +1243,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.INNER,
         1
     );
@@ -1072,6 +1311,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.INNER,
         1
     );
@@ -1128,6 +1368,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.INNER,
         MAX_BUFFERED_BYTES
     );
@@ -1182,6 +1423,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING))
         ),
+        new int[]{0},
         JoinType.INNER,
         1
     );

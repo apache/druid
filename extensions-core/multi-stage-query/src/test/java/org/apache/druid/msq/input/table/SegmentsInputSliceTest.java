@@ -79,6 +79,43 @@ public class SegmentsInputSliceTest
   }
 
   @Test
+  public void testSerde2() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                          .registerModules(new MSQIndexingModule().getJacksonModules());
+
+    final String sliceString = "{\n"
+                               + "    \"type\": \"segments\","
+                               + "    \"dataSource\": \"myds\",\n"
+                               + "    \"segments\": [\n"
+                               + "        {\n"
+                               + "            \"itvl\": \"2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z\",\n"
+                               + "            \"ver\": \"1\",\n"
+                               + "            \"part\": 0\n"
+                               + "        }\n"
+                               + "    ]\n"
+                               + "}";
+
+    final SegmentsInputSlice expectedSlice = new SegmentsInputSlice(
+        "myds",
+        ImmutableList.of(
+            new RichSegmentDescriptor(
+                Intervals.of("2000/P1M"),
+                Intervals.of("2000/P1M"),
+                "1",
+                0
+            )
+        ),
+        null
+    );
+
+    Assert.assertEquals(
+        expectedSlice,
+        mapper.readValue(sliceString, InputSlice.class)
+    );
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(SegmentsInputSlice.class).usingGetClass().verify();

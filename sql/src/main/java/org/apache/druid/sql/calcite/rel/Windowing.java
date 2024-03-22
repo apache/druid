@@ -180,10 +180,9 @@ public class Windowing
               virtualColumnRegistry,
               rexBuilder,
               InputAccessor.buildFor(
-                  rexBuilder,
-                  sourceRowSignature,
+                  window,
                   partialQuery.getSelectProject(),
-                  window.constants),
+                  sourceRowSignature),
               Collections.emptyList(),
               aggName,
               aggregateCall,

@@ -17,13 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
+package org.apache.druid.sql.calcite.table;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.query.DataSource;
 
-/**
- */
-public interface RowOffsetMatcherFactory
+public interface DatasourceMetadata
 {
-  ValueMatcher makeRowOffsetMatcher(ImmutableBitmap bitmap);
+
+  DataSource dataSource();
+
+  boolean isJoinable();
+
+  boolean isBroadcast();
+
 }

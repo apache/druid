@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
@@ -42,12 +43,17 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -232,7 +238,59 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         }
     );
 
-    Assert.assertEquals(new BroadcastTablesTooLargeFault(100_000), e.getFault());
+    Assert.assertEquals(new BroadcastTablesTooLargeFault(100_000, null), e.getFault());
+  }
+
+  /**
+   * Like {@link #testBuildTableMemoryLimit()}, but with {@link JoinAlgorithm#SORT_MERGE} configured, so we can
+   * verify we get a better error message.
+   */
+  @Test
+  public void testBuildTableMemoryLimitWithSortMergeConfigured() throws IOException
+  {
+    final Int2IntMap sideStageChannelNumberMap = new Int2IntOpenHashMap();
+    sideStageChannelNumberMap.put(0, 0);
+
+    final List<ReadableFrameChannel> channels = new ArrayList<>();
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker())));
+
+    final List<FrameReader> channelReaders = new ArrayList<>();
+    channelReaders.add(frameReader1);
+
+    // Query: used only to retrieve configured join from context
+    final Query<?> mockQuery = EasyMock.mock(Query.class);
+    EasyMock.expect(mockQuery.context()).andReturn(
+        QueryContext.of(
+            ImmutableMap.of(
+                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                JoinAlgorithm.SORT_MERGE.getId()
+            )
+        )
+    );
+    EasyMock.replay(mockQuery);
+    final BroadcastJoinSegmentMapFnProcessor broadcastJoinHelper = new BroadcastJoinSegmentMapFnProcessor(
+        mockQuery,
+        sideStageChannelNumberMap,
+        channels,
+        channelReaders,
+        100_000 // Low memory limit; we will hit this
+    );
+
+    Assert.assertEquals(ImmutableSet.of(0), broadcastJoinHelper.getSideChannelNumbers());
+
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> {
+          boolean doneReading = false;
+          while (!doneReading) {
+            final IntSet readableInputs = new IntOpenHashSet(new int[]{0});
+            doneReading = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
+          }
+        }
+    );
+
+    Assert.assertEquals(new BroadcastTablesTooLargeFault(100_000, JoinAlgorithm.SORT_MERGE), e.getFault());
+    EasyMock.verify(mockQuery);
   }
 
   /**

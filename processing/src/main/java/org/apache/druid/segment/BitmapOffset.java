@@ -127,7 +127,7 @@ public class BitmapOffset extends Offset
   private final int valueForReset;
   private int value;
 
-  static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
+  public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
   {
     ImmutableBitmap roaringBitmap = bitmapIndex;
     if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
