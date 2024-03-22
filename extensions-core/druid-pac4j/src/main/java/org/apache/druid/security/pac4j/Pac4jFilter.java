@@ -19,6 +19,18 @@
 
 package org.apache.druid.security.pac4j;
 
+import java.io.IOException;
+import java.util.Collection;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -31,18 +43,8 @@ import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
 import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
 import org.pac4j.core.profile.UserProfile;
-import org.pac4j.oidc.profile.OidcProfile;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Collection;
+import com.google.common.collect.ImmutableMap;
 
 public class Pac4jFilter implements Filter
 {
@@ -97,7 +99,7 @@ public class Pac4jFilter implements Filter
           "/",
           true, false, false, null);
     } else {
-      OidcProfile profile = (OidcProfile) securityLogic.perform(
+      UserProfile profile = (UserProfile) securityLogic.perform(
           context,
           pac4jConfig,
           (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
@@ -114,7 +116,7 @@ public class Pac4jFilter implements Filter
       // In the older version, if it is null, it simply grant access and returns authorized.
       // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
       if (profile != null && profile.getId() != null) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(profile.getId(), authorizerName, name, profile.getAttributes());
+        AuthenticationResult authenticationResult = new AuthenticationResult(profile.getId(), authorizerName, name, ImmutableMap.of("profile", profile));
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       }
