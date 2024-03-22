@@ -69,7 +69,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -178,9 +177,9 @@ public class TaskQueue
   }
 
   @VisibleForTesting
-  void setActive(boolean active)
+  void setActive()
   {
-    this.active = active;
+    this.active = true;
   }
 
   /**
@@ -203,30 +202,25 @@ public class TaskQueue
                  "Shutting down forcefully as task failed to reacquire lock while becoming leader");
       }
       managerExec.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              while (true) {
+          () -> {
+            while (true) {
+              try {
+                manage();
+                break;
+              }
+              catch (InterruptedException e) {
+                log.info("Interrupted, exiting!");
+                break;
+              }
+              catch (Exception e) {
+                final long restartDelay = config.getRestartDelay().getMillis();
+                log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
                 try {
-                  manage();
-                  break;
+                  Thread.sleep(restartDelay);
                 }
-                catch (InterruptedException e) {
+                catch (InterruptedException e2) {
                   log.info("Interrupted, exiting!");
                   break;
-                }
-                catch (Exception e) {
-                  final long restartDelay = config.getRestartDelay().getMillis();
-                  log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
-                  try {
-                    Thread.sleep(restartDelay);
-                  }
-                  catch (InterruptedException e2) {
-                    log.info("Interrupted, exiting!");
-                    break;
-                  }
                 }
               }
             }
@@ -235,24 +229,19 @@ public class TaskQueue
       ScheduledExecutors.scheduleAtFixedRate(
           storageSyncExec,
           config.getStorageSyncRate(),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              try {
-                syncFromStorage();
-              }
-              catch (Exception e) {
-                if (active) {
-                  log.makeAlert(e, "Failed to sync with storage").emit();
-                }
-              }
+          () -> {
+            try {
+              syncFromStorage();
+            }
+            catch (Exception e) {
               if (active) {
-                return ScheduledExecutors.Signal.REPEAT;
-              } else {
-                return ScheduledExecutors.Signal.STOP;
+                log.makeAlert(e, "Failed to sync with storage").emit();
               }
+            }
+            if (active) {
+              return ScheduledExecutors.Signal.REPEAT;
+            } else {
+              return ScheduledExecutors.Signal.STOP;
             }
           }
       );
@@ -522,15 +511,12 @@ public class TaskQueue
       Preconditions.checkNotNull(task, "task");
       if (tasks.size() >= config.getMaxSize()) {
         throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
-                .build(
-                        StringUtils.format(
-                                "Too many tasks are in the queue (Limit = %d), " +
-                                        "(Current active tasks = %d). Retry later or increase the druid.indexer.queue.maxSize",
-                                config.getMaxSize(),
-                                tasks.size()
-                        )
-                );
+                            .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                            .build(
+                                "Task queue already contains [%d] tasks."
+                                + " Retry later or increase 'druid.indexer.queue.maxSize'[%d].",
+                                tasks.size(), config.getMaxSize()
+                            );
       }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
@@ -946,6 +932,10 @@ public class TaskQueue
     }
   }
 
+  /**
+   * Gets the current status of this task either from the {@link TaskRunner}
+   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   */
   public Optional<TaskStatus> getTaskStatus(final String taskId)
   {
     RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
