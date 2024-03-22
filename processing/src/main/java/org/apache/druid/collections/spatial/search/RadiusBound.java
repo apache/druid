@@ -165,7 +165,7 @@ public class RadiusBound extends RectangularBound
     return cacheKey.array();
   }
 
-  enum RadiusUnit
+  public enum RadiusUnit
   {
     meters(1),
     euclidean(1),

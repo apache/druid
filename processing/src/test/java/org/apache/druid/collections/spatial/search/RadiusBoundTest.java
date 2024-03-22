@@ -20,49 +20,14 @@
 package org.apache.druid.collections.spatial.search;
 
 import org.apache.druid.collections.spatial.RTreeUtils;
+import org.apache.druid.collections.spatial.SpatialUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class RadiusBoundTest
 {
-  private static Random random = ThreadLocalRandom.current();
-
-  public static float[][] generateGeoCoordinatesAroundCircle(
-      float circleCenterLat,
-      float circleCenterLon,
-      float circleRadius,
-      int numberOfPoints,
-      boolean shouldBeInside
-  )
-  {
-    float[][] geoCoordinates = new float[numberOfPoints][2];
-
-    for (int i = 0; i < numberOfPoints; i++) {
-      double angle = 2 * Math.PI * random.nextDouble();
-      double distance;
-      if (shouldBeInside) {
-        // Generate random distance within the circle's radius
-        distance = circleRadius * Math.sqrt(random.nextDouble()) - 1;
-      } else {
-        // Generate random points outside of circle but slightly beyond the circle's radius
-        distance = circleRadius + 100 * random.nextDouble();
-      }
-
-      // Calculate new latitude and longitude
-      double latitude = circleCenterLat
-                        + distance * Math.cos(angle) / 111000; // 1 degree is approximately 111,000 meters
-      double longitude = circleCenterLon + distance * Math.sin(angle) / (111000 * Math.cos(Math.toRadians(latitude)));
-
-      geoCoordinates[i][0] = (float) latitude;
-      geoCoordinates[i][1] = (float) longitude;
-    }
-    return geoCoordinates;
-  }
-
   @Test
   public void testCacheKey()
   {
@@ -97,7 +62,7 @@ public class RadiusBoundTest
     float[] center = new float[]{circleCenterLat, circleCenterLon};
     Bound bound = new RadiusBound(center, circleRadius, 100, RadiusBound.RadiusUnit.meters);
 
-    float[][] geoInsidePoints = generateGeoCoordinatesAroundCircle(
+    float[][] geoInsidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(
         circleCenterLat,
         circleCenterLon,
         circleRadius,
@@ -116,7 +81,7 @@ public class RadiusBoundTest
       Assert.assertTrue(bound.contains(floatPoint));
     }
 
-    float[][] geoOutsidePoints = generateGeoCoordinatesAroundCircle(
+    float[][] geoOutsidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(
         circleCenterLat,
         circleCenterLon,
         circleRadius,
