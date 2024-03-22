@@ -905,8 +905,6 @@ public class MSQReplaceTest extends MSQTestBase
                                                  .dataSource("foo")
                                                  .build();
 
-    PartitionsSpec partitionsSpec = new DynamicPartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null);
-
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
            .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
