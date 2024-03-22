@@ -58,7 +58,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'No management proxy mode';
       message = (
         <p>
-          It appears that the management proxy is not enabled, the console will operate with limited
+         The management proxy is not enabled, the console will operate with limited
           functionality.
         </p>
       );
