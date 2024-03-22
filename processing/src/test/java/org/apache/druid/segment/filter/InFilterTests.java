@@ -659,7 +659,8 @@ public class InFilterTests
     }
 
     @Nullable
-    private DimFilter rewriteToLegacyFilter(DimFilter filter) {
+    private DimFilter rewriteToLegacyFilter(DimFilter filter)
+    {
       if (filter instanceof InDimFilter) {
         return filter;
       } else if (filter instanceof TypedInFilter) {
