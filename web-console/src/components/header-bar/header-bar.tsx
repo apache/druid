@@ -367,9 +367,8 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
                    than detecting all capabilities for the cluster.
                 </p>
                 <p>
-                  This is an advanced feature used for testing and for working around issues in the
-                  capability detecting logic. If you are not sure why you are in this mode then
-                  clear it.
+                  Forced mode is an advanced feature used for testing and for working around issues with the
+                  capability detecting logic. If you are unsure why the console is in forced mode, clear it.
                 </p>
                 <p>
                   <Button
