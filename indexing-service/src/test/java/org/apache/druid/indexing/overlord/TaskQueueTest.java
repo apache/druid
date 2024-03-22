@@ -622,20 +622,18 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.start();
     taskQueue.add(taskWithPassword);
 
-    final Optional<Task> taskFromTaskStorage = taskStorage.getTask(taskWithPassword.getId());
-    Assert.assertTrue(taskFromTaskStorage.isPresent());
-    Assert.assertNotNull(taskFromTaskStorage.get());
-    Assert.assertFalse(mapper.writeValueAsString(taskFromTaskStorage.get()).contains(password));
+    final Optional<Task> taskInStorage = taskStorage.getTask(taskWithPassword.getId());
+    Assert.assertTrue(taskInStorage.isPresent());
+    Assert.assertFalse(mapper.writeValueAsString(taskInStorage.get()).contains(password));
 
 
-    final Optional<Task> taskFromTaskQueue = taskQueue.getActiveTask(taskWithPassword.getId());
-    Assert.assertTrue(taskFromTaskQueue.isPresent());
-    Assert.assertNotNull(taskFromTaskQueue.get());
-    Assert.assertFalse(mapper.writeValueAsString(taskFromTaskQueue.get()).contains(password));
+    final Optional<Task> taskInQueue = taskQueue.getActiveTask(taskWithPassword.getId());
+    Assert.assertTrue(taskInQueue.isPresent());
+    Assert.assertFalse(mapper.writeValueAsString(taskInQueue.get()).contains(password));
 
     Assert.assertEquals(
-        mapper.writeValueAsString(taskFromTaskStorage.get()),
-        mapper.writeValueAsString(taskFromTaskQueue.get())
+        mapper.writeValueAsString(taskInStorage.get()),
+        mapper.writeValueAsString(taskInQueue.get())
     );
   }
 

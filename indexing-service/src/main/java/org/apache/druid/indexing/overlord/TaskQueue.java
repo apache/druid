@@ -121,7 +121,7 @@ public class TaskQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
-  private final ObjectMapper PASSWORD_REDACTING_MAPPER;
+  private final ObjectMapper passwordRedactingMapper;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -182,8 +182,8 @@ public class TaskQueue
         config.getTaskCompleteHandlerNumThreads(),
         "TaskQueue-OnComplete-%d"
     );
-    this.PASSWORD_REDACTING_MAPPER = mapper.copy()
-                                           .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.passwordRedactingMapper = mapper.copy()
+                                         .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
   }
 
   @VisibleForTesting
@@ -997,13 +997,13 @@ public class TaskQueue
     if (task != null) {
       try {
         // Write and read the value using a mapper with password redaction mixin.
-        task = PASSWORD_REDACTING_MAPPER.readValue(PASSWORD_REDACTING_MAPPER.writeValueAsString(task), Task.class);
+        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(task), Task.class);
       }
       catch (JsonProcessingException e) {
         log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
-        throw DruidException.forPersona(DruidException.Persona.USER)
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build(e, "Failed to serialize or deserialize task.");
+                            .build(e, "Failed to serialize or deserialize task[%s].", task.getId());
       }
     }
     return Optional.fromNullable(task);
