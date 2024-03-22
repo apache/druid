@@ -16,28 +16,18 @@
  * limitations under the License.
  */
 
-import type { CapacityInfo } from '../druid-models';
-import { Api } from '../singletons';
+import React from 'react';
 
-export async function getClusterCapacity(): Promise<CapacityInfo> {
-  const workersResponse = await Api.instance.get('/druid/indexer/v1/totalWorkerCapacity', {
-    timeout: 5000,
+import { Capabilities } from '../../../helpers';
+import { shallow } from '../../../utils/shallow-renderer';
+
+import { RestrictedMode } from './restricted-mode';
+
+describe('RestrictedMode', () => {
+  it('matches snapshot', () => {
+    const headerBar = shallow(
+      <RestrictedMode capabilities={Capabilities.COORDINATOR_OVERLORD} onUnrestrict={() => {}} />,
+    );
+    expect(headerBar).toMatchSnapshot();
   });
-
-  const usedTaskSlots = Number(workersResponse.data.usedClusterCapacity);
-  const totalTaskSlots = Number(workersResponse.data.currentClusterCapacity);
-
-  return {
-    availableTaskSlots: totalTaskSlots - usedTaskSlots,
-    usedTaskSlots,
-    totalTaskSlots,
-  };
-}
-
-export async function maybeGetClusterCapacity(): Promise<CapacityInfo | undefined> {
-  try {
-    return await getClusterCapacity();
-  } catch {
-    return;
-  }
-}
+});

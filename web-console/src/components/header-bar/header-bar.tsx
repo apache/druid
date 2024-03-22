@@ -32,7 +32,6 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import {
@@ -51,8 +50,9 @@ import {
   localStorageSetJson,
   oneOf,
 } from '../../utils';
-import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
+
+import { RestrictedMode } from './restricted-mode/restricted-mode';
 
 import './header-bar.scss';
 
@@ -89,143 +89,6 @@ const DruidLogo = React.memo(function DruidLogo() {
         />
       </svg>
     </div>
-  );
-});
-
-interface RestrictedModeProps {
-  capabilities: Capabilities;
-  onUnrestrict(capabilities: Capabilities): void;
-}
-
-const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeProps) {
-  const { capabilities, onUnrestrict } = props;
-  const mode = capabilities.getModeExtended();
-
-  let label: string;
-  let message: JSX.Element;
-  switch (mode) {
-    case 'full':
-      return null; // Do not show anything
-
-    case 'no-sql':
-      label = 'No SQL mode';
-      message = (
-        <p>
-          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will be
-          limited in functionality. Look at{' '}
-          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> to enable the SQL
-          endpoint.
-        </p>
-      );
-      break;
-
-    case 'no-proxy':
-      label = 'No management proxy mode';
-      message = (
-        <p>
-          It appears that the management proxy is not enabled, the console will operate with limited
-          functionality.
-        </p>
-      );
-      break;
-
-    case 'no-sql-no-proxy':
-      label = 'No SQL mode';
-      message = (
-        <p>
-          It appears that the SQL endpoint and management proxy are disabled. The console can only
-          be used to make queries.
-        </p>
-      );
-      break;
-
-    case 'coordinator-overlord':
-      label = 'Coordinator/Overlord mode';
-      message = (
-        <p>
-          It appears that you are accessing the console on the Coordinator/Overlord shared service.
-          Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The unrestricted version of the console can be accessed on the Router
-          service.
-        </p>
-      );
-      break;
-
-    case 'coordinator':
-      label = 'Coordinator mode';
-      message = (
-        <p>
-          It appears that you are accessing the console on the Coordinator service. Due to the lack
-          of access to some APIs on this service the console will operate in a limited mode. The
-          full version of the console can be accessed on the Router service.
-        </p>
-      );
-      break;
-
-    case 'overlord':
-      label = 'Overlord mode';
-      message = (
-        <p>
-          It appears that you are accessing the console on the Overlord service. Due to the lack of
-          access to some APIs on this service the console will operate in a limited mode. The
-          unrestricted version of the console can be accessed on the Router service.
-        </p>
-      );
-      break;
-
-    default:
-      label = 'Restricted mode';
-      message = (
-        <p>
-          Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The unrestricted version of the console can be accessed on the Router
-          service.
-        </p>
-      );
-      break;
-  }
-
-  return (
-    <Popover2
-      content={
-        <PopoverText>
-          <p>The console is running in restricted mode.</p>
-          {message}
-          <p>
-            For more info check out the{' '}
-            <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
-              web console documentation
-            </ExternalLink>
-            .
-          </p>
-          <p>
-            It is possible that there is an issue with the capability detection. You can enable the
-            unrestricted console but certain features might not work if the underlying APIs are not
-            available.
-          </p>
-          <p>
-            <Button
-              icon={IconNames.WARNING_SIGN}
-              text={`Temporarily unrestrict console${capabilities.hasSql() ? '' : ' (with SQL)'}`}
-              onClick={() => onUnrestrict(Capabilities.FULL)}
-            />
-          </p>
-          {!capabilities.hasSql() && (
-            <p>
-              <Button
-                icon={IconNames.WARNING_SIGN}
-                text="Temporarily unrestrict console (without SQL)"
-                onClick={() => onUnrestrict(Capabilities.NO_SQL)}
-              />
-            </p>
-          )}
-        </PopoverText>
-      }
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
-    </Popover2>
   );
 });
 
@@ -360,38 +223,37 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         onClick={() => setCompactionDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasCoordinatorAccess()}
       />
-
       <MenuDivider />
-      <MenuItem icon={IconNames.COG} text="Console options">
-        {capabilitiesOverride ? (
-          <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
-        ) : (
+      <MenuItem icon={IconNames.HIGH_PRIORITY} text="Force specific console mode">
+        {capabilitiesOverride && (
           <>
-            {capabilitiesMode !== 'coordinator-overlord' && (
-              <MenuItem
-                text="Force Coordinator/Overlord mode"
-                onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
-              />
-            )}
-            {capabilitiesMode !== 'coordinator' && (
-              <MenuItem
-                text="Force Coordinator mode"
-                onClick={() => setForcedMode(Capabilities.COORDINATOR)}
-              />
-            )}
-            {capabilitiesMode !== 'overlord' && (
-              <MenuItem
-                text="Force Overlord mode"
-                onClick={() => setForcedMode(Capabilities.OVERLORD)}
-              />
-            )}
-            {capabilitiesMode !== 'no-proxy' && (
-              <MenuItem
-                text="Force no management proxy mode"
-                onClick={() => setForcedMode(Capabilities.NO_PROXY)}
-              />
-            )}
+            <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
+            <MenuDivider />
           </>
+        )}
+        {capabilitiesMode !== 'coordinator-overlord' && (
+          <MenuItem
+            text="Force Coordinator/Overlord mode"
+            onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
+          />
+        )}
+        {capabilitiesMode !== 'coordinator' && (
+          <MenuItem
+            text="Force Coordinator mode"
+            onClick={() => setForcedMode(Capabilities.COORDINATOR)}
+          />
+        )}
+        {capabilitiesMode !== 'overlord' && (
+          <MenuItem
+            text="Force Overlord mode"
+            onClick={() => setForcedMode(Capabilities.OVERLORD)}
+          />
+        )}
+        {capabilitiesMode !== 'no-proxy' && (
+          <MenuItem
+            text="Force no management proxy mode"
+            onClick={() => setForcedMode(Capabilities.NO_PROXY)}
+          />
         )}
       </MenuItem>
     </Menu>
@@ -496,6 +358,38 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         <RestrictedMode capabilities={capabilities} onUnrestrict={onUnrestrict} />
+        {capabilitiesOverride && (
+          <Popover2
+            content={
+              <PopoverText>
+                <p>
+                  The console is running in a specific forced mode. Instead of detecting the
+                  capabilities of the cluster it is assuming a certain defined set of capabilities.
+                </p>
+                <p>
+                  This is an advanced feature used for testing and for working around issues in the
+                  capability detecting logic. If you are not sure why you are in this mode then
+                  clear it.
+                </p>
+                <p>
+                  <Button
+                    text="Clear forced mode"
+                    onClick={() => setForcedMode(undefined)}
+                    intent={Intent.PRIMARY}
+                  />
+                </p>
+              </PopoverText>
+            }
+            position={Position.BOTTOM_RIGHT}
+          >
+            <Button
+              icon={IconNames.HIGH_PRIORITY}
+              text="Forced mode"
+              intent={Intent.DANGER}
+              minimal
+            />
+          </Popover2>
+        )}
         <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button className="header-entry" minimal icon={IconNames.COG} />
         </Popover2>

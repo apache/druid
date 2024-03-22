@@ -108,7 +108,7 @@ export class Capabilities {
     } catch (e) {
       const { response } = e;
       // If we detect error code 400 the management proxy is enabled but just does not know about the recently added /proxy/enabled route so treat this as a win.
-      return response.status === 400;
+      return response?.status === 400;
     }
 
     return true;
