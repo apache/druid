@@ -1769,7 +1769,11 @@ public class ControllerImpl implements Controller
   }
 
   public static Function<Set<DataSegment>, Set<DataSegment>> prepareCompactionStateAnnotateFunction(
-      MSQControllerTask task, ObjectMapper jsonMapper, DataSchema dataSchema, ShardSpec shardSpec, String queryId
+      MSQControllerTask task,
+      ObjectMapper jsonMapper,
+      DataSchema dataSchema,
+      ShardSpec shardSpec,
+      String queryId
   )
   {
     PartitionsSpec partitionSpec;

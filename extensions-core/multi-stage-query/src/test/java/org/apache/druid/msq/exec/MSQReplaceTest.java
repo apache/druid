@@ -181,7 +181,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.DAY
                          )
@@ -238,7 +239,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.DAY
                          )
@@ -321,7 +323,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new LongDimensionSchema("cnt")),
                              GranularityType.HOUR
                          )
@@ -395,7 +398,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("user")),
                              GranularityType.HOUR
                          )
@@ -475,7 +479,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.ALL
                          )
@@ -566,7 +571,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -647,7 +653,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -731,7 +738,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -819,7 +827,8 @@ public class MSQReplaceTest extends MSQTestBase
                          ))
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -882,7 +891,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -942,7 +952,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema(
                                  "m1")),
                              GranularityType.MONTH
@@ -973,7 +984,8 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.singletonList("dim1"),
+                             context,
+                             Collections.singletonList("dim1"),
                              Arrays.asList(
                                  new StringDimensionSchema("dim1"),
                                  new LongDimensionSchema("cnt")
@@ -1055,7 +1067,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.ALL
                          )
@@ -1110,7 +1123,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Arrays.asList(new FloatDimensionSchema("m1"), new DoubleDimensionSchema("m2")),
                              GranularityType.QUARTER
                          )
@@ -1195,7 +1209,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("d")),
                              GranularityType.ALL
                          )
@@ -1266,7 +1281,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.emptyList(),
+                             context,
+                             Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("d")),
                              GranularityType.ALL
                          )
@@ -1348,7 +1364,8 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             context, Collections.singletonList("d"),
+                             context,
+                             Collections.singletonList("d"),
                              Collections.singletonList(new StringDimensionSchema("d")),
                              GranularityType.DAY
                          )
@@ -1848,8 +1865,8 @@ public class MSQReplaceTest extends MSQTestBase
                                                         partitionDimensions, false
       );
     }
-    DimensionsSpec dimensionsSpec = new DimensionsSpec.Builder().
-        setDimensions(dimensions)
+    DimensionsSpec dimensionsSpec = new DimensionsSpec.Builder()
+        .setDimensions(dimensions)
         .setDimensionExclusions(Collections.singletonList(
             "__time"))
         .build();
