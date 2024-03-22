@@ -112,8 +112,8 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'Restricted mode';
       message = (
         <p>
-          Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The unrestricted version of the console can be accessed on the Router
+          Due to the lack of access to some APIs on this service, the console will operate in a
+          limited mode. You can access the unrestricted version of the console on the Router
           service.
         </p>
       );
