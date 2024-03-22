@@ -68,8 +68,8 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'No SQL mode';
       message = (
         <p>
-          It appears that the SQL endpoint and management proxy are disabled. The console can only
-          be used to make queries.
+          The SQL endpoint and management proxy are disabled.  You can only use the console
+          to make queries.
         </p>
       );
       break;
