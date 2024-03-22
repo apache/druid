@@ -469,13 +469,14 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   private static List<?> sortValues(List<?> unsortedValues, ColumnType matchValueType)
   {
     final Object[] array = unsortedValues.toArray(new Object[0]);
-    // check if values need coerced
+    // coerce values to matchValueType
     for (int i = 0; i < array.length; i++) {
       Object coerced = coerceValue(array[i], matchValueType);
       array[i] = coerced;
     }
-    Comparator<Object> comparator = matchValueType.getNullableStrategy();
+    final Comparator<Object> comparator = matchValueType.getNullableStrategy();
     ObjectArrays.quickSort(array, comparator);
+    // dedupe values
     final List<Object> sortedList = Lists.newArrayListWithCapacity(array.length);
     for (int i = 0; i < array.length; i++) {
       if (i > 0 && comparator.compare(array[i - 1], array[i]) == 0) {
