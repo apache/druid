@@ -134,7 +134,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
             .
           </p>
           <p>
-            It is possible that there is an issue with the capability detection. You can enable the
+            There is an issue with the console capability detection. You can enable the
             unrestricted console but certain features might not work if the underlying APIs are not
             available.
           </p>
