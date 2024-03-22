@@ -75,7 +75,7 @@ import java.util.TreeSet;
 public class MSQReplaceTest extends MSQTestBase
 {
 
-  private static final String WITH_REPLACE_LOCK_AND_COMPACTION_STATE = "WITH_REPLACE_LOCK_AND_COMPACTION_STATE";
+  private static final String WITH_REPLACE_LOCK_AND_COMPACTION_STATE = "with_replace_lock_and_compaction_state";
   private static final Map<String, Object> QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
@@ -181,7 +181,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.DAY
                          )
@@ -238,7 +238,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.DAY
                          )
@@ -321,7 +321,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new LongDimensionSchema("cnt")),
                              GranularityType.HOUR
                          )
@@ -395,7 +395,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("user")),
                              GranularityType.HOUR
                          )
@@ -475,7 +475,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.ALL
                          )
@@ -566,7 +566,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -647,7 +647,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -731,7 +731,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -789,8 +789,6 @@ public class MSQReplaceTest extends MSQTestBase
                                                        .version(MSQTestTaskActionClient.VERSION)
                                                        .size(1)
                                                        .build();
-
-
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
            .submit(new RetrieveUsedSegmentsAction(
@@ -821,7 +819,7 @@ public class MSQReplaceTest extends MSQTestBase
                          ))
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -884,7 +882,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
@@ -944,7 +942,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema(
                                  "m1")),
                              GranularityType.MONTH
@@ -975,7 +973,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.singletonList("dim1"),
+                             context, Collections.singletonList("dim1"),
                              Arrays.asList(
                                  new StringDimensionSchema("dim1"),
                                  new LongDimensionSchema("cnt")
@@ -1057,7 +1055,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.ALL
                          )
@@ -1065,8 +1063,9 @@ public class MSQReplaceTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testReplaceSegmentsWithQuarterSegmentGranularity()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceSegmentsWithQuarterSegmentGranularity(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1111,7 +1110,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Arrays.asList(new FloatDimensionSchema("m1"), new DoubleDimensionSchema("m2")),
                              GranularityType.QUARTER
                          )
@@ -1196,7 +1195,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("d")),
                              GranularityType.ALL
                          )
@@ -1267,7 +1266,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.emptyList(),
+                             context, Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("d")),
                              GranularityType.ALL
                          )
@@ -1349,7 +1348,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
-                             Collections.singletonList("d"),
+                             context, Collections.singletonList("d"),
                              Collections.singletonList(new StringDimensionSchema("d")),
                              GranularityType.DAY
                          )
@@ -1830,8 +1829,9 @@ public class MSQReplaceTest extends MSQTestBase
     ));
     return expectedRows;
   }
-  private CompactionState expectedCompactionState(List<String> partitionDimensions, List<DimensionSchema> dimensions,
-                                                  GranularityType segmentGranularity
+  private CompactionState expectedCompactionState(
+      Map<String, Object> context, List<String> partitionDimensions, List<DimensionSchema> dimensions,
+      GranularityType segmentGranularity
   ){
     if (!context.containsKey(Tasks.STORE_COMPACTION_STATE_KEY) || !((Boolean) context.get(Tasks.STORE_COMPACTION_STATE_KEY))){
       return null;
