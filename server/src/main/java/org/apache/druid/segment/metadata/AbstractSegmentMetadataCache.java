@@ -40,8 +40,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -117,7 +115,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
 
-  private final ExecutorService cacheExec;
 
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
@@ -193,6 +190,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   protected final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
       = new ConcurrentHashMap<>();
 
+  protected final ExecutorService cacheExec;
   protected final ExecutorService callbackExec;
 
   @GuardedBy("lock")
@@ -246,7 +244,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     this.emitter = emitter;
   }
 
-  private void startCacheExec()
+  protected void startCacheExec()
   {
     cacheExec.submit(
         () -> {
@@ -255,6 +253,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
           long lastFailure = 0L;
 
           try {
+            additionalRefreshWaitCondition();
             while (!Thread.currentThread().isInterrupted()) {
               final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
               final Set<String> dataSourcesToRebuild = new TreeSet<>();
@@ -278,8 +277,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                     if (isServerViewInitialized &&
                         !wasRecentFailure &&
                         (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
-                        (refreshImmediately || nextRefresh < System.currentTimeMillis()) &&
-                        additionalRefreshConditionMet()) {
+                        (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                       // We need to do a refresh. Break out of the waiting loop.
                       break;
                     }
@@ -355,24 +353,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     initialized.countDown();
   }
 
-  public abstract boolean additionalRefreshConditionMet() throws InterruptedException;
-
-  @LifecycleStart
-  public void start() throws InterruptedException
+  public void additionalRefreshWaitCondition() throws InterruptedException
   {
-    log.info("%s starting cache initialization.", getClass().getSimpleName());
-    startCacheExec();
-
-    if (config.isAwaitInitializationOnStart()) {
-      awaitInitialization();
-    }
-  }
-
-  @LifecycleStop
-  public void stop()
-  {
-    cacheExec.shutdownNow();
-    callbackExec.shutdownNow();
+    // noop
   }
 
   public void awaitInitialization() throws InterruptedException

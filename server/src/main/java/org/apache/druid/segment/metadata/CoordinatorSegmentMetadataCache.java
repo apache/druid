@@ -30,6 +30,8 @@ import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -79,9 +81,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
-
-  @GuardedBy("this")
-  private final AtomicBoolean isLeader = new AtomicBoolean(false);
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -154,28 +153,33 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     );
   }
 
-  public synchronized void onLeaderStart()
+  public void start()
   {
-    isLeader.set(true);
+    log.info("%s starting cache initialization.", getClass().getSimpleName());
+    try {
+      segmentSchemaBackfillQueue.start();
+      startCacheExec();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    log.info("CoordinatorSegmentMetadataCache start complete.");
   }
 
-  public synchronized void onLeaderStop()
+  public void stop()
   {
-    isLeader.set(false);
+    cacheExec.shutdownNow();
+    callbackExec.shutdownNow();
+    segmentSchemaCache.uninitialize();
+    segmentSchemaBackfillQueue.stop();
   }
 
   /**
-   * This method ensures that the refresh goes through only when schemaCache is initialized
-   * and the current node is leader.
+   * This method ensures that the refresh goes through only when schemaCache is initialized.
    */
   @Override
-  public synchronized boolean additionalRefreshConditionMet() throws InterruptedException
+  public synchronized void additionalRefreshWaitCondition() throws InterruptedException
   {
-    if (isLeader.get()) {
-      segmentSchemaCache.awaitInitialization();
-      return isLeader.get();
-    }
-    return false;
+    segmentSchemaCache.awaitInitialization();
   }
 
   @Override

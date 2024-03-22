@@ -518,8 +518,6 @@ public class CliCoordinator extends ServerRunnable
       binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
 
       binder.bind(QuerySegmentWalker.class).to(SegmentMetadataQuerySegmentWalker.class).in(LazySingleton.class);
-      LifecycleModule.register(binder, SegmentSchemaBackFillQueue.class);
-      LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
     }
 
     @LazySingleton

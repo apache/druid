@@ -1386,6 +1386,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public void resetLatestSchemaId()
   {
-    latestSchemaId.set(null);
+    latestSchemaId.set(0L);
   }
 }

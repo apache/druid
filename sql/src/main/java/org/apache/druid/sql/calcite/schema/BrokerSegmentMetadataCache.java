@@ -28,6 +28,8 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -148,10 +150,22 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     );
   }
 
-  @Override
-  public boolean additionalRefreshConditionMet()
+  @LifecycleStart
+  public void start() throws InterruptedException
   {
-    return true;
+    log.info("%s starting cache initialization.", getClass().getSimpleName());
+    startCacheExec();
+
+    if (config.isAwaitInitializationOnStart()) {
+      awaitInitialization();
+    }
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    cacheExec.shutdownNow();
+    callbackExec.shutdownNow();
   }
 
   /**

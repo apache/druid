@@ -31,6 +31,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+
+
+// SMC on Coordinator
+// schema -> smq or db poll
+// if schema is in db, good
+// ow, execute smq -> backfill schema in db
+//
 
 /**
  * In-memory cache of segment schema.
@@ -53,7 +61,7 @@ public class SegmentSchemaCache
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaCache.class);
 
   // Cache is marked initialized after first DB poll.
-  private CountDownLatch initialized = new CountDownLatch(1);
+  private AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
 
   /**
    * Mapping from segmentId to segment level information which includes numRows and schemaId.
@@ -84,21 +92,36 @@ public class SegmentSchemaCache
    */
   private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
-  public void setInitialized()
+  public synchronized void setInitialized()
   {
-    initialized.countDown();
+    initialized.get().countDown();
+
     log.info("SegmentSchemaCache is initialized.");
   }
 
-  public void uninitialize()
+  /**
+   * Uninitialize is called when the current node is no longer the leader.
+   */
+  public synchronized void uninitialize()
   {
-    initialized = new CountDownLatch(1);
+    initialized.set(new CountDownLatch(1));
+
+    finalizedSegmentSchema.clear();
+    finalizedSegmentStats.clear();
+    realtimeSegmentSchemaMap.clear();
+    inTransitSMQResults.clear();
+    inTransitSMQPublishedResults.clear();
+
     log.info("SegmentSchemaCache is uninitialized.");
   }
 
-  public void awaitInitialization() throws InterruptedException
+  /**
+   * {@link CoordinatorSegmentMetadataCache} startup waits on the cache initialization.
+   * This is being done to ensure that we don't execute SMQ for segment with schema already present in the DB.
+   */
+  public synchronized void awaitInitialization() throws InterruptedException
   {
-    initialized.await();
+    initialized.get().await();
   }
 
   public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
@@ -152,6 +175,13 @@ public class SegmentSchemaCache
 
   public Optional<SegmentSchemaMetadata> getSchemaForSegment(SegmentId segmentId)
   {
+    // consider potential race
+    // We first look up the schema in the realtime map. This ensures that during handoff
+    // there is no window where segment schema is missing from the cache.
+    // If were to look up the finalized segment map first, during handoff it is possible
+    // that segment schema isn't polled yet and thus missing from the map and by the time
+    // we look up the schema in the realtime map, it has been removed.
+
     // realtime segment
     if (realtimeSegmentSchemaMap.containsKey(segmentId)) {
       return Optional.of(realtimeSegmentSchemaMap.get(segmentId));

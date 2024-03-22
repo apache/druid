@@ -41,10 +41,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Responsible for persisting segment schema which are obtained as a result of executing segment metadata queries.
- * SMQ results are added to a queue and are periodically published to the DB in batches.
+ * This class publishes the segment schema for segments obtained via segment metadata query.
+ * It maintains a queue which is populated by {@link CoordinatorSegmentMetadataCache}.
  */
-@ManageLifecycle
 public class SegmentSchemaBackFillQueue
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaBackFillQueue.class);
@@ -75,7 +74,6 @@ public class SegmentSchemaBackFillQueue
     this.fingerprintGenerator = fingerprintGenerator;
   }
 
-  @LifecycleStart
   public void start()
   {
     if (isEnabled()) {
@@ -83,7 +81,6 @@ public class SegmentSchemaBackFillQueue
     }
   }
 
-  @LifecycleStop
   public void stop()
   {
     if (isEnabled()) {
