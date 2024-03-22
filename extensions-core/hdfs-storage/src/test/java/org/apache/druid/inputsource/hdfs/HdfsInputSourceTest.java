@@ -53,10 +53,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -76,7 +74,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@RunWith(Enclosed.class)
 public class HdfsInputSourceTest extends InitializedNullHandlingTest
 {
   private static final String PATH = "hdfs://localhost:7020/foo/bar";

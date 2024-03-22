@@ -108,3 +108,10 @@ Also see the [CONCAT function](sql-scalar.md#string-functions).
 |`x NOT IN (values)`|True if _x_ is not one of the listed values|
 |`x IN (subquery)`|True if _x_ is returned by the subquery. This will be translated into a join; see [Query translation](sql-translation.md) for details.|
 |`x NOT IN (subquery)`|True if _x_ is not returned by the subquery. This will be translated into a join; see [Query translation](sql-translation.md) for details.|
+
+## Other operators
+
+|Operator|Description|
+|--------|-----------|
+|`PIVOT (aggregation_function(column_to_aggregate) FOR column_with_values_to_pivot IN (pivoted_column1 [, pivoted_column2 ...]))`|Carries out an aggregation and transforms rows into columns in the output.|
+|`UNPIVOT (values_column FOR names_column IN (unpivoted_column1 [, unpivoted_column2 ... ]))`|Transforms existing column values into rows.|

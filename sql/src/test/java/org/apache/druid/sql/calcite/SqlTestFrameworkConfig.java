@@ -20,25 +20,26 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Annotation to specify desired framework settings.
  *
- * This class provides junit rule facilities to build the framework accordingly to the annotation.
- * These rules also cache the previously created frameworks.
+ * This class provides junit rule facilities to build the framework accordingly
+ * to the annotation. These rules also cache the previously created frameworks.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
@@ -48,79 +49,98 @@ public @interface SqlTestFrameworkConfig
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
+  ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
+
+
+
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class ClassRule extends ExternalResource
+  class Rule implements AfterAllCallback, BeforeEachCallback
   {
+    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
+    private SqlTestFrameworkConfig config;
+    private QueryComponentSupplier testHost;
+    private Method method;
 
-    Map<SqlTestFrameworkConfig, SqlTestFramework> frameworkMap = new HashMap<SqlTestFrameworkConfig, SqlTestFramework>();
-
-    public MethodRule methodRule(BaseCalciteQueryTest testHost)
+    @Override
+    public void afterAll(ExtensionContext context)
     {
-      return new MethodRule(this, testHost);
+      for (ConfigurationInstance f : configMap.values()) {
+        f.close();
+      }
+      configMap.clear();
     }
 
     @Override
-    protected void after()
+    public void beforeEach(ExtensionContext context)
     {
-      for (SqlTestFramework f : frameworkMap.values()) {
-        f.close();
-      }
-      frameworkMap.clear();
-    }
-  }
+      testHost = (QueryComponentSupplier) context.getTestInstance().get();
+      method = context.getTestMethod().get();
+      setConfig(method.getAnnotation(SqlTestFrameworkConfig.class));
 
-  /**
-   * @see {@link SqlTestFrameworkConfig}
-   */
-  class MethodRule implements TestRule
-  {
-    private SqlTestFrameworkConfig config;
-    private ClassRule classRule;
-    private QueryComponentSupplier testHost;
-
-    public MethodRule(ClassRule classRule, QueryComponentSupplier testHost)
-    {
-      this.classRule = classRule;
-      this.testHost = testHost;
     }
 
     @SqlTestFrameworkConfig
     public SqlTestFrameworkConfig defaultConfig()
     {
       try {
-        return getClass()
+        SqlTestFrameworkConfig annotation = getClass()
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
+        return annotation;
       }
       catch (NoSuchMethodException | SecurityException e) {
         throw new RuntimeException(e);
       }
     }
 
-    @Override
-    public Statement apply(Statement base, Description description)
+    public void setConfig(SqlTestFrameworkConfig annotation)
     {
-      config = description.getAnnotation(SqlTestFrameworkConfig.class);
+      config = annotation;
       if (config == null) {
         config = defaultConfig();
       }
-      return base;
     }
 
     public SqlTestFramework get()
     {
-      return classRule.frameworkMap.computeIfAbsent(config, this::createFramework);
+      return getConfigurationInstance().framework;
     }
 
-    private SqlTestFramework createFramework(SqlTestFrameworkConfig config)
+    public <T extends Annotation> T getAnnotation(Class<T> annotationType)
+    {
+      return method.getAnnotation(annotationType);
+    }
+
+    private ConfigurationInstance getConfigurationInstance()
+    {
+      return configMap.computeIfAbsent(config, this::buildConfiguration);
+    }
+
+    ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
+    {
+      return new ConfigurationInstance(config, testHost);
+    }
+  }
+
+  class ConfigurationInstance
+  {
+    public SqlTestFramework framework;
+
+    ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .catalogResolver(testHost.createCatalogResolver())
           .minTopNThreshold(config.minTopNThreshold())
-          .mergeBufferCount(config.numMergeBuffers());
-      return builder.build();
+          .mergeBufferCount(config.numMergeBuffers())
+          .withOverrideModule(config.resultCache().makeModule());
+      framework = builder.build();
+    }
+
+    public void close()
+    {
+      framework.close();
     }
   }
 }

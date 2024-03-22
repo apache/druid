@@ -82,9 +82,27 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
     if (typeof detailArchiveVersion === 'number') {
       try {
         if (detailArchiveVersion === 2) {
-          execution = Execution.fromTaskReport(parsed.reports)
-            .updateWithTaskPayload(parsed.payload)
-            .updateWithAsyncStatus(parsed.statementsStatus);
+          if (parsed.reports) {
+            execution = Execution.fromTaskReport(parsed.reports);
+          }
+
+          if (parsed.statementsStatus) {
+            execution = execution
+              ? execution.updateWithAsyncStatus(parsed.statementsStatus)
+              : Execution.fromAsyncStatus(parsed.statementsStatus);
+          }
+
+          if (!execution) {
+            AppToaster.show({
+              intent: Intent.DANGER,
+              message: `Not enough information to decode detail archive`,
+            });
+            return;
+          }
+
+          if (parsed.payload) {
+            execution = execution.updateWithTaskPayload(parsed.payload);
+          }
         } else {
           AppToaster.show({
             intent: Intent.DANGER,
@@ -97,6 +115,7 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
           intent: Intent.DANGER,
           message: `Could not decode profile: ${e.message}`,
         });
+        console.log(e); // Log out the error to the console in case we want to debug this further. This is very much a power user feature.
         return;
       }
     } else if (typeof (parsed as any).multiStageQuery === 'object') {

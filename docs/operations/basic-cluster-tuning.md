@@ -90,9 +90,10 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 #### Segment Cache Size
 
-For better query performance, do not allocate segment data to a Historical in excess of the system free memory.  When `free system memory` is greater than or equal to `druid.segmentCache.locations`, the more segment data the Historical can be held in the memory-mapped segment cache.
+For better query performance, do not allocate segment data to a Historical in excess of the system free memory. The Historical uses free system memory to cache segments.
+For more detail, see [Loading and serving segments from cache](../design/historical/#loading-and-serving-segments-from-cache)
 
-Druid uses the `druid.segmentCache.locations` to calculate the total segment data size assigned to a Historical. For some rarer use cases, you can override this behavior with `druid.server.maxSize` property.
+Druid uses the `druid.segmentCache.locations` to calculate the total segment data size assigned to a Historical. For rare use cases, you can override this behavior with `druid.server.maxSize` property.
 
 #### Number of Historicals
 
@@ -256,7 +257,7 @@ The total memory usage of the MiddleManager + Tasks:
 
 ###### Kafka/Kinesis ingestion
 
-If you use the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
+If you use the [Kafka Indexing Service](../ingestion/kafka-ingestion.md) or [Kinesis Indexing Service](../ingestion/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
 
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
 slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).

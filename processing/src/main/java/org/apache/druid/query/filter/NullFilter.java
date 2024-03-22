@@ -216,7 +216,7 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
                                          .build();
   }
 
-  private static class NullPredicateFactory implements DruidPredicateFactory
+  public static class NullPredicateFactory implements DruidPredicateFactory
   {
     public static final NullPredicateFactory INSTANCE = new NullPredicateFactory();
 

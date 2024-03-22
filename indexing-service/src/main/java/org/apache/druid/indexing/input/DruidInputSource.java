@@ -49,7 +49,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -546,7 +546,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     Preconditions.checkNotNull(interval);
 
     final Collection<DataSegment> usedSegments;
-    if (toolbox == null || !toolbox.getConfig().isConcurrentAppendAndReplaceEnabled()) {
+    if (toolbox == null) {
       usedSegments = FutureUtils.getUnchecked(
           coordinatorClient.fetchUsedSegments(dataSource, Collections.singletonList(interval)),
           true
@@ -554,7 +554,10 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     } else {
       try {
         usedSegments = toolbox.getTaskActionClient()
-                              .submit(new RetrieveSegmentsToReplaceAction(dataSource, Collections.singletonList(interval)));
+                              .submit(new RetrieveUsedSegmentsAction(
+                                  dataSource,
+                                  Collections.singletonList(interval)
+                              ));
       }
       catch (IOException e) {
         LOG.error(e, "Error retrieving the used segments for interval[%s].", interval);

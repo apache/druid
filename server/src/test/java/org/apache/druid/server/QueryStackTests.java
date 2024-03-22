@@ -19,9 +19,17 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
+import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -41,6 +49,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -70,7 +79,6 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -82,11 +90,15 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -114,6 +126,7 @@ public class QueryStackTests
   }
 
   public static ClientQuerySegmentWalker createClientQuerySegmentWalker(
+      final Injector injector,
       final QuerySegmentWalker clusterWalker,
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -135,35 +148,10 @@ public class QueryStackTests
         },
         joinableFactory,
         new RetryQueryRunnerConfig(),
-        TestHelper.makeJsonMapper(),
+        injector.getInstance(ObjectMapper.class),
         serverConfig,
-        null /* Cache */,
-        new CacheConfig()
-        {
-          @Override
-          public boolean isPopulateCache()
-          {
-            return false;
-          }
-
-          @Override
-          public boolean isUseCache()
-          {
-            return false;
-          }
-
-          @Override
-          public boolean isPopulateResultLevelCache()
-          {
-            return false;
-          }
-
-          @Override
-          public boolean isUseResultLevelCache()
-          {
-            return false;
-          }
-        },
+        injector.getInstance(Cache.class),
+        injector.getInstance(CacheConfig.class),
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
         new SubqueryCountStatsProvider()
     );
@@ -172,10 +160,11 @@ public class QueryStackTests
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler
+      @Nullable QueryScheduler scheduler,
+      Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler);
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
@@ -384,5 +373,30 @@ public class QueryStackTests
     }
 
     return new MapJoinableFactory(setBuilder.build(), mapBuilder.build());
+  }
+
+  public static DruidInjectorBuilder defaultInjectorBuilder()
+  {
+    Injector startupInjector = new StartupInjectorBuilder()
+        .build();
+
+    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+        .ignoreLoadScopes()
+        .addModule(new ExpressionModule())
+        .addModule(new SegmentWranglerModule())
+        .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED));
+
+    return injectorBuilder;
+  }
+
+  public static Injector injectorWithLookup()
+  {
+
+    final LookupExtractorFactoryContainerProvider lookupProvider;
+    lookupProvider = LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap());
+
+    return defaultInjectorBuilder()
+        .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
+        .build();
   }
 }

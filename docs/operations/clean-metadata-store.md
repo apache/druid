@@ -86,6 +86,8 @@ Only applies to the specified datasources in the dynamic configuration parameter
 If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitted for all datasources.
 - `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `P1D`. Must be greater than `druid.coordinator.period.indexingPeriod`. 
 - `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
+- `druid.coordinator.kill.ignoreDurationToRetain`: A way to override `druid.coordinator.kill.durationToRetain`. When enabled, the coordinator considers all unused segments as eligible to be killed.
+- `druid.coordinator.kill.bufferPeriod`: Defines the amount of time that a segment must be unused before it can be permanently removed from metadata and deep storage. This serves as a buffer period to prevent data loss if data ends up being needed after being marked unused.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
 
 ### Audit records
@@ -189,15 +191,15 @@ druid.coordinator.kill.datasource.on=false
 <a name="example"></a>
 ## Example configuration for automated metadata cleanup
 
-Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old. The exception is for audit logs, which you need to retain for 30 days:
+Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old after a seven day buffer period in case you want to recover the data. The exception is for audit logs, which you need to retain for 30 days:
 
 ```properties
 ...
 # Schedule the metadata management store task for every hour:
-druid.coordinator.period.metadataStoreManagementPeriod=P1H
+druid.coordinator.period.metadataStoreManagementPeriod=PT1H
 
-# Set a kill task to poll every day to delete Segment records and segments
-# in deep storage > 4 days old. When druid.coordinator.kill.on is set to true,
+# Set a kill task to poll every day to delete segment records and segments
+# in deep storage > 4 days old after a 7-day buffer period. When druid.coordinator.kill.on is set to true,
 # you can set killDataSourceWhitelist in the dynamic configuration to limit
 # the datasources that can be killed.
 # Required also for automated cleanup of rules and compaction configuration.
@@ -205,6 +207,7 @@ druid.coordinator.period.metadataStoreManagementPeriod=P1H
 druid.coordinator.kill.on=true
 druid.coordinator.kill.period=P1D
 druid.coordinator.kill.durationToRetain=P4D
+druid.coordinator.kill.bufferPeriod=P7D
 druid.coordinator.kill.maxSegments=1000
 
 # Poll every day to delete audit records > 30 days old

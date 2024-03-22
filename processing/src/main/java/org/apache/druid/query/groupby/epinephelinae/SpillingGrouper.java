@@ -215,6 +215,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void close()
   {
     grouper.close();
+    keySerde.reset();
     deleteFiles();
   }
 

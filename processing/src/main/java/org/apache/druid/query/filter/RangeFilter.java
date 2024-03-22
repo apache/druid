@@ -461,7 +461,11 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     final DimFilterToStringBuilder builder = new DimFilterToStringBuilder();
 
     if (lower != null) {
-      builder.append(lower);
+      if (matchValueType.isArray()) {
+        builder.append(Arrays.deepToString(lowerEval.asArray()));
+      } else {
+        builder.append(lower);
+      }
       if (lowerOpen) {
         builder.append(" < ");
       } else {
@@ -479,7 +483,11 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       } else {
         builder.append(" <= ");
       }
-      builder.append(upper);
+      if (matchValueType.isArray()) {
+        builder.append(Arrays.deepToString(upperEval.asArray()));
+      } else {
+        builder.append(upper);
+      }
     }
 
     return builder.appendFilterTuning(filterTuning).build();

@@ -62,11 +62,11 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
 
     Expr arg = args.get(0);
 
-    class IPv4AddressStringifyExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class IPv4AddressStringifyExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private IPv4AddressStringifyExpr(Expr arg)
+      private IPv4AddressStringifyExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(IPv4AddressStringifyExprMacro.this, args);
       }
 
       @Nonnull
@@ -84,12 +84,6 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
         }
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -98,7 +92,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
       }
     }
 
-    return new IPv4AddressStringifyExpr(arg);
+    return new IPv4AddressStringifyExpr(args);
   }
 
   private static ExprEval evalAsString(ExprEval eval)

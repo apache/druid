@@ -27,7 +27,6 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchHolder;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class HllPostAggExprMacros
 {
@@ -40,7 +39,7 @@ public class HllPostAggExprMacros
     public Expr apply(List<Expr> args)
     {
       validationHelperCheckAnyOfArgumentCount(args, 1, 2);
-      return new HllSketchEstimateExpr(args);
+      return new HllSketchEstimateExpr(this, args);
     }
 
     @Override
@@ -55,9 +54,9 @@ public class HllPostAggExprMacros
     private Expr estimateExpr;
     private Expr isRound;
 
-    public HllSketchEstimateExpr(List<Expr> args)
+    public HllSketchEstimateExpr(HLLSketchEstimateExprMacro macro, List<Expr> args)
     {
-      super(HLL_SKETCH_ESTIMATE, args);
+      super(macro, args);
       this.estimateExpr = args.get(0);
       if (args.size() == 2) {
         isRound = args.get(1);
@@ -87,13 +86,6 @@ public class HllPostAggExprMacros
       HllSketchHolder h = HllSketchHolder.fromObj(valObj);
       double estimate = h.getEstimate();
       return round ? ExprEval.of(Math.round(estimate)) : ExprEval.of(estimate);
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new HllSketchEstimateExpr(newArgs));
     }
   }
 }

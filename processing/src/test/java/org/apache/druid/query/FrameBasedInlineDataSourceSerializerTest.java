@@ -132,7 +132,7 @@ public class FrameBasedInlineDataSourceSerializerTest
     );
     Cursor cursor = cursorAndCloseable.lhs;
     RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(
         cursor,
         FrameWriters.makeFrameWriterFactory(
             FrameType.ROW_BASED,

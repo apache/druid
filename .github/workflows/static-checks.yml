@@ -34,7 +34,7 @@ env:
   MVN: mvn -B
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
+  MAVEN_OPTS: -Xmx8g
 
 jobs:
   static-checks:
@@ -45,9 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
@@ -76,7 +76,7 @@ jobs:
         if: ${{ matrix.java == '8' }}
         run: |
           echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: checkstyle
@@ -118,9 +118,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '8'
@@ -129,7 +129,7 @@ jobs:
       - name: maven install
         run: |
           echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: intellij inspections
@@ -144,15 +144,37 @@ jobs:
           --levels ERROR \
           --scope JavaInspectionsScope
 
+  openrewrite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+          cache: 'maven'
+
+      - name: maven install
+        run: |
+          echo 'Running Maven install...' &&
+          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+      - name: rewrite:dryRun
+        run: |
+          ${MVN} rewrite:dryRun ${MAVEN_SKIP}
+
   web-checks:
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -178,6 +200,7 @@ jobs:
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
+        id: web-console-test
         run: |
           ./.github/scripts/setup_generate_license.sh
           web-console/script/druid build
@@ -186,11 +209,11 @@ jobs:
           web-console/script/druid stop
 
       - name: Tar druid logs
-        if: ${{ failure() }}
-        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ logs
+        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
+        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
 
       - name: Upload druid logs to GitHub
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
         uses: actions/upload-artifact@master
         with:
           name: Druid logs web-checks

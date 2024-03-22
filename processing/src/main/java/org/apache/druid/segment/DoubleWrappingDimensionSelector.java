@@ -43,12 +43,10 @@ public class DoubleWrappingDimensionSelector extends BaseSingleValueDimensionSel
   @Override
   protected String getValue()
   {
-    if (selector.isNull()) {
-      return null;
-    } else if (extractionFn == null) {
-      return String.valueOf(selector.getDouble());
+    if (extractionFn == null) {
+      return selector.isNull() ? null : String.valueOf(selector.getDouble());
     } else {
-      return extractionFn.apply(selector.getDouble());
+      return selector.isNull() ? extractionFn.apply(null) : extractionFn.apply(selector.getDouble());
     }
   }
 

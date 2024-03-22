@@ -61,6 +61,7 @@ import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.ThreadingTaskRunner;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -79,6 +80,7 @@ import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -152,6 +154,7 @@ public class CliIndexer extends ServerRunnable
             binder.bind(TaskRunner.class).to(ThreadingTaskRunner.class);
             binder.bind(QuerySegmentWalker.class).to(ThreadingTaskRunner.class);
             binder.bind(ThreadingTaskRunner.class).in(LazySingleton.class);
+            binder.bind(IndexerTaskCountStatsProvider.class).to(WorkerTaskManager.class);
 
             CliPeon.bindRowIngestionMeters(binder);
             CliPeon.bindChatHandler(binder);

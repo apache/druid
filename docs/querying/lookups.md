@@ -155,8 +155,8 @@ You can see the difference in the native query that is generated during SQL plan
 can retrieve with [`EXPLAIN PLAN FOR`](sql.md#explain-plan). When a lookup is reversed in this way, the `lookup`
 function disappears and is replaced by a simpler filter, typically of type `equals` or `in`.
 
-Lookups are not reversed if the number of matching keys exceeds the [`inSubQueryThreshold`](sql-query-context.md) for
-the query.
+Lookups are not reversed if the number of matching keys exceeds the [`sqlReverseLookupThreshold`](sql-query-context.md)
+or [`inSubQueryThreshold`](sql-query-context.md) for the query.
 
 This rewrite adds some planning time that may become noticeable for larger lookups, especially if many keys map to the
 same value. You can see the impact on planning time in the `sqlQuery/planningTimeMs` metric. You can also measure the

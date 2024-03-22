@@ -542,6 +542,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         //CountDownLatch.countDown() does nothing when count has already reached 0.
         workerViewInitialized.countDown();
       }
+
+      @Override
+      public void nodeViewInitializedTimedOut()
+      {
+        nodeViewInitialized();
+      }
     };
     druidNodeDiscovery.registerListener(nodeDiscoveryListener);
 
@@ -709,8 +715,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               if (!taskItem.getResult().isDone()) {
                 log.warn(
                     "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
-                    workerHostAndPort,
                     taskItem.getTaskId(),
+                    workerHostAndPort,
                     config.getTaskCleanupTimeout()
                 );
                 // taskComplete(..) must be called outside of statusLock, see comments on method.

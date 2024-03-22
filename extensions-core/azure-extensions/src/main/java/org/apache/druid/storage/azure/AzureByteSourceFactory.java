@@ -26,5 +26,9 @@ import com.google.inject.assistedinject.Assisted;
  */
 public interface AzureByteSourceFactory
 {
-  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
+  AzureByteSource create(
+      @Assisted("containerName") String containerName,
+      @Assisted("blobPath") String blobPath,
+      @Assisted("azureStorage") AzureStorage azureStorage
+  );
 }

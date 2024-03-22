@@ -45,7 +45,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -61,31 +61,31 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
+        [
+          {
             "Header": "Task ID",
             "accessor": [Function],
             "className": "padded",
             "id": "task_id",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
@@ -95,18 +95,18 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
           },
         ]
       }
-      data={Array []}
-      defaultExpanded={Object {}}
+      data={[]}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -150,14 +150,14 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -171,7 +171,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>
@@ -223,7 +223,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -239,31 +239,31 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
+        [
+          {
             "Header": "Task ID",
             "accessor": [Function],
             "className": "padded",
             "id": "task_id",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
@@ -273,18 +273,18 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
           },
         ]
       }
-      data={Array []}
-      defaultExpanded={Object {}}
+      data={[]}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -328,14 +328,14 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -349,7 +349,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>
@@ -427,7 +427,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -443,31 +443,31 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
+        [
+          {
             "Header": "Task ID",
             "accessor": [Function],
             "className": "padded",
             "id": "task_id",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
@@ -477,18 +477,18 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
           },
         ]
       }
-      data={Array []}
-      defaultExpanded={Object {}}
+      data={[]}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -532,14 +532,14 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -553,7 +553,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>
@@ -605,7 +605,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -621,31 +621,31 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
+        [
+          {
             "Header": "Task ID",
             "accessor": [Function],
             "className": "padded",
             "id": "task_id",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
@@ -653,7 +653,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "id": "total",
             "width": 200,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "1m",
             "accessor": [Function],
@@ -661,7 +661,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "id": "1m",
             "width": 200,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "5m",
             "accessor": [Function],
@@ -669,7 +669,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "id": "5m",
             "width": 200,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "15m",
             "accessor": [Function],
@@ -680,24 +680,24 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
         ]
       }
       data={
-        Array [
-          Object {
-            "summary": Object {
-              "movingAverages": Object {
-                "buildSegments": Object {
-                  "15m": Object {
+        [
+          {
+            "summary": {
+              "movingAverages": {
+                "buildSegments": {
+                  "15m": {
                     "processed": 5.544749689510444,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
-                  "1m": Object {
+                  "1m": {
                     "processed": 4.593670088770785,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
-                  "5m": Object {
+                  "5m": {
                     "processed": 3.5455993615040584,
                     "processedWithError": 0,
                     "thrownAway": 0,
@@ -705,8 +705,8 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
                   },
                 },
               },
-              "totals": Object {
-                "buildSegments": Object {
+              "totals": {
+                "buildSegments": {
                   "processed": 7516,
                   "processedWithError": 0,
                   "thrownAway": 0,
@@ -718,17 +718,17 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           },
         ]
       }
-      defaultExpanded={Object {}}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -772,14 +772,14 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -793,7 +793,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>

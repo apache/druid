@@ -98,22 +98,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
   private static final String NO_MATCH = "no";
 
-  private static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
-  {
-
-    @Override
-    public double skipValueRangeIndexScale()
-    {
-      return 1.0;
-    }
-
-    @Override
-    public double skipValuePredicateIndexScale()
-    {
-      return 1.0;
-    }
-  };
-
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
@@ -260,7 +244,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     );
     bob.setFileMapper(fileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(baseBuffer, bob, ALWAYS_USE_INDEXES);
+    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE);
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
@@ -284,7 +268,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     );
     bob.setFileMapper(arrayFileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(arrayBaseBuffer, bob, ALWAYS_USE_INDEXES);
+    deserializer.read(arrayBaseBuffer, bob, ColumnConfig.SELECTION_SIZE);
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
@@ -305,7 +289,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         baseBuffer,
         bob,
-        ALWAYS_USE_INDEXES,
+        ColumnConfig.SELECTION_SIZE,
         bitmapSerdeFactory,
         ByteOrder.nativeOrder()
     );

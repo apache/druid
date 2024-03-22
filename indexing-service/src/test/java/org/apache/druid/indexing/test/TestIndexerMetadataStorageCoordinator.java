@@ -34,6 +34,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -43,7 +44,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
@@ -105,30 +105,32 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
+  )
   {
-    synchronized (unusedSegments) {
-      return ImmutableList.copyOf(unusedSegments);
-    }
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable List<String> versions,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     synchronized (unusedSegments) {
-      Stream<DataSegment> resultStream = unusedSegments.stream();
-
-      resultStream = resultStream.filter(ds -> !nuked.contains(ds));
-
-      if (limit != null) {
-        resultStream = resultStream.limit(limit);
-      }
-
-      return ImmutableList.copyOf(resultStream.iterator());
+      return ImmutableList.copyOf(
+          unusedSegments.stream()
+                        .filter(ds -> !nuked.contains(ds))
+                        .limit(limit != null ? limit : Long.MAX_VALUE)
+                        .iterator()
+      );
     }
   }
 

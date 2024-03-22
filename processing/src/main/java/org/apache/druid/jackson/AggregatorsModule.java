@@ -43,6 +43,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetri
 import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
+import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -84,11 +85,23 @@ public class AggregatorsModule extends SimpleModule
 
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
     ComplexMetrics.registerSerde(PreComputedHyperUniquesSerde.TYPE_NAME, new PreComputedHyperUniquesSerde());
-    ComplexMetrics.registerSerde(SerializablePairLongStringComplexMetricSerde.TYPE_NAME, new SerializablePairLongStringComplexMetricSerde());
+    ComplexMetrics.registerSerde(
+        SerializablePairLongStringComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongStringComplexMetricSerde()
+    );
 
-    ComplexMetrics.registerSerde(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME, new SerializablePairLongFloatComplexMetricSerde());
-    ComplexMetrics.registerSerde(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME, new SerializablePairLongDoubleComplexMetricSerde());
-    ComplexMetrics.registerSerde(SerializablePairLongLongComplexMetricSerde.TYPE_NAME, new SerializablePairLongLongComplexMetricSerde());
+    ComplexMetrics.registerSerde(
+        SerializablePairLongFloatComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongFloatComplexMetricSerde()
+    );
+    ComplexMetrics.registerSerde(
+        SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongDoubleComplexMetricSerde()
+    );
+    ComplexMetrics.registerSerde(
+        SerializablePairLongLongComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongLongComplexMetricSerde()
+    );
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
@@ -129,7 +142,8 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleAny", value = DoubleAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "grouping", value = GroupingAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "expression", value = ExpressionLambdaAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "expression", value = ExpressionLambdaAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "singleValue", value = SingleValueAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

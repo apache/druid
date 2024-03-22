@@ -62,10 +62,6 @@ public abstract class NumericFirstAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    if (timeSelector.isNull()) {
-      return;
-    }
-
     if (needsFoldCheck) {
       final Object object = valueSelector.getObject();
       if (object instanceof SerializablePair) {
@@ -82,6 +78,10 @@ public abstract class NumericFirstAggregator implements Aggregator
         }
         return;
       }
+    }
+
+    if (timeSelector.isNull()) {
+      return;
     }
 
     long time = timeSelector.getLong();

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
@@ -28,10 +27,7 @@ import org.joda.time.Interval;
 
 public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
 {
-  @JsonIgnore
   private final String dataSource;
-
-  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator
@@ -67,9 +63,8 @@ public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
   @Override
   public Integer perform(Task task, TaskActionToolbox toolbox)
   {
-    int numMarked = toolbox.getIndexerMetadataStorageCoordinator()
-                           .markSegmentsAsUnusedWithinInterval(dataSource, interval);
-    return numMarked;
+    return toolbox.getIndexerMetadataStorageCoordinator()
+                  .markSegmentsAsUnusedWithinInterval(dataSource, interval);
   }
 
   @Override

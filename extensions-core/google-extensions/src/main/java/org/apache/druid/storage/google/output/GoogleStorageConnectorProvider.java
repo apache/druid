@@ -60,5 +60,4 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   {
     return new GoogleStorageConnector(this, googleStorage, googleInputDataConfig);
   }
-
 }

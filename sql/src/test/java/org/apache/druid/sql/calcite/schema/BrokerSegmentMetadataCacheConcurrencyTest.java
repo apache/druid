@@ -101,7 +101,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
   {
     super.setUp();
     tmpDir = temporaryFolder.newFolder();
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
+    walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate);
     inventoryView = new TestServerInventoryView();
     serverView = newBrokerServerView(inventoryView);
     inventoryView.init();

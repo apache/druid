@@ -36,15 +36,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
  */
-@RunWith(Enclosed.class)
 public class CalciteSelectJoinQueryMSQTest
 {
   /**
@@ -89,31 +84,24 @@ public class CalciteSelectJoinQueryMSQTest
   {
     private final JoinAlgorithm joinAlgorithm;
 
-    private TestGroupByBuffers groupByBuffers;
-
     protected Base(final JoinAlgorithm joinAlgorithm)
     {
-      super(joinAlgorithm == JoinAlgorithm.SORT_MERGE);
       this.joinAlgorithm = joinAlgorithm;
     }
 
-    @Before
-    public void setup2()
+    @Override
+    public boolean isSortBasedJoin()
     {
-      groupByBuffers = TestGroupByBuffers.createDefault();
-    }
-
-    @After
-    public void teardown2()
-    {
-      groupByBuffers.close();
+      return joinAlgorithm == JoinAlgorithm.SORT_MERGE;
     }
 
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
+      builder.addModules(
+          CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+      );
     }
 
     @Override
@@ -135,10 +123,9 @@ public class CalciteSelectJoinQueryMSQTest
       return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
       {
         @Override
-        public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+        public boolean featureAvailable(EngineFeature feature)
         {
-          plannerContext.queryContextMap().put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString());
-          return super.featureAvailable(feature, plannerContext);
+          return super.featureAvailable(feature);
         }
 
         @Override
@@ -157,8 +144,7 @@ public class CalciteSelectJoinQueryMSQTest
           .addCustomRunner(
               new ExtractResultsFactory(
                   () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-          .skipVectorize(true)
-          .msqCompatible(msqCompatible);
+          .skipVectorize(true);
     }
   }
 }

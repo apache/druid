@@ -35,6 +35,8 @@ import {
   wait,
 } from '../../../utils';
 
+import './destination-pages-pane.scss';
+
 type ResultFormat = 'object' | 'array' | 'objectLines' | 'arrayLines' | 'csv';
 
 const RESULT_FORMATS: ResultFormat[] = ['objectLines', 'object', 'arrayLines', 'array', 'csv'];
@@ -86,24 +88,28 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     );
   }
 
-  function getPageFilename(pageIndex: number) {
-    return `${id}_page${pageIndex}.${desiredExtension}`;
+  function getPageFilename(pageIndex: number, numPages: number) {
+    const numPagesString = String(numPages);
+    const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
+    return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
   }
 
   async function downloadAllPages() {
     if (!pages) return;
+    const numPages = pages.length;
     for (let i = 0; i < pages.length; i++) {
-      downloadUrl(getPageUrl(i), getPageFilename(i));
+      downloadUrl(getPageUrl(i), getPageFilename(i, numPages));
       await wait(100);
     }
   }
 
+  const numPages = pages.length;
   return (
-    <div className="execution-details-pane">
+    <div className="destination-pages-pane">
       <p>
         {`${
           typeof numTotalRows === 'number' ? pluralIfNeeded(numTotalRows, 'row') : 'Results'
-        } have been written to ${pluralIfNeeded(pages.length, 'page')}. `}
+        } have been written to ${pluralIfNeeded(numPages, 'page')}. `}
       </p>
       <p>
         Format when downloading:{' '}
@@ -133,7 +139,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           <Button
             intent={Intent.PRIMARY}
             icon={IconNames.DOWNLOAD}
-            text={`Download all data (${pluralIfNeeded(pages.length, 'file')})`}
+            text={`Download all data (${pluralIfNeeded(numPages, 'file')})`}
             onClick={() => void downloadAllPages()}
           />
         )}
@@ -142,11 +148,11 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
         data={pages}
         loading={false}
         sortable={false}
-        defaultPageSize={clamp(pages.length, 1, SMALL_TABLE_PAGE_SIZE)}
-        showPagination={pages.length > SMALL_TABLE_PAGE_SIZE}
+        defaultPageSize={clamp(numPages, 1, SMALL_TABLE_PAGE_SIZE)}
+        showPagination={numPages > SMALL_TABLE_PAGE_SIZE}
         columns={[
           {
-            Header: 'Page number',
+            Header: 'Page ID',
             id: 'id',
             accessor: 'id',
             className: 'padded',
@@ -175,11 +181,12 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             width: 300,
             Cell: ({ value }) => (
               <AnchorButton
+                className="download-button"
                 icon={IconNames.DOWNLOAD}
                 text="Download"
                 minimal
                 href={getPageUrl(value)}
-                download={getPageFilename(value)}
+                download={getPageFilename(value, numPages)}
               />
             ),
           },

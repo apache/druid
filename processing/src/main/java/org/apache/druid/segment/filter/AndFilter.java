@@ -23,15 +23,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.RowOffsetMatcherFactory;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
@@ -41,12 +39,13 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +56,7 @@ import java.util.Objects;
  */
 public class AndFilter implements BooleanFilter
 {
-  private static final Joiner AND_JOINER = Joiner.on(" && ");
+  public static final Joiner AND_JOINER = Joiner.on(" && ");
 
   private final LinkedHashSet<Filter> filters;
 
@@ -73,21 +72,136 @@ public class AndFilter implements BooleanFilter
     this(new LinkedHashSet<>(filters));
   }
 
-  public static <T> ImmutableBitmap getBitmapIndex(
-      ColumnIndexSelector selector,
+  @Override
+  public <T> FilterBundle makeFilterBundle(
+      ColumnIndexSelector columnIndexSelector,
       BitmapResultFactory<T> bitmapResultFactory,
-      List<Filter> filters
+      int selectionRowCount,
+      int totalRowCount,
+      boolean includeUnknown
   )
   {
-    return bitmapResultFactory.toImmutableBitmap(
-        getBitmapIndex(selector, filters).computeBitmapResult(bitmapResultFactory, false)
+    final List<FilterBundle.IndexBundleInfo> indexBundleInfos = new ArrayList<>();
+    final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
+    final List<FilterBundle.MatcherBundleInfo> matcherBundleInfos = new ArrayList<>();
+
+    int selectionCount = selectionRowCount;
+    ImmutableBitmap index = null;
+    ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
+    // AND filter can be partitioned into a bundle that has both indexes and value matchers. The filters which support
+    // indexes are computed into bitmaps and intersected together incrementally, feeding forward the selected row count
+    // (number of set bits on the bitmap), allowing filters to skip index computation if it would be more expensive
+    // than using a ValueMatcher for the remaining number of rows. Any filter which was not computed into an index is
+    // converted into a ValueMatcher which are combined using the makeMatcher/makeVectorMatcher functions.
+    // We delegate to the makeFilterBundle of the AND clauses to allow this partitioning to be pushed down. For example,
+    // a nested AND filter might also partition itself into indexes and bundles, and since it is part of a logical AND
+    // operation, this is valid (and even preferable).
+    final long bitmapConstructionStartNs = System.nanoTime();
+    for (Filter subfilter : filters) {
+      final FilterBundle subBundle = subfilter.makeFilterBundle(
+          columnIndexSelector,
+          bitmapResultFactory,
+          selectionCount,
+          totalRowCount,
+          includeUnknown
+      );
+      if (subBundle.getIndex() != null) {
+        if (subBundle.getIndex().getBitmap().isEmpty()) {
+          // if nothing matches for any sub filter, short-circuit, because nothing can possibly match
+          return FilterBundle.allFalse(
+              System.nanoTime() - bitmapConstructionStartNs,
+              columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
+          );
+        }
+        merged = merged.merge(subBundle.getIndex().getIndexCapabilities());
+        indexBundleInfos.add(subBundle.getIndex().getIndexInfo());
+        if (index == null) {
+          index = subBundle.getIndex().getBitmap();
+        } else {
+          index = index.intersection(subBundle.getIndex().getBitmap());
+        }
+        selectionCount = index.size();
+      }
+      if (subBundle.getMatcherBundle() != null) {
+        matcherBundles.add(subBundle.getMatcherBundle());
+        matcherBundleInfos.add(subBundle.getMatcherBundle().getMatcherInfo());
+      }
+    }
+
+    final FilterBundle.IndexBundle indexBundle;
+    if (index != null) {
+      if (indexBundleInfos.size() == 1) {
+        indexBundle = new FilterBundle.SimpleIndexBundle(
+            indexBundleInfos.get(0),
+            index,
+            merged
+        );
+      } else {
+        indexBundle = new FilterBundle.SimpleIndexBundle(
+            new FilterBundle.IndexBundleInfo(
+                () -> "AND",
+                selectionCount,
+                System.nanoTime() - bitmapConstructionStartNs,
+                indexBundleInfos
+            ),
+            index,
+            merged
+        );
+      }
+    } else {
+      indexBundle = null;
+    }
+
+    final FilterBundle.MatcherBundle matcherBundle;
+    if (!matcherBundles.isEmpty()) {
+      matcherBundle = new FilterBundle.MatcherBundle()
+      {
+        @Override
+        public FilterBundle.MatcherBundleInfo getMatcherInfo()
+        {
+          if (matcherBundles.size() == 1) {
+            return matcherBundleInfos.get(0);
+          }
+          return new FilterBundle.MatcherBundleInfo(
+              () -> "AND",
+              null,
+              matcherBundleInfos
+          );
+        }
+
+        @Override
+        public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
+        {
+          final ValueMatcher[] matchers = new ValueMatcher[matcherBundles.size()];
+          for (int i = 0; i < matcherBundles.size(); i++) {
+            matchers[i] = matcherBundles.get(i).valueMatcher(selectorFactory, baseOffset, descending);
+          }
+          return makeMatcher(matchers);
+        }
+
+        @Override
+        public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+        {
+          final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherBundles.size()];
+          for (int i = 0; i < matcherBundles.size(); i++) {
+            vectorMatchers[i] = matcherBundles.get(i).vectorMatcher(selectorFactory, baseOffset);
+          }
+          return makeVectorMatcher(vectorMatchers);
+        }
+      };
+    } else {
+      matcherBundle = null;
+    }
+
+    return new FilterBundle(
+        indexBundle,
+        matcherBundle
     );
   }
 
-  private static BitmapColumnIndex getBitmapIndex(
-      ColumnIndexSelector selector,
-      Collection<Filter> filters
-  )
+  @Nullable
+  @Override
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
     if (filters.size() == 1) {
       return Iterables.getOnlyElement(filters).getBitmapColumnIndex(selector);
@@ -122,22 +236,43 @@ public class AndFilter implements BooleanFilter
           final T bitmapResult = index.computeBitmapResult(bitmapResultFactory, includeUnknown);
           if (bitmapResultFactory.isEmpty(bitmapResult)) {
             // Short-circuit.
-            return bitmapResultFactory.wrapAllFalse(
-                selector.getBitmapFactory().makeEmptyImmutableBitmap()
-            );
+            return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
+          }
+          bitmapResults.add(bitmapResult);
+        }
+        return bitmapResultFactory.intersection(bitmapResults);
+      }
+
+      @Nullable
+      @Override
+      public <T> T computeBitmapResult(
+          BitmapResultFactory<T> bitmapResultFactory,
+          int selectionRowCount,
+          int totalRowCount,
+          boolean includeUnknown
+      )
+      {
+        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
+        for (final BitmapColumnIndex index : bitmapColumnIndices) {
+          final T bitmapResult = index.computeBitmapResult(
+              bitmapResultFactory,
+              selectionRowCount,
+              totalRowCount,
+              includeUnknown
+          );
+          if (bitmapResult == null) {
+            // all or nothing
+            return null;
+          }
+          if (bitmapResultFactory.isEmpty(bitmapResult)) {
+            // Short-circuit.
+            return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
           }
           bitmapResults.add(bitmapResult);
         }
         return bitmapResultFactory.intersection(bitmapResults);
       }
     };
-  }
-
-  @Nullable
-  @Override
-  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
-  {
-    return getBitmapIndex(selector, filters);
   }
 
   @Override
@@ -168,37 +303,6 @@ public class AndFilter implements BooleanFilter
   public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return filters.stream().allMatch(filter -> filter.canVectorizeMatcher(inspector));
-  }
-
-  @Override
-  public ValueMatcher makeMatcher(
-      ColumnIndexSelector selector,
-      ColumnSelectorFactory columnSelectorFactory,
-      RowOffsetMatcherFactory rowOffsetMatcherFactory
-  )
-  {
-    final List<ValueMatcher> matchers = new ArrayList<>();
-    final List<ImmutableBitmap> bitmaps = new ArrayList<>();
-    final BitmapFactory bitmapFactory = selector.getBitmapFactory();
-    final DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapFactory);
-
-    for (Filter filter : filters) {
-      final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
-      if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
-        bitmaps.add(columnIndex.computeBitmapResult(resultFactory, false));
-      } else {
-        ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
-        matchers.add(matcher);
-      }
-    }
-
-    if (bitmaps.size() > 0) {
-      ImmutableBitmap combinedBitmap = selector.getBitmapFactory().intersection(bitmaps);
-      ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(combinedBitmap);
-      matchers.add(0, offsetMatcher);
-    }
-
-    return makeMatcher(matchers.toArray(BooleanFilter.EMPTY_VALUE_MATCHER_ARRAY));
   }
 
   @Override
@@ -235,7 +339,7 @@ public class AndFilter implements BooleanFilter
     return StringUtils.format("(%s)", AND_JOINER.join(filters));
   }
 
-  private static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  public static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
   {
     Preconditions.checkState(baseMatchers.length > 0);
     if (baseMatchers.length == 1) {
@@ -266,7 +370,7 @@ public class AndFilter implements BooleanFilter
     };
   }
 
-  private static VectorValueMatcher makeVectorMatcher(final VectorValueMatcher[] baseMatchers)
+  public static VectorValueMatcher makeVectorMatcher(final VectorValueMatcher[] baseMatchers)
   {
     Preconditions.checkState(baseMatchers.length > 0);
     if (baseMatchers.length == 1) {
@@ -285,7 +389,6 @@ public class AndFilter implements BooleanFilter
             // Short-circuit if the entire vector is false.
             break;
           }
-
           match = matcher.match(match, includeUnknown);
         }
 

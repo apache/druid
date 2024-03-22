@@ -56,6 +56,7 @@ import { Api } from '../../singletons';
 import type { NumberLike } from '../../utils';
 import {
   compact,
+  countBy,
   deepGet,
   filterMap,
   formatBytes,
@@ -64,6 +65,7 @@ import {
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -135,6 +137,11 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
 interface Sorted {
   id: string;
   desc: boolean;
+}
+
+function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
+  if (!sorted.length) return;
+  return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
 }
 
 interface TableState {
@@ -315,9 +322,9 @@ END AS "time_span"`,
 
           let queryParts: string[];
 
-          let whereClause = '';
+          let filterClause = '';
           if (whereParts.length) {
-            whereClause = SqlExpression.and(...whereParts).toString();
+            filterClause = SqlExpression.and(...whereParts).toString();
           }
 
           let effectiveSorted = sorted;
@@ -331,61 +338,45 @@ END AS "time_span"`,
             ]);
           }
 
+          const base = SegmentsView.baseQuery(visibleColumns);
+          const orderByClause = sortedToOrderByClause(effectiveSorted);
+
           if (groupByInterval) {
             const innerQuery = compact([
-              `SELECT "start" || '/' || "end" AS "interval"`,
+              `SELECT "start", "end"`,
               `FROM sys.segments`,
-              whereClause ? `WHERE ${whereClause}` : undefined,
-              `GROUP BY 1`,
-              `ORDER BY 1 DESC`,
+              filterClause ? `WHERE ${filterClause}` : undefined,
+              `GROUP BY 1, 2`,
+              sortedToOrderByClause(sorted.filter(sort => oneOf(sort.id, 'start', 'end'))) ||
+                `ORDER BY 1 DESC`,
               `LIMIT ${pageSize}`,
               page ? `OFFSET ${page * pageSize}` : undefined,
             ]).join('\n');
 
             const intervals: string = (await queryDruidSql({ query: innerQuery }))
-              .map(row => `'${row.interval}'`)
+              .map(({ start, end }) => `'${start}/${end}'`)
               .join(', ');
 
             queryParts = compact([
-              SegmentsView.baseQuery(visibleColumns),
+              base,
               `SELECT "start" || '/' || "end" AS "interval", *`,
               `FROM s`,
               `WHERE`,
               intervals ? `  ("start" || '/' || "end") IN (${intervals})` : 'FALSE',
-              whereClause ? `  AND ${whereClause}` : '',
+              filterClause ? `  AND ${filterClause}` : '',
+              orderByClause,
+              `LIMIT ${pageSize * 1000}`,
             ]);
-
-            if (effectiveSorted.length) {
-              queryParts.push(
-                'ORDER BY ' +
-                  effectiveSorted
-                    .map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-                    .join(', '),
-              );
-            }
-
-            queryParts.push(`LIMIT ${pageSize * 1000}`);
           } else {
-            queryParts = [SegmentsView.baseQuery(visibleColumns), `SELECT *`, `FROM s`];
-
-            if (whereClause) {
-              queryParts.push(`WHERE ${whereClause}`);
-            }
-
-            if (effectiveSorted.length) {
-              queryParts.push(
-                'ORDER BY ' +
-                  effectiveSorted
-                    .map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-                    .join(', '),
-              );
-            }
-
-            queryParts.push(`LIMIT ${pageSize}`);
-
-            if (page) {
-              queryParts.push(`OFFSET ${page * pageSize}`);
-            }
+            queryParts = compact([
+              base,
+              `SELECT *`,
+              `FROM s`,
+              filterClause ? `WHERE ${filterClause}` : undefined,
+              orderByClause,
+              `LIMIT ${pageSize}`,
+              page ? `OFFSET ${page * pageSize}` : undefined,
+            ]);
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
@@ -761,6 +752,19 @@ END AS "time_span"`,
                     </TableClickableCell>
                   );
               }
+            },
+            Aggregated: opt => {
+              const { subRows } = opt;
+              const previewValues = filterMap(subRows, row => row['shard_spec'].type);
+              const previewCount = countBy(previewValues);
+              return (
+                <div className="default-aggregated">
+                  {Object.keys(previewCount)
+                    .sort()
+                    .map(v => `${v} (${previewCount[v]})`)
+                    .join(', ')}
+                </div>
+              );
             },
           },
           {

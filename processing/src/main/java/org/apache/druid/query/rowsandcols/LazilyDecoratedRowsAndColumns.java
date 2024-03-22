@@ -67,8 +67,8 @@ import java.util.function.Function;
 
 public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
-  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP =
-      RowsAndColumns.makeAsMap(LazilyDecoratedRowsAndColumns.class);
+  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+      .makeAsMap(LazilyDecoratedRowsAndColumns.class);
 
   private RowsAndColumns base;
   private Interval interval;

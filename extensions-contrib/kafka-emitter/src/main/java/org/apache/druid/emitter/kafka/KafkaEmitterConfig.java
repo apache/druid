@@ -22,14 +22,15 @@ package org.apache.druid.emitter.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class KafkaEmitterConfig
   public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
-  @Nullable @JsonProperty("event.types")
+  @Nonnull @JsonProperty("event.types")
   private final Set<EventType> eventTypes;
   @Nullable @JsonProperty("metric.topic")
   private final String metricTopic;
@@ -71,8 +72,10 @@ public class KafkaEmitterConfig
   private final String requestTopic;
   @Nullable @JsonProperty("segmentMetadata.topic")
   private final String segmentMetadataTopic;
-  @JsonProperty
+  @Nullable @JsonProperty
   private final String clusterName;
+  @Nullable @JsonProperty("extra.dimensions")
+  private final Map<String, String> extraDimensions;
   @JsonProperty("producer.config")
   private final Map<String, String> kafkaProducerConfig;
   @JsonProperty("producer.hiddenProperties")
@@ -86,22 +89,58 @@ public class KafkaEmitterConfig
       @Nullable @JsonProperty("alert.topic") String alertTopic,
       @Nullable @JsonProperty("request.topic") String requestTopic,
       @Nullable @JsonProperty("segmentMetadata.topic") String segmentMetadataTopic,
-      @JsonProperty("clusterName") String clusterName,
+      @Nullable @JsonProperty("clusterName") String clusterName,
+      @Nullable @JsonProperty("extra.dimensions") Map<String, String> extraDimensions,
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig,
       @JsonProperty("producer.hiddenProperties") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets
   )
   {
-    this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "druid.emitter.kafka.bootstrap.servers can not be null");
     this.eventTypes = maybeUpdateEventTypes(eventTypes, requestTopic);
-    this.metricTopic = this.eventTypes.contains(EventType.METRICS) ? Preconditions.checkNotNull(metricTopic, "druid.emitter.kafka.metric.topic can not be null") : null;
-    this.alertTopic = this.eventTypes.contains(EventType.ALERTS) ? Preconditions.checkNotNull(alertTopic, "druid.emitter.kafka.alert.topic can not be null") : null;
-    this.requestTopic = this.eventTypes.contains(EventType.REQUESTS) ? Preconditions.checkNotNull(requestTopic, "druid.emitter.kafka.request.topic can not be null") : null;
-    this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENT_METADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "druid.emitter.kafka.segmentMetadata.topic can not be null") : null;
+
+    // Validate all required properties
+    if (bootstrapServers == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("druid.emitter.kafka.bootstrap.servers must be specified.");
+    }
+
+    if (this.eventTypes.contains(EventType.METRICS) && metricTopic == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("druid.emitter.kafka.metric.topic must be specified"
+                                 + " if druid.emitter.kafka.event.types contains %s.", EventType.METRICS);
+    }
+    if (this.eventTypes.contains(EventType.ALERTS) && alertTopic == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("druid.emitter.kafka.alert.topic must be specified"
+                                 + " if druid.emitter.kafka.event.types contains %s.", EventType.ALERTS);
+    }
+    if (this.eventTypes.contains(EventType.REQUESTS) && requestTopic == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("druid.emitter.kafka.request.topic must be specified"
+                                 + " if druid.emitter.kafka.event.types contains %s.", EventType.REQUESTS);
+    }
+    if (this.eventTypes.contains(EventType.SEGMENT_METADATA) && segmentMetadataTopic == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("druid.emitter.kafka.segmentMetadata.topic must be specified"
+                                 + " if druid.emitter.kafka.event.types contains %s.", EventType.SEGMENT_METADATA);
+    }
+
+    this.bootstrapServers = bootstrapServers;
+    this.metricTopic = metricTopic;
+    this.alertTopic = alertTopic;
+    this.requestTopic = requestTopic;
+    this.segmentMetadataTopic = segmentMetadataTopic;
     this.clusterName = clusterName;
+    this.extraDimensions = extraDimensions;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
     this.kafkaProducerSecrets = kafkaProducerSecrets == null ? new MapStringDynamicConfigProvider(ImmutableMap.of()) : kafkaProducerSecrets;
   }
 
+  @Nonnull
   private Set<EventType> maybeUpdateEventTypes(Set<EventType> eventTypes, String requestTopic)
   {
     // Unless explicitly overridden, kafka emitter will always emit metrics and alerts
@@ -124,6 +163,7 @@ public class KafkaEmitterConfig
   }
 
   @JsonProperty
+  @Nonnull
   public Set<EventType> getEventTypes()
   {
     return eventTypes;
@@ -141,10 +181,16 @@ public class KafkaEmitterConfig
     return alertTopic;
   }
 
-  @JsonProperty
+  @Nullable @JsonProperty
   public String getClusterName()
   {
     return clusterName;
+  }
+
+  @Nullable
+  public Map<String, String> getExtraDimensions()
+  {
+    return extraDimensions;
   }
 
   @Nullable
@@ -226,6 +272,7 @@ public class KafkaEmitterConfig
     result = 31 * result + (getRequestTopic() != null ? getRequestTopic().hashCode() : 0);
     result = 31 * result + (getSegmentMetadataTopic() != null ? getSegmentMetadataTopic().hashCode() : 0);
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
+    result = 31 * result + (getExtraDimensions() != null ? getExtraDimensions().hashCode() : 0);
     result = 31 * result + getKafkaProducerConfig().hashCode();
     result = 31 * result + getKafkaProducerSecrets().getConfig().hashCode();
     return result;
@@ -242,6 +289,7 @@ public class KafkaEmitterConfig
            ", request.topic='" + requestTopic + '\'' +
            ", segmentMetadata.topic='" + segmentMetadataTopic + '\'' +
            ", clusterName='" + clusterName + '\'' +
+           ", extra.dimensions='" + extraDimensions + '\'' +
            ", producer.config=" + kafkaProducerConfig + '\'' +
            ", producer.hiddenProperties=" + kafkaProducerSecrets +
            '}';

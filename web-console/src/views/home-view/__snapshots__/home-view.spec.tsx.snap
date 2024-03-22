@@ -4,7 +4,17 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
 <div
   className="home-view app-view"
 >
-  <Memo(StatusCard) />
+  <Memo(StatusCard)
+    capabilities={
+      Capabilities {
+        "clusterCapacity": undefined,
+        "coordinator": true,
+        "multiStageQuery": false,
+        "overlord": false,
+        "queryType": "none",
+      }
+    }
+  />
   <React.Fragment>
     <Memo(DatasourcesCard)
       capabilities={
@@ -58,7 +68,17 @@ exports[`HomeView matches snapshot (full) 1`] = `
 <div
   className="home-view app-view"
 >
-  <Memo(StatusCard) />
+  <Memo(StatusCard)
+    capabilities={
+      Capabilities {
+        "clusterCapacity": undefined,
+        "coordinator": true,
+        "multiStageQuery": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
   <React.Fragment>
     <Memo(DatasourcesCard)
       capabilities={
@@ -136,7 +156,17 @@ exports[`HomeView matches snapshot (overlord) 1`] = `
 <div
   className="home-view app-view"
 >
-  <Memo(StatusCard) />
+  <Memo(StatusCard)
+    capabilities={
+      Capabilities {
+        "clusterCapacity": undefined,
+        "coordinator": false,
+        "multiStageQuery": false,
+        "overlord": true,
+        "queryType": "none",
+      }
+    }
+  />
   <React.Fragment>
     <Memo(SupervisorsCard)
       capabilities={

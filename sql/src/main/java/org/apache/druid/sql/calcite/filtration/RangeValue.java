@@ -49,11 +49,6 @@ public class RangeValue implements Comparable<RangeValue>
     return value;
   }
 
-  public ColumnType getMatchValueType()
-  {
-    return matchValueType;
-  }
-
   @Override
   public int compareTo(RangeValue o)
   {

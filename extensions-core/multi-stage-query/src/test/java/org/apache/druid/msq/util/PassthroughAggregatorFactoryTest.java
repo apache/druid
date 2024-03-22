@@ -19,8 +19,11 @@
 
 package org.apache.druid.msq.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.junit.Assert;
@@ -28,6 +31,21 @@ import org.junit.Test;
 
 public class PassthroughAggregatorFactoryTest
 {
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.registerSubtypes(PassthroughAggregatorFactory.class);
+    AggregatorFactory aggregatorFactory = new PassthroughAggregatorFactory("x", "y");
+    String serializedvalue = objectMapper.writeValueAsString(aggregatorFactory);
+    Assert.assertEquals(
+        "{\"type\":\"passthrough\",\"columnName\":\"x\",\"complexTypeName\":\"y\"}",
+        serializedvalue
+    );
+    Assert.assertEquals(aggregatorFactory, objectMapper.readValue(serializedvalue, AggregatorFactory.class));
+  }
+
   @Test
   public void testRequiredFields()
   {

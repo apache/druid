@@ -184,4 +184,10 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     }
     return baseObject.as(clazz);
   }
+
+  @Override
+  public String asString()
+  {
+    return baseObject.asString();
+  }
 }

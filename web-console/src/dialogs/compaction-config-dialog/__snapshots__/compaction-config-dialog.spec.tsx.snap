@@ -18,14 +18,14 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
     <React.Fragment>
       <AutoForm
         fields={
-          Array [
-            Object {
+          [
+            {
               "defaultValue": "P1D",
               "info": <p>
                 The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
               </p>,
               "name": "skipOffsetFromLatest",
-              "suggestions": Array [
+              "suggestions": [
                 "PT0H",
                 "PT1H",
                 "P1D",
@@ -33,7 +33,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               ],
               "type": "string",
             },
-            Object {
+            {
               "info": <p>
                 For perfect rollup, you should use either 
                 <Unknown>
@@ -51,14 +51,14 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               </p>,
               "label": "Partitioning type",
               "name": "tuningConfig.partitionsSpec.type",
-              "suggestions": Array [
+              "suggestions": [
                 "dynamic",
                 "hashed",
                 "range",
               ],
               "type": "string",
             },
-            Object {
+            {
               "defaultValue": 5000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -67,7 +67,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 20000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -76,7 +76,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.partitionsSpec.maxTotalRows",
               "type": "number",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -118,7 +118,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -165,7 +165,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -190,7 +190,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on. Leave blank to select all dimensions.
@@ -199,7 +199,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "placeholder": "(all dimensions)",
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimension to partition on.
@@ -208,7 +208,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "required": true,
               "type": "string",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on.
@@ -217,7 +217,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "required": true,
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -240,7 +240,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -263,7 +263,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defaultValue": false,
               "defined": [Function],
               "info": <p>
@@ -272,7 +272,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.partitionsSpec.assumeGrouped",
               "type": "boolean",
             },
-            Object {
+            {
               "defaultValue": 1,
               "info": <React.Fragment>
                 Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
@@ -281,7 +281,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.maxNumConcurrentSubTasks",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": -1,
               "info": <React.Fragment>
                 <p>
@@ -295,7 +295,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.maxColumnsToMerge",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 10,
               "defined": [Function],
               "info": <React.Fragment>
@@ -305,7 +305,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.totalNumMergeTasks",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1073741824,
               "hideInMore": true,
@@ -316,7 +316,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "name": "tuningConfig.splitHintSpec.maxSplitSize",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1000,
               "hideInMore": true,
@@ -339,10 +339,10 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
           ]
         }
         model={
-          Object {
+          {
             "dataSource": "test1",
-            "tuningConfig": Object {
-              "partitionsSpec": Object {
+            "tuningConfig": {
+              "partitionsSpec": {
                 "type": "dynamic",
               },
             },
@@ -350,11 +350,32 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
@@ -407,14 +428,14 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
     <React.Fragment>
       <AutoForm
         fields={
-          Array [
-            Object {
+          [
+            {
               "defaultValue": "P1D",
               "info": <p>
                 The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
               </p>,
               "name": "skipOffsetFromLatest",
-              "suggestions": Array [
+              "suggestions": [
                 "PT0H",
                 "PT1H",
                 "P1D",
@@ -422,7 +443,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               ],
               "type": "string",
             },
-            Object {
+            {
               "info": <p>
                 For perfect rollup, you should use either 
                 <Unknown>
@@ -440,14 +461,14 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               </p>,
               "label": "Partitioning type",
               "name": "tuningConfig.partitionsSpec.type",
-              "suggestions": Array [
+              "suggestions": [
                 "dynamic",
                 "hashed",
                 "range",
               ],
               "type": "string",
             },
-            Object {
+            {
               "defaultValue": 5000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -456,7 +477,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 20000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -465,7 +486,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.partitionsSpec.maxTotalRows",
               "type": "number",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -507,7 +528,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -554,7 +575,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -579,7 +600,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on. Leave blank to select all dimensions.
@@ -588,7 +609,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "placeholder": "(all dimensions)",
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimension to partition on.
@@ -597,7 +618,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "required": true,
               "type": "string",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on.
@@ -606,7 +627,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "required": true,
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -629,7 +650,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -652,7 +673,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defaultValue": false,
               "defined": [Function],
               "info": <p>
@@ -661,7 +682,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.partitionsSpec.assumeGrouped",
               "type": "boolean",
             },
-            Object {
+            {
               "defaultValue": 1,
               "info": <React.Fragment>
                 Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
@@ -670,7 +691,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.maxNumConcurrentSubTasks",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": -1,
               "info": <React.Fragment>
                 <p>
@@ -684,7 +705,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.maxColumnsToMerge",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 10,
               "defined": [Function],
               "info": <React.Fragment>
@@ -694,7 +715,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.totalNumMergeTasks",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1073741824,
               "hideInMore": true,
@@ -705,7 +726,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "name": "tuningConfig.splitHintSpec.maxSplitSize",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1000,
               "hideInMore": true,
@@ -728,10 +749,10 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
           ]
         }
         model={
-          Object {
+          {
             "dataSource": "test1",
-            "tuningConfig": Object {
-              "partitionsSpec": Object {
+            "tuningConfig": {
+              "partitionsSpec": {
                 "type": "hashed",
               },
             },
@@ -739,11 +760,32 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
@@ -796,14 +838,14 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
     <React.Fragment>
       <AutoForm
         fields={
-          Array [
-            Object {
+          [
+            {
               "defaultValue": "P1D",
               "info": <p>
                 The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
               </p>,
               "name": "skipOffsetFromLatest",
-              "suggestions": Array [
+              "suggestions": [
                 "PT0H",
                 "PT1H",
                 "P1D",
@@ -811,7 +853,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               ],
               "type": "string",
             },
-            Object {
+            {
               "info": <p>
                 For perfect rollup, you should use either 
                 <Unknown>
@@ -829,14 +871,14 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               </p>,
               "label": "Partitioning type",
               "name": "tuningConfig.partitionsSpec.type",
-              "suggestions": Array [
+              "suggestions": [
                 "dynamic",
                 "hashed",
                 "range",
               ],
               "type": "string",
             },
-            Object {
+            {
               "defaultValue": 5000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -845,7 +887,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 20000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -854,7 +896,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.partitionsSpec.maxTotalRows",
               "type": "number",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -896,7 +938,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -943,7 +985,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -968,7 +1010,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on. Leave blank to select all dimensions.
@@ -977,7 +1019,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "placeholder": "(all dimensions)",
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimension to partition on.
@@ -986,7 +1028,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "required": true,
               "type": "string",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on.
@@ -995,7 +1037,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "required": true,
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1018,7 +1060,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1041,7 +1083,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defaultValue": false,
               "defined": [Function],
               "info": <p>
@@ -1050,7 +1092,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.partitionsSpec.assumeGrouped",
               "type": "boolean",
             },
-            Object {
+            {
               "defaultValue": 1,
               "info": <React.Fragment>
                 Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
@@ -1059,7 +1101,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.maxNumConcurrentSubTasks",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": -1,
               "info": <React.Fragment>
                 <p>
@@ -1073,7 +1115,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.maxColumnsToMerge",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 10,
               "defined": [Function],
               "info": <React.Fragment>
@@ -1083,7 +1125,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.totalNumMergeTasks",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1073741824,
               "hideInMore": true,
@@ -1094,7 +1136,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "name": "tuningConfig.splitHintSpec.maxSplitSize",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1000,
               "hideInMore": true,
@@ -1117,10 +1159,10 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
           ]
         }
         model={
-          Object {
+          {
             "dataSource": "test1",
-            "tuningConfig": Object {
-              "partitionsSpec": Object {
+            "tuningConfig": {
+              "partitionsSpec": {
                 "type": "range",
               },
             },
@@ -1128,11 +1170,32 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
@@ -1185,14 +1248,14 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
     <React.Fragment>
       <AutoForm
         fields={
-          Array [
-            Object {
+          [
+            {
               "defaultValue": "P1D",
               "info": <p>
                 The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
               </p>,
               "name": "skipOffsetFromLatest",
-              "suggestions": Array [
+              "suggestions": [
                 "PT0H",
                 "PT1H",
                 "P1D",
@@ -1200,7 +1263,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               ],
               "type": "string",
             },
-            Object {
+            {
               "info": <p>
                 For perfect rollup, you should use either 
                 <Unknown>
@@ -1218,14 +1281,14 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               </p>,
               "label": "Partitioning type",
               "name": "tuningConfig.partitionsSpec.type",
-              "suggestions": Array [
+              "suggestions": [
                 "dynamic",
                 "hashed",
                 "range",
               ],
               "type": "string",
             },
-            Object {
+            {
               "defaultValue": 5000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -1234,7 +1297,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 20000000,
               "defined": [Function],
               "info": <React.Fragment>
@@ -1243,7 +1306,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.partitionsSpec.maxTotalRows",
               "type": "number",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1285,7 +1348,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1332,7 +1395,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1357,7 +1420,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on. Leave blank to select all dimensions.
@@ -1366,7 +1429,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "placeholder": "(all dimensions)",
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimension to partition on.
@@ -1375,7 +1438,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "required": true,
               "type": "string",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <p>
                 The dimensions to partition on.
@@ -1384,7 +1447,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "required": true,
               "type": "string-array",
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1407,7 +1470,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defined": [Function],
               "info": <React.Fragment>
                 <p>
@@ -1430,7 +1493,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "type": "number",
               "zeroMeansUndefined": true,
             },
-            Object {
+            {
               "defaultValue": false,
               "defined": [Function],
               "info": <p>
@@ -1439,7 +1502,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.partitionsSpec.assumeGrouped",
               "type": "boolean",
             },
-            Object {
+            {
               "defaultValue": 1,
               "info": <React.Fragment>
                 Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
@@ -1448,7 +1511,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.maxNumConcurrentSubTasks",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": -1,
               "info": <React.Fragment>
                 <p>
@@ -1462,7 +1525,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.maxColumnsToMerge",
               "type": "number",
             },
-            Object {
+            {
               "defaultValue": 10,
               "defined": [Function],
               "info": <React.Fragment>
@@ -1472,7 +1535,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.totalNumMergeTasks",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1073741824,
               "hideInMore": true,
@@ -1483,7 +1546,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "name": "tuningConfig.splitHintSpec.maxSplitSize",
               "type": "number",
             },
-            Object {
+            {
               "adjustment": [Function],
               "defaultValue": 1000,
               "hideInMore": true,
@@ -1506,10 +1569,10 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
           ]
         }
         model={
-          Object {
+          {
             "dataSource": "test1",
-            "tuningConfig": Object {
-              "partitionsSpec": Object {
+            "tuningConfig": {
+              "partitionsSpec": {
                 "type": "dynamic",
               },
             },
@@ -1517,11 +1580,32 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div

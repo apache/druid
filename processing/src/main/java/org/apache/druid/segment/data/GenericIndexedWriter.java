@@ -77,13 +77,14 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final CompressionStrategy compressionStrategy,
-      final int bufferSize
+      final int bufferSize,
+      final Closer closer
   )
   {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, segmentWriteOutMedium.getCloser())
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer)
     );
     writer.objectsSorted = false;
     return writer;

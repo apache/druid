@@ -147,31 +147,28 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT1.getInterval(),
                         Intervals.of("2000-06-01/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000-06-01/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceStatic(spec, 1)
@@ -213,10 +210,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             NilInputSlice.INSTANCE
         ),
@@ -243,17 +240,16 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceStatic(spec, 1)
@@ -282,10 +278,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             new SegmentsInputSlice(
                 DATASOURCE,
@@ -294,10 +290,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000-06-01/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceStatic(spec, 2)
@@ -317,17 +313,16 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceStatic(spec, 1)
@@ -347,10 +342,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             new SegmentsInputSlice(
                 DATASOURCE,
@@ -359,10 +354,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceStatic(spec, 2)
@@ -382,10 +377,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             new SegmentsInputSlice(
                 DATASOURCE,
@@ -394,10 +389,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             NilInputSlice.INSTANCE
         ),
@@ -440,17 +435,16 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceDynamic(spec, 1, 1, 1)
@@ -476,17 +470,16 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceDynamic(spec, 100, 5, BYTES_PER_SEGMENT * 5)
@@ -512,10 +505,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             new SegmentsInputSlice(
                 DATASOURCE,
@@ -524,10 +517,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceDynamic(spec, 100, 1, BYTES_PER_SEGMENT * 5)
@@ -553,10 +546,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT1.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             ),
             new SegmentsInputSlice(
                 DATASOURCE,
@@ -565,10 +558,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
+                        SEGMENT2.getShardSpec().getPartitionNum()
                     )
-                )
+                ),
+                ImmutableList.of()
             )
         ),
         slicer.sliceDynamic(spec, 100, 5, BYTES_PER_SEGMENT)

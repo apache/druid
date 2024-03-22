@@ -439,7 +439,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),
           queryProcessingPool,
-          joinableFactoryWrapper,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
           cachePopulatorStats
@@ -572,6 +571,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
     {
       return baseConfig.getSegmentWriteOutMediumFactory();
+    }
+
+    @Override
+    public int getNumPersistThreads()
+    {
+      return baseConfig.getNumPersistThreads();
     }
   }
 

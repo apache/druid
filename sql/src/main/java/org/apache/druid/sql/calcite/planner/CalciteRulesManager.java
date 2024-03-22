@@ -248,10 +248,23 @@ public class CalciteRulesManager
         ),
         Programs.sequence(
             druidPreProgram,
+            buildDecoupledLogicalOptimizationProgram(plannerContext),
+            new LoggingProgram("After DecoupledLogicalOptimizationProgram program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
         )
     );
+  }
+
+  private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addGroupBegin();
+    builder.addRuleCollection(baseRuleSet(plannerContext));
+    builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addGroupEnd();
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   /**
@@ -405,7 +418,7 @@ public class CalciteRulesManager
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext))
+        .add(CoreRules.SORT_REMOVE)
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }

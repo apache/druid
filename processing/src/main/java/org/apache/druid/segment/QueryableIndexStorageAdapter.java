@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -187,9 +186,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   )
   {
     if (filter != null) {
-      final boolean filterCanVectorize =
-          filter.getBitmapColumnIndex(makeBitmapIndexSelector(virtualColumns)) != null
-          || filter.canVectorizeMatcher(this);
+      // ideally we would allow stuff to vectorize if we can build indexes even if the value matcher cannot be
+      // vectorized, this used to be true in fact, but changes to filter partitioning (FilterBundle) have caused
+      // the only way to know this to be building the bitmaps since BitmapColumnIndex can return null.
+      // this will be changed in a future refactor of cursor building, at which point this method can just return
+      // true if !descending...
+      final boolean filterCanVectorize = filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
         return false;
@@ -299,17 +301,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     return interval.overlap(dataInterval);
-  }
-
-  @VisibleForTesting
-  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(
-      final VirtualColumns virtualColumns
-  )
-  {
-    return new ColumnSelectorColumnIndexSelector(
-        index.getBitmapFactoryForDimensions(),
-        virtualColumns,
-        new DeprecatedQueryableIndexColumnSelector(index)
-    );
   }
 }

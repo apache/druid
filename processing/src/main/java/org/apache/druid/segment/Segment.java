@@ -69,4 +69,9 @@ public interface Segment extends Closeable
     }
     return null;
   }
+
+  default String asString()
+  {
+    return getClass().toString();
+  }
 }

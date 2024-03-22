@@ -2851,7 +2851,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
       final TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints = new TreeMap<>();
@@ -3197,6 +3198,92 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ParseExceptionReport.forPhase(getTaskReportData(), RowIngestionMeters.BUILD_SEGMENTS);
 
     Assert.assertEquals(ImmutableList.of(), parseExceptionReport.getErrorMessages());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCompletionReportPartitionStats() throws Exception
+  {
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(
+                topic,
+                ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L),
+                ImmutableSet.of()
+            ),
+            new SeekableStreamEndSequenceNumbers<>(
+                topic,
+                ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 10L)
+            ),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    TaskStatus status = future.get();
+
+    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    Assert.assertEquals(reportData.getRecordsProcessed().size(), 1);
+    Assert.assertEquals(reportData.getRecordsProcessed().values().iterator().next(), (Long) 6L);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCompletionReportMultiplePartitionStats() throws Exception
+  {
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(
+                topic,
+                ImmutableMap.of(
+                    new KafkaTopicPartition(false, topic, 0),
+                    0L,
+                    new KafkaTopicPartition(false, topic, 1),
+                    0L
+                ),
+                ImmutableSet.of()
+            ),
+            new SeekableStreamEndSequenceNumbers<>(
+                topic,
+                ImmutableMap.of(
+                    new KafkaTopicPartition(false, topic, 0),
+                    10L,
+                    new KafkaTopicPartition(false, topic, 1),
+                    2L
+                )
+            ),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    TaskStatus status = future.get();
+
+    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    Assert.assertEquals(reportData.getRecordsProcessed().size(), 2);
+    Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
   }
 
   public static class TestKafkaInputFormat implements InputFormat

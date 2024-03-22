@@ -112,7 +112,6 @@ public class RealtimePlumberSchool implements PlumberSchool
         conglomerate,
         segmentAnnouncer,
         queryProcessingPool,
-        joinableFactory,
         dataSegmentPusher,
         segmentPublisher,
         handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),

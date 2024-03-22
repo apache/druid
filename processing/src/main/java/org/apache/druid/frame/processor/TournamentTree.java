@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.processor;
 
+import com.google.common.annotations.VisibleForTesting;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import org.apache.druid.java.util.common.IAE;
@@ -115,6 +116,7 @@ public class TournamentTree
   /**
    * Returns the backing array of the tree. Used in tests.
    */
+  @VisibleForTesting
   int[] backingArray()
   {
     return tree;
