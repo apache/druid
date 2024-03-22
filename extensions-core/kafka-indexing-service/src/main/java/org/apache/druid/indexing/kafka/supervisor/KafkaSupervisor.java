@@ -460,62 +460,40 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       if (partitions != null && partitions.getPartitionSequenceNumberMap() != null) {
         Map<KafkaTopicPartition, Long> partitionOffsets = new HashMap<>();
         Set<String> topicMisMatchLogged = new HashSet<>();
-        if (getIoConfig().isMultiTopic()) {
-          Pattern pattern = Pattern.compile(getIoConfig().getStream());
-          partitions.getPartitionSequenceNumberMap().forEach((kafkaTopicPartition, value) -> {
-            final boolean match;
-            final String matchValue;
-            // previous offsets are from multi-topic config
-            if (kafkaTopicPartition.topic().isPresent()) {
-              matchValue = kafkaTopicPartition.topic().get();
-            } else {
-              // previous offsets are from single topic config
-              matchValue = partitions.getStream();
-            }
+        boolean isMultiTopic = getIoConfig().isMultiTopic();
+        Pattern pattern = isMultiTopic ? Pattern.compile(getIoConfig().getStream()) : null;
+        partitions.getPartitionSequenceNumberMap().forEach((kafkaTopicPartition, value) -> {
+          final boolean match;
+          final String matchValue;
+          // previous offsets are from multi-topic config
+          if (kafkaTopicPartition.topic().isPresent()) {
+            matchValue = kafkaTopicPartition.topic().get();
+          } else {
+            // previous offsets are from single topic config
+            matchValue = partitions.getStream();
+          }
 
-            match = pattern.matcher(matchValue).matches();
+          match = pattern != null
+              ? pattern.matcher(matchValue).matches()
+              : getIoConfig().getStream().equals(matchValue);
 
-            if (!match && !topicMisMatchLogged.contains(matchValue)) {
-              log.warn(
-                  "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored sequences",
-                  matchValue,
-                  getIoConfig().getStream()
-              );
-              topicMisMatchLogged.add(matchValue);
-            }
-            if (match) {
+          if (!match && !topicMisMatchLogged.contains(matchValue)) {
+            log.warn(
+                "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored sequences",
+                matchValue,
+                getIoConfig().getStream()
+            );
+            topicMisMatchLogged.add(matchValue);
+          }
+          if (match) {
+            if (isMultiTopic) {
               partitionOffsets.put(new KafkaTopicPartition(true, matchValue, kafkaTopicPartition.partition()), value);
-            }
-          });
-          return partitionOffsets;
-        } else {
-          partitions.getPartitionSequenceNumberMap().forEach((kafkaTopicPartition, value) -> {
-            final boolean match;
-            final String matchValue;
-            // previous offsets are from multi-topic config
-            if (kafkaTopicPartition.topic().isPresent()) {
-              matchValue = kafkaTopicPartition.topic().get();
             } else {
-              // previous offsets are from single topic config
-              matchValue = partitions.getStream();
-            }
-
-            match = getIoConfig().getStream().equals(matchValue);
-
-            if (!match && !topicMisMatchLogged.contains(matchValue)) {
-              log.warn(
-                  "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored sequences",
-                  matchValue,
-                  getIoConfig().getStream()
-              );
-              topicMisMatchLogged.add(matchValue);
-            }
-            if (match) {
               partitionOffsets.put(new KafkaTopicPartition(false, matchValue, kafkaTopicPartition.partition()), value);
             }
-          });
-          return partitionOffsets;
-        }
+          }
+        });
+        return partitionOffsets;
       }
     }
 
