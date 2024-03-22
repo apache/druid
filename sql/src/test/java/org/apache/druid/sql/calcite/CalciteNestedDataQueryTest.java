@@ -52,7 +52,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
@@ -2892,7 +2891,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(in("v0", ImmutableList.of("1", "1.1"), null))
+                        .setDimFilter(in("v0", ImmutableList.of("1", "1.1")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3761,10 +3760,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setDimFilter(
-                            NullHandling.replaceWithDefault()
-                            ? in("v0", ImmutableSet.of("100", "200"), null)
-                            : or(equality("v0", 100L, ColumnType.LONG), equality("v0", 200L, ColumnType.LONG)
-                            )
+                            in("v0", ColumnType.LONG, ImmutableList.of(100L, 200L))
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3804,12 +3800,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setDimFilter(
-                            NullHandling.replaceWithDefault()
-                            ? in("v0", ImmutableSet.of("2.02", "3.03"), null)
-                            : or(
-                                equality("v0", 2.02, ColumnType.DOUBLE),
-                                equality("v0", 3.03, ColumnType.DOUBLE)
-                            )
+                            in("v0", ColumnType.DOUBLE, ImmutableList.of(2.02, 3.03))
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3848,7 +3839,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("300", "abcdef")))
+                        .setDimFilter(in("v0", ImmutableSet.of("300", "abcdef")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3886,7 +3877,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("hello", "1")))
+                        .setDimFilter(in("v0", ImmutableSet.of("hello", "1")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
