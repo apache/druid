@@ -45,10 +45,10 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'No SQL mode';
       message = (
         <p>
-          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will be
-          limited in functionality. Look at{' '}
-          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> to enable the SQL
+          The SQL endpoint is disabled. The console will fall back to{' '}
+          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will operate with
+          limited functionality. Refer to {' '}
+          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> for instructions to enable the SQL
           endpoint.
         </p>
       );
