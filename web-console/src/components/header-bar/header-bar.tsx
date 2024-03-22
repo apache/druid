@@ -363,8 +363,8 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
             content={
               <PopoverText>
                 <p>
-                  The console is running in a specific forced mode. Instead of detecting the
-                  capabilities of the cluster it is assuming a certain defined set of capabilities.
+                  The console is running in a forced mode that assumes a limited set of capabilities rather
+                   than detecting all capabilities for the cluster.
                 </p>
                 <p>
                   This is an advanced feature used for testing and for working around issues in the
