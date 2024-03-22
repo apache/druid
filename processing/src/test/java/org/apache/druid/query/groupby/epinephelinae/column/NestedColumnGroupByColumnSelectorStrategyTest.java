@@ -131,9 +131,17 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
     int[] stack = new int[1];
     ResultRow resultRow = ResultRow.create(1);
+    Object obj = StructuredData.wrap(ImmutableList.of("x", "y", "z"));
 
-    // strategy.initGroupingKeyColumnValue( 0, 0, StructuredData.wrap(ImmutableList.of("x", "y", "z")), BUFFER1, );
+    strategy.initGroupingKeyColumnValue(0, 0, obj, BUFFER1, stack);
+    Assert.assertEquals(1, stack[0]);
+    strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+    Assert.assertEquals(obj, resultRow.get(0));
 
+    strategy.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
+    Assert.assertEquals(0, stack[0]);
+    strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
+    Assert.assertNull(resultRow.get(0));
   }
 
   // test reset works fine

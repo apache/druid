@@ -550,7 +550,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testGroupByNested()
   {
     testQuery(
-        "SELECT * FROM druid.nested",
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1",
         ImmutableList.of(),
         ImmutableList.of()
     );

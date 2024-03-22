@@ -122,44 +122,44 @@ public class SqlGroupByBenchmark
   };
 
   @Param({
-      "string-Sequential-100_000",
-      "string-Sequential-10_000_000",
+//      "string-Sequential-100_000",
+//      "string-Sequential-10_000_000",
       // "string-Sequential-1_000_000_000",
-      "string-ZipF-1_000_000",
-      "string-Uniform-1_000_000",
+//      "string-ZipF-1_000_000",
+//      "string-Uniform-1_000_000",
 
-      "multi-string-Sequential-100_000",
-      "multi-string-Sequential-10_000_000",
+//      "multi-string-Sequential-100_000",
+//      "multi-string-Sequential-10_000_000",
       // "multi-string-Sequential-1_000_000_000",
-      "multi-string-ZipF-1_000_000",
-      "multi-string-Uniform-1_000_000",
+//      "multi-string-ZipF-1_000_000",
+//      "multi-string-Uniform-1_000_000",
 
-      "long-Sequential-100_000",
-      "long-Sequential-10_000_000",
+//      "long-Sequential-100_000",
+//      "long-Sequential-10_000_000",
       // "long-Sequential-1_000_000_000",
-      "long-ZipF-1_000_000",
-      "long-Uniform-1_000_000",
+//      "long-ZipF-1_000_000",
+//      "long-Uniform-1_000_000",
 
-      "double-ZipF-1_000_000",
-      "double-Uniform-1_000_000",
+//      "double-ZipF-1_000_000",
+//      "double-Uniform-1_000_000",
 
-      "float-ZipF-1_000_000",
-      "float-Uniform-1_000_000",
+//      "float-ZipF-1_000_000",
+//      "float-Uniform-1_000_000",
 
       "stringArray-Sequential-100_000",
-      "stringArray-Sequential-10_000_000",
+      "stringArray-Sequential-3_000_000",
       // "stringArray-Sequential-1_000_000_000",
       "stringArray-ZipF-1_000_000",
       "stringArray-Uniform-1_000_000",
 
       "longArray-Sequential-100_000",
-      "longArray-Sequential-10_000_000",
+      "longArray-Sequential-3_000_000",
       // "longArray-Sequential-1_000_000_000",
       "longArray-ZipF-1_000_000",
       "longArray-Uniform-1_000_000",
 
       "nested-Sequential-100_000",
-      "nested-Sequential-10_000_000",
+      "nested-Sequential-3_000_000",
       // "nested-Sequential-1_000_000_000",
       "nested-ZipF-1_000_000",
       "nested-Uniform-1_000_000",
@@ -210,7 +210,7 @@ public class SqlGroupByBenchmark
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionTransform(
-                "stringArray-Sequential-10_000_000",
+                "stringArray-Sequential-3_000_000",
                 "array(\"string-Sequential-10_000_000\")",
                 TestExprMacroTable.INSTANCE
             ),
@@ -238,7 +238,7 @@ public class SqlGroupByBenchmark
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionTransform(
-                "longArray-Sequential-10_000_000",
+                "longArray-Sequential-3_000_000",
                 "array(\"long-Sequential-10_000_000\")",
                 TestExprMacroTable.INSTANCE
             ),
@@ -266,7 +266,7 @@ public class SqlGroupByBenchmark
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionTransform(
-                "nested-Sequential-10_000_000",
+                "nested-Sequential-3_000_000",
                 "json_object('long1', \"long-Sequential-10_000_000\", 'nesteder', json_object('long1', \"long-Sequential-10_000_000\"))",
                 TestExprMacroTable.INSTANCE
             ),
