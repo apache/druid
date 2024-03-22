@@ -1268,7 +1268,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
-          if (expectedLastCompactionState != null){
+          if (expectedLastCompactionState != null) {
             CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
                                                                   .getLastCompactionState();
             Assert.assertEquals(expectedLastCompactionState, compactionState);

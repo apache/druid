@@ -1829,11 +1829,14 @@ public class MSQReplaceTest extends MSQTestBase
     ));
     return expectedRows;
   }
+
   private CompactionState expectedCompactionState(
       Map<String, Object> context, List<String> partitionDimensions, List<DimensionSchema> dimensions,
       GranularityType segmentGranularity
-  ){
-    if (!context.containsKey(Tasks.STORE_COMPACTION_STATE_KEY) || !((Boolean) context.get(Tasks.STORE_COMPACTION_STATE_KEY))){
+  )
+  {
+    if (!context.containsKey(Tasks.STORE_COMPACTION_STATE_KEY)
+        || !((Boolean) context.get(Tasks.STORE_COMPACTION_STATE_KEY))) {
       return null;
     }
     PartitionsSpec partitionsSpec;
@@ -1842,7 +1845,7 @@ public class MSQReplaceTest extends MSQTestBase
 
     } else {
       partitionsSpec = new DimensionRangePartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null,
-                                                       partitionDimensions, false
+                                                        partitionDimensions, false
       );
     }
     DimensionsSpec dimensionsSpec = new DimensionsSpec.Builder().
