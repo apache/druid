@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 import org.apache.druid.collections.spatial.RTreeUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -43,7 +44,7 @@ public class RadiusBound extends RectangularBound
       @JsonProperty("coords") float[] coords,
       @JsonProperty("radius") float radius,
       @JsonProperty("limit") int limit,
-      @JsonProperty("radiusUnit") RadiusUnit radiusUnit
+      @JsonProperty("radiusUnit") @Nullable RadiusUnit radiusUnit
   )
   {
     super(getMinCoords(coords, radius), getMaxCoords(coords, radius), limit);

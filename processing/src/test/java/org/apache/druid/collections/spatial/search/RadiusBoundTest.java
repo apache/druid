@@ -19,8 +19,10 @@
 
 package org.apache.druid.collections.spatial.search;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.collections.spatial.RTreeUtils;
 import org.apache.druid.collections.spatial.SpatialUtils;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -99,5 +101,23 @@ public class RadiusBoundTest
       };
       Assert.assertFalse(bound.contains(floatPoint));
     }
+  }
+
+  @Test
+  public void deSerTest() throws JsonProcessingException
+  {
+    float circleCenterLat = 12.3456789f;
+    float circleCenterLon = 45.6789012f;
+    float circleRadius = 500.0f; // Radius in meters
+
+    float[] center = new float[]{circleCenterLat, circleCenterLon};
+    Bound bound = new RadiusBound(center, circleRadius, 100);
+    DefaultObjectMapper objectMapper = DefaultObjectMapper.INSTANCE;
+    Bound val = objectMapper.readValue(objectMapper.writeValueAsString(bound), Bound.class);
+    Assert.assertEquals(bound, val);
+
+    Bound bound1 = new RadiusBound(center, circleRadius, 100, RadiusBound.RadiusUnit.meters);
+    Bound val1 = objectMapper.readValue(objectMapper.writeValueAsString(bound1), Bound.class);
+    Assert.assertEquals(bound1, val1);
   }
 }

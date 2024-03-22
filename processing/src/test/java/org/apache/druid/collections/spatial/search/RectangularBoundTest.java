@@ -79,26 +79,16 @@ public class RectangularBoundTest
   }
 
   @Test
-  public void testDeSerForDoubleArrays() throws JsonProcessingException
+  public void testDeSer() throws JsonProcessingException
   {
-    String val = "{\n"
-                 + "          \"type\": \"rectangular\",\n"
-                 + "          \"minCoords\": [\n"
-                 + "            39.094969,\n"
-                 + "            -84.516996\n"
-                 + "          ],\n"
-                 + "          \"maxCoords\": [\n"
-                 + "            39.095473,\n"
-                 + "            -84.515373\n"
-                 + "          ]\n"
-                 + "}";
-    DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    Bound bound = objectMapper.readValue(val, Bound.class);
-    Assert.assertTrue(bound instanceof RectangularBound);
-    Assert.assertEquals(
-        bound,
-        new RectangularBound(new float[]{39.094969f, -84.516996f}, new float[]{39.095473f, -84.515373f})
+    Bound rectangularBound = new RectangularBound(
+        new float[]{39.094969f, -84.516996f},
+        new float[]{39.095473f, -84.515373f}
     );
+    DefaultObjectMapper objectMapper = DefaultObjectMapper.INSTANCE;
+    String val = objectMapper.writeValueAsString(rectangularBound);
+    Bound deSerVal = objectMapper.readValue(val, Bound.class);
+    Assert.assertEquals(deSerVal, rectangularBound);
   }
 
   @Test
