@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -114,7 +114,7 @@ public class TaskStorageQueryAdapter
           return activeTask;
         }
       }
-      catch (JsonProcessingException e) {
+      catch (DruidException e) {
         // do nothing
       }
     }

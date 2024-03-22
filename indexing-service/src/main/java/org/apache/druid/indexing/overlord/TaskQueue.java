@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -122,6 +121,7 @@ public class TaskQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
+  private final ObjectMapper PASSWORD_REDACTING_MAPPER;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -157,7 +157,6 @@ public class TaskQueue
   private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
   private final AtomicInteger handledStatusUpdates = new AtomicInteger();
 
-  private final ObjectMapper jsonMapper;
 
   public TaskQueue(
       TaskLockConfig lockConfig,
@@ -167,7 +166,8 @@ public class TaskQueue
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ObjectMapper mapper
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -182,11 +182,8 @@ public class TaskQueue
         config.getTaskCompleteHandlerNumThreads(),
         "TaskQueue-OnComplete-%d"
     );
-    // Add mixin to redact passwords.
-    this.jsonMapper = (new JsonMapper()).addMixIn(
-        PasswordProvider.class,
-        PasswordProviderRedactionMixIn.class
-    );
+    this.PASSWORD_REDACTING_MAPPER = mapper.copy()
+                                           .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
   }
 
   @VisibleForTesting
@@ -987,7 +984,7 @@ public class TaskQueue
    * Returns an absent optional if there is no task payload corresponding to the taskId in memory.
    * Throws JsonProcessingException if password could not be redacted due to serialization / deserialization failure
    */
-  public Optional<Task> getActiveTask(String id) throws JsonProcessingException
+  public Optional<Task> getActiveTask(String id)
   {
     Task task;
     giant.lock();
@@ -1000,11 +997,13 @@ public class TaskQueue
     if (task != null) {
       try {
         // Write and read the value using a mapper with password redaction mixin.
-        task = jsonMapper.readValue(jsonMapper.writeValueAsString(task), Task.class);
+        task = PASSWORD_REDACTING_MAPPER.readValue(PASSWORD_REDACTING_MAPPER.writeValueAsString(task), Task.class);
       }
       catch (JsonProcessingException e) {
-        log.error(e, "Failed to  serialize or deserialize task with id [%s].", task.getId());
-        throw e;
+        log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Failed to serialize or deserialize task.");
       }
     }
     return Optional.fromNullable(task);
