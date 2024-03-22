@@ -167,6 +167,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 DIM_NAME,
@@ -179,6 +180,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                     1,
                     DIM_VALUE,
                     DIM_VALUE,
+                    null,
                     null
                 ),
                 DIM_FLOAT_NAME,
@@ -188,6 +190,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                     false,
                     false,
                     80,
+                    null,
                     null,
                     null,
                     null,
@@ -217,6 +220,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 DIM_NAME,
@@ -229,6 +233,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                     1,
                     DIM_VALUE,
                     DIM_VALUE,
+                    null,
                     null
                 ),
                 DIM_FLOAT_NAME,
@@ -238,6 +243,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                     false,
                     false,
                     80,
+                    null,
                     null,
                     null,
                     null,

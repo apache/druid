@@ -20,12 +20,12 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
 
 /**
  *
@@ -36,7 +36,7 @@ class SimpleColumnHolder implements ColumnHolder
   private final ColumnFormat columnFormat;
 
   @Nullable
-  private final Supplier<? extends BaseColumn> columnSupplier;
+  private final ColumnSupplier<? extends BaseColumn> columnSupplier;
 
   @Nullable
   private final ColumnIndexSupplier indexSupplier;
@@ -47,7 +47,7 @@ class SimpleColumnHolder implements ColumnHolder
   SimpleColumnHolder(
       ColumnCapabilities capabilities,
       @Nullable ColumnFormat columnFormat,
-      @Nullable Supplier<? extends BaseColumn> columnSupplier,
+      @Nullable ColumnSupplier<? extends BaseColumn> columnSupplier,
       @Nullable ColumnIndexSupplier indexSupplier
   )
   {
@@ -104,6 +104,22 @@ class SimpleColumnHolder implements ColumnHolder
   public ColumnIndexSupplier getIndexSupplier()
   {
     return indexSupplier;
+  }
+
+  @Override
+  public ColumnSize getColumnSize()
+  {
+    if (columnSupplier != null) {
+      LinkedHashMap<String, ColumnPartSize> allParts = new LinkedHashMap<>(columnSupplier.getComponents());
+      if (indexSupplier != null) {
+        allParts.putAll(indexSupplier.getIndexComponents());
+      }
+      return new ColumnSize(
+        allParts.values().stream().mapToLong(ColumnPartSize::getTotalSize).sum(),
+        allParts
+      );
+    }
+    return ColumnSize.NO_DATA;
   }
 
   @Override

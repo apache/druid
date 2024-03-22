@@ -114,6 +114,7 @@ public class SegmentMetadataQueryQueryToolChestTest
                     1,
                     "preferred",
                     "preferred",
+                    null,
                     null
                 )
             )

@@ -30,6 +30,7 @@ import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -1286,7 +1287,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1390,7 +1391,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1474,7 +1475,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1554,7 +1555,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1639,7 +1640,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1719,7 +1720,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1804,7 +1805,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),
@@ -1896,7 +1897,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+    ColumnPartSupplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
         localDictionaryBuffer,
         CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
         ByteOrder.nativeOrder(),

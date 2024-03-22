@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
@@ -97,7 +98,7 @@ public class DoubleNumericColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     return (buffer, builder, columnConfig) -> {
-      final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+      final ColumnPartSupplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
           byteOrder
       );

@@ -24,6 +24,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -54,6 +55,9 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -82,6 +86,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
@@ -96,7 +101,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   private final ColumnType singleType;
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
-  private final Supplier<FixedIndexed<Integer>> localDictionarySupplier;
+  private final ColumnPartSupplier<FixedIndexed<Integer>> localDictionarySupplier;
   private final Supplier<TStringDictionary> globalStringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> globalLongDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier;
@@ -108,7 +113,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   private final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
   @SuppressWarnings({"FieldCanBeLocal", "unused"})
   @Nullable
-  private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+  private final ColumnPartSupplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
 
   private final int adjustLongId;
   private final int adjustDoubleId;
@@ -120,12 +125,12 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       BitmapFactory bitmapFactory,
       ColumnConfig columnConfig,
       GenericIndexed<ImmutableBitmap> bitmaps,
-      Supplier<FixedIndexed<Integer>> localDictionarySupplier,
+      ColumnPartSupplier<FixedIndexed<Integer>> localDictionarySupplier,
       Supplier<TStringDictionary> globalStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> globalLongDictionarySupplier,
       Supplier<FixedIndexed<Double>> globalDoubleDictionarySupplier,
       @Nullable Supplier<FrontCodedIntArrayIndexed> globalArrayDictionarySupplier,
-      @Nullable Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
+      @Nullable ColumnPartSupplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
       @Nullable GenericIndexed<ImmutableBitmap> arrayElementBitmaps
   )
   {
@@ -143,6 +148,20 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     this.adjustDoubleId = adjustLongId + globalLongDictionarySupplier.get().size();
     this.adjustArrayId = adjustDoubleId + globalDoubleDictionarySupplier.get().size();
     this.columnConfig = columnConfig;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    if (arrayElementBitmaps != null) {
+      return ImmutableMap.of(
+          ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART, bitmaps.getColumnPartSize(),
+          ColumnSize.BITMAP_ARRAY_ELEMENT_INDEX_COLUMN_PART, arrayElementBitmaps.getColumnPartSize()
+      );
+    }
+    return ImmutableMap.of(
+        ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART, bitmaps.getColumnPartSize()
+    );
   }
 
   @Nullable

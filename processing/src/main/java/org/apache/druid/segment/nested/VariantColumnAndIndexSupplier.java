@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.error.DruidException;
@@ -33,6 +33,10 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeSignature;
@@ -59,8 +63,9 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Map;
 
-public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
+public class VariantColumnAndIndexSupplier implements ColumnSupplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static VariantColumnAndIndexSupplier read(
       ColumnType logicalType,
@@ -88,11 +93,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
-        final Supplier<FixedIndexed<Long>> longDictionarySupplier;
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
-        final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-        final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+        final ColumnPartSupplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
+        final ColumnPartSupplier<FixedIndexed<Long>> longDictionarySupplier;
+        final ColumnPartSupplier<FixedIndexed<Double>> doubleDictionarySupplier;
+        final ColumnPartSupplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
+        final ColumnPartSupplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
 
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -205,12 +210,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   @Nullable
   private final Byte variantTypeSetByte;
   private final BitmapFactory bitmapFactory;
-  private final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
-  private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
-  private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
-  private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-  private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
-  private final Supplier<ColumnarInts> encodedValueColumnSupplier;
+  private final ColumnPartSupplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
+  private final ColumnPartSupplier<FixedIndexed<Long>> longDictionarySupplier;
+  private final ColumnPartSupplier<FixedIndexed<Double>> doubleDictionarySupplier;
+  private final ColumnPartSupplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
+  private final ColumnPartSupplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+  private final ColumnPartSupplier<ColumnarInts> encodedValueColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final GenericIndexed<ImmutableBitmap> arrayElementIndexes;
   private final ImmutableBitmap nullValueBitmap;
@@ -218,12 +223,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   public VariantColumnAndIndexSupplier(
       ColumnType logicalType,
       @Nullable Byte variantTypeSetByte,
-      Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier,
-      Supplier<FixedIndexed<Long>> longDictionarySupplier,
-      Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
-      Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
-      Supplier<ColumnarInts> encodedValueColumnSupplier,
+      ColumnPartSupplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier,
+      ColumnPartSupplier<FixedIndexed<Long>> longDictionarySupplier,
+      ColumnPartSupplier<FixedIndexed<Double>> doubleDictionarySupplier,
+      ColumnPartSupplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
+      ColumnPartSupplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
+      ColumnPartSupplier<ColumnarInts> encodedValueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       GenericIndexed<ImmutableBitmap> elementIndexes,
       BitmapFactory bitmapFactory
@@ -247,6 +252,27 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   public Byte getVariantTypeSetByte()
   {
     return variantTypeSetByte;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART, valueIndexes.getColumnPartSize(),
+        ColumnSize.BITMAP_ARRAY_ELEMENT_INDEX_COLUMN_PART, arrayElementIndexes.getColumnPartSize()
+    );
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.ENCODED_VALUE_COLUMN_PART, encodedValueColumnSupplier.getColumnPartSize(),
+        ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART, stringDictionarySupplier.getColumnPartSize(),
+        ColumnSize.LONG_VALUE_DICTIONARY_COLUMN_PART, longDictionarySupplier.getColumnPartSize(),
+        ColumnSize.DOUBLE_VALUE_DICTIONARY_COLUMN_PART, doubleDictionarySupplier.getColumnPartSize(),
+        ColumnSize.ARRAY_VALUE_DICTIONARY_COLUMN_PART, arrayDictionarySupplier.getColumnPartSize()
+    );
   }
 
   @Override

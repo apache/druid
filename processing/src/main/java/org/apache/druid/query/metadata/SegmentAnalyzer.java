@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -34,12 +35,14 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ComplexColumn;
@@ -58,6 +61,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -87,6 +91,7 @@ public class SegmentAnalyzer
     return Preconditions.checkNotNull(segment, "segment").asStorageAdapter().getNumRows();
   }
 
+
   public Map<String, ColumnAnalysis> analyze(Segment segment)
   {
     Preconditions.checkNotNull(segment, "segment");
@@ -104,6 +109,7 @@ public class SegmentAnalyzer
     final RowSignature rowSignature = storageAdapter.getRowSignature();
     for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
+      final ColumnHolder columnHolder = index == null ?  null : index.getColumnHolder(columnName);
 
       if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
         // See javadocs for getSnapshotColumnCapabilities for a discussion of why we need to do this.
@@ -125,26 +131,25 @@ public class SegmentAnalyzer
             final int bytesPerRow =
                 ColumnHolder.TIME_COLUMN_NAME.equals(columnName) ? NUM_BYTES_IN_TIMESTAMP : Long.BYTES;
 
-            analysis = analyzeNumericColumn(capabilities, numRows, bytesPerRow);
+            analysis = analyzeNumericColumn(columnHolder, capabilities, numRows, bytesPerRow);
             break;
           case FLOAT:
-            analysis = analyzeNumericColumn(capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
+            analysis = analyzeNumericColumn(columnHolder, capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
             break;
           case DOUBLE:
-            analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
+            analysis = analyzeNumericColumn(columnHolder, capabilities, numRows, Double.BYTES);
             break;
           case STRING:
             if (index != null) {
-              analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
+              analysis = analyzeStringColumn(capabilities, columnHolder);
             } else {
               analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
             }
             break;
           case ARRAY:
-            analysis = analyzeArrayColumn(capabilities);
+            analysis = analyzeArrayColumn(columnHolder, capabilities);
             break;
           case COMPLEX:
-            final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
             analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
             break;
           default:
@@ -166,9 +171,30 @@ public class SegmentAnalyzer
     return columns;
   }
 
+  @Nullable
+  public Map<String, Integer> analyzeSmoosh(Segment segment)
+  {
+    final QueryableIndex index = segment.asQueryableIndex();
+    if (index == null || !(index instanceof SimpleQueryableIndex)) {
+      return null;
+    }
+    SimpleQueryableIndex simpleQueryableIndex = (SimpleQueryableIndex) index;
+    final Map<String, Integer> smoosh = new HashMap<>();
+    SmooshedFileMapper fileMapper = simpleQueryableIndex.getFileMapper();
+    for (String file : fileMapper.getInternalFilenames()) {
+      smoosh.put(file, fileMapper.getFileSize(file));
+    }
+    return smoosh;
+  }
+
   public boolean analyzingSize()
   {
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.SIZE);
+  }
+
+  public boolean analyzingColumnSize()
+  {
+    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.COLUMN_SIZE);
   }
 
   public boolean analyzingCardinality()
@@ -182,6 +208,7 @@ public class SegmentAnalyzer
   }
 
   private ColumnAnalysis analyzeNumericColumn(
+      final ColumnHolder holder,
       final ColumnCapabilities capabilities,
       final int length,
       final int sizePerRow
@@ -197,7 +224,13 @@ public class SegmentAnalyzer
 
       size = ((long) length) * sizePerRow;
     }
-    return bob.withSize(size).build();
+    final ColumnSize columnSize;
+    if (analyzingColumnSize() && holder != null) {
+      columnSize = holder.getColumnSize();
+    } else {
+      columnSize = null;
+    }
+    return bob.withSize(size).withColumnSize(columnSize).build();
   }
 
   private ColumnAnalysis analyzeStringColumn(
@@ -246,6 +279,12 @@ public class SegmentAnalyzer
     } else {
       cardinality = 0;
     }
+    final ColumnSize columnSize;
+    if (analyzingColumnSize()) {
+      columnSize = columnHolder.getColumnSize();
+    } else {
+      columnSize = null;
+    }
 
     return ColumnAnalysis.builder()
                          .withCapabilities(capabilities)
@@ -253,6 +292,7 @@ public class SegmentAnalyzer
                          .withCardinality(analyzingCardinality() ? cardinality : 0)
                          .withMinValue(min)
                          .withMaxValue(max)
+                         .withColumnSize(columnSize)
                          .build();
 
   }
@@ -379,15 +419,28 @@ public class SegmentAnalyzer
           }
         }
       }
-      return bob.withSize(size).build();
+      final ColumnSize columnSize;
+      if (analyzingColumnSize() && columnHolder != null) {
+        columnSize = columnHolder.getColumnSize();
+      } else {
+        columnSize = null;
+      }
+      return bob.withSize(size).withColumnSize(columnSize).build();
     }
     catch (IOException e) {
       return bob.withErrorMessage(e.getMessage()).build();
     }
   }
 
-  private ColumnAnalysis analyzeArrayColumn(final ColumnCapabilities capabilities)
+  private ColumnAnalysis analyzeArrayColumn(@Nullable ColumnHolder columnHolder, final ColumnCapabilities capabilities)
   {
-    return ColumnAnalysis.builder().withCapabilities(capabilities).build();
+    final ColumnSize size;
+    if (analyzingColumnSize() && columnHolder != null) {
+      size = columnHolder.getColumnSize();
+    } else {
+      size = null;
+    }
+
+    return ColumnAnalysis.builder().withCapabilities(capabilities).withColumnSize(size).build();
   }
 }

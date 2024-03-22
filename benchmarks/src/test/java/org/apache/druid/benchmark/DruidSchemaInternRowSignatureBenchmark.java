@@ -125,6 +125,7 @@ public class DruidSchemaInternRowSignatureBenchmark
                 null,
                 null,
                 null,
+                null,
                 null
             )
         );

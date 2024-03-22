@@ -19,13 +19,18 @@
 
 package org.apache.druid.segment.serde;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * {@link ColumnIndexSupplier} for columns which only have an {@link ImmutableBitmap} to indicate which rows only have
@@ -35,11 +40,13 @@ import javax.annotation.Nullable;
  */
 public class NullValueIndexSupplier implements ColumnIndexSupplier
 {
+  private final int sizeBytes;
   private final SimpleImmutableBitmapIndex nullValueIndex;
 
-  public NullValueIndexSupplier(ImmutableBitmap nullValueBitmap)
+  public NullValueIndexSupplier(ImmutableBitmap nullValueBitmap, int sizeBytes)
   {
     this.nullValueIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
+    this.sizeBytes = sizeBytes;
   }
 
   @Nullable
@@ -50,6 +57,17 @@ public class NullValueIndexSupplier implements ColumnIndexSupplier
       return (T) new NullableNumericNullValueIndex();
     }
     return null;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    if (sizeBytes > 0) {
+      return ImmutableMap.of(
+          ColumnSize.NULL_VALUE_INDEX_COLUMN_PART, ColumnPartSize.simple("nullBitmap", sizeBytes)
+      );
+    }
+    return Collections.emptyMap();
   }
 
   private final class NullableNumericNullValueIndex implements NullValueIndex

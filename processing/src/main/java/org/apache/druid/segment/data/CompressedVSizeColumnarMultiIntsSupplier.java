@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,7 +43,7 @@ import java.util.Iterator;
  *           represents the total length of values column.
  * values - {@link ColumnarInts} representing concatenated values of all rows
  */
-public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>
+public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>, ColumnPartSupplier<ColumnarMultiInts>
 {
   private static final byte VERSION = 0x2;
 

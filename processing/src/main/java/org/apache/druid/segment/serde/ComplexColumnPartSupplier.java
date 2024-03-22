@@ -19,14 +19,19 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.GenericIndexedBasedComplexColumn;
 import org.apache.druid.segment.data.GenericIndexed;
 
+import java.util.Map;
+
 /**
 */
-public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
+public class ComplexColumnPartSupplier implements ColumnSupplier<ComplexColumn>
 {
   private final GenericIndexed<?> complexType;
   private final String typeName;
@@ -41,5 +46,11 @@ public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
   public ComplexColumn get()
   {
     return new GenericIndexedBasedComplexColumn(typeName, complexType);
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(ColumnSize.DATA_SECTION, complexType.getColumnPartSize());
   }
 }

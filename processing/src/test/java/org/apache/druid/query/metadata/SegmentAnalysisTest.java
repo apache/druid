@@ -45,19 +45,63 @@ public class SegmentAnalysisTest
     final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
     columns.put(
         "b",
-        new ColumnAnalysis(ColumnType.LONG, ColumnType.LONG.asTypeString(), true, true, 0, null, null, null, null)
+        new ColumnAnalysis(
+            ColumnType.LONG,
+            ColumnType.LONG.asTypeString(),
+            true,
+            true,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
     );
     columns.put(
         "a",
-        new ColumnAnalysis(ColumnType.FLOAT, ColumnType.FLOAT.asTypeString(), true, true, 0, null, null, null, null)
+        new ColumnAnalysis(
+            ColumnType.FLOAT,
+            ColumnType.FLOAT.asTypeString(),
+            true,
+            true,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
     );
     columns.put(
         "f",
-        new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), true, true, 0, null, null, null, null)
+        new ColumnAnalysis(
+            ColumnType.STRING,
+            ColumnType.STRING.asTypeString(),
+            true,
+            true,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
     );
     columns.put(
         "c",
-        new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), true, true, 0, null, null, null, null)
+        new ColumnAnalysis(
+            ColumnType.DOUBLE,
+            ColumnType.DOUBLE.asTypeString(),
+            true,
+            true,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
     );
 
     final SegmentAnalysis analysis = new SegmentAnalysis(

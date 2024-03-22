@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -43,11 +44,16 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -64,7 +70,6 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.VSizeColumnarInts;
-import org.apache.druid.segment.data.WritableSupplier;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -83,6 +88,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -923,7 +929,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           )
       );
 
-      final Supplier<FixedIndexed<Integer>> localDictionarySupplier = FixedIndexed.read(
+      final ColumnPartSupplier<FixedIndexed<Integer>> localDictionarySupplier = FixedIndexed.read(
           dataBuffer,
           INT_TYPE_STRATEGY,
           byteOrder,
@@ -934,18 +940,18 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       int doublesLength = bb.getInt();
       dataBuffer.position(dataBuffer.position() + Integer.BYTES + Integer.BYTES);
       int pos = dataBuffer.position();
-      final Supplier<ColumnarLongs> longs = longsLength > 0 ? CompressedColumnarLongsSupplier.fromByteBuffer(
+      final ColumnPartSupplier<ColumnarLongs> longs = longsLength > 0 ? CompressedColumnarLongsSupplier.fromByteBuffer(
           dataBuffer,
           byteOrder
       ) : () -> null;
       dataBuffer.position(pos + longsLength);
       pos = dataBuffer.position();
-      final Supplier<ColumnarDoubles> doubles = doublesLength > 0 ? CompressedColumnarDoublesSuppliers.fromByteBuffer(
+      final ColumnPartSupplier<ColumnarDoubles> doubles = doublesLength > 0 ? CompressedColumnarDoublesSuppliers.fromByteBuffer(
           dataBuffer,
           byteOrder
       ) : () -> null;
       dataBuffer.position(pos + doublesLength);
-      final WritableSupplier<ColumnarInts> ints;
+      final ColumnPartSupplier<ColumnarInts> ints;
       if (version == DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED) {
         ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(dataBuffer, byteOrder);
       } else {
@@ -959,7 +965,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
           bitmapSerdeFactory.getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
-      final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+      final ColumnPartSupplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
       final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
       if (dataBuffer.hasRemaining()) {
         arrayElementDictionarySupplier = FixedIndexed.read(
@@ -978,22 +984,56 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         arrayElementBitmaps = null;
       }
       final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
-      Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
-        FixedIndexed<Integer> localDict = localDictionarySupplier.get();
-        return closer.register(new NestedFieldDictionaryEncodedColumn(
-            types,
-            longs.get(),
-            doubles.get(),
-            ints.get(),
-            stringDictionarySupplier.get(),
-            longDictionarySupplier.get(),
-            doubleDictionarySupplier.get(),
-            arrayDictionarySupplier != null ? arrayDictionarySupplier.get() : null,
-            localDict,
-            hasNull
-            ? rBitmaps.get(0)
-            : bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
-        ));
+      ColumnSupplier<DictionaryEncodedColumn<?>> columnSupplier = new ColumnSupplier<DictionaryEncodedColumn<?>>()
+      {
+        @Override
+        public DictionaryEncodedColumn<?> get()
+        {
+          final FixedIndexed<Integer> localDict = localDictionarySupplier.get();
+          return closer.register(
+              new NestedFieldDictionaryEncodedColumn(
+                  types,
+                  longs.get(),
+                  doubles.get(),
+                  ints.get(),
+                  stringDictionarySupplier.get(),
+                  longDictionarySupplier.get(),
+                  doubleDictionarySupplier.get(),
+                  arrayDictionarySupplier != null ? arrayDictionarySupplier.get() : null,
+                  localDict,
+                  hasNull
+                  ? rBitmaps.get(0)
+                  : bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
+          ));
+        }
+
+        @Override
+        public Map<String, ColumnPartSize> getComponents()
+        {
+          if (logicalType.is(ValueType.LONG)) {
+            return ImmutableMap.of(
+                ColumnSize.ENCODED_VALUE_COLUMN_PART, ints.getColumnPartSize(),
+                ColumnSize.LONG_COLUMN_PART, longs.getColumnPartSize(),
+                "localValueDictionary", localDictionarySupplier.getColumnPartSize()
+            );
+          } else if (logicalType.is(ValueType.DOUBLE)) {
+            return ImmutableMap.of(
+                ColumnSize.ENCODED_VALUE_COLUMN_PART, ints.getColumnPartSize(),
+                ColumnSize.DOUBLE_COLUMN_PART, doubles.getColumnPartSize(),
+                "localValueDictionary", localDictionarySupplier.getColumnPartSize()
+            );
+          } else if (arrayElementDictionarySupplier != null) {
+            return ImmutableMap.of(
+                ColumnSize.ENCODED_VALUE_COLUMN_PART, ints.getColumnPartSize(),
+                "localValueDictionary", localDictionarySupplier.getColumnPartSize(),
+                "localArrayElementDictionary", arrayElementDictionarySupplier.getColumnPartSize()
+            );
+          }
+          return ImmutableMap.of(
+              ColumnSize.ENCODED_VALUE_COLUMN_PART, ints.getColumnPartSize(),
+              "localValueDictionary", localDictionarySupplier.getColumnPartSize()
+          );
+        }
       };
       columnBuilder.setHasMultipleValues(false)
                    .setHasNulls(hasNull)

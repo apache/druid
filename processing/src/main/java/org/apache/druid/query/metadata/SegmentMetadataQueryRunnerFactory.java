@@ -92,7 +92,6 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
         final long numRows = analyzer.numRows(segment);
         long totalSize = 0;
-
         if (analyzer.analyzingSize()) {
           // Initialize with the size of the whitespace, 1 byte per
           totalSize = analyzedColumns.size() * numRows;

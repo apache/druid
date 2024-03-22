@@ -236,6 +236,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 "index",
@@ -245,6 +246,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     false,
                     9672,
+                    null,
                     null,
                     null,
                     null,
@@ -260,6 +262,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     1,
                     "preferred",
                     "preferred",
+                    null,
                     null
                 )
             )
@@ -286,6 +289,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 "index",
@@ -295,6 +299,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     false,
                     9672,
+                    null,
                     null,
                     null,
                     null,
@@ -308,6 +313,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     placementSize2,
                     1,
+                    null,
                     null,
                     null,
                     null
@@ -351,6 +357,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 ),
                 "placementish",
@@ -363,6 +370,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -425,6 +433,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     1,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 ),
                 "placementish",
@@ -437,6 +446,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     9,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -499,6 +509,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     1,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 ),
                 "quality_uniques",
@@ -508,6 +519,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     true,
                     0,
+                    null,
                     null,
                     null,
                     null,
@@ -573,6 +585,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         1,
         "preferred",
         "preferred",
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("placement", analysis);
@@ -596,6 +609,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         3,
         "spot",
         "upfront",
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("market", analysis);
@@ -619,6 +633,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         9,
         "automotive",
         "travel",
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("quality", analysis);
@@ -649,6 +664,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 "index",
@@ -658,6 +674,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     false,
                     9672 * 2,
+                    null,
                     null,
                     null,
                     null,
@@ -719,6 +736,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -785,6 +803,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -851,6 +870,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -914,6 +934,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -976,6 +997,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -1495,6 +1517,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("longNumericNull", analysis);
@@ -1509,6 +1532,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         false,
         NullHandling.replaceWithDefault() ? false : true,
         19344,
+        null,
         null,
         null,
         null,
@@ -1530,6 +1554,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("floatNumericNull", analysis);
@@ -1547,6 +1572,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         1,
         NullHandling.defaultStringValue(),
         NullHandling.defaultStringValue(),
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("null_column", analysis);

@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -296,7 +297,7 @@ public class CompressionFactory
     LongEncodingReader duplicate();
   }
 
-  public static Supplier<ColumnarLongs> getLongSupplier(
+  public static ColumnPartSupplier<ColumnarLongs> getLongSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
@@ -306,7 +307,7 @@ public class CompressionFactory
   )
   {
     if (strategy == CompressionStrategy.NONE) {
-      return new EntireLayoutColumnarLongsSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
+      return new EntireLayoutColumnarLongsSupplier(totalSize, fromBuffer.remaining(), encodingFormat.getReader(fromBuffer, order));
     } else {
       return new BlockLayoutColumnarLongsSupplier(
           totalSize,

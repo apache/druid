@@ -19,10 +19,12 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 
@@ -33,7 +35,7 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>, Serializer
+public class CompressedColumnarLongsSupplier implements ColumnPartSupplier<ColumnarLongs>, Serializer
 {
   public static final byte LZF_VERSION = 0x1;
   public static final byte VERSION = 0x2;
@@ -57,7 +59,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   private final int totalSize;
   private final int sizePer;
   private final ByteBuffer buffer;
-  private final Supplier<ColumnarLongs> supplier;
+  private final ColumnPartSupplier<ColumnarLongs> supplier;
   private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingFormat encoding;
 
@@ -65,7 +67,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
       int totalSize,
       int sizePer,
       ByteBuffer buffer,
-      Supplier<ColumnarLongs> supplier,
+      ColumnPartSupplier<ColumnarLongs> supplier,
       CompressionStrategy compression,
       CompressionFactory.LongEncodingFormat encoding
   )
@@ -88,6 +90,19 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   public long getSerializedSize()
   {
     return META_SERDE_HELPER.size(this) + (long) buffer.remaining();
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple(
+        StringUtils.format(
+            "compressed longs column compression:[%s] values per block:[%s]",
+            compression.toString(),
+            sizePer
+        ),
+        META_SERDE_HELPER.size(this) + supplier.getColumnPartSize().getSize()
+    );
   }
 
   @Override
@@ -114,7 +129,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
         }
         compression = CompressionStrategy.forId(compressionId);
       }
-      Supplier<ColumnarLongs> supplier = CompressionFactory.getLongSupplier(
+      ColumnPartSupplier<ColumnarLongs> supplier = CompressionFactory.getLongSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),

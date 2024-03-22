@@ -47,6 +47,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         2,
         "aaA",
         "Zzz",
+        null,
         null
     );
     final ColumnAnalysis analysis2 = new ColumnAnalysis(
@@ -58,6 +59,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         4,
         "aAA",
         "ZZz",
+        null,
         null
     );
 
@@ -73,6 +75,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         4,
         "aAA",
         "Zzz",
+        null,
         null
     );
 
@@ -97,6 +100,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         2,
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(analysis1, analysis1.fold(null));
@@ -115,6 +119,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     final ColumnAnalysis analysis2 = new ColumnAnalysis(
@@ -123,6 +128,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         false,
         false,
         0L,
+        null,
         null,
         null,
         null,
@@ -138,6 +144,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         false,
         false,
         0L,
+        null,
         null,
         null,
         null,
@@ -165,6 +172,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         1,
         null,
         null,
+        null,
         null
     );
     final ColumnAnalysis analysis2 = new ColumnAnalysis(
@@ -174,6 +182,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         false,
         2L,
         2,
+        null,
         null,
         null,
         null
@@ -206,6 +215,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         1,
         null,
         null,
+        null,
         null
     );
     final ColumnAnalysis analysis2 = new ColumnAnalysis(
@@ -215,6 +225,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         false,
         2L,
         2,
+        null,
         null,
         null,
         null
@@ -256,6 +267,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         "error:foo"
     );
     ColumnAnalysis fold1 = analysis1.fold(analysis2);
@@ -280,6 +292,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         2,
         "a",
         "z",
+        null,
         null
     );
 
@@ -292,6 +305,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         false,
         false,
         -1L,
+        null,
         null,
         null,
         null,
@@ -321,6 +335,7 @@ public class ColumnAnalysisTest extends InitializedNullHandlingTest
         false,
         false,
         -1L,
+        null,
         null,
         null,
         null,

@@ -119,6 +119,11 @@ public class SmooshedFileMapper implements Closeable
     return internalFiles.keySet();
   }
 
+  public Integer getFileSize(String name)
+  {
+    final Metadata metadata = internalFiles.get(name);
+    return metadata.getEndOffset() - metadata.getStartOffset();
+  }
   /**
    * Returns a mapped buffer of the smooshed file with the given name. Buffer's contents from 0 to capacity() are the
    * whole mapped file contents, limit() is equal to capacity().

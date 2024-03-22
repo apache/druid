@@ -72,8 +72,7 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
-    builder.setComplexColumnSupplier(
-        CompressedBigDecimalColumnPartSupplier.fromByteBuffer(buffer));
+    builder.setComplexColumnSupplier(CompressedBigDecimalColumnSupplier.fromByteBuffer(buffer));
   }
 
   /* (non-Javadoc)

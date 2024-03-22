@@ -21,10 +21,10 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -146,7 +146,7 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
-      final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+      final ColumnPartSupplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
           byteOrder
       );
@@ -154,7 +154,9 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       final boolean hasNulls;
+      final int bitmapSize;
       if (buffer.hasRemaining()) {
+        final int startOffset = buffer.position();
         if (NullHandling.sqlCompatible()) {
           bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
         } else {
@@ -163,16 +165,18 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
           bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
         }
 
+        bitmapSize = buffer.position() - startOffset;
         hasNulls = !bitmap.isEmpty();
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
         hasNulls = false;
+        bitmapSize = 0;
       }
       builder.setType(ValueType.DOUBLE)
              .setHasMultipleValues(false)
              .setHasNulls(hasNulls)
              .setNumericColumnSupplier(new DoubleNumericColumnSupplier(column, bitmap))
-             .setNullValueIndexSupplier(bitmap);
+             .setNullValueIndexSupplier(bitmap, bitmapSize);
     };
   }
 }

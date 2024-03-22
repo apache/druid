@@ -19,19 +19,16 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
 
@@ -46,28 +43,14 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
 
   public abstract List<int[]> getValsUsed();
 
-  public abstract WritableSupplier<ColumnarMultiInts> getColumnarMultiIntsSupplier();
+  public abstract Supplier<ColumnarMultiInts> getColumnarMultiIntsSupplier();
 
-  public abstract WritableSupplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buf);
+  public abstract Supplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buf);
 
   @Test
   public void testSanity()
   {
     assertSame(getValsUsed(), getColumnarMultiIntsSupplier().get());
-  }
-
-  @Test
-  public void testSerde() throws IOException
-  {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier = getColumnarMultiIntsSupplier();
-    columnarMultiIntsSupplier.writeTo(Channels.newChannel(baos), null);
-
-    final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(columnarMultiIntsSupplier.getSerializedSize(), bytes.length);
-    WritableSupplier<ColumnarMultiInts> deserializedColumnarMultiInts = fromByteBuffer(ByteBuffer.wrap(bytes));
-
-    assertSame(getValsUsed(), deserializedColumnarMultiInts.get());
   }
 
 
@@ -80,7 +63,7 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
   @Test
   public void testIterators()
   {
-    final WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier = getColumnarMultiIntsSupplier();
+    final Supplier<ColumnarMultiInts> columnarMultiIntsSupplier = getColumnarMultiIntsSupplier();
     List<int[]> vals = getValsUsed();
 
     Iterator<IndexedInts> iterator = columnarMultiIntsSupplier.get().iterator();
@@ -111,35 +94,15 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
     }
   }
 
-  public static <T extends Closeable> WritableSupplier<T> wrapSupplier(
-      WritableSupplier<T> supplier,
+  public static <T extends Closeable> Supplier<T> wrapSupplier(
+      Supplier<T> supplier,
       Closer closer
   )
   {
-    return new WritableSupplier<T>()
-    {
-      @Override
-      public T get()
-      {
-        // We must register the actual column with the closer as well because the resources taken by the
-        // column are not part of what the Supplier's closer manages
-        return closer.register(supplier.get());
-      }
-
-      @Override
-      public long getSerializedSize() throws IOException
-      {
-        return supplier.getSerializedSize();
-      }
-
-      @Override
-      public void writeTo(
-          WritableByteChannel channel,
-          FileSmoosher smoosher
-      ) throws IOException
-      {
-        supplier.writeTo(channel, smoosher);
-      }
+    return () -> {
+      // We must register the actual column with the closer as well because the resources taken by the
+      // column are not part of what the Supplier's closer manages
+      return closer.register(supplier.get());
     };
   }
 }

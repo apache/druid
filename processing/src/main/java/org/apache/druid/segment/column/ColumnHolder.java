@@ -50,6 +50,11 @@ public interface ColumnHolder
   @Nullable
   ColumnIndexSupplier getIndexSupplier();
 
+  default ColumnSize getColumnSize()
+  {
+    return ColumnSize.NO_DATA;
+  }
+
   /**
    * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
    */

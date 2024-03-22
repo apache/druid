@@ -25,6 +25,7 @@ import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 
@@ -34,7 +35,7 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnarInts>, WritableSupplier<ColumnarInts>
+public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnarInts>, WritableSupplier<ColumnarInts>, ColumnPartSupplier<ColumnarInts>
 {
   public static final byte VERSION = 0x0;
 
