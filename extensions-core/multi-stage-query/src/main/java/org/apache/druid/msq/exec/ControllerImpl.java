@@ -1729,16 +1729,11 @@ public class ControllerImpl implements Controller
 
       Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = Function.identity();
 
-      Boolean storeCompactionState = QueryContext.of(task.getQuerySpec().getQuery().getContext())
+      boolean storeCompactionState = QueryContext.of(task.getQuerySpec().getQuery().getContext())
                                                  .getBoolean(
                                                      Tasks.STORE_COMPACTION_STATE_KEY,
                                                      Tasks.DEFAULT_STORE_COMPACTION_STATE
                                                  );
-
-      if (storeCompactionState == null) {
-        storeCompactionState = Tasks.DEFAULT_STORE_COMPACTION_STATE;
-
-      }
 
       if (!segments.isEmpty() && storeCompactionState) {
 

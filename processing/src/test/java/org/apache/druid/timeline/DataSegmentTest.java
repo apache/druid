@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -47,6 +48,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  */
@@ -361,8 +364,46 @@ public class DataSegmentTest
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(7))
                                            .size(0)
-                                           .build();
+                                            .build();
     Assert.assertEquals(segment1, segment2.withLastCompactionState(compactionState));
+  }
+
+  @Test
+  public void testAnnotateWithLastCompactionState()
+  {
+    final CompactionState compactionState = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
+        ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
+        Collections.singletonMap("test", "map"),
+        Collections.singletonMap("test2", "map2")
+    );
+
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFn = CompactionState.compactionStateAnnotateFunction(
+        new DynamicPartitionsSpec(null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
+        ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
+        Collections.singletonMap("test", "map"),
+        Collections.singletonMap("test2", "map2")
+    );
+    final DataSegment segment1 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .lastCompactionState(compactionState)
+                                            .build();
+    final DataSegment segment2 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .build();
+    Assert.assertEquals(ImmutableSet.of(segment1), annotateFn.apply(ImmutableSet.of(segment2)));
   }
 
   @Test
