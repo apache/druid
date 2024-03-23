@@ -46,10 +46,10 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       message = (
         <p>
           The SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will operate with
-          limited functionality. Refer to {' '}
-          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> for instructions to enable the SQL
-          endpoint.
+          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will operate
+          with limited functionality. Refer to{' '}
+          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> for instructions to
+          enable the SQL endpoint.
         </p>
       );
       break;
@@ -58,8 +58,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'No management proxy mode';
       message = (
         <p>
-         The management proxy is not enabled, the console will operate with limited
-          functionality.
+          The management proxy is disabled, the console will operate with limited functionality.
         </p>
       );
       break;
@@ -68,8 +67,8 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'No SQL mode';
       message = (
         <p>
-          The SQL endpoint and management proxy are disabled.  You can only use the console
-          to make queries.
+          The SQL endpoint and management proxy are disabled. You can only use the console to make
+          JSON-based queries.
         </p>
       );
       break;
@@ -78,7 +77,9 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'Coordinator/Overlord mode';
       message = (
         <p>
-          You are accessing the console on the Coordinator/Overlord shared service. Because this service lacks access to some APIs, the console will operate in a limited mode. You can access the unrestricted version of the console on the Router service.
+          You are accessing the console on the Coordinator/Overlord shared service. Because this
+          service lacks access to some APIs, the console will operate in a limited mode. You can
+          access the unrestricted version of the console on the Router service.
         </p>
       );
       break;
@@ -87,9 +88,9 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'Coordinator mode';
       message = (
         <p>
-          It appears that you are accessing the console on the Coordinator service. Due to the lack
-          of access to some APIs on this service the console will operate in a limited mode. The
-          full version of the console can be accessed on the Router service.
+          You are accessing the console on the Coordinator service. Because this service lacks
+          access to some APIs, the console will operate in a limited mode. You can access the
+          unrestricted version of the console on the Router service.
         </p>
       );
       break;
@@ -98,9 +99,9 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'Overlord mode';
       message = (
         <p>
-          It appears that you are accessing the console on the Overlord service. Due to the lack of
-          access to some APIs on this service the console will operate in a limited mode. The
-          unrestricted version of the console can be accessed on the Router service.
+          You are accessing the console on the Overlord service. Because this service lacks access
+          to some APIs, the console will operate in a limited mode. You can access the unrestricted
+          version of the console on the Router service.
         </p>
       );
       break;
@@ -131,9 +132,9 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
             .
           </p>
           <p>
-            There is an issue with the console capability detection. You can enable the
-            unrestricted console but certain features might not work if the underlying APIs are not
-            available.
+            It is possible that the console is experiencing an issue with the capability detection.
+            You can enable the unrestricted console, but certain features might not work if the
+            underlying APIs are not available.
           </p>
           <p>
             <Button
