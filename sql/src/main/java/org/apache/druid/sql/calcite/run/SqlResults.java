@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -70,7 +71,7 @@ public class SqlResults
       } else if (value instanceof Boolean) {
         coercedValue = String.valueOf(value);
       } else {
-        final Object maybeList = maybeCoerceArrayToList(value, false);
+        final Object maybeList = coerceArrayToList(value, false);
 
         // Check if "maybeList" was originally a Collection of some kind, or was able to be coerced to one.
         // Then Iterate through the collection, coercing each value. Useful for handling multi-value dimensions.
@@ -152,10 +153,7 @@ public class SqlResults
         // the protobuf jdbc handler prefers lists (it actually can't handle java arrays as sql arrays, only java lists)
         // the json handler could handle this just fine, but it handles lists as sql arrays as well so just convert
         // here if needed
-        coercedValue = maybeCoerceArrayToList(value, true);
-        if (coercedValue == null) {
-          throw cannotCoerce(value, sqlTypeName, fieldName);
-        }
+        coercedValue = coerceArrayToList(value, true);
       }
     } else {
       throw cannotCoerce(value, sqlTypeName, fieldName);
@@ -166,11 +164,11 @@ public class SqlResults
 
   /**
    * Attempt to coerce a value to {@link List}. If it cannot be coerced, either return the original value (if mustCoerce
-   * is false) or return null (if mustCoerce is true).
+   * is false) or return the value as a single element list (if mustCoerce is true).
    */
   @VisibleForTesting
   @Nullable
-  static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  static Object coerceArrayToList(Object value, boolean mustCoerce)
   {
     if (value instanceof List) {
       return value;
@@ -184,7 +182,7 @@ public class SqlResults
       final Object[] array = (Object[]) value;
       final ArrayList<Object> lst = new ArrayList<>(array.length);
       for (Object o : array) {
-        lst.add(maybeCoerceArrayToList(o, false));
+        lst.add(coerceArrayToList(o, false));
       }
       return lst;
     } else if (value instanceof long[]) {
@@ -199,7 +197,7 @@ public class SqlResults
       }
       return lst;
     } else if (mustCoerce) {
-      return null;
+      return Collections.singletonList(value);
     }
     return value;
   }

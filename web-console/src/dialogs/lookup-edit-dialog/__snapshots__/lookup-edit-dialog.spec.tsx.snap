@@ -127,33 +127,28 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           },
           {
             "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                URI for the file of interest, specified as a 
-                <Unknown>
-                  file
-                </Unknown>
-                , 
-                <Unknown>
-                  hdfs
-                </Unknown>
-                ,
-                 
-                <Unknown>
-                  s3
-                </Unknown>
-                , or 
-                <Unknown>
-                  gs
-                </Unknown>
-                 path
-              </p>
-              <p>
-                The URI prefix option is strictly better than URI and should be used instead
-              </p>
-            </React.Fragment>,
+            "info": <p>
+              URI for the file of interest, specified as a 
+              <Unknown>
+                file
+              </Unknown>
+              , 
+              <Unknown>
+                hdfs
+              </Unknown>
+              ,
+               
+              <Unknown>
+                s3
+              </Unknown>
+              , or 
+              <Unknown>
+                gs
+              </Unknown>
+               path
+            </p>,
             "issueWithValue": [Function],
-            "label": "URI (deprecated)",
+            "label": "URI",
             "name": "extractionNamespace.uri",
             "placeholder": "s3://bucket/some/key/prefix/lookups-01.gz",
             "required": [Function],

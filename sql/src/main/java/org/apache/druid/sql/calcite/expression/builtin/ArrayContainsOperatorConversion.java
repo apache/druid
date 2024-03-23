@@ -67,7 +67,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
               )
           )
       )
-      .returnTypeInference(ReturnTypes.BOOLEAN)
+      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .build();
 
   public ArrayContainsOperatorConversion()
@@ -191,6 +191,6 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
         }
       }
     }
-    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+    return toExpressionFilter(plannerContext, druidExpressions);
   }
 }

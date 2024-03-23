@@ -33,24 +33,12 @@ public enum JoinAlgorithm
     {
       return false;
     }
-
-    @Override
-    public boolean canHandleLeftExpressions()
-    {
-      return true;
-    }
   },
   SORT_MERGE("sortMerge") {
     @Override
     public boolean requiresSubquery()
     {
       return true;
-    }
-
-    @Override
-    public boolean canHandleLeftExpressions()
-    {
-      return false;
     }
   };
 
@@ -83,11 +71,6 @@ public enum JoinAlgorithm
    * Whether this join algorithm requires subqueries for all inputs.
    */
   public abstract boolean requiresSubquery();
-
-  /**
-   * Whether this join algorithm is able to handle left-hand side expressions.
-   */
-  public abstract boolean canHandleLeftExpressions();
 
   @Override
   public String toString()

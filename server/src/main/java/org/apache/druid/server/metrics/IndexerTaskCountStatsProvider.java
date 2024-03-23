@@ -17,29 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.server.metrics;
 
-import java.util.Collection;
+import java.util.Map;
 
 /**
- * Exception thrown by {@link SegmentsMetadataManager} when a segment id is unknown.
- *
- * @deprecated Usages of this exception will be replaced by the new
- * {@link org.apache.druid.error.DruidException} in a future release.
+ * Provides task count metrics for the indexers
+ * These metrics are reported by indexers
  */
-@Deprecated
-public class UnknownSegmentIdsException extends Exception
+public interface IndexerTaskCountStatsProvider
 {
-  private final Collection<String> unknownSegmentIds;
+  /**
+   * Map from datasource name to the number of running tasks on the Indexer.
+   */
+  Map<String, Long> getWorkerRunningTasks();
 
-  UnknownSegmentIdsException(Collection<String> segmentIds)
-  {
-    super("Cannot find segment ids " + segmentIds);
-    this.unknownSegmentIds = segmentIds;
-  }
+  /**
+   * Map from datasource name to the number of assigned tasks to the Indexer.
+   */
+  Map<String, Long> getWorkerAssignedTasks();
 
-  public Collection<String> getUnknownSegmentIds()
-  {
-    return unknownSegmentIds;
-  }
+  /**
+   * Map from datasource name to the number of completed tasks by the Indexer.
+   */
+  Map<String, Long> getWorkerCompletedTasks();
 }

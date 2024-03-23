@@ -31,7 +31,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.joda.time.Interval;
@@ -100,7 +99,7 @@ public class TaskLockBoxConcurrencyTest
 
   @Test(timeout = 60_000L)
   public void testDoInCriticalSectionWithDifferentTasks()
-      throws ExecutionException, InterruptedException, EntryExistsException
+      throws ExecutionException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.ofPriority(10);
