@@ -59,7 +59,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a")))
                         .setDimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
                             new DefaultDimensionSpec("dim2", "d1")
@@ -101,7 +101,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a")))
                         .setDimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
                             new DefaultDimensionSpec("dim2", "d1")
@@ -167,7 +167,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(in("dim2", ImmutableList.of("en", "a"), null))
+                        .setDimFilter(in("dim2", ImmutableList.of("en", "a")))
                         .setDimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
                             new DefaultDimensionSpec("dim2", "d1")
@@ -272,7 +272,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a")))
                         .setDimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
                             new DefaultDimensionSpec("dim2", "d1")
@@ -314,7 +314,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a")))
                         .setDimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
                             new DefaultDimensionSpec("dim2", "d1")

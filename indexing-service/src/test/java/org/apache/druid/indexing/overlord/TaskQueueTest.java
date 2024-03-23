@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +29,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.HttpInputSource;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.error.DruidException;
@@ -39,10 +47,14 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
 import org.apache.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
@@ -53,14 +65,21 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerTest;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
+import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -73,6 +92,8 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,7 +131,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(),
         actionClientFactory,
         getLockbox(),
-        serviceEmitter
+        serviceEmitter,
+        getObjectMapper()
     );
     taskQueue.setActive();
   }
@@ -317,7 +339,8 @@ public class TaskQueueTest extends IngestionTestBase
         taskRunner,
         actionClientFactory,
         getLockbox(),
-        serviceEmitter
+        serviceEmitter,
+        getObjectMapper()
     );
     taskQueue.setActive();
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -403,7 +426,8 @@ public class TaskQueueTest extends IngestionTestBase
         taskRunner,
         actionClientFactory,
         getLockbox(),
-        serviceEmitter
+        serviceEmitter,
+        getObjectMapper()
     );
     taskQueue.setActive();
 
@@ -413,6 +437,91 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(TaskStatus.running(runningTask), taskQueue.getTaskStatus(runningTask).get());
     Assert.assertEquals(TaskStatus.success(successfulTask), taskQueue.getTaskStatus(successfulTask).get());
     Assert.assertEquals(TaskStatus.failure(failedTask, failedTask), taskQueue.getTaskStatus(failedTask).get());
+  }
+
+  @Test
+  public void testGetActiveTaskRedactsPassword() throws JsonProcessingException
+  {
+    final String password = "AbCd_1234";
+    final ObjectMapper mapper = getObjectMapper();
+
+    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"));
+    mapper.setInjectableValues(new InjectableValues.Std()
+                                   .addValue(HttpInputSourceConfig.class, httpInputSourceConfig)
+                                   .addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
+
+    final SQLMetadataConnector derbyConnector = derbyConnectorRule.getConnector();
+    final TaskStorage taskStorage = new MetadataTaskStorage(
+        derbyConnector,
+        new TaskStorageConfig(null),
+        new DerbyMetadataStorageActionHandlerFactory(
+            derbyConnector,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            mapper
+        )
+    );
+
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null),
+        new DefaultTaskConfig(),
+        taskStorage,
+        EasyMock.createMock(HttpRemoteTaskRunner.class),
+        createActionClientFactory(),
+        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
+        new StubServiceEmitter("druid/overlord", "testHost"),
+        mapper
+    );
+
+    final DataSchema dataSchema = new DataSchema(
+        "DS",
+        new TimestampSpec(null, null, null),
+        new DimensionsSpec(null),
+        null,
+        new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null),
+        null
+    );
+    final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+        null,
+        new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
+                            "user",
+                            new DefaultPasswordProvider(password),
+                            null,
+                            httpInputSourceConfig),
+        new NoopInputFormat(),
+        null,
+        null
+    );
+    final ParallelIndexSupervisorTask taskWithPassword = new ParallelIndexSupervisorTask(
+        "taskWithPassword",
+        "taskWithPassword",
+        null,
+        new ParallelIndexIngestionSpec(
+            dataSchema,
+            ioConfig,
+            null
+        ),
+        null,
+        null,
+        false
+    );
+    Assert.assertTrue(mapper.writeValueAsString(taskWithPassword).contains(password));
+
+    taskQueue.start();
+    taskQueue.add(taskWithPassword);
+
+    final Optional<Task> taskInStorage = taskStorage.getTask(taskWithPassword.getId());
+    Assert.assertTrue(taskInStorage.isPresent());
+    final String taskInStorageAsString = mapper.writeValueAsString(taskInStorage.get());
+    Assert.assertFalse(taskInStorageAsString.contains(password));
+
+    final Optional<Task> taskInQueue = taskQueue.getActiveTask(taskWithPassword.getId());
+    Assert.assertTrue(taskInQueue.isPresent());
+    final String taskInQueueAsString = mapper.writeValueAsString(taskInQueue.get());
+    Assert.assertFalse(taskInQueueAsString.contains(password));
+
+    Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
