@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -108,14 +107,9 @@ public class TaskStorageQueryAdapter
   public Optional<Task> getTask(final String taskid)
   {
     if (taskQueue.isPresent()) {
-      try {
-        Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
-        if (activeTask.isPresent()) {
-          return activeTask;
-        }
-      }
-      catch (DruidException e) {
-        // do nothing
+      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
+      if (activeTask.isPresent()) {
+        return activeTask;
       }
     }
     return storage.getTask(taskid);

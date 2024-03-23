@@ -624,17 +624,15 @@ public class TaskQueueTest extends IngestionTestBase
 
     final Optional<Task> taskInStorage = taskStorage.getTask(taskWithPassword.getId());
     Assert.assertTrue(taskInStorage.isPresent());
-    Assert.assertFalse(mapper.writeValueAsString(taskInStorage.get()).contains(password));
-
+    final String taskInStorageAsString = mapper.writeValueAsString(taskInStorage.get());
+    Assert.assertFalse(taskInStorageAsString.contains(password));
 
     final Optional<Task> taskInQueue = taskQueue.getActiveTask(taskWithPassword.getId());
     Assert.assertTrue(taskInQueue.isPresent());
-    Assert.assertFalse(mapper.writeValueAsString(taskInQueue.get()).contains(password));
+    final String taskInQueueAsString = mapper.writeValueAsString(taskInQueue.get());
+    Assert.assertFalse(taskInQueueAsString.contains(password));
 
-    Assert.assertEquals(
-        mapper.writeValueAsString(taskInStorage.get()),
-        mapper.writeValueAsString(taskInQueue.get())
-    );
+    Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner(List<String> runningTasks)

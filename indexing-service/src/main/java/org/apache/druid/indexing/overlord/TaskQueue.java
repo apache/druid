@@ -157,7 +157,6 @@ public class TaskQueue
   private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
   private final AtomicInteger handledStatusUpdates = new AtomicInteger();
 
-
   public TaskQueue(
       TaskLockConfig lockConfig,
       TaskQueueConfig config,
@@ -982,7 +981,7 @@ public class TaskQueue
   /**
    * Returns an optional containing the task payload after successfully redacting credentials.
    * Returns an absent optional if there is no task payload corresponding to the taskId in memory.
-   * Throws JsonProcessingException if password could not be redacted due to serialization / deserialization failure
+   * Throws DruidException if password could not be redacted due to serialization / deserialization failure
    */
   public Optional<Task> getActiveTask(String id)
   {
