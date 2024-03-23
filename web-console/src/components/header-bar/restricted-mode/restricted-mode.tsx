@@ -78,10 +78,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       label = 'Coordinator/Overlord mode';
       message = (
         <p>
-          It appears that you are accessing the console on the Coordinator/Overlord shared service.
-          Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The unrestricted version of the console can be accessed on the Router
-          service.
+          You are accessing the console on the Coordinator/Overlord shared service. Because this service lacks access to some APIs, the console will operate in a limited mode. You can access the unrestricted version of the console on the Router service.
         </p>
       );
       break;
