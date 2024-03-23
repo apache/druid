@@ -67,8 +67,8 @@ import java.util.function.Function;
 
 public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
-  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP =
-      RowsAndColumns.makeAsMap(LazilyDecoratedRowsAndColumns.class);
+  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+      .makeAsMap(LazilyDecoratedRowsAndColumns.class);
 
   private RowsAndColumns base;
   private Interval interval;
@@ -246,18 +246,15 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       final RowSignature.Builder sigBob = RowSignature.builder();
 
       for (String col : cols) {
-        ColumnCapabilities capabilities;
-        capabilities = columnSelectorFactory.getColumnCapabilities(col);
+        final ColumnCapabilities capabilities;
+        if (virtualColumns != null) {
+          capabilities = virtualColumns.getColumnCapabilitiesWithFallback(columnSelectorFactory, col);
+        } else {
+          capabilities = columnSelectorFactory.getColumnCapabilities(col);
+        }
+
         if (capabilities != null) {
           sigBob.add(col, capabilities.toColumnType());
-          continue;
-        }
-        if (virtualColumns != null) {
-          capabilities = virtualColumns.getColumnCapabilities(columnSelectorFactory, col);
-          if (capabilities != null) {
-            sigBob.add(col, capabilities.toColumnType());
-            continue;
-          }
         }
       }
       final RowSignature signature = sigBob.build();

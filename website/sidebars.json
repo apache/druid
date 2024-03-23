@@ -14,6 +14,7 @@
       "tutorials/tutorial-rollup",
       "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
+      "tutorials/tutorial-append-data",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
       "tutorials/tutorial-delete-data",
@@ -25,13 +26,26 @@
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
-      "tutorials/tutorial-jupyter-index",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",
+      {
+        "type": "category",
+        "label": "Services",
+        "items": [
+          "design/coordinator",
+          "design/overlord",
+          "design/broker",
+          "design/router",
+          "design/historical",
+          "design/middlemanager",
+          "design/peons",
+          "design/indexer"
+        ]
+      },
+      "design/storage",
       "design/segments",
-      "design/processes",
       "design/deep-storage",
       "design/metadata-storage",
       "design/zookeeper"
@@ -66,10 +80,10 @@
         "type": "category",
         "label": "Streaming",
         "items": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion"
+          "ingestion/streaming",
+          "ingestion/supervisor",
+          "ingestion/kafka-ingestion",
+          "ingestion/kinesis-ingestion"
         ]
       },
       {
@@ -82,6 +96,7 @@
       },
       "ingestion/ingestion-spec",
       "ingestion/schema-design",
+      "ingestion/concurrent-append-replace",
       "ingestion/faq"
     ],
     "Data management": [
@@ -108,6 +123,7 @@
         "label": "Druid SQL",
         "items": [
           "querying/sql",
+          "querying/sql-functions",
           "querying/tips-good-queries",
           "querying/query-deep-storage",
           "querying/sql-data-types",
@@ -118,13 +134,13 @@
           "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
-          "querying/sql-functions",
           "querying/sql-query-context",
           "querying/sql-metadata-tables",
           "querying/sql-translation"
         ]
       },
       "querying/querying",
+      "querying/query-processing",
       "querying/query-execution",
       "querying/troubleshooting",
       {
@@ -278,6 +294,10 @@
     ],
     "Misc": [
       "misc/papers-and-talks"
+    ],
+    "Release info": [
+      "release-info/release-notes",
+      "release-info/upgrade-notes"
     ]
-      }
+  }
 }

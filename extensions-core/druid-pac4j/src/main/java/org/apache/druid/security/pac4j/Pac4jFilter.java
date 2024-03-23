@@ -23,14 +23,14 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.pac4j.core.config.Config;
-import org.pac4j.core.context.J2EContext;
+import org.pac4j.core.context.JEEContext;
 import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
-import org.pac4j.core.http.adapter.HttpActionAdapter;
-import org.pac4j.core.profile.CommonProfile;
+import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
+import org.pac4j.core.profile.UserProfile;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -47,12 +47,10 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private static final HttpActionAdapter<String, J2EContext> NOOP_HTTP_ACTION_ADAPTER = (int code, J2EContext ctx) -> null;
-
   private final Config pac4jConfig;
-  private final SecurityLogic<String, J2EContext> securityLogic;
-  private final CallbackLogic<String, J2EContext> callbackLogic;
-  private final SessionStore<J2EContext> sessionStore;
+  private final SecurityLogic<Object, JEEContext> securityLogic;
+  private final CallbackLogic<Object, JEEContext> callbackLogic;
+  private final SessionStore<JEEContext> sessionStore;
 
   private final String name;
   private final String authorizerName;
@@ -88,20 +86,20 @@ public class Pac4jFilter implements Filter
 
     HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
     HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
-    J2EContext context = new J2EContext(httpServletRequest, httpServletResponse, sessionStore);
+    JEEContext context = new JEEContext(httpServletRequest, httpServletResponse, sessionStore);
 
     if (Pac4jCallbackResource.SELF_URL.equals(httpServletRequest.getRequestURI())) {
       callbackLogic.perform(
           context,
           pac4jConfig,
-          NOOP_HTTP_ACTION_ADAPTER,
+          JEEHttpActionAdapter.INSTANCE,
           "/",
           true, false, false, null);
     } else {
-      String uid = securityLogic.perform(
+      Object uid = securityLogic.perform(
           context,
           pac4jConfig,
-          (J2EContext ctx, Collection<CommonProfile> profiles, Object... parameters) -> {
+          (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
             if (profiles.isEmpty()) {
               LOGGER.warn("No profiles found after OIDC auth.");
               return null;
@@ -109,11 +107,13 @@ public class Pac4jFilter implements Filter
               return profiles.iterator().next().getId();
             }
           },
-          NOOP_HTTP_ACTION_ADAPTER,
-          null, null, null, null);
-
+          JEEHttpActionAdapter.INSTANCE,
+          null, "none", null, null);
+      // Changed the Authorizer from null to "none".
+      // In the older version, if it is null, it simply grant access and returns authorized.
+      // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
       if (uid != null) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(uid.toString(), authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       }

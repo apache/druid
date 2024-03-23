@@ -1,0 +1,107 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "2.2"
+services:
+  druid-zookeeper-kafka:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-zookeeper-kafka
+
+  druid-metadata-storage:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-metadata-storage
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+
+  druid-coordinator:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-coordinator
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - druid_centralizedDatasourceSchema_enabled=true
+      - druid_centralizedDatasourceSchema_announceRealtimeSegmentSchema=true
+      - druid_coordinator_segmentMetadata_metadataRefreshPeriod=PT15S
+    depends_on:
+      - druid-overlord
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
+
+  druid-overlord:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-overlord
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
+
+  druid-historical:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-historical
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+
+  druid-middlemanager:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-middlemanager
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - druid_centralizedDatasourceSchema_announceRealtimeSegmentSchema=true
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-overlord
+
+  druid-broker:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-broker
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - druid_sql_planner_metadataRefreshPeriod=PT20S
+      - druid_sql_planner_disableSegmentMetadataQueries=true
+    depends_on:
+      - druid-coordinator
+      - druid-zookeeper-kafka
+      - druid-middlemanager
+      - druid-historical
+
+  druid-router:
+    extends:
+      file: docker-compose.base.yml
+      service: druid-router
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-coordinator
+      - druid-broker
+      - druid-overlord
+
+networks:
+  druid-it-net:
+    name: druid-it-net
+    ipam:
+      config:
+        - subnet: 172.172.172.0/24

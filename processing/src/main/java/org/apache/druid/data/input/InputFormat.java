@@ -30,6 +30,8 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
@@ -84,5 +86,16 @@ public interface InputFormat
   default long getWeightedSize(String path, long size)
   {
     return size;
+  }
+
+  /**
+   * Returns an adapter that can read the rows from {@link #createReader(InputRowSchema, InputEntity, File)},
+   * given a particular {@link InputRowSchema}. Note that {@link RowAdapters#standardRow()} always works, but the
+   * one returned by this method may be more performant.
+   */
+  @SuppressWarnings("unused") // inputRowSchema is currently unused, but may be used in the future for ColumnsFilter
+  default RowAdapter<InputRow> createRowAdapter(InputRowSchema inputRowSchema)
+  {
+    return RowAdapters.standardRow();
   }
 }

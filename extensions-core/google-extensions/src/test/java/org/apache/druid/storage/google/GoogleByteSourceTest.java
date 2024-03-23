@@ -36,7 +36,7 @@ public class GoogleByteSourceTest extends EasyMockSupport
     GoogleStorage storage = createMock(GoogleStorage.class);
     InputStream stream = createMock(InputStream.class);
 
-    EasyMock.expect(storage.get(bucket, path)).andReturn(stream);
+    EasyMock.expect(storage.getInputStream(bucket, path)).andReturn(stream);
 
     replayAll();
 
@@ -54,7 +54,7 @@ public class GoogleByteSourceTest extends EasyMockSupport
     final String path = "/path/to/file";
     GoogleStorage storage = createMock(GoogleStorage.class);
 
-    EasyMock.expect(storage.get(bucket, path)).andThrow(new IOException(""));
+    EasyMock.expect(storage.getInputStream(bucket, path)).andThrow(new IOException(""));
 
     replayAll();
 

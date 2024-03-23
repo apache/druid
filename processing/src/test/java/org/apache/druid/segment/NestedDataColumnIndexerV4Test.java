@@ -551,7 +551,6 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
         () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
@@ -560,7 +559,6 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
         () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1.1, "y", 2L)), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);

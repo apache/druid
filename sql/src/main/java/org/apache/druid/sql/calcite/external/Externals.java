@@ -292,6 +292,8 @@ public class Externals
       case FLOAT:
       case REAL:
         return SqlType.FLOAT.name();
+      case ARRAY:
+        return convertType(name, dataType.getComponentTypeSpec()) + " " + SqlType.ARRAY.name();
       default:
         throw unsupportedType(name, dataType);
     }

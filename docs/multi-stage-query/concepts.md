@@ -34,7 +34,7 @@ sidebar_label: "Key concepts"
 The `druid-multi-stage-query` extension adds a multi-stage query (MSQ) task engine that executes SQL statements as batch
 tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).
 [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) tasks publish
-[segments](../design/architecture.md#datasources-and-segments) just like [all other forms of batch
+[segments](../design/storage.md) just like [all other forms of batch
 ingestion](../ingestion/index.md#batch). Each query occupies at least two task slots while running: one controller task,
 and at least one worker task. As an experimental feature, the MSQ task engine also supports running SELECT queries as
 batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
@@ -115,6 +115,14 @@ When deciding whether to use `REPLACE` or `INSERT`, keep in mind that segments g
 with dimension-based pruning but those generated with `INSERT` cannot. For more information about the requirements
 for dimension-based pruning, see [Clustering](#clustering).
 
+### Write to an external destination with `EXTERN`
+
+Query tasks can write data to an external destination through the `EXTERN` function, when it is used with the `INTO`
+clause, such as `INSERT INTO EXTERN(...)`. The EXTERN function takes arguments that specify where to write the files.
+The format can be specified using an `AS` clause.
+
+For more information about the syntax, see [`EXTERN`](./reference.md#extern-function).
+
 ### Primary timestamp
 
 Druid tables always include a primary timestamp named `__time`.
@@ -192,16 +200,16 @@ To perform ingestion with rollup:
 2. Set [`finalizeAggregations: false`](reference.md#context-parameters) in your context. This causes aggregation
    functions to write their internal state to the generated segments, instead of the finalized end result, and enables
    further aggregation at query time.
-3. See [ARRAY types](../querying/arrays.md#sql-based-ingestion-with-rollup) for information about ingesting `ARRAY` columns
-4. See [multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion-with-rollup) for information to ingest multi-value VARCHAR columns
+3. See [ARRAY types](../querying/arrays.md#sql-based-ingestion) for information about ingesting `ARRAY` columns
+4. See [multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion) for information to ingest multi-value VARCHAR columns
 
 When you do all of these things, Druid understands that you intend to do an ingestion with rollup, and it writes
 rollup-related metadata into the generated segments. Other applications can then use [`segmentMetadata`
 queries](../querying/segmentmetadataquery.md) to retrieve rollup-related information.
 
 The following [aggregation functions](../querying/sql-aggregations.md) are supported for rollup at ingestion time:
-`COUNT` (but switch to `SUM` at query time), `SUM`, `MIN`, `MAX`, `EARLIEST` and `EARLIEST_BY` ([string only](known-issues.md#select-statement)),
-`LATEST` and `LATEST_BY` ([string only](known-issues.md#select-statement)), `APPROX_COUNT_DISTINCT`, `APPROX_COUNT_DISTINCT_BUILTIN`,
+`COUNT` (but switch to `SUM` at query time), `SUM`, `MIN`, `MAX`, `EARLIEST` and `EARLIEST_BY`,
+`LATEST` and `LATEST_BY`, `APPROX_COUNT_DISTINCT`, `APPROX_COUNT_DISTINCT_BUILTIN`,
 `APPROX_COUNT_DISTINCT_DS_HLL`, `APPROX_COUNT_DISTINCT_DS_THETA`, and `DS_QUANTILES_SKETCH` (but switch to
 `APPROX_QUANTILE_DS` at query time). Do not use `AVG`; instead, use `SUM` and `COUNT` at ingest time and compute the
 quotient at query time.

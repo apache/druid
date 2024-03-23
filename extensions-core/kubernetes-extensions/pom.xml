@@ -30,13 +30,26 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>29.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <kubernetes.client.version>11.0.4</kubernetes.client.version>
+    <kubernetes.client.version>19.0.0</kubernetes.client.version>
   </properties>
+
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- This is an indirect dependency of io.kubernetes.client-java
+      update to address vulnerability in transitive dependency okio used by okhttp -->
+      <dependency>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
+          <version>4.12.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -78,18 +91,6 @@
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <scope>test</scope>
-    </dependency>
-
-    <!-- Version override to address CVE-2020-28052 -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-ext-jdk15on</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <!-- others -->
@@ -137,6 +138,18 @@
   </dependencies>
 
   <build>
+    <pluginManagement>
+        <plugins>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-dependency-plugin</artifactId>
+              <configuration>
+              <!-- analyze incorrectly flags this dependency as missing when omitted, and unused when declared -->
+                <ignoredDependencies>io.kubernetes:client-java-api-fluent:jar:19.0.0</ignoredDependencies>
+              </configuration>
+          </plugin>
+        </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.jacoco</groupId>

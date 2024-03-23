@@ -33,6 +33,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -214,6 +215,13 @@ public class TestCoordinatorServerView extends CoordinatorServerView
             execAndCallback.rhs.segmentRemoved(segment);
           }
         })
+    );
+  }
+
+  public void addSegmentSchemas(SegmentSchemas segmentSchemas)
+  {
+    timelineCallbackExecs.forEach(
+        execAndCallback -> execAndCallback.lhs.execute(() -> execAndCallback.rhs.segmentSchemasAnnounced(segmentSchemas))
     );
   }
 

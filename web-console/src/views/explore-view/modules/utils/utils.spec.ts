@@ -42,4 +42,17 @@ describe('shiftTimeInWhere', () => {
       `(TIME_SHIFT(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1), 'PT1H', -1) <= "__time" AND "__time" < TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1))`,
     );
   });
+
+  it('works with relative time (specific timestamps)', () => {
+    expect(
+      shiftTimeInWhere(
+        SqlExpression.parse(
+          `TIMESTAMP '2016-06-27 20:31:02.498' <= "__time" AND "__time" < TIMESTAMP '2016-06-27 21:31:02.498'`,
+        ),
+        'PT1H',
+      ).toString(),
+    ).toEqual(
+      `TIME_SHIFT(TIMESTAMP '2016-06-27 20:31:02.498', 'PT1H', -1) <= "__time" AND "__time" < TIME_SHIFT(TIMESTAMP '2016-06-27 21:31:02.498', 'PT1H', -1)`,
+    );
+  });
 });

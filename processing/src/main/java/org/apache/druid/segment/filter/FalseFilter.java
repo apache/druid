@@ -24,7 +24,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -56,12 +55,6 @@ public class FalseFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    return 0;
-  }
-
-  @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     return ConstantMatcherType.ALL_FALSE.asValueMatcher();
@@ -71,12 +64,6 @@ public class FalseFilter implements Filter
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
     return ConstantMatcherType.ALL_FALSE.asVectorMatcher(factory.getReadableVectorInspector());
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return true;
   }
 
   @Override

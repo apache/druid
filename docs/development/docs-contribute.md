@@ -101,7 +101,8 @@ Now you're up to date, and you can make your changes.
    git checkout -b MY-BRANCH
    ```
 
-Provide a name for your feature branch in `MY-BRANCH`.
+   Provide a name for your feature branch in `MY-BRANCH`.
+
 2. Find the file that you want to make changes to. All the source files for the docs are written in Markdown and located in the `docs` directory. The URL for the page includes the subdirectory the source file is in. For example, the SQL-based ingestion tutorial found at `https://druid.apache.org/docs/latest/tutorials/tutorial-msq-extern.html` is in the `tutorials` subdirectory.
    
    If you're adding a page, create a new Markdown file in the appropriate subdirectory. Then, copy the front matter and Apache license from an existing file. Update the `title` and `id` fields. Don't forget to add it to `website/sidebars.json` so that your new page shows up in the navigation.
@@ -111,6 +112,11 @@ Provide a name for your feature branch in `MY-BRANCH`.
 5. Use the following commands to run the link and spellcheckers locally: 
    
    ```bash
+   cd website
+   # You only need to install once
+   npm install
+   npm run build
+
    npm run spellcheck
    npm run link-lint
    ```
@@ -167,6 +173,32 @@ HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])
 **Incorrect**
 
 HUMAN_READABLE_BINARY_BYTE_FORMAT(value, \[precision])
+:::
+
+#### Markdown table format
+
+When editing or adding tables, do not include extra characters to "prettify" the table format within the Markdown source.
+Some code editors may format tables by default.
+See the developer [style guide](https://github.com/apache/druid/blob/master/dev/style-conventions.md) for more information.
+
+:::tip
+
+**Correct**
+
+```markdown
+| Column 1 | Column 2 | Column 3 |
+| --- | --- | --- |
+| value 1 | val 2 | a-very-long-value 3 |
+```
+
+**Incorrect**
+
+```markdown
+| Column 1 | Column 2 | Column 3            |
+| -------- | -------- | ------------------- |
+| value 1  | val 2    | a-very-long-value 3 |
+```
+
 :::
 
 ### Style checklist

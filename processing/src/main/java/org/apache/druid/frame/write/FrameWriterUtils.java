@@ -34,8 +34,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ComparableIntArray;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -164,10 +162,6 @@ public class FrameWriterUtils
       for (Object value : (Object[]) row) {
         retVal.add(getUtf8ByteBufferFromString((String) value));
       }
-    } else if (row instanceof ComparableStringArray) {
-      for (String value : ((ComparableStringArray) row).getDelegate()) {
-        retVal.add(getUtf8ByteBufferFromString(value));
-      }
     } else {
       throw new ISE("Unexpected type %s found", row.getClass().getName());
     }
@@ -199,10 +193,6 @@ public class FrameWriterUtils
       }
     } else if (row instanceof Object[]) {
       for (Object value : (Object[]) row) {
-        retVal.add((Number) value);
-      }
-    } else if (row instanceof ComparableList) {
-      for (Object value : ((ComparableList) row).getDelegate()) {
         retVal.add((Number) value);
       }
     } else if (row instanceof ComparableIntArray) {

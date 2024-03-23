@@ -32,8 +32,7 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +40,6 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -59,22 +56,13 @@ public class KubernetesPeonClientTest
   private KubernetesMockServer server;
   private KubernetesClientApi clientApi;
   private KubernetesPeonClient instance;
-  private ServiceEmitter serviceEmitter;
-  private Collection<Event> events;
+  private StubServiceEmitter serviceEmitter;
 
   @BeforeEach
   public void setup()
   {
     clientApi = new TestKubernetesClient(this.client);
-    events = new ArrayList<>();
-    serviceEmitter = new ServiceEmitter("service", "host", null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-        events.add(event);
-      }
-    };
+    serviceEmitter = new StubServiceEmitter("service", "host");
     instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
   }
 
@@ -102,11 +90,11 @@ public class KubernetesPeonClientTest
     Pod peonPod = instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS);
 
     Assertions.assertNotNull(peonPod);
-    Assertions.assertEquals(1, events.size());
+    Assertions.assertEquals(1, serviceEmitter.getEvents().size());
   }
 
   @Test
-  void test_launchPeonJobAndWaitForStart_withDisappearingPod_throwsKubernetesClientTimeoutException()
+  void test_launchPeonJobAndWaitForStart_withDisappearingPod_throwIllegalStateExceptionn()
   {
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -127,11 +115,38 @@ public class KubernetesPeonClientTest
         ).once();
 
     Assertions.assertThrows(
-        KubernetesClientTimeoutException.class,
+        IllegalStateException.class,
         () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
     );
   }
 
+  @Test
+  void test_launchPeonJobAndWaitForStart_withPendingPod_throwIllegalStateExceptionn()
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .build();
+
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(POD_NAME)
+        .addToLabels("job-name", KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP(null)
+        .endStatus()
+        .build();
+
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
+
+    Assertions.assertThrows(
+        KubernetesClientTimeoutException.class,
+        () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
+    );
+  }
+  
   @Test
   void test_waitForPeonJobCompletion_withSuccessfulJob_returnsJobResponseWithJobAndSucceededPeonPhase()
   {

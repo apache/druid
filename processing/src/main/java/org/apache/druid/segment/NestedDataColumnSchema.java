@@ -93,7 +93,7 @@ public class NestedDataColumnSchema extends DimensionSchema
     if (formatVersion == 4) {
       return new NestedDataColumnHandlerV4(getName());
     } else {
-      return new NestedCommonFormatColumnHandler(getName());
+      return new NestedCommonFormatColumnHandler(getName(), null);
     }
   }
 

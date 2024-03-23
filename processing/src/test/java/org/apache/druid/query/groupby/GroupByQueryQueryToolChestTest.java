@@ -47,6 +47,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.SerializablePairLongFloat;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
@@ -960,9 +963,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   {
     switch (valueType) {
       case LONG:
+        return new SerializablePairLongLong(123L, (long) dimValue);
       case DOUBLE:
+        return new SerializablePairLongDouble(123L, (double) dimValue);
       case FLOAT:
-        return new SerializablePair<>(123L, dimValue);
+        return new SerializablePairLongFloat(123L, (float) dimValue);
       case STRING:
         return new SerializablePairLongString(123L, (String) dimValue);
       default:
@@ -986,7 +991,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
             )
         )
         .setPostAggregatorSpecs(
-            ImmutableList.of(new ConstantPostAggregator("post", 10))
+            new ConstantPostAggregator("post", 10),
+            new ConstantPostAggregator("post2", 20)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
@@ -1017,14 +1023,14 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertEquals(result1, fromCacheResult);
 
     // test timestamps that result in integer size millis
-    final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10);
+    final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10, 20);
 
     // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
     final ResultRow typeAdjustedResult2;
     if (valueType.is(ValueType.FLOAT)) {
-      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2.1d, 10);
+      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2.1d, 10, 20);
     } else if (valueType.is(ValueType.LONG)) {
-      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2, 10);
+      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2, 10, 20);
     } else {
       typeAdjustedResult2 = result2;
     }

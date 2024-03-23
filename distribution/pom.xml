@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>29.0.0-SNAPSHOT</version>
+        <version>30.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -443,13 +443,21 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-ddsketch</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:gce-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:aliyun-oss-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-iceberg-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-iceberg-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-deltalake-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-spectator-histogram</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-rabbit-indexing-service</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

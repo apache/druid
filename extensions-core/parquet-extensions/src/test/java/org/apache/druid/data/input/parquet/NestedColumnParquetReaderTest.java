@@ -51,8 +51,8 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("nestedData"),
-                new AutoTypeColumnSchema("t_nestedData_listDim"),
+                new AutoTypeColumnSchema("nestedData", null),
+                new AutoTypeColumnSchema("t_nestedData_listDim", null),
                 new StringDimensionSchema("t_nestedData_listDim_string"),
                 new StringDimensionSchema("t_nestedData_dim2"),
                 new LongDimensionSchema("t_nestedData_dim3"),
@@ -105,10 +105,10 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("a1"),
-                new AutoTypeColumnSchema("a2"),
-                new AutoTypeColumnSchema("t_a2"),
-                new AutoTypeColumnSchema("t_a1_b1"),
+                new AutoTypeColumnSchema("a1", null),
+                new AutoTypeColumnSchema("a2", null),
+                new AutoTypeColumnSchema("t_a2", null),
+                new AutoTypeColumnSchema("t_a1_b1", null),
                 new LongDimensionSchema("t_a1_b1_c1"),
                 new LongDimensionSchema("t_e2_0_b1"),
                 new LongDimensionSchema("tt_a2_0_b1")

@@ -41,18 +41,6 @@ import java.util.Map;
 public class BasicAuthUtilsTest
 {
   @Test
-  public void testHashPassword()
-  {
-    char[] password = "HELLO".toCharArray();
-    int iterations = BasicAuthUtils.DEFAULT_KEY_ITERATIONS;
-    byte[] salt = BasicAuthUtils.generateSalt();
-    byte[] hash = BasicAuthUtils.hashPassword(password, salt, iterations);
-
-    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
-  }
-
-  @Test
   public void testPermissionSerdeIsChillAboutUnknownEnumStuffs() throws JsonProcessingException
   {
     final String someRoleName = "some-role";

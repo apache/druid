@@ -238,7 +238,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
         null
     );
 
-    ColumnCapabilities capabilities = virtualColumns.getColumnCapabilities(storageAdapter, "v");
+    ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(storageAdapter, "v");
 
     int rowCount = 0;
     if (capabilities.isDictionaryEncoded().isTrue()) {

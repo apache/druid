@@ -25,7 +25,7 @@ import com.google.api.client.http.FileContent;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -84,10 +84,7 @@ public class GcsTestUtil
     GoogleCredential finalCredential = credential;
     return new GoogleStorage(
         Suppliers.memoize(
-            () -> new Storage
-                .Builder(httpTransport, jsonFactory, finalCredential)
-                .setApplicationName("GcsTestUtil")
-                .build()
+            () -> StorageOptions.getDefaultInstance().getService()
         )
     );
   }
@@ -102,7 +99,7 @@ public class GcsTestUtil
     );
   }
 
-  public void deleteFileFromGcs(String gcsObjectName) throws IOException
+  public void deleteFileFromGcs(String gcsObjectName)
   {
     LOG.info("Deleting object %s at path %s in bucket %s", gcsObjectName, GOOGLE_PREFIX, GOOGLE_BUCKET);
     googleStorageClient.delete(GOOGLE_BUCKET, GOOGLE_PREFIX + "/" + gcsObjectName);

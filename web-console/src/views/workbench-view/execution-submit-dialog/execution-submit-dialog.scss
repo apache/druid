@@ -21,11 +21,21 @@
 .execution-submit-dialog {
   &.#{$bp-ns}-dialog {
     top: 5%;
-    width: 90%;
+    width: 500px;
   }
+}
 
-  .execution-submit-dialog-textarea {
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+.#{$bp-ns}-overlay-backdrop.dragging-file {
+  &::after {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 3px dashed cyan;
+    border-radius: 20px;
+
+    pointer-events: none;
+    content: '';
   }
 }

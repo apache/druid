@@ -25,6 +25,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class StringAnyBufferAggregator implements BufferAggregator
 {
@@ -34,11 +35,13 @@ public class StringAnyBufferAggregator implements BufferAggregator
 
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
+  private final boolean aggregateMultipleValues;
 
-  public StringAnyBufferAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes)
+  public StringAnyBufferAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes, boolean aggregateMultipleValues)
   {
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
+    this.aggregateMultipleValues = aggregateMultipleValues;
   }
 
   @Override
@@ -51,8 +54,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
-      final Object object = valueSelector.getObject();
-      String foundValue = DimensionHandlerUtils.convertObjectToString(object);
+      String foundValue = readValue(valueSelector.getObject());
       if (foundValue != null) {
         ByteBuffer mutationBuffer = buf.duplicate();
         mutationBuffer.position(position + FOUND_VALUE_OFFSET);
@@ -63,6 +65,27 @@ public class StringAnyBufferAggregator implements BufferAggregator
         buf.putInt(position, FOUND_AND_NULL_FLAG_VALUE);
       }
     }
+  }
+
+  private String readValue(Object object)
+  {
+    if (object == null) {
+      return null;
+    }
+    if (object instanceof List) {
+      List<Object> objectList = (List) object;
+      if (objectList.size() == 0) {
+        return null;
+      }
+      if (objectList.size() == 1) {
+        return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+      }
+      if (aggregateMultipleValues) {
+        return DimensionHandlerUtils.convertObjectToString(objectList);
+      }
+      return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+    }
+    return DimensionHandlerUtils.convertObjectToString(object);
   }
 
   @Override

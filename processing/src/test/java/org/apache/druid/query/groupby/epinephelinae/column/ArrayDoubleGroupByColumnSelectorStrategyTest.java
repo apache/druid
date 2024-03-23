@@ -20,12 +20,10 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.ImmutableList;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.data.ComparableList;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,15 +31,9 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ArrayDoubleGroupByColumnSelectorStrategyTest
 {
-  protected final List<List<Double>> dictionary = new ArrayList<>();
-
-  protected final Object2IntOpenHashMap<List<Double>> reverseDictionary = new Object2IntOpenHashMap<>();
-
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
 
@@ -50,16 +42,10 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
   @Before
   public void setup()
   {
-    dictionary.add(ImmutableList.of(1.0, 2.0));
-    dictionary.add(ImmutableList.of(2.0, 3.0));
-    dictionary.add(ImmutableList.of(1.0));
-
-    reverseDictionary.defaultReturnValue(-1);
-    reverseDictionary.put(ImmutableList.of(1.0, 2.0), 0);
-    reverseDictionary.put(ImmutableList.of(2.0, 3.0), 1);
-    reverseDictionary.put(ImmutableList.of(1.0), 2);
-
-    strategy = new ArrayDoubleGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
+    strategy = new ArrayDoubleGroupByColumnSelectorStrategy();
+    addToStrategy(new Object[]{1.0, 2.0});
+    addToStrategy(ImmutableList.of(2.0, 3.0));
+    addToStrategy(new Double[]{1.0});
   }
 
   @Test
@@ -103,23 +89,28 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
 
   }
 
-
   @Test
   public void testSanity()
   {
+    testSanity(new Object[]{1.0, 2.0}, 0);
+    testSanity(new Object[]{2.0, 3.0}, 1);
+    testSanity(new Object[]{1.0}, 2);
+  }
+
+  private void testSanity(Object[] storedValue, int expectedIndex)
+  {
     ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of(1.0, 2.0));
-    Assert.assertEquals(0, strategy.computeDictionaryId(columnValueSelector));
+    Mockito.when(columnValueSelector.getObject()).thenReturn(storedValue);
+    Assert.assertEquals(expectedIndex, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
     ResultRow row = ResultRow.create(1);
 
-    buffer1.putInt(0);
+    buffer1.putInt(0, expectedIndex);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList<>(ImmutableList.of(1.0, 2.0)), row.get(0));
+    Assert.assertArrayEquals(storedValue, (Object[]) row.get(0));
   }
-
 
   @Test
   public void testAddingInDictionary()
@@ -134,7 +125,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList<>(ImmutableList.of(4.0, 2.0)), row.get(0));
+    Assert.assertArrayEquals(new Object[]{4.0, 2.0}, (Object[]) row.get(0));
   }
 
   @Test
@@ -149,7 +140,14 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
     ResultRow row = ResultRow.create(1);
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList<>(ImmutableList.of(4.0, 2.0)), row.get(0));
+    Assert.assertArrayEquals(new Object[]{4.0, 2.0}, (Object[]) row.get(0));
+  }
+
+  private void addToStrategy(Object value)
+  {
+    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
+    Mockito.when(columnValueSelector.getObject()).thenReturn(value);
+    strategy.computeDictionaryId(columnValueSelector);
   }
 
   @After

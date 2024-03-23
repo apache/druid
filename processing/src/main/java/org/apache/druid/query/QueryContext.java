@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -215,6 +216,11 @@ public class QueryContext
   public HumanReadableBytes getHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
   {
     return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
+  }
+
+  public HumanReadableBytes getHumanReadableBytes(final String key, final long defaultBytes)
+  {
+    return QueryContexts.getAsHumanReadableBytes(key, get(key), HumanReadableBytes.valueOf(defaultBytes));
   }
 
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
@@ -576,6 +582,15 @@ public class QueryContext
         QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING
     );
   }
+
+  public boolean isWindowingStrictValidation()
+  {
+    return getBoolean(
+        QueryContexts.WINDOWING_STRICT_VALIDATION,
+        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION
+    );
+  }
+
 
   public String getBrokerServiceName()
   {

@@ -100,8 +100,7 @@ public class LookupInputSliceReader implements InputSliceReader
 
                       return ResourceHolder.fromCloseable(segment);
                     },
-                    null,
-                    new RichSegmentDescriptor(SegmentId.dummy(lookupName).toDescriptor(), null, null)
+                    new RichSegmentDescriptor(SegmentId.dummy(lookupName).toDescriptor(), null)
                 )
             )
         )

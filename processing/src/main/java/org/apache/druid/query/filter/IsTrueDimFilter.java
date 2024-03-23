@@ -38,8 +38,8 @@ public class IsTrueDimFilter extends IsBooleanDimFilter
   }
 
   @Override
-  public DimFilter optimize()
+  public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    return new IsTrueDimFilter(getField().optimize());
+    return new IsTrueDimFilter(getField().optimize(mayIncludeUnknown));
   }
 }

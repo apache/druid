@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -38,6 +40,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 /**
  *
@@ -82,7 +85,8 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
         try {
           doDispose();
           // Log statement goes after doDispose(), because logging may fail (e. g. if we are in shutdownHooks).
-          log.error("OffHeapNamespaceExtractionCacheManager.disposeCache() was not called, disposed resources by the JVM");
+          log.error(
+              "OffHeapNamespaceExtractionCacheManager.disposeCache() was not called, disposed resources by the JVM");
         }
         catch (Throwable t) {
           try {
@@ -249,6 +253,23 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   {
     // nothing to do, allocate is create, no specialized implementation for populate then read-only pattern
     return cache;
+  }
+
+  @Override
+  public LookupExtractor asLookupExtractor(
+      final CacheHandler cacheHandler,
+      final boolean isOneToOne,
+      final Supplier<byte[]> cacheKeySupplier
+  )
+  {
+    return new MapLookupExtractor(cacheHandler.getCache(), isOneToOne)
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return cacheKeySupplier.get();
+      }
+    };
   }
 
   @Override

@@ -57,7 +57,7 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   }
 
   @Override
-  public Object getPayload()
+  public IngestionStatsAndErrorsTaskReportData getPayload()
   {
     return payload;
   }

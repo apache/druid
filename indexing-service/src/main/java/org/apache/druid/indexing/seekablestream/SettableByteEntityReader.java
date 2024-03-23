@@ -51,7 +51,7 @@ class SettableByteEntityReader<T extends ByteEntity> implements InputEntityReade
   )
   {
     Preconditions.checkNotNull(inputFormat, "inputFormat");
-    final InputFormat format = (inputFormat instanceof JsonInputFormat) ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
+    final InputFormat format = JsonInputFormat.withLineSplittable(inputFormat, false);
     this.entity = new SettableByteEntity<>();
     this.delegate = new TransformingInputEntityReader(
         format.createReader(inputRowSchema, entity, indexingTmpDir),

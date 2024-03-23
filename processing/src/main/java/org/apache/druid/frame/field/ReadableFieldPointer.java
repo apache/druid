@@ -20,10 +20,8 @@
 package org.apache.druid.frame.field;
 
 /**
- * Pointer to a field position in some memory. Only points to the beginning of the field, since all fields
- * can be read without knowing their entire length.
- *
- * See {@link org.apache.druid.frame.write.RowBasedFrameWriter} for details about the format.
+ * Pointer to a field position in some memory. See {@link org.apache.druid.frame.write.RowBasedFrameWriter} for details
+ * about the format.
  */
 public interface ReadableFieldPointer
 {
@@ -33,7 +31,8 @@ public interface ReadableFieldPointer
   long position();
 
   /**
-   * Length of the field.
+   * Length of the field. Never necessary to read a field, since all fields can be read without knowing their
+   * entire length. Provided because it may be useful for reading in a more optimal manner.
    */
   long length();
 }

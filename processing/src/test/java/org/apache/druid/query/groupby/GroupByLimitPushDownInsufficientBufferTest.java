@@ -138,7 +138,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                 .withRollup(withRollup)
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
   }

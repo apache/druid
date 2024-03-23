@@ -41,6 +41,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -74,17 +75,21 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
+  private final EtagProvider etagProvider;
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler
+      @Nullable QueryScheduler scheduler,
+      EtagProvider etagProvider
   )
   {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
+    this.etagProvider = etagProvider;
   }
+
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
@@ -159,6 +164,11 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // to actually serve the queries
     return (theQuery, responseContext) -> {
       responseContext.initializeRemainingResponses();
+
+      String etag = etagProvider.getEtagFor(theQuery.getQuery());
+      if (etag != null) {
+        responseContext.put(Keys.ETAG, etag);
+      }
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
       if (scheduler != null) {

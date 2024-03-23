@@ -200,11 +200,13 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               {RuleUtil.hasIncludeFuture(rule) && (
                 <Switch
                   className="include-future"
-                  checked={rule.includeFuture || false}
+                  checked={RuleUtil.getIncludeFuture(rule)}
                   label="Include future"
                   disabled={disabled}
                   onChange={() => {
-                    onChange?.(RuleUtil.changeIncludeFuture(rule, !rule.includeFuture));
+                    onChange?.(
+                      RuleUtil.changeIncludeFuture(rule, !RuleUtil.getIncludeFuture(rule)),
+                    );
                   }}
                 />
               )}

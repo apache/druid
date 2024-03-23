@@ -554,11 +554,12 @@ ORDER BY
               switch (row.service_type) {
                 case 'middle_manager':
                 case 'indexer': {
-                  if (deepGet(row, 'worker.version') === '') return 'Disabled';
                   const { workerInfo } = row;
                   if (!workerInfo) {
                     return 'Could not get detail info';
                   }
+
+                  if (workerInfo.worker.version === '') return 'Disabled';
 
                   const details: string[] = [];
                   if (workerInfo.lastCompletedTaskTime) {

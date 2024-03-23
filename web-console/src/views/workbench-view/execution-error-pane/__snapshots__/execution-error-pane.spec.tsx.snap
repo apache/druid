@@ -21,7 +21,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   <div>
     Failed task ID: 
     <Memo(ClickToCopy)
-      text="query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0"
+      text="query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0"
     />
     <React.Fragment>
        (on host: 

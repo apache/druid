@@ -100,7 +100,6 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     }
 
     final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(
-        plannerContext,
         virtualColumnRegistry,
         args.get(0),
         rexNodes.get(0)
@@ -113,13 +112,13 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
             aggregatorName,
             fieldName,
             EarliestLatestAnySqlAggregator.getColumnName(
-                plannerContext,
                 virtualColumnRegistry,
                 args.get(1),
                 rexNodes.get(1)
             ),
             outputType,
-            null
+            null,
+            true
         );
         break;
       case 3:
@@ -139,13 +138,13 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
             aggregatorName,
             fieldName,
             EarliestLatestAnySqlAggregator.getColumnName(
-                plannerContext,
                 virtualColumnRegistry,
                 args.get(1),
                 rexNodes.get(1)
             ),
             outputType,
-            maxStringBytes
+            maxStringBytes,
+            true
         );
         break;
       default:

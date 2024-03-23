@@ -26,9 +26,12 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
@@ -156,7 +159,7 @@ public class MetadataResource
     }
 
     if (includeOvershadowedStatus != null) {
-      // note that realtime segments are returned only when druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator
+      // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
       // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
       return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
     }
@@ -332,6 +335,51 @@ public class MetadataResource
     }
 
     return builder.entity(Collections2.transform(segments, DataSegment::getId)).build();
+  }
+
+  @GET
+  @Path("/datasources/{dataSourceName}/unusedSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getUnusedSegmentsInDataSource(
+      @Context final HttpServletRequest req,
+      @PathParam("dataSourceName") final String dataSource,
+      @QueryParam("interval") @Nullable String interval,
+      @QueryParam("limit") @Nullable Integer limit,
+      @QueryParam("lastSegmentId") @Nullable final String lastSegmentId,
+      @QueryParam("sortOrder") @Nullable final String sortOrder
+  )
+  {
+    if (dataSource == null || dataSource.isEmpty()) {
+      throw InvalidInput.exception("dataSourceName must be non-empty");
+    }
+    if (limit != null && limit < 0) {
+      throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0", limit);
+    }
+
+    if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
+      throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+    }
+
+    SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
+
+    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+    Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+        dataSource,
+        theInterval,
+        limit,
+        lastSegmentId,
+        theSortOrder
+    );
+
+    final Function<DataSegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
+
+    final Iterable<DataSegmentPlus> authorizedSegments =
+        AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
+
+    final List<DataSegmentPlus> retVal = new ArrayList<>();
+    authorizedSegments.iterator().forEachRemaining(retVal::add);
+    return Response.status(Response.Status.OK).entity(retVal).build();
   }
 
   @GET

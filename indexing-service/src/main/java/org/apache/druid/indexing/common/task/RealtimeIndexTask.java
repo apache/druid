@@ -57,6 +57,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.SegmentPublisher;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -309,6 +310,16 @@ public class RealtimeIndexTask extends AbstractTask
             toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
           }
         }
+      }
+
+      @Override
+      public void announceSegmentSchemas(String taskId, SegmentSchemas sinksSchema, SegmentSchemas sinksSchemaChange)
+      {
+      }
+
+      @Override
+      public void removeSegmentSchemasForTask(String taskId)
+      {
       }
     };
 

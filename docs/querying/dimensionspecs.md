@@ -376,7 +376,7 @@ be treated as missing.
 It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
 
 A property of `injective` can override the lookup's own sense of whether or not it is
-[injective](lookups.md#query-execution). If left unspecified, Druid will use the registered cluster-wide lookup
+[injective](lookups.md#injective-lookups). If left unspecified, Druid will use the registered cluster-wide lookup
 configuration.
 
 A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).

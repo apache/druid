@@ -563,10 +563,19 @@ public class Expressions
           );
         } else {
           if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
-            // return null to fallback to using an expression filter
-            return null;
+            if (virtualColumnRegistry != null) {
+              String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                  druidExpression,
+                  druidExpression.getDruidType()
+              );
+              equalFilter = NullFilter.forColumn(column);
+            } else {
+              // virtual column registry unavailable, fallback to expression filter
+              return null;
+            }
+          } else {
+            equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
           }
-          equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
         }
       } else if (virtualColumnRegistry != null) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -666,7 +675,7 @@ public class Expressions
         );
       }
 
-      final String column;
+      String column;
       final ExtractionFn extractionFn;
       if (lhsExpression.isSimpleExtraction()) {
         column = lhsExpression.getSimpleExtraction().getColumn();
@@ -755,9 +764,22 @@ public class Expressions
       } else {
         final Object val = rhsParsed.getLiteralValue();
 
-        if (extractionFn != null || val == null) {
+        if (val == null) {
           // fall back to expression filter
           return null;
+        }
+
+        // extractionFn are not supported by equality/range filter
+        if (extractionFn != null) {
+          if (virtualColumnRegistry != null) {
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                lhsExpression,
+                lhs.getType()
+            );
+          } else {
+            // if this happens for some reason, bail and use an expression filter
+            return null;
+          }
         }
 
         final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
@@ -943,17 +965,17 @@ public class Expressions
                ? new NotDimFilter(Ranges.interval(rangeRefKey, interval))
                : Filtration.matchEverything();
       case GREATER_THAN:
-        return Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+        return Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
       case GREATER_THAN_OR_EQUAL:
         return isAligned
-               ? Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getStartMillis()))
-               : Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+               ? Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getStartMillis())
+               : Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
       case LESS_THAN:
         return isAligned
-               ? Ranges.lessThan(rangeRefKey, String.valueOf(interval.getStartMillis()))
-               : Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+               ? Ranges.lessThan(rangeRefKey, interval.getStartMillis())
+               : Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       case LESS_THAN_OR_EQUAL:
-        return Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+        return Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       default:
         throw new IllegalStateException("Shouldn't have got here");
     }

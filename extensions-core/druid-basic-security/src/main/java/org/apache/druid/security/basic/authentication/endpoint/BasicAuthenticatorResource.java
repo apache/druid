@@ -22,10 +22,14 @@ package org.apache.druid.security.basic.authentication.endpoint;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.AuthValidator;
+import org.apache.druid.server.security.AuthorizationUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -45,15 +49,18 @@ public class BasicAuthenticatorResource
 {
   private final BasicAuthenticatorResourceHandler handler;
   private final AuthValidator authValidator;
+  private final AuditManager auditManager;
 
   @Inject
   public BasicAuthenticatorResource(
       BasicAuthenticatorResourceHandler handler,
-      AuthValidator authValidator
+      AuthValidator authValidator,
+      AuditManager auditManager
   )
   {
     this.handler = handler;
     this.authValidator = authValidator;
+    this.auditManager = auditManager;
   }
 
   /**
@@ -151,7 +158,11 @@ public class BasicAuthenticatorResource
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
-    return handler.createUser(authenticatorName, userName);
+
+    final Response response = handler.createUser(authenticatorName, userName);
+    performAuditIfSuccess(authenticatorName, req, response, "Create user[%s]", userName);
+
+    return response;
   }
 
   /**
@@ -174,7 +185,10 @@ public class BasicAuthenticatorResource
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
-    return handler.deleteUser(authenticatorName, userName);
+    final Response response = handler.deleteUser(authenticatorName, userName);
+    performAuditIfSuccess(authenticatorName, req, response, "Delete user[%s]", userName);
+
+    return response;
   }
 
   /**
@@ -198,7 +212,10 @@ public class BasicAuthenticatorResource
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
-    return handler.updateUserCredentials(authenticatorName, userName, update);
+    final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
+    performAuditIfSuccess(authenticatorName, req, response, "Update credentials for user[%s]", userName);
+
+    return response;
   }
 
   /**
@@ -236,5 +253,36 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     return handler.authenticatorUserUpdateListener(authenticatorName, serializedUserMap);
+  }
+
+  private boolean isSuccess(Response response)
+  {
+    if (response == null) {
+      return false;
+    }
+
+    int responseCode = response.getStatus();
+    return responseCode >= 200 && responseCode < 300;
+  }
+
+  private void performAuditIfSuccess(
+      String authenticatorName,
+      HttpServletRequest request,
+      Response response,
+      String payloadFormat,
+      Object... payloadArgs
+  )
+  {
+    if (isSuccess(response)) {
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(authenticatorName)
+                    .type("basic.authenticator")
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(request))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
+                    .payload(StringUtils.format(payloadFormat, payloadArgs))
+                    .build()
+      );
+    }
   }
 }

@@ -24,14 +24,5 @@ package org.apache.druid.common.config;
 public interface ConfigSerde<T>
 {
   byte[] serialize(T obj);
-  /**
-   * Serialize object to String
-   *
-   * @param obj to be serialize
-   * @param skipNull if true, then skip serialization of any field with null value.
-   *                 This can be used to reduce the size of the resulting String.
-   * @return String serialization of the input
-   */
-  String serializeToString(T obj, boolean skipNull);
   T deserialize(byte[] bytes);
 }

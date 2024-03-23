@@ -30,7 +30,7 @@ public interface OverwriteShardSpec extends ShardSpec
 {
   /**
    * The core partition concept is not used with segment locking. Instead, the {@link AtomicUpdateGroup} is used
-   * to atomically overshadow segments. Here, we always returns 0 so that the {@link PartitionHolder} skips checking
+   * to atomically overshadow segments. Here, we always return 0 so that the {@link PartitionHolder} skips checking
    * the completeness of the core partitions.
    */
   @Override

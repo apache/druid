@@ -53,7 +53,7 @@ import java.util.UUID;
  *
  * This class has two primary uses: processing nested groupBys, and processing subtotals.
  *
- * This class has some similarity to {@link GroupByMergingQueryRunnerV2}, but is different enough that it deserved to
+ * This class has some similarity to {@link GroupByMergingQueryRunner}, but is different enough that it deserved to
  * be its own class. Some common code between the two classes is in {@link RowBasedGrouperHelper}.
  */
 public class GroupByRowProcessor

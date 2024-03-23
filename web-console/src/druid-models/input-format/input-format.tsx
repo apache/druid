@@ -22,7 +22,7 @@ import React from 'react';
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { compact, deepGet, deepSet, oneOf, typeIsKnown } from '../../utils';
+import { compact, deepGet, deepSet, oneOf, oneOfKnown, typeIsKnown } from '../../utils';
 import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 
 export interface InputFormat {
@@ -58,6 +58,7 @@ const KNOWN_TYPES = [
   'orc',
   'avro_ocf',
   'avro_stream',
+  'protobuf',
   'regex',
   'kafka',
   'javascript',
@@ -231,6 +232,44 @@ function generateInputFormatFields(streaming: boolean) {
       info: <>A custom delimiter for multi-value dimensions.</>,
     },
     {
+      name: 'avroBytesDecoder',
+      type: 'json',
+      defined: typeIsKnown(KNOWN_TYPES, 'avro_stream'),
+      required: true,
+      placeholder: `{ type: "schema_repo", ... }`,
+      info: (
+        <>
+          <p>Specifies how to decode bytes to Avro record.</p>
+          <p>
+            For more details refer to the{' '}
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats/#avro-bytes-decoder`}>
+              documentation
+            </ExternalLink>
+            .
+          </p>
+        </>
+      ),
+    },
+    {
+      name: 'schema',
+      type: 'json',
+      defined: typeIsKnown(KNOWN_TYPES, 'avro_ocf'),
+      info: (
+        <>
+          Define a reader schema to be used when parsing Avro records. This is useful when parsing
+          multiple versions of Avro OCF file data.
+        </>
+      ),
+    },
+    {
+      name: 'protoBytesDecoder',
+      type: 'json',
+      defined: typeIsKnown(KNOWN_TYPES, 'protobuf'),
+      required: true,
+      placeholder: `{ ... }`,
+      info: <>Specifies how to decode bytes to Protobuf record.</>,
+    },
+    {
       name: 'binaryAsString',
       type: 'boolean',
       defaultValue: false,
@@ -320,7 +359,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.featureSpec',
     label: 'Kafka key JSON parser features',
     type: 'json',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'json',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'json'),
     hideInMore: true,
     info: (
       <>
@@ -342,7 +381,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.assumeNewlineDelimited',
     label: 'Kafka key assume newline delimited',
     type: 'boolean',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'json',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'json'),
     disabled: inputFormat => Boolean(inputFormat.useJsonNodeReader),
     defaultValue: false,
     hideInMore: true,
@@ -370,7 +409,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.useJsonNodeReader',
     label: 'Kafka key use JSON node reader',
     type: 'boolean',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'json',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'json'),
     disabled: inputFormat => Boolean(inputFormat.assumeNewlineDelimited),
     defaultValue: false,
     hideInMore: true,
@@ -400,14 +439,15 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: '\t',
     suggestions: ['\t', ';', '|', '#'],
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'tsv',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'tsv'),
     info: <>A custom delimiter for data values.</>,
   },
   {
     name: 'keyFormat.pattern',
     label: 'Kafka key pattern',
     type: 'string',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'regex',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'regex'),
     required: true,
   },
   {
@@ -415,7 +455,8 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka key skip header rows',
     type: 'number',
     defaultValue: 0,
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'keyFormat.type'), 'csv', 'tsv'),
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'csv', 'tsv'),
     min: 0,
     info: (
       <>
@@ -427,7 +468,8 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.findColumnsFromHeader',
     label: 'Kafka key find columns from header',
     type: 'boolean',
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'keyFormat.type'), 'csv', 'tsv'),
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'csv', 'tsv'),
     required: true,
     hideInMore: true,
     info: (
@@ -463,12 +505,57 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: '\x01',
     suggestions: ['\x01', '\x00'],
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'keyFormat.type'), 'csv', 'tsv', 'regex'),
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'csv', 'tsv', 'regex'),
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
+    name: 'keyFormat.avroBytesDecoder',
+    label: 'Kafka key Avro bytes decoder',
+    type: 'json',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'avro_stream'),
+    required: true,
+    placeholder: `{ type: "schema_repo", ... }`,
+    info: (
+      <>
+        <p>Specifies how to decode bytes to Avro record.</p>
+        <p>
+          For more details refer to the{' '}
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats/#avro-bytes-decoder`}>
+            documentation
+          </ExternalLink>
+          .
+        </p>
+      </>
+    ),
+  },
+  {
+    name: 'keyFormat.schema',
+    label: 'Key format schema',
+    type: 'json',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'avro_ocf'),
+    info: (
+      <>
+        Define a reader schema to be used when parsing Avro records. This is useful when parsing
+        multiple versions of Avro OCF file data.
+      </>
+    ),
+  },
+  {
+    name: 'keyFormat.protoBytesDecoder',
+    label: 'Kafka key proto bytes decoder',
+    type: 'json',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'protobuf'),
+    required: true,
+    placeholder: `{ ... }`,
+    info: <>Specifies how to decode bytes to Protobuf record.</>,
+  },
+  {
     name: 'keyFormat.binaryAsString',
-    label: 'Kafka key list binary as string',
+    label: 'Kafka key binary as string',
     type: 'boolean',
     defaultValue: false,
     defined: inputFormat =>
@@ -498,7 +585,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka header format type',
     type: 'string',
     defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-    placeholder: `(don't parse Kafka herders)`,
+    placeholder: `(don't parse Kafka headers)`,
     suggestions: [undefined, 'string'],
   },
   {
@@ -529,5 +616,5 @@ export function inputFormatCanProduceNestedData(inputFormat: InputFormat): boole
       inputFormat.valueFormat && inputFormatCanProduceNestedData(inputFormat.valueFormat),
     );
   }
-  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream');
+  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream', 'protobuf');
 }

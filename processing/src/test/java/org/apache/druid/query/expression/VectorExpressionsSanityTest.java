@@ -22,7 +22,6 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -62,13 +61,8 @@ public class VectorExpressionsSanityTest extends InitializedNullHandlingTest
   static void testExpression(String expr, Expr parsed, Map<String, ExpressionType> types)
   {
     log.debug("[%s]", expr);
-    NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings;
-    for (int iterations = 0; iterations < NUM_ITERATIONS; iterations++) {
-      bindings = VectorExprSanityTest.makeRandomizedBindings(VECTOR_SIZE, types);
-      VectorExprSanityTest.testExpressionWithBindings(expr, parsed, bindings);
-    }
-    bindings = VectorExprSanityTest.makeSequentialBinding(VECTOR_SIZE, types);
-    VectorExprSanityTest.testExpressionWithBindings(expr, parsed, bindings);
+    VectorExprSanityTest.testExpression(expr, parsed, types, NUM_ITERATIONS);
+    VectorExprSanityTest.testSequentialBinding(expr, parsed, types);
   }
 
   @Test

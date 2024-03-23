@@ -28,6 +28,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -47,7 +48,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   private final Memory dataRegion;
   private final int keyFieldCount;
   private final List<FieldReader> keyFieldReaders;
-  private final long firstFieldPosition;
+  private final int firstFieldPosition;
   private final int[] ascDescRunLengths;
 
   private FrameComparisonWidgetImpl(
@@ -56,7 +57,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       final Memory rowOffsetRegion,
       final Memory dataRegion,
       final List<FieldReader> keyFieldReaders,
-      final long firstFieldPosition,
+      final int firstFieldPosition,
       final int[] ascDescRunLengths
   )
   {
@@ -138,21 +139,29 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   }
 
   @Override
-  public boolean isCompletelyNonNullKey(int row)
+  public boolean hasNonNullKeyParts(int row, int[] keyParts)
   {
-    if (keyFieldCount == 0) {
+    if (keyParts.length == 0) {
       return true;
     }
 
     final long rowPosition = getRowPositionInDataRegion(row);
-    long keyFieldPosition = rowPosition + (long) signature.size() * Integer.BYTES;
 
-    for (int i = 0; i < keyFieldCount; i++) {
-      final boolean isNull = keyFieldReaders.get(i).isNull(dataRegion, keyFieldPosition);
-      if (isNull) {
-        return false;
+    for (int i : keyParts) {
+      if (i < 0 || i >= keyFieldCount) {
+        throw new IAE("Invalid key part[%d]", i);
+      }
+
+      final long keyFieldPosition;
+
+      if (i == 0) {
+        keyFieldPosition = rowPosition + (long) signature.size() * Integer.BYTES;
       } else {
-        keyFieldPosition = rowPosition + dataRegion.getInt(rowPosition + (long) i * Integer.BYTES);
+        keyFieldPosition = rowPosition + dataRegion.getInt(rowPosition + (long) (i - 1) * Integer.BYTES);
+      }
+
+      if (keyFieldReaders.get(i).isNull(dataRegion, keyFieldPosition)) {
+        return false;
       }
     }
 
@@ -218,8 +227,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     final long rowPosition = getRowPositionInDataRegion(row);
     final long otherRowPosition = otherWidgetImpl.getRowPositionInDataRegion(otherRow);
 
-    long comparableBytesStartPositionInRow = firstFieldPosition;
-    long otherComparableBytesStartPositionInRow = otherWidgetImpl.firstFieldPosition;
+    int comparableBytesStartPositionInRow = firstFieldPosition;
+    int otherComparableBytesStartPositionInRow = otherWidgetImpl.firstFieldPosition;
 
     boolean ascending = true;
     int field = 0;
@@ -227,12 +236,12 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     for (int numFields : ascDescRunLengths) {
       if (numFields > 0) {
         final int nextField = field + numFields;
-        final long comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final long otherComparableBytesEndPositionInRow =
+        final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
+        final int otherComparableBytesEndPositionInRow =
             otherWidgetImpl.getFieldEndPositionInRow(otherRowPosition, nextField - 1);
 
-        final long comparableBytesLength = comparableBytesEndPositionInRow - comparableBytesStartPositionInRow;
-        final long otherComparableBytesLength =
+        final int comparableBytesLength = comparableBytesEndPositionInRow - comparableBytesStartPositionInRow;
+        final int otherComparableBytesLength =
             otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow;
 
         int cmp = FrameReaderUtils.compareMemoryUnsigned(
@@ -270,7 +279,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     }
   }
 
-  long getFieldEndPositionInRow(final long rowPosition, final int fieldNumber)
+  int getFieldEndPositionInRow(final long rowPosition, final int fieldNumber)
   {
     assert fieldNumber >= 0 && fieldNumber < signature.size();
     return dataRegion.getInt(rowPosition + (long) fieldNumber * Integer.BYTES);

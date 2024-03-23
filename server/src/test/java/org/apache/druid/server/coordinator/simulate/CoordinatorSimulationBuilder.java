@@ -335,7 +335,7 @@ public class CoordinatorSimulationBuilder
       env.ruleManager.overrideRule(
           datasource,
           Arrays.asList(rules),
-          new AuditInfo("sim", "sim", "localhost")
+          new AuditInfo("sim", "sim", "sim", "localhost")
       );
     }
 

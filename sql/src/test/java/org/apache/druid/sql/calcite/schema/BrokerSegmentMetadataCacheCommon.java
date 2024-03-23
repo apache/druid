@@ -86,7 +86,7 @@ public class BrokerSegmentMetadataCacheCommon extends SegmentMetadataCacheCommon
       }
     };
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+    walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
         .add(segment3, index2)

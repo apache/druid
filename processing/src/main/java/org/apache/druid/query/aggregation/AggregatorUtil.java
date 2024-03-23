@@ -129,6 +129,11 @@ public class AggregatorUtil
   // TDigest sketch aggregators
   public static final byte TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID = 0x38;
 
+  // Spectator histogram aggregators
+  public static final byte SPECTATOR_HISTOGRAM_CACHE_TYPE_ID = 0x39;
+  public static final byte SPECTATOR_HISTOGRAM_DISTRIBUTION_CACHE_TYPE_ID = 0x3A;
+  public static final byte SPECTATOR_HISTOGRAM_TIMER_CACHE_TYPE_ID = 0x3B;
+
   public static final byte MEAN_CACHE_TYPE_ID = 0x41;
 
   // ANY aggregator
@@ -153,19 +158,23 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING_CACHE_TYPE_ID = 0x4C;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_CONSTANT_SKETCH_CACHE_TYPE_ID = 0x4D;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_SUM_ESTIMATE_CACHE_TYPE_ID = 0x4E;
+  public static final byte SINGLE_VALUE_CACHE_TYPE_ID = 0x4F;
+
+  // DDSketch aggregator
+  public static final byte DDSKETCH_CACHE_TYPE_ID = 0x50;
 
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
    * required to compute the output column.
-   *
+   * <p>
    * If the outputColumn does not exist in the list of PostAggregators, the return list will be empty (under the
    * assumption that the outputColumn comes from a project, aggregation or really anything other than a
    * PostAggregator).
-   *
+   * <p>
    * If the outputColumn <strong>does</strong> exist in the list of PostAggregators, then the return list will have at
    * least one element.  If the PostAggregator with outputName depends on any other PostAggregators, then the returned
    * list will contain all PostAggregators required to compute the outputColumn.
-   *
+   * <p>
    * Note that PostAggregators are processed in list-order, meaning that for a PostAggregator to depend on another
    * PostAggregator, the "depender" must exist *after* the "dependee" in the list.  That is, if PostAggregator A
    * depends on PostAggregator B, then the list should be [B, A], such that A is computed after B.
@@ -173,8 +182,7 @@ public class AggregatorUtil
    * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order such
    *                           that all the dependencies of any given aggregator should occur before that aggregator.
    *                           See AggregatorUtilTest.testOutOfOrderPruneDependentPostAgg for example.
-   * @param outputName        name of the postAgg on which dependency is to be calculated
-   *
+   * @param outputName         name of the postAgg on which dependency is to be calculated
    * @return the list of dependent postAggregators
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String outputName)

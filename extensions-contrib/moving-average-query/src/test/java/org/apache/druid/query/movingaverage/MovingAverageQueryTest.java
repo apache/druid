@@ -52,8 +52,6 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.guava.Accumulators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -374,13 +372,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
-        new ServiceEmitter("", "", null)
-        {
-          @Override
-          public void emit(Event event)
-          {
-          }
-        },
+        new NoopServiceEmitter(),
         baseClient,
         null /* local client; unused in this test, so pass in null */,
         warehouse,

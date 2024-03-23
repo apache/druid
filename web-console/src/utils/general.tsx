@@ -20,7 +20,6 @@ import { Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import type { JSX } from 'react';
@@ -216,7 +215,7 @@ export function groupByAsMap<T, Q>(
 export function uniq(array: readonly string[]): string[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
-    if (hasOwnProp(seen, s)) {
+    if (Object.hasOwn(seen, s)) {
       return false;
     } else {
       seen[s] = true;

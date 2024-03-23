@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
@@ -35,6 +34,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.BucketExtractionFn;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -473,7 +473,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.notNull(), false));
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(
+        StringPredicateDruidPredicateFactory.of(
+            value -> value == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.TRUE
+        )
+    );
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(true, nullMatcher.matches(false));
@@ -516,7 +520,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         COLUMN_SELECTOR_FACTORY
     );
 
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.notNull(), false));
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(
+        StringPredicateDruidPredicateFactory.of(
+            value -> value == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.TRUE
+        )
+    );
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(false, nonNullMatcher.matches(false));
@@ -597,7 +605,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.notNull(), false));
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(
+        StringPredicateDruidPredicateFactory.of(
+            value -> value == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.TRUE
+        )
+    );
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(true, nullMatcher.matches(false));

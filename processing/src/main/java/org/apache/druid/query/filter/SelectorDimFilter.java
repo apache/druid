@@ -39,7 +39,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- *
+ * Recommended to use {@link EqualityFilter} or {@link NullFilter} instead
  */
 public class SelectorDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
@@ -94,11 +94,11 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
   }
 
   @Override
-  public DimFilter optimize()
+  public DimFilter optimize(final boolean mayIncludeUnknown)
   {
     final InDimFilter.ValuesSet valuesSet = new InDimFilter.ValuesSet();
     valuesSet.add(value);
-    return new InDimFilter(dimension, valuesSet, extractionFn, filterTuning).optimize();
+    return new InDimFilter(dimension, valuesSet, extractionFn, filterTuning).optimize(mayIncludeUnknown);
   }
 
   @Override

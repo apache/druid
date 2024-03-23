@@ -49,9 +49,9 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     validationHelperCheckArgumentRange(args, 2, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
-      return new TimestampCeilExpr(args);
+      return new TimestampCeilExpr(this, args);
     } else {
-      return new TimestampCeilDynamicExpr(args);
+      return new TimestampCeilDynamicExpr(this, args);
     }
   }
 
@@ -60,9 +60,9 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
   {
     private final Granularity granularity;
 
-    TimestampCeilExpr(final List<Expr> args)
+    TimestampCeilExpr(final TimestampCeilExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
       this.granularity = getGranularity(args, InputBindings.nilBindings());
     }
 
@@ -81,12 +81,6 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
         return ExprEval.of(bucketStartTime);
       }
       return ExprEval.of(granularity.increment(bucketStartTime));
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampCeilExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -132,9 +126,9 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
   @VisibleForTesting
   static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    TimestampCeilDynamicExpr(final List<Expr> args)
+    TimestampCeilDynamicExpr(final TimestampCeilExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
     }
 
     @Nonnull
@@ -148,12 +142,6 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
         return ExprEval.of(bucketStartTime);
       }
       return ExprEval.of(granularity.increment(bucketStartTime));
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampCeilDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

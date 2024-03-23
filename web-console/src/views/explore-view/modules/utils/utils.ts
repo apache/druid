@@ -17,22 +17,28 @@
  */
 
 import type { SqlExpression } from '@druid-toolkit/query';
-import { F, SqlFunction } from '@druid-toolkit/query';
+import { F, SqlFunction, SqlLiteral } from '@druid-toolkit/query';
 
 export function shiftTimeInWhere(where: SqlExpression, period: string): SqlExpression {
   return where.walk(ex => {
-    if (!(ex instanceof SqlFunction)) return ex;
-    const effectiveFunctionName = ex.getEffectiveFunctionName();
+    if (ex instanceof SqlLiteral) {
+      // Works with: __time < TIMESTAMP '2022-01-02 03:04:05'
+      if (ex.isDate()) {
+        return F('TIME_SHIFT', ex, period, -1);
+      }
+    } else if (ex instanceof SqlFunction) {
+      const effectiveFunctionName = ex.getEffectiveFunctionName();
 
-    // Works with: TIME_IN_INTERVAL(__time, '<interval>')
-    if (effectiveFunctionName === 'TIME_IN_INTERVAL') {
-      return ex.changeArgs(ex.args!.change(0, F('TIME_SHIFT', ex.getArg(0), period, 1)));
-    }
+      // Works with: TIME_IN_INTERVAL(__time, '<interval>')
+      if (effectiveFunctionName === 'TIME_IN_INTERVAL') {
+        return ex.changeArgs(ex.args!.change(0, F('TIME_SHIFT', ex.getArg(0), period, 1)));
+      }
 
-    // Works with: TIME_SHIFT(...) <= __time
-    //        and: __time < MAX_DATA_TIME()
-    if (effectiveFunctionName === 'TIME_SHIFT' || effectiveFunctionName === 'MAX_DATA_TIME') {
-      return F('TIME_SHIFT', ex, period, -1);
+      // Works with: TIME_SHIFT(...) <= __time
+      //        and: __time < MAX_DATA_TIME()
+      if (effectiveFunctionName === 'TIME_SHIFT' || effectiveFunctionName === 'MAX_DATA_TIME') {
+        return F('TIME_SHIFT', ex, period, -1);
+      }
     }
 
     return ex;

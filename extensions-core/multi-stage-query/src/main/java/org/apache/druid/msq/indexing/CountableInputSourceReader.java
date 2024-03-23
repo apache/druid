@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.segment.RowAdapter;
 
 import java.io.IOException;
 
@@ -55,5 +56,11 @@ public class CountableInputSourceReader implements InputSourceReader
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
     return inputSourceReader.sample();
+  }
+
+  @Override
+  public RowAdapter<InputRow> rowAdapter()
+  {
+    return inputSourceReader.rowAdapter();
   }
 }

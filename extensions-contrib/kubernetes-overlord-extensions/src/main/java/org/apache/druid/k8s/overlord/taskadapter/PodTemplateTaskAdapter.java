@@ -20,10 +20,6 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.cfg.MapperConfig;
-import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
-import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -60,10 +56,12 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
@@ -84,7 +82,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   public static final String TYPE = "customTemplateAdapter";
 
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
-  private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.%s";
+
+
+  private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.";
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
@@ -212,37 +212,46 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private HashMap<String, PodTemplate> initializePodTemplates(Properties properties)
   {
-    HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();
-    Optional<PodTemplate> basePodTemplate = loadPodTemplate("base", properties);
-    if (!basePodTemplate.isPresent()) {
-      throw new IAE("Pod template task adapter requires a base pod template to be specified");
+    Set<String> taskAdapterTemplateKeys = getTaskAdapterTemplates(properties);
+    if (!taskAdapterTemplateKeys.contains("base")) {
+      throw new IAE("Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
     }
-    podTemplateMap.put("base", basePodTemplate.get());
 
-    MapperConfig config = mapper.getDeserializationConfig();
-    AnnotatedClass cls = AnnotatedClassResolver.resolveWithoutSuperTypes(config, Task.class);
-    Collection<NamedType> taskSubtypes = mapper.getSubtypeResolver().collectAndResolveSubtypesByClass(config, cls);
-    for (NamedType namedType : taskSubtypes) {
-      String taskType = namedType.getName();
-      Optional<PodTemplate> template = loadPodTemplate(taskType, properties);
-      template.ifPresent(podTemplate -> podTemplateMap.put(taskType, podTemplate));
+    HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();
+    for (String taskAdapterTemplateKey : taskAdapterTemplateKeys) {
+      Optional<PodTemplate> template = loadPodTemplate(taskAdapterTemplateKey, properties);
+      template.ifPresent(podTemplate -> podTemplateMap.put(taskAdapterTemplateKey, podTemplate));
     }
     return podTemplateMap;
   }
 
+  private static Set<String> getTaskAdapterTemplates(Properties properties)
+  {
+    Set<String> taskAdapterTemplates = new HashSet<>();
+
+    for (String runtimeProperty : properties.stringPropertyNames()) {
+      if (runtimeProperty.startsWith(TASK_PROPERTY)) {
+        String[] taskAdapterPropertyPaths = runtimeProperty.split("\\.");
+        taskAdapterTemplates.add(taskAdapterPropertyPaths[taskAdapterPropertyPaths.length - 1]);
+      }
+    }
+
+    return taskAdapterTemplates;
+  }
+
   private Optional<PodTemplate> loadPodTemplate(String key, Properties properties)
   {
-    String property = StringUtils.format(TASK_PROPERTY, key);
+    String property = TASK_PROPERTY + key;
     String podTemplateFile = properties.getProperty(property);
     if (podTemplateFile == null) {
-      log.debug("Pod template file not specified for [%s]", key);
-      return Optional.empty();
+      throw new IAE("Pod template file not specified for [%s]", property);
+
     }
     try {
       return Optional.of(Serialization.unmarshal(Files.newInputStream(new File(podTemplateFile).toPath()), PodTemplate.class));
     }
     catch (Exception e) {
-      throw new ISE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
+      throw new IAE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
     }
   }
 

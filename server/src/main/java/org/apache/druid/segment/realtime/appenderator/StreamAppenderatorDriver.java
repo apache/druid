@@ -43,12 +43,14 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -207,7 +209,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
       for (final SegmentIdWithShardSpec identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
-        final long key = identifier.getInterval().getStartMillis();
+        final Interval key = identifier.getInterval();
         final SegmentsOfInterval segmentsOfInterval = activeSegmentsForSequence.get(key);
         if (segmentsOfInterval == null ||
             segmentsOfInterval.getAppendingSegment() == null ||
@@ -457,11 +459,11 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
     SegmentsForSequence build()
     {
-      final NavigableMap<Long, SegmentsOfInterval> map = new TreeMap<>();
+      final Map<Interval, SegmentsOfInterval> map = new HashMap<>();
       for (Entry<SegmentIdWithShardSpec, Pair<SegmentWithState, List<SegmentWithState>>> entry :
           intervalToSegments.entrySet()) {
         map.put(
-            entry.getKey().getInterval().getStartMillis(),
+            entry.getKey().getInterval(),
             new SegmentsOfInterval(entry.getKey().getInterval(), entry.getValue().lhs, entry.getValue().rhs)
         );
       }

@@ -19,16 +19,17 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class LongLastBufferAggregator extends NumericLastBufferAggregator<BaseLongColumnValueSelector>
+public class LongLastBufferAggregator extends NumericLastBufferAggregator
 {
-  public LongLastBufferAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
+  public LongLastBufferAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, needsFoldCheck);
   }
 
   @Override
@@ -38,16 +39,22 @@ public class LongLastBufferAggregator extends NumericLastBufferAggregator<BaseLo
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position, ColumnValueSelector valueSelector)
   {
     buf.putLong(position, valueSelector.getLong());
+  }
+
+  @Override
+  void putValue(ByteBuffer buf, int position, Number value)
+  {
+    buf.putLong(position, value.longValue());
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
     boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
+    return new SerializablePairLongLong(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
   }
 
   @Override

@@ -50,6 +50,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -131,14 +132,16 @@ public class QueryFrameworkUtils
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final CatalogResolver catalogResolver
   )
   {
     DruidSchema druidSchema = createMockSchema(
         injector,
         conglomerate,
         walker,
-        druidSchemaManager
+        druidSchemaManager,
+        catalogResolver
     );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
@@ -193,7 +196,8 @@ public class QueryFrameworkUtils
         plannerConfig,
         null,
         new NoopDruidSchemaManager(),
-        authorizerMapper
+        authorizerMapper,
+        CatalogResolver.NULL_RESOLVER
     );
   }
 
@@ -201,7 +205,8 @@ public class QueryFrameworkUtils
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final DruidSchemaManager druidSchemaManager
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalog
   )
   {
     final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
@@ -220,7 +225,8 @@ public class QueryFrameworkUtils
               {
                 return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
               }
-            }),
+            }
+        ),
         null
     );
 
@@ -233,7 +239,7 @@ public class QueryFrameworkUtils
     }
 
     cache.stop();
-    return new DruidSchema(cache, druidSchemaManager);
+    return new DruidSchema(cache, druidSchemaManager, catalog);
   }
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)

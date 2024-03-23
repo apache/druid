@@ -117,7 +117,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
               <ReactAce
                 className="query-string"
                 cursorStart={1}
-                editorProps={Object {}}
+                editorProps={{}}
                 enableBasicAutocompletion={false}
                 enableLiveAutocompletion={false}
                 enableSnippets={false}
@@ -137,44 +137,44 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
                 placeholder={null}
                 readOnly={true}
                 scrollMargin={
-                  Array [
+                  [
                     0,
                     0,
                     0,
                     0,
                   ]
                 }
-                setOptions={Object {}}
+                setOptions={{}}
                 showGutter={true}
                 showPrintMargin={false}
-                style={Object {}}
+                style={{}}
                 tabSize={4}
                 theme="solarized_dark"
                 value="{
-  \\"queryType\\": \\"scan\\",
-  \\"dataSource\\": {
-    \\"type\\": \\"table\\",
-    \\"name\\": \\"wikipedia\\"
+  "queryType": "scan",
+  "dataSource": {
+    "type": "table",
+    "name": "wikipedia"
   },
-  \\"intervals\\": {
-    \\"type\\": \\"intervals\\",
-    \\"intervals\\": [
-      \\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\"
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
     ]
   },
-  \\"virtualColumns\\": [],
-  \\"resultFormat\\": \\"compactedList\\",
-  \\"batchSize\\": 20480,
-  \\"limit\\": 101,
-  \\"filter\\": null,
-  \\"columns\\": [
-    \\"channel\\"
+  "virtualColumns": [],
+  "resultFormat": "compactedList",
+  "batchSize": 20480,
+  "limit": 101,
+  "filter": null,
+  "columns": [
+    "channel"
   ],
-  \\"legacy\\": false,
-  \\"context\\": {},
-  \\"descending\\": false,
-  \\"granularity\\": {
-    \\"type\\": \\"all\\"
+  "legacy": false,
+  "context": {},
+  "descending": false,
+  "granularity": {
+    "type": "all"
   }
 }"
                 width="100%"
@@ -215,7 +215,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
               <ReactAce
                 className="query-string"
                 cursorStart={1}
-                editorProps={Object {}}
+                editorProps={{}}
                 enableBasicAutocompletion={false}
                 enableLiveAutocompletion={false}
                 enableSnippets={false}
@@ -235,49 +235,49 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
                 placeholder={null}
                 readOnly={true}
                 scrollMargin={
-                  Array [
+                  [
                     0,
                     0,
                     0,
                     0,
                   ]
                 }
-                setOptions={Object {}}
+                setOptions={{}}
                 showGutter={true}
                 showPrintMargin={false}
-                style={Object {}}
+                style={{}}
                 tabSize={4}
                 theme="solarized_dark"
                 value="{
-  \\"queryType\\": \\"scan\\",
-  \\"dataSource\\": {
-    \\"type\\": \\"table\\",
-    \\"name\\": \\"wikipedia\\"
+  "queryType": "scan",
+  "dataSource": {
+    "type": "table",
+    "name": "wikipedia"
   },
-  \\"intervals\\": {
-    \\"type\\": \\"intervals\\",
-    \\"intervals\\": [
-      \\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\"
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
     ]
   },
-  \\"virtualColumns\\": [],
-  \\"resultFormat\\": \\"compactedList\\",
-  \\"batchSize\\": 20480,
-  \\"limit\\": 101,
-  \\"filter\\": {
-    \\"type\\": \\"selector\\",
-    \\"dimension\\": \\"channel\\",
-    \\"value\\": \\"#en.wikipedia\\",
-    \\"extractionFn\\": null
+  "virtualColumns": [],
+  "resultFormat": "compactedList",
+  "batchSize": 20480,
+  "limit": 101,
+  "filter": {
+    "type": "selector",
+    "dimension": "channel",
+    "value": "#en.wikipedia",
+    "extractionFn": null
   },
-  \\"columns\\": [
-    \\"channel\\"
+  "columns": [
+    "channel"
   ],
-  \\"legacy\\": false,
-  \\"context\\": {},
-  \\"descending\\": false,
-  \\"granularity\\": {
-    \\"type\\": \\"all\\"
+  "legacy": false,
+  "context": {},
+  "descending": false,
+  "granularity": {
+    "type": "all"
   }
 }"
                 width="100%"
@@ -343,7 +343,7 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
         <ReactAce
           className="query-string"
           cursorStart={1}
-          editorProps={Object {}}
+          editorProps={{}}
           enableBasicAutocompletion={false}
           enableLiveAutocompletion={false}
           enableSnippets={false}
@@ -363,108 +363,108 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
           placeholder={null}
           readOnly={true}
           scrollMargin={
-            Array [
+            [
               0,
               0,
               0,
               0,
             ]
           }
-          setOptions={Object {}}
+          setOptions={{}}
           showGutter={true}
           showPrintMargin={false}
-          style={Object {}}
+          style={{}}
           tabSize={4}
           theme="solarized_dark"
           value="{
-  \\"queryType\\": \\"topN\\",
-  \\"dataSource\\": {
-    \\"type\\": \\"join\\",
-    \\"left\\": {
-      \\"type\\": \\"table\\",
-      \\"name\\": \\"wikipedia\\"
+  "queryType": "topN",
+  "dataSource": {
+    "type": "join",
+    "left": {
+      "type": "table",
+      "name": "wikipedia"
     },
-    \\"right\\": {
-      \\"type\\": \\"query\\",
-      \\"query\\": {
-        \\"queryType\\": \\"groupBy\\",
-        \\"dataSource\\": {
-          \\"type\\": \\"table\\",
-          \\"name\\": \\"wikipedia\\"
+    "right": {
+      "type": "query",
+      "query": {
+        "queryType": "groupBy",
+        "dataSource": {
+          "type": "table",
+          "name": "wikipedia"
         },
-        \\"intervals\\": {
-          \\"type\\": \\"intervals\\",
-          \\"intervals\\": [
-            \\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\"
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
           ]
         },
-        \\"virtualColumns\\": [],
-        \\"filter\\": {
-          \\"type\\": \\"selector\\",
-          \\"dimension\\": \\"channel\\",
-          \\"value\\": \\"#en.wikipedia\\",
-          \\"extractionFn\\": null
+        "virtualColumns": [],
+        "filter": {
+          "type": "selector",
+          "dimension": "channel",
+          "value": "#en.wikipedia",
+          "extractionFn": null
         },
-        \\"granularity\\": {
-          \\"type\\": \\"all\\"
+        "granularity": {
+          "type": "all"
         },
-        \\"dimensions\\": [
+        "dimensions": [
           {
-            \\"type\\": \\"default\\",
-            \\"dimension\\": \\"channel\\",
-            \\"outputName\\": \\"d0\\",
-            \\"outputType\\": \\"STRING\\"
+            "type": "default",
+            "dimension": "channel",
+            "outputName": "d0",
+            "outputType": "STRING"
           }
         ],
-        \\"aggregations\\": [],
-        \\"postAggregations\\": [],
-        \\"having\\": null,
-        \\"limitSpec\\": {
-          \\"type\\": \\"NoopLimitSpec\\"
+        "aggregations": [],
+        "postAggregations": [],
+        "having": null,
+        "limitSpec": {
+          "type": "NoopLimitSpec"
         },
-        \\"context\\": {},
-        \\"descending\\": false
+        "context": {},
+        "descending": false
       }
     },
-    \\"rightPrefix\\": \\"j0.\\",
-    \\"condition\\": \\"(\\\\\\"channel\\\\\\" == \\\\\\"j0.d0\\\\\\")\\",
-    \\"joinType\\": \\"LEFT\\",
-    \\"leftFilter\\": null
+    "rightPrefix": "j0.",
+    "condition": "(\\"channel\\" == \\"j0.d0\\")",
+    "joinType": "LEFT",
+    "leftFilter": null
   },
-  \\"virtualColumns\\": [],
-  \\"dimension\\": {
-    \\"type\\": \\"default\\",
-    \\"dimension\\": \\"channel\\",
-    \\"outputName\\": \\"d0\\",
-    \\"outputType\\": \\"STRING\\"
+  "virtualColumns": [],
+  "dimension": {
+    "type": "default",
+    "dimension": "channel",
+    "outputName": "d0",
+    "outputType": "STRING"
   },
-  \\"metric\\": {
-    \\"type\\": \\"dimension\\",
-    \\"previousStop\\": null,
-    \\"ordering\\": {
-      \\"type\\": \\"lexicographic\\"
+  "metric": {
+    "type": "dimension",
+    "previousStop": null,
+    "ordering": {
+      "type": "lexicographic"
     }
   },
-  \\"threshold\\": 101,
-  \\"intervals\\": {
-    \\"type\\": \\"intervals\\",
-    \\"intervals\\": [
-      \\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\"
+  "threshold": 101,
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
     ]
   },
-  \\"filter\\": null,
-  \\"granularity\\": {
-    \\"type\\": \\"all\\"
+  "filter": null,
+  "granularity": {
+    "type": "all"
   },
-  \\"aggregations\\": [
+  "aggregations": [
     {
-      \\"type\\": \\"count\\",
-      \\"name\\": \\"a0\\"
+      "type": "count",
+      "name": "a0"
     }
   ],
-  \\"postAggregations\\": [],
-  \\"context\\": {},
-  \\"descending\\": false
+  "postAggregations": [],
+  "context": {},
+  "descending": false
 }"
           width="100%"
           wrapEnabled={false}

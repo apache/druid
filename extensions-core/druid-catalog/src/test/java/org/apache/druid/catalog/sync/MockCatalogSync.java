@@ -55,4 +55,14 @@ public class MockCatalogSync implements CatalogUpdateListener
   {
     return catalog;
   }
+
+  @Override
+  public void flush()
+  {
+  }
+
+  @Override
+  public void resync()
+  {
+  }
 }

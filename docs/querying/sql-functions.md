@@ -50,7 +50,7 @@ Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
-`ANY_VALUE(expr, [maxBytesPerValue])`
+`ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -181,7 +181,7 @@ Returns the array element at the 0-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode)..
+Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 ## ARRAY_ORDINAL
 
@@ -196,7 +196,7 @@ Returns the array element at the 1-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode)..|
+Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 ## ARRAY_OVERLAP
 
@@ -480,6 +480,14 @@ Calculates the trigonometric cotangent of an angle expressed in radians.
 
 Counts the number of rows.
 
+## CUME_DIST
+
+`CUME_DIST()`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows`. The return value ranges between `1/number of rows` and 1.
+
 ## CURRENT_DATE
 
 `CURRENT_DATE`
@@ -504,6 +512,23 @@ Returns the current timestamp in the connection's time zone.
 
 Rounds down a timestamp by a given time unit.
 
+## DECODE_BASE64_COMPLEX
+
+`DECODE_BASE64_COMPLEX(dataType, expr)`
+
+**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+
+Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+
+## DECODE_BASE64_UTF8
+
+`DECODE_BASE64_UTF8(expr)`
+
+**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+
+
+Decodes a Base64-encoded string into a UTF-8 encoded string.
+
 ## DEGREES
 
 `DEGREES(<NUMERIC>)`
@@ -511,6 +536,14 @@ Rounds down a timestamp by a given time unit.
 **Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
 Converts an angle from radians to degrees.
+
+## DENSE_RANK
+
+`DENSE_RANK()`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the rank for a row within a window without gaps. For example, if two rows tie for a rank of 1, the subsequent row is ranked 2.
 
 ## DIV
 
@@ -667,6 +700,14 @@ Calculates _e_ raised to the power of the numeric expression.
 
 Extracts the value of some unit of the timestamp, optionally from a certain time zone, and returns the number.
 
+## FIRST_VALUE
+
+`FIRST_VALUE(expr)`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the value evaluated for the expression for the first row within the window.
+
 ## FLOOR (date and time)
 
 `FLOOR(<TIMESTAMP> TO <TIME_UNIT>)`
@@ -769,7 +810,7 @@ Finds whether a string is in a given expression, case-insensitive.
 
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-Returns true if the `address` belongs to the `subnet` literal, else false.
+Returns true if the IPv4 `address` belongs to the `subnet` literal, else false.
 
 ## IPV4_PARSE
 
@@ -786,6 +827,14 @@ Parses `address` into an IPv4 address stored as an integer.
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
 Converts `address` into an IPv4 address in dot-decimal notation.
+
+## IPV6_MATCH
+
+`IPV6_MATCH(address, subnet)`
+
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+
+Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 ## JSON_KEYS
 
@@ -819,6 +868,14 @@ Returns an array of all paths which refer to literal values in `expr` in JSONPat
 
 Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
 
+## JSON_QUERY_ARRAY
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_QUERY_ARRAY(expr, path)`
+
+Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+
 ## JSON_VALUE
 
 **Function type:** [JSON](sql-json-functions.md)
@@ -826,6 +883,22 @@ Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
 `JSON_VALUE(expr, path [RETURNING sqlType])`
 
 Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.
+
+## LAG
+
+`LAG(expr[, offset])`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+If you do not supply an `offset`, returns the value evaluated at the row preceding the current row. Specify an offset number `n` to return the value evaluated at `n` rows preceding the current one.
+
+## LAST_VALUE
+
+`LAST_VALUE(expr)`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the value evaluated for the expression for the last row within the window.
 
 ## LATEST
 
@@ -842,6 +915,14 @@ Returns the value of a numeric or string expression corresponding to the latest 
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Returns the value of a numeric or string expression corresponding to the latest time value from `timestampExpr`.
+
+## LEAD
+
+`LEAD(expr[, offset])`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+If you do not supply an `offset`, returns the value evaluated at the row following the current row. Specify an offset number `n` to return the value evaluated at `n` rows following the current one; if there is no such row, returns the given default value.
 
 ## LEAST
 
@@ -1059,6 +1140,14 @@ Returns a slice of the array from the zero-based start and end indexes.
 
 Joins all elements of the array together by the given delimiter.
 
+## NTILE
+
+`NTILE(tiles)`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into.
+
 ## NULLIF
 
 `NULLIF(value1, value2)`
@@ -1091,6 +1180,14 @@ Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON val
 
 Converts a string into a BIGINT with the given base or into a DECIMAL data type if the base is not specified.
 
+## PERCENT_RANK
+
+`PERCENT_RANK()`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the relative rank of the row calculated as a percentage according to the formula: `RANK() OVER (window) / COUNT(1) OVER (window)`.
+
 ## POSITION
 
 `POSITION(<CHARACTER> IN <CHARACTER> [FROM <INTEGER>])`
@@ -1114,6 +1211,14 @@ Calculates a numerical expression raised to the specified power.
 **Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
 Converts an angle from degrees to radians.
+
+## RANK
+
+`RANK()`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the rank with gaps for a row within a window. For example, if two rows tie for rank 1, the next rank is 3.
 
 ## REGEXP_EXTRACT
 
@@ -1179,6 +1284,14 @@ Returns the rightmost number of characters from an expression.
 **Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
 Calculates the rounded value for a numerical expression.
+
+## ROW_NUMBER
+
+`ROW_NUMBER()`
+
+**Function type:** [Window](sql-window-functions.md#window-function-reference)
+
+Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
@@ -1275,7 +1388,7 @@ Returns a string formatted in accordance to Java's String.format method.
 
 **Function type:** [Multi-value string](sql-multivalue-string-functions.md)
 
-Converts a string into an array, split by the given delimiter.
+Splits `str1` into an multi-value string on the delimiter specified by `str2`, which is a regular expression.
 
 ## STRLEN
 

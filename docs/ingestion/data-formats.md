@@ -398,8 +398,8 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String\> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
-| headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
+| config | Json | To send additional configurations, configured for Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
+| headers | Json | To send headers to the Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
@@ -549,52 +549,62 @@ For example:
 
 ### Kafka
 
-`kafka` is a special input format that wraps a regular input format (which goes in `valueFormat`) and allows you
-to parse the Kafka metadata (timestamp, headers, and key) that is part of Kafka messages.
-It should only be used when ingesting from Apache Kafka. 
+The `kafka` input format lets you parse the Kafka metadata fields in addition to the Kafka payload value contents.
+It should only be used when ingesting from Apache Kafka.
 
-Configure the Kafka `inputFormat` as follows:
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `type` | String | Set value to `kafka`. | yes |
-| `valueFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
-| `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
-| `topicColumnName` | String |Name of the column for the kafka record's topic. It is useful when ingesting data from multiple topics.| no (default = "kafka.timestamp") |
-| `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
-| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
-| `keyFormat` | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
-| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
-
-
-The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
+The `kafka` input format wraps around the payload parsing input format and augments the data it outputs with the Kafka event timestamp, topic name, event headers, and the key field that itself can be parsed using any available input format.
 
 If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
 This ensures that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.  
 
-Here is a minimal example that only augments the parsed payload with the Kafka timestamp column and kafka topic column:
+Configure the Kafka `inputFormat` as follows:
 
-```
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `type` | String | Set value to `kafka`. | yes ||
+| `valueFormat` | [InputFormat](#input-format) | The [input format](#input-format) to parse the Kafka value payload. | yes ||
+| `timestampColumnName` | String | The name of the column for the Kafka timestamp.| no |`kafka.timestamp`|
+| `topicColumnName` | String |The name of the column for the Kafka topic. This field is useful when ingesting data from multiple topics into same datasource.| no |`kafka.topic`|
+| `headerColumnPrefix` | String | The custom prefix for all the header columns. | no | `kafka.header`|
+| `headerFormat` | Object | Specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the `encoding` type in `KafkaStringHeaderFormat` to match your custom implementation. See [Header format](#header-format) for supported encoding formats.| no ||
+| `keyFormat` | [InputFormat](#input-format) | The [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. If your key values are simple strings, you can use the `tsv` format to parse them. Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`. | no ||
+| `keyColumnName` | String | The name of the column for the Kafka key.| no |`kafka.key`|
+
+#### Header format
+
+`headerFormat` supports the following encoding formats:
+   - `ISO-8859-1`: ISO Latin Alphabet No. 1, that is, ISO-LATIN-1.
+   - `US-ASCII`: Seven-bit ASCII. Also known as ISO646-US. The Basic Latin block of the Unicode character set.
+   - `UTF-8`: Eight-bit UCS Transformation Format.
+   - `UTF-16`: Sixteen-bit UCS Transformation Format, byte order identified by an optional byte-order mark.
+   - `UTF-16BE`: Sixteen-bit UCS Transformation Format, big-endian byte order.
+   - `UTF-16LE`: Sixteen-bit UCS Transformation Format, little-endian byte order.
+- `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with columns from the payload. The default is `kafka.header.`.
+
+#### Example
+
+Using `{ "type": "json" }` as the input format would only parse the payload value.
+To parse the Kafka metadata in addition to the payload, use the `kafka` input format.
+
+For example, consider the following structure for a Kafka message that represents an edit in a development environment:
+
+- **Kafka timestamp**: `1680795276351`
+- **Kafka topic**: `wiki-edits`
+- **Kafka headers**:
+  - `env=development`
+  - `zone=z1`
+- **Kafka key**: `wiki-edit`
+- **Kafka payload value**: `{"channel":"#sv.wikipedia","timestamp":"2016-06-27T00:00:11.080Z","page":"Salo Toraut","delta":31,"namespace":"Main"}`
+
+You would configure it as follows:
+
+```json
 "ioConfig": {
   "inputFormat": {
     "type": "kafka",
     "valueFormat": {
       "type": "json"
-    }
-  },
-  ...
-}
-```
-
-Here is a complete example:
-
-```
-"ioConfig": {
-  "inputFormat": {
-    "type": "kafka",
-    "valueFormat": {
-      "type": "json"
-    }
+    },
     "timestampColumnName": "kafka.timestamp",
     "topicColumnName": "kafka.topic",
     "headerFormat": {
@@ -608,8 +618,24 @@ Here is a complete example:
       "columns": ["x"]
     },
     "keyColumnName": "kafka.key",
-  },
-  ...
+  }
+}
+```
+
+You would parse the example message as follows:
+
+```json
+{
+  "channel": "#sv.wikipedia",
+  "timestamp": "2016-06-27T00:00:11.080Z",
+  "page": "Salo Toraut",
+  "delta": 31,
+  "namespace": "Main",
+  "kafka.timestamp": 1680795276351,
+  "kafka.topic": "wiki-edits",
+  "kafka.header.env": "development",
+  "kafka.header.zone": "z1",
+  "kafka.key": "wiki-edit"
 }
 ```
 
@@ -630,6 +656,80 @@ Similarly, if you want to use a timestamp extracted from the Kafka header:
   "format": "millis"
 }
 ```
+
+Finally, add these Kafka metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to auto-detect columns.
+     
+The following supervisor spec demonstrates how to ingest the Kafka header, key, timestamp, and topic into Druid dimensions:
+
+<details>
+<summary>Click to view the example</summary>
+
+```json
+{
+  "type": "kafka",
+  "spec": {
+    "ioConfig": {
+      "type": "kafka",
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
+      },
+      "topic": "wiki-edits",
+      "inputFormat": {
+        "type": "kafka",
+        "valueFormat": {
+          "type": "json"
+        },
+        "headerFormat": {
+          "type": "string"
+        },
+        "keyFormat": {
+          "type": "tsv",
+          "findColumnsFromHeader": false,
+          "columns": ["x"]
+        }
+      },
+      "useEarliestOffset": true
+    },
+    "dataSchema": {
+      "dataSource": "wikiticker",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "posix"
+      },
+      "dimensionsSpec":  "dimensionsSpec": {
+        "useSchemaDiscovery": true,
+        "includeAllDimensions": true
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+      }
+    },
+    "tuningConfig": {
+      "type": "kafka"
+    }
+  }
+}
+```
+</details>
+
+After Druid ingests the data, you can query the Kafka metadata columns as follows:
+
+```sql
+SELECT
+  "kafka.header.env",
+  "kafka.key",
+  "kafka.timestamp",
+  "kafka.topic"
+FROM "wikiticker"
+```
+
+This query returns:
+
+| `kafka.header.env` | `kafka.key` | `kafka.timestamp` | `kafka.topic` |
+|--------------------|-----------|---------------|---------------|
+| `development`      | `wiki-edit` | `1680795276351` | `wiki-edits`  |
 
 ## FlattenSpec
 
@@ -698,8 +798,8 @@ Each entry in the `fields` list can have the following components:
 ## Parser
 
 :::info
- The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
-and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
+and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
 :::
 
@@ -1464,8 +1564,8 @@ Multiple Instances:
 ## ParseSpec
 
 :::info
- The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
-and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
+and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
 :::
 

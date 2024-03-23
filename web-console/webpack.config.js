@@ -39,8 +39,7 @@ module.exports = env => {
   };
 
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
-  const useBabel = process.env.babel || mode === 'production';
-  console.log(`Webpack running in ${mode} mode. ${useBabel ? 'Will' : "Won't"} use babel.`);
+  console.log(`Webpack running in ${mode} mode.`);
 
   const plugins = [
     new webpack.DefinePlugin({
@@ -49,12 +48,6 @@ module.exports = env => {
       'NODE_ENV': JSON.stringify(mode),
     }),
   ];
-
-  function babelTest(s) {
-    // https://github.com/zloirock/core-js/issues/514
-    if (s.includes('/node_modules/core-js/')) return false;
-    return /\.m?js$/.test(s);
-  }
 
   return {
     mode: mode,
@@ -85,17 +78,21 @@ module.exports = env => {
       },
     },
     devServer: {
-      publicPath: '/public',
-      index: './index.html',
-      openPage: 'unified-console.html',
       host: '0.0.0.0',
       port: 18081,
+      hot: true,
+      static: {
+        directory: __dirname,
+      },
+      devMiddleware: {
+        publicPath: '/public',
+      },
+      open: 'unified-console.html',
       proxy: {
         '/status': proxyTarget,
         '/druid': proxyTarget,
         '/proxy': proxyTarget,
       },
-      transportMode: 'ws',
     },
     module: {
       rules: [
@@ -110,12 +107,6 @@ module.exports = env => {
               },
             },
           ],
-        },
-        {
-          test: useBabel ? babelTest : /^xxx_nothing_will_match_$/,
-          use: {
-            loader: 'babel-loader',
-          },
         },
         {
           test: /\.s?css$/,

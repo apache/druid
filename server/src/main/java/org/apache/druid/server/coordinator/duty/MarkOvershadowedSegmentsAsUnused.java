@@ -42,10 +42,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Marks segments that are overshadowed by currently served segments as unused.
+ * Marks a segment as unused if it is overshadowed by:
+ * <ul>
+ * <li>a segment served by a historical or broker</li>
+ * <li>a segment that has zero required replicas and thus will never be loaded on a server</li>
+ * </ul>
+ * <p>
  * This duty runs only if the Coordinator has been running long enough to have a
  * refreshed metadata view. This duration is controlled by the dynamic config
- * {@code millisToWaitBeforeDeleting}.
+ * {@link org.apache.druid.server.coordinator.CoordinatorDynamicConfig#markSegmentAsUnusedDelayMillis}.
  */
 public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
 {
@@ -67,7 +72,7 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
     final long delayMillis = params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis();
     if (DateTimes.nowUtc().isBefore(coordinatorStartTime.plus(delayMillis))) {
       log.info(
-          "Skipping MarkAsUnused until [%s] have elapsed after coordinator start [%s].",
+          "Skipping MarkAsUnused until [%s] have elapsed after coordinator start time[%s].",
           Duration.ofMillis(delayMillis), coordinatorStartTime
       );
       return params;
@@ -79,7 +84,7 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
       return params;
     }
 
-    DruidCluster cluster = params.getDruidCluster();
+    final DruidCluster cluster = params.getDruidCluster();
     final Map<String, SegmentTimeline> timelines = new HashMap<>();
 
     cluster.getHistoricals().values().forEach(
@@ -91,7 +96,14 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
         broker -> addSegmentsFromServer(broker, timelines)
     );
 
-    // Note that we do not include segments from ingestion services such as tasks or indexers,
+    // Include all segments that require zero replicas to be loaded
+    params.getSegmentAssigner().getSegmentsWithZeroRequiredReplicas().forEach(
+        (datasource, segments) -> timelines
+            .computeIfAbsent(datasource, ds -> new SegmentTimeline())
+            .addSegments(segments.iterator())
+    );
+
+    // Do not include segments served by ingestion services such as tasks or indexers,
     // to prevent unpublished segments from prematurely overshadowing segments.
 
     // Mark all segments overshadowed by served segments as unused

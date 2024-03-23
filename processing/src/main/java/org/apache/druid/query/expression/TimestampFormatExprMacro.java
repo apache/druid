@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -69,11 +68,11 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
                                         ? ISODateTimeFormat.dateTime().withZone(timeZone)
                                         : DateTimeFormat.forPattern(formatString).withZone(timeZone);
 
-    class TimestampFormatExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class TimestampFormatExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private TimestampFormatExpr(Expr arg)
+      private TimestampFormatExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(TimestampFormatExprMacro.this, args);
       }
 
       @Nonnull
@@ -88,38 +87,14 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
         return ExprEval.of(formatter.print(arg.eval(bindings).asLong()));
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return ExpressionType.STRING;
       }
-
-      @Override
-      public String stringify()
-      {
-        if (args.size() > 2) {
-          return StringUtils.format(
-              "%s(%s, %s, %s)",
-              FN_NAME,
-              arg.stringify(),
-              args.get(1).stringify(),
-              args.get(2).stringify()
-          );
-        }
-        if (args.size() > 1) {
-          return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
-        }
-        return super.stringify();
-      }
     }
 
-    return new TimestampFormatExpr(arg);
+    return new TimestampFormatExpr(args);
   }
 }

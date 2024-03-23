@@ -34,6 +34,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -67,7 +68,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testKeySizeEstimation()
   {
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
     Assert.assertEquals(baseCardinality, indexer.getCardinality());
 
@@ -198,6 +199,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, dimensionSelector.getRow().size());
     Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertNull(dimensionSelector.getObject());
+
+    Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(STRING_COL).toColumnType());
   }
 
   @Test
@@ -294,6 +297,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
     }
+    Assert.assertEquals(ColumnType.LONG, storageAdapter.getColumnCapabilities(LONG_COL).toColumnType());
   }
 
   @Test
@@ -389,6 +393,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
     }
+    Assert.assertEquals(ColumnType.DOUBLE, storageAdapter.getColumnCapabilities(DOUBLE_COL).toColumnType());
   }
 
   @Test
@@ -454,6 +459,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, storageAdapter.getColumnCapabilities(STRING_ARRAY_COL).toColumnType());
   }
 
   @Test
@@ -512,6 +518,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
     Assert.assertNull(valueSelector.getObject());
     Assert.assertNull(dimensionSelector.getObject());
+    Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(VARIANT_COL).toColumnType());
   }
 
   @Test
@@ -553,7 +560,6 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
@@ -562,7 +568,6 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1.1, "y", 2L)), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
@@ -579,13 +584,91 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertEquals(ColumnType.NESTED_DATA, storageAdapter.getColumnCapabilities(NESTED_COL).toColumnType());
+  }
+
+  @Test
+  public void testNestedColumnIndexerSchemaDiscoveryTypeCoercion() throws IndexSizeExceededException
+  {
+    // coerce nested column to STRING type, throwing parse exceptions for nested data
+    // and casting anything else to string
+    long minTimestamp = System.currentTimeMillis();
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema(
+                minTimestamp,
+                new TimestampSpec(TIME_COL, "millis", null),
+                Granularities.NONE,
+                VirtualColumns.EMPTY,
+                DimensionsSpec.builder()
+                              .setDimensions(ImmutableList.of(new AutoTypeColumnSchema(NESTED_COL, ColumnType.STRING)))
+                              .useSchemaDiscovery(true)
+                              .build(),
+                new AggregatorFactory[0],
+                false
+            )
+        )
+        .setMaxRowCount(1000)
+        .build();
+
+    index.add(makeInputRow(minTimestamp + 1, true, NESTED_COL, "a"));
+    index.add(makeInputRow(minTimestamp + 2, true, NESTED_COL, 2L));
+    IncrementalIndexAddResult result = index.add(makeInputRow(minTimestamp + 3, true, NESTED_COL, ImmutableMap.of("x", 1.1, "y", 2L)));
+    Assert.assertTrue(result.hasParseException());
+    index.add(makeInputRow(minTimestamp + 4, true, NESTED_COL, null));
+    index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
+
+    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
+    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
+        null,
+        Intervals.ETERNITY,
+        VirtualColumns.EMPTY,
+        Granularities.NONE,
+        false,
+        null
+    );
+    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
+    List<Cursor> cursorList = cursorSequence.toList();
+    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+
+    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    DimensionSelector dimensionSelector = cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals("a", valueSelector.getObject());
+    Assert.assertEquals("a", dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals("2", valueSelector.getObject());
+    Assert.assertFalse(valueSelector.isNull());
+    Assert.assertEquals("2", dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
+
+    Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(NESTED_COL).toColumnType());
   }
 
   @Test
   public void testConstantNull()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
@@ -603,13 +686,14 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertTrue(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.STRING, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantString()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
@@ -626,13 +710,14 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.STRING, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantLong()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
@@ -649,13 +734,14 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.LONG, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantEmptyArray()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
@@ -672,13 +758,14 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantArray()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
@@ -695,13 +782,14 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantEmptyObject()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
@@ -718,6 +806,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertTrue(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.NESTED_DATA, indexer.getLogicalType());
   }
 
   @Nonnull

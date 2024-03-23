@@ -271,14 +271,14 @@ public class ProtobufInputFormatTest
             timestampSpec,
             new DimensionsSpec(
                 Lists.newArrayList(
-                    new AutoTypeColumnSchema("event"),
-                    new AutoTypeColumnSchema("id"),
-                    new AutoTypeColumnSchema("someOtherId"),
-                    new AutoTypeColumnSchema("isValid"),
-                    new AutoTypeColumnSchema("eventType"),
-                    new AutoTypeColumnSchema("foo"),
-                    new AutoTypeColumnSchema("bar"),
-                    new AutoTypeColumnSchema("someBytesColumn")
+                    new AutoTypeColumnSchema("event", null),
+                    new AutoTypeColumnSchema("id", null),
+                    new AutoTypeColumnSchema("someOtherId", null),
+                    new AutoTypeColumnSchema("isValid", null),
+                    new AutoTypeColumnSchema("eventType", null),
+                    new AutoTypeColumnSchema("foo", null),
+                    new AutoTypeColumnSchema("bar", null),
+                    new AutoTypeColumnSchema("someBytesColumn", null)
                 )
             ),
             null

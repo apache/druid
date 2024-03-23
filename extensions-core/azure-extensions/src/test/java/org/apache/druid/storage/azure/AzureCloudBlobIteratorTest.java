@@ -19,132 +19,51 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.http.rest.PagedResponse;
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.microsoft.azure.storage.ResultContinuation;
-import com.microsoft.azure.storage.ResultSegment;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.ListBlobItem;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 import org.easymock.EasyMock;
+import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
-import org.junit.After;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.IOException;
+import org.junit.runner.RunWith;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
+@RunWith(EasyMockRunner.class)
 public class AzureCloudBlobIteratorTest extends EasyMockSupport
 {
-  private static final String AZURE = "azure";
-  private static final String CONTAINER1 = "container1";
-  private static final String PREFIX_ONLY_CLOUD_BLOBS = "prefixOnlyCloudBlobs";
-  private static final String PREFIX_WITH_NO_BLOBS = "prefixWithNoBlobs";
-  private static final String PREFIX_WITH_CLOUD_BLOBS_AND_DIRECTORIES = "prefixWithCloudBlobsAndDirectories";
-  private static final URI PREFIX_ONLY_CLOUD_BLOBS_URI;
-  private static final URI PREFIX_WITH_NO_BLOBS_URI;
-  private static final URI PREFIX_WITH_CLOUD_BLOBS_AND_DIRECTORIES_URI;
-  private static final List<URI> EMPTY_URI_PREFIXES = ImmutableList.of();
-  private static final List<URI> PREFIXES;
-  private static final int MAX_LISTING_LENGTH = 10;
-  private static final int MAX_TRIES = 2;
-  private static final StorageException RETRYABLE_EXCEPTION = new StorageException("", "", new IOException());
-  private static final URISyntaxException NON_RETRYABLE_EXCEPTION = new URISyntaxException("", "");
-
+  @Mock
   private AzureStorage storage;
-  private ListBlobItemHolderFactory blobItemDruidFactory;
-  private AzureAccountConfig config;
-  private ResultSegment<ListBlobItem> resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1;
-  private ResultSegment<ListBlobItem> resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs2;
-  private ResultSegment<ListBlobItem> resultSegmentPrefixWithNoBlobs;
-  private ResultSegment<ListBlobItem> resultSegmentPrefixWithCloudBlobsAndDirectories;
-
-  private ResultContinuation resultContinuationPrefixOnlyCloudBlobs = new ResultContinuation();
-  private ResultContinuation nullResultContinuationToken = null;
-
-  private ListBlobItem blobItemPrefixWithOnlyCloudBlobs1;
-  private ListBlobItemHolder cloudBlobItemPrefixWithOnlyCloudBlobs1;
-  private CloudBlobHolder cloudBlobDruidPrefixWithOnlyCloudBlobs1;
-
-  private ListBlobItem blobItemPrefixWithOnlyCloudBlobs2;
-  private ListBlobItemHolder cloudBlobItemPrefixWithOnlyCloudBlobs2;
-  private CloudBlobHolder cloudBlobDruidPrefixWithOnlyCloudBlobs2;
-
-  private ListBlobItem blobItemPrefixWithCloudBlobsAndDirectories1;
-  private ListBlobItemHolder directoryItemPrefixWithCloudBlobsAndDirectories;
-
-  private ListBlobItem blobItemPrefixWithCloudBlobsAndDirectories2;
-  private ListBlobItemHolder cloudBlobItemPrefixWithCloudBlobsAndDirectories;
-  private CloudBlobHolder cloudBlobDruidPrefixWithCloudBlobsAndDirectories;
-
-  private ListBlobItem blobItemPrefixWithCloudBlobsAndDirectories3;
-  private ListBlobItemHolder directoryItemPrefixWithCloudBlobsAndDirectories3;
-
 
   private AzureCloudBlobIterator azureCloudBlobIterator;
+  private final AzureAccountConfig config = new AzureAccountConfig();
+  private final Integer MAX_TRIES = 3;
+  private final Integer MAX_LISTING_LENGTH = 10;
+  private final String CONTAINER = "container";
+  private final String STORAGE_ACCOUNT = "storageAccount";
+  private final String DEFAULT_STORAGE_ACCOUNT = "defaultStorageAccount";
 
-  static {
-    try {
-      PREFIX_ONLY_CLOUD_BLOBS_URI = new URI(AZURE + "://" + CONTAINER1 + "/" + PREFIX_ONLY_CLOUD_BLOBS);
-      PREFIX_WITH_NO_BLOBS_URI = new URI(AZURE + "://" + CONTAINER1 + "/" + PREFIX_WITH_NO_BLOBS);
-      PREFIX_WITH_CLOUD_BLOBS_AND_DIRECTORIES_URI = new URI(AZURE
-                                                            + "://"
-                                                            + CONTAINER1
-                                                            + "/"
-                                                            + PREFIX_WITH_CLOUD_BLOBS_AND_DIRECTORIES);
-      PREFIXES = ImmutableList.of(
-          PREFIX_ONLY_CLOUD_BLOBS_URI,
-          PREFIX_WITH_NO_BLOBS_URI,
-          PREFIX_WITH_CLOUD_BLOBS_AND_DIRECTORIES_URI
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   @Before
   public void setup()
   {
-    storage = createMock(AzureStorage.class);
-    config = createMock(AzureAccountConfig.class);
-    blobItemDruidFactory = createMock(ListBlobItemHolderFactory.class);
+    config.setMaxTries(MAX_TRIES);
+    config.setAccount(DEFAULT_STORAGE_ACCOUNT);
 
-    resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1 = createMock(ResultSegment.class);
-    resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs2 = createMock(ResultSegment.class);
-    resultSegmentPrefixWithNoBlobs = createMock(ResultSegment.class);
-    resultSegmentPrefixWithCloudBlobsAndDirectories = createMock(ResultSegment.class);
-    cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemHolder.class);
-
-    blobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItem.class);
-    cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemHolder.class);
-    cloudBlobDruidPrefixWithOnlyCloudBlobs1 = createMock(CloudBlobHolder.class);
-    EasyMock.expect(cloudBlobDruidPrefixWithOnlyCloudBlobs1.getBlobLength()).andReturn(10L).anyTimes();
-
-    blobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItem.class);
-    cloudBlobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItemHolder.class);
-    cloudBlobDruidPrefixWithOnlyCloudBlobs2 = createMock(CloudBlobHolder.class);
-    EasyMock.expect(cloudBlobDruidPrefixWithOnlyCloudBlobs2.getBlobLength()).andReturn(10L).anyTimes();
-
-    blobItemPrefixWithCloudBlobsAndDirectories1 = createMock(ListBlobItem.class);
-    directoryItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemHolder.class);
-
-    blobItemPrefixWithCloudBlobsAndDirectories2 = createMock(ListBlobItem.class);
-    cloudBlobItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemHolder.class);
-    cloudBlobDruidPrefixWithCloudBlobsAndDirectories = createMock(CloudBlobHolder.class);
-    EasyMock.expect(cloudBlobDruidPrefixWithCloudBlobsAndDirectories.getBlobLength()).andReturn(10L).anyTimes();
-
-    blobItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItem.class);
-    directoryItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItemHolder.class);
   }
 
   @Test
@@ -152,10 +71,9 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   {
     azureCloudBlobIterator = new AzureCloudBlobIterator(
         storage,
-        blobItemDruidFactory,
         config,
-        EMPTY_URI_PREFIXES,
-        MAX_LISTING_LENGTH
+        ImmutableList.of(),
+        1
     );
     boolean hasNext = azureCloudBlobIterator.hasNext();
     Assert.assertFalse(hasNext);
@@ -164,168 +82,202 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   @Test
   public void test_next_prefixesWithMultipleBlobsAndSomeDirectories_returnsExpectedBlobs() throws Exception
   {
-    EasyMock.expect(config.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
-    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.isCloudBlob()).andReturn(true);
-    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithOnlyCloudBlobs1).anyTimes();
-    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithOnlyCloudBlobs1)).andReturn(
-        cloudBlobItemPrefixWithOnlyCloudBlobs1);
-
-    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs2.isCloudBlob()).andReturn(true);
-    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs2.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithOnlyCloudBlobs2).anyTimes();
-    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithOnlyCloudBlobs2)).andReturn(
-        cloudBlobItemPrefixWithOnlyCloudBlobs2);
-
-    EasyMock.expect(directoryItemPrefixWithCloudBlobsAndDirectories.isCloudBlob()).andReturn(false);
-    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithCloudBlobsAndDirectories1)).andReturn(
-        directoryItemPrefixWithCloudBlobsAndDirectories);
-
-    EasyMock.expect(cloudBlobItemPrefixWithCloudBlobsAndDirectories.isCloudBlob()).andReturn(true);
-    EasyMock.expect(cloudBlobItemPrefixWithCloudBlobsAndDirectories.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithCloudBlobsAndDirectories).anyTimes();
-    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithCloudBlobsAndDirectories2)).andReturn(
-        cloudBlobItemPrefixWithCloudBlobsAndDirectories);
-
-    EasyMock.expect(directoryItemPrefixWithCloudBlobsAndDirectories3.isCloudBlob()).andReturn(false);
-    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithCloudBlobsAndDirectories3)).andReturn(
-        directoryItemPrefixWithCloudBlobsAndDirectories3);
-
-    ArrayList<ListBlobItem> resultBlobItemsPrefixWithOnlyCloudBlobs1 = new ArrayList<>();
-    resultBlobItemsPrefixWithOnlyCloudBlobs1.add(blobItemPrefixWithOnlyCloudBlobs1);
-    ArrayList<ListBlobItem> resultBlobItemsPrefixWithOnlyCloudBlobs2 = new ArrayList<>();
-    resultBlobItemsPrefixWithOnlyCloudBlobs2.add(blobItemPrefixWithOnlyCloudBlobs2);
-    ArrayList<ListBlobItem> resultBlobItemsPrefixWithNoBlobs = new ArrayList<>();
-    ArrayList<ListBlobItem> resultBlobItemsPrefixWithCloudBlobsAndDirectories = new ArrayList<>();
-    resultBlobItemsPrefixWithCloudBlobsAndDirectories.add(blobItemPrefixWithCloudBlobsAndDirectories1);
-    resultBlobItemsPrefixWithCloudBlobsAndDirectories.add(blobItemPrefixWithCloudBlobsAndDirectories2);
-    resultBlobItemsPrefixWithCloudBlobsAndDirectories.add(blobItemPrefixWithCloudBlobsAndDirectories3);
-    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1.getContinuationToken())
-            .andReturn(resultContinuationPrefixOnlyCloudBlobs);
-    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1.getResults())
-            .andReturn(resultBlobItemsPrefixWithOnlyCloudBlobs1);
-
-    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs2.getContinuationToken()).andReturn(nullResultContinuationToken);
-    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs2.getResults())
-            .andReturn(resultBlobItemsPrefixWithOnlyCloudBlobs2);
-
-    EasyMock.expect(resultSegmentPrefixWithNoBlobs.getContinuationToken()).andReturn(nullResultContinuationToken);
-    EasyMock.expect(resultSegmentPrefixWithNoBlobs.getResults()).andReturn(resultBlobItemsPrefixWithNoBlobs);
-
-    EasyMock.expect(resultSegmentPrefixWithCloudBlobsAndDirectories.getContinuationToken())
-            .andReturn(nullResultContinuationToken);
-    EasyMock.expect(resultSegmentPrefixWithCloudBlobsAndDirectories.getResults())
-            .andReturn(resultBlobItemsPrefixWithCloudBlobsAndDirectories);
-
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
-        CONTAINER1,
-        PREFIX_ONLY_CLOUD_BLOBS,
-        nullResultContinuationToken,
-        MAX_LISTING_LENGTH
-    )).andThrow(RETRYABLE_EXCEPTION);
-
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
-        CONTAINER1,
-        PREFIX_ONLY_CLOUD_BLOBS,
-        nullResultContinuationToken,
-        MAX_LISTING_LENGTH
-    )).andReturn(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1);
-
-
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
-        CONTAINER1,
-        PREFIX_ONLY_CLOUD_BLOBS,
-        resultContinuationPrefixOnlyCloudBlobs,
-        MAX_LISTING_LENGTH
-    )).andReturn(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs2);
-
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
-        CONTAINER1,
-        PREFIX_WITH_NO_BLOBS,
-        nullResultContinuationToken,
-        MAX_LISTING_LENGTH
-    )).andReturn(resultSegmentPrefixWithNoBlobs);
-
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
-        CONTAINER1,
-        PREFIX_WITH_CLOUD_BLOBS_AND_DIRECTORIES,
-        nullResultContinuationToken,
-        MAX_LISTING_LENGTH
-    )).andReturn(resultSegmentPrefixWithCloudBlobsAndDirectories);
-
-    replayAll();
-
-    azureCloudBlobIterator = new AzureCloudBlobIterator(
-        storage,
-        blobItemDruidFactory,
-        config,
-        PREFIXES,
-        MAX_LISTING_LENGTH
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azure://%s/dir1", CONTAINER)),
+        new URI(StringUtils.format("azure://%s/dir2", CONTAINER))
     );
 
-    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
-        cloudBlobDruidPrefixWithOnlyCloudBlobs1,
-        cloudBlobDruidPrefixWithOnlyCloudBlobs2,
-        cloudBlobDruidPrefixWithCloudBlobsAndDirectories
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable);
+
+    BlobItem blobPrefixItem = new BlobItem().setIsPrefix(true).setName("subdir").setProperties(new BlobItemProperties());
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier2 = new SettableSupplier<>();
+    supplier2.set(new TestPagedResponse<>(ImmutableList.of(blobPrefixItem, blobItem2)));
+    PagedIterable<BlobItem> pagedIterable2 = new PagedIterable<>(supplier2);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir2", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable2);
+
+    replayAll();
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        config,
+        prefixes,
+        MAX_LISTING_LENGTH
     );
     List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
     while (azureCloudBlobIterator.hasNext()) {
       actualBlobItems.add(azureCloudBlobIterator.next());
     }
-    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
-    Assert.assertTrue(expectedBlobItems.containsAll(actualBlobItems));
     verifyAll();
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
+        new CloudBlobHolder(blobItem, CONTAINER, DEFAULT_STORAGE_ACCOUNT),
+        new CloudBlobHolder(blobItem2, CONTAINER, DEFAULT_STORAGE_ACCOUNT)
+    );
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
   }
 
   @Test
-  public void test_next_emptyObjects_skipEmptyObjects() throws URISyntaxException, StorageException
+  public void test_next_prefixesWithMultipleBlobsAndOneDirectory_returnsExpectedBlobs() throws Exception
   {
-    EasyMock.expect(config.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
-    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.isCloudBlob()).andReturn(true);
-    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithOnlyCloudBlobs1).anyTimes();
-    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithOnlyCloudBlobs1)).andReturn(
-        cloudBlobItemPrefixWithOnlyCloudBlobs1);
-
-    ListBlobItem emptyBlobItem = createMock(ListBlobItem.class);
-    ListBlobItemHolder emptyBlobItemHolder = createMock(ListBlobItemHolder.class);
-    CloudBlobHolder emptyBlobHolder = createMock(CloudBlobHolder.class);
-    EasyMock.expect(emptyBlobHolder.getBlobLength()).andReturn(0L).anyTimes();
-    EasyMock.expect(emptyBlobItemHolder.isCloudBlob()).andReturn(true);
-    EasyMock.expect(emptyBlobItemHolder.getCloudBlob()).andReturn(emptyBlobHolder).anyTimes();
-
-    EasyMock.expect(blobItemDruidFactory.create(emptyBlobItem)).andReturn(emptyBlobItemHolder);
-
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
-        CONTAINER1,
-        PREFIX_ONLY_CLOUD_BLOBS,
-        nullResultContinuationToken,
-        MAX_LISTING_LENGTH
-    )).andReturn(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1);
-
-    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1.getContinuationToken())
-            .andReturn(nullResultContinuationToken);
-    ArrayList<ListBlobItem> resultBlobItemsPrefixWithOnlyCloudBlobs1 = new ArrayList<>();
-    resultBlobItemsPrefixWithOnlyCloudBlobs1.add(blobItemPrefixWithOnlyCloudBlobs1);
-    resultBlobItemsPrefixWithOnlyCloudBlobs1.add(emptyBlobItem);
-    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1.getResults())
-            .andReturn(resultBlobItemsPrefixWithOnlyCloudBlobs1);
-
-    replayAll();
-
-    azureCloudBlobIterator = new AzureCloudBlobIterator(
-        storage,
-        blobItemDruidFactory,
-        config,
-        ImmutableList.of(PREFIX_ONLY_CLOUD_BLOBS_URI),
-        MAX_LISTING_LENGTH
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azure://%s/dir1", CONTAINER))
     );
 
-    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(cloudBlobDruidPrefixWithOnlyCloudBlobs1);
-    List<CloudBlobHolder> actualBlobItems = Lists.newArrayList(azureCloudBlobIterator);
-    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
-    Assert.assertTrue(expectedBlobItems.containsAll(actualBlobItems));
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem, blobItem2)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable);
+
+
+    replayAll();
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        config,
+        prefixes,
+        MAX_LISTING_LENGTH
+    );
+    List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
+    while (azureCloudBlobIterator.hasNext()) {
+      actualBlobItems.add(azureCloudBlobIterator.next());
+    }
     verifyAll();
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
+        new CloudBlobHolder(blobItem, CONTAINER, DEFAULT_STORAGE_ACCOUNT),
+        new CloudBlobHolder(blobItem2, CONTAINER, DEFAULT_STORAGE_ACCOUNT)
+    );
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
+  public void test_next_prefixesWithMultipleBlobsAndSomeDirectories_returnsExpectedBlobs_azureStorage() throws Exception
+  {
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azureStorage://%s/%s/dir1", STORAGE_ACCOUNT, CONTAINER)),
+        new URI(StringUtils.format("azureStorage://%s/%s/dir2", STORAGE_ACCOUNT, CONTAINER))
+    );
+
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable);
+
+    BlobItem blobPrefixItem = new BlobItem().setIsPrefix(true).setName("subdir").setProperties(new BlobItemProperties());
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier2 = new SettableSupplier<>();
+    supplier2.set(new TestPagedResponse<>(ImmutableList.of(blobPrefixItem, blobItem2)));
+    PagedIterable<BlobItem> pagedIterable2 = new PagedIterable<>(supplier2);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(STORAGE_ACCOUNT, CONTAINER, "dir2", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable2);
+
+    replayAll();
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        config,
+        prefixes,
+        MAX_LISTING_LENGTH
+    );
+    List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
+    while (azureCloudBlobIterator.hasNext()) {
+      actualBlobItems.add(azureCloudBlobIterator.next());
+    }
+    verifyAll();
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
+        new CloudBlobHolder(blobItem, CONTAINER, STORAGE_ACCOUNT),
+        new CloudBlobHolder(blobItem2, CONTAINER, STORAGE_ACCOUNT)
+    );
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
+  public void test_next_emptyObjects_skipEmptyObjects() throws Exception
+  {
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azure://%s/dir1", CONTAINER))
+    );
+
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(0L));
+
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem, blobItem2)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable);
+
+    replayAll();
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        config,
+        prefixes,
+        MAX_LISTING_LENGTH
+    );
+    List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
+    while (azureCloudBlobIterator.hasNext()) {
+      actualBlobItems.add(azureCloudBlobIterator.next());
+    }
+    verifyAll();
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
+        new CloudBlobHolder(blobItem, CONTAINER, DEFAULT_STORAGE_ACCOUNT)
+    );
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
   }
 
   @Test(expected = NoSuchElementException.class)
@@ -333,9 +285,8 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   {
     azureCloudBlobIterator = new AzureCloudBlobIterator(
         storage,
-        blobItemDruidFactory,
         config,
-        EMPTY_URI_PREFIXES,
+        ImmutableList.of(),
         MAX_LISTING_LENGTH
     );
     azureCloudBlobIterator.next();
@@ -344,50 +295,48 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   @Test(expected = RE.class)
   public void test_fetchNextBatch_moreThanMaxTriesRetryableExceptionsThrownInStorage_throwsREException() throws Exception
   {
-    EasyMock.expect(config.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azure://%s/dir1", CONTAINER))
+    );
+
     EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
         EasyMock.anyString(),
         EasyMock.anyString(),
-        EasyMock.anyObject(),
-        EasyMock.anyInt()
-    )).andThrow(RETRYABLE_EXCEPTION);
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
         EasyMock.anyString(),
-        EasyMock.anyString(),
-        EasyMock.anyObject(),
+        EasyMock.anyInt(),
         EasyMock.anyInt()
-    )).andThrow(RETRYABLE_EXCEPTION);
+    )).andThrow(new BlobStorageException("", null, null)).times(3);
+
+    replayAll();
     azureCloudBlobIterator = new AzureCloudBlobIterator(
         storage,
-        blobItemDruidFactory,
         config,
-        PREFIXES,
+        prefixes,
         MAX_LISTING_LENGTH
     );
+    verifyAll();
   }
 
   @Test(expected = RE.class)
   public void test_fetchNextBatch_nonRetryableExceptionThrownInStorage_throwsREException() throws Exception
   {
-    EasyMock.expect(config.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azure://%s/dir1", CONTAINER))
+    );
     EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
         EasyMock.anyString(),
         EasyMock.anyString(),
-        EasyMock.anyObject(),
+        EasyMock.anyString(),
+        EasyMock.anyInt(),
         EasyMock.anyInt()
-    )).andThrow(NON_RETRYABLE_EXCEPTION);
+    )).andThrow(new RuntimeException(""));
+    replayAll();
     azureCloudBlobIterator = new AzureCloudBlobIterator(
         storage,
-        blobItemDruidFactory,
         config,
-        PREFIXES,
+        prefixes,
         MAX_LISTING_LENGTH
     );
-  }
-
-  @After
-  public void cleanup()
-  {
-    resetAll();
+    verifyAll();
   }
 }

@@ -148,14 +148,10 @@ public class CoordinatorCompactionConfigsResourceTest
 
     double compactionTaskSlotRatio = 0.5;
     int maxCompactionTaskSlots = 9;
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         true,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -195,12 +191,8 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         ImmutableMap.of("key", "val")
     );
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -248,12 +240,8 @@ public class CoordinatorCompactionConfigsResourceTest
                  )
     ).thenReturn(originalConfig);
 
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
         datasourceName,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -277,8 +265,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         NEW_CONFIG,
-        "author",
-        "test",
         mockHttpServletRequest
     );
 
@@ -308,8 +294,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         NEW_CONFIG,
-        "author",
-        "test",
         mockHttpServletRequest
     );
 
@@ -351,14 +335,10 @@ public class CoordinatorCompactionConfigsResourceTest
 
     double compactionTaskSlotRatio = 0.5;
     int maxCompactionTaskSlots = 9;
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         true,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -414,8 +394,6 @@ public class CoordinatorCompactionConfigsResourceTest
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -441,12 +419,8 @@ public class CoordinatorCompactionConfigsResourceTest
                      ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
                  )
     ).thenReturn(CoordinatorCompactionConfig.empty());
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
         DATASOURCE_NOT_EXISTS,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), result.getStatus());

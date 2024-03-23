@@ -48,6 +48,8 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
+  private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
+  private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
@@ -164,7 +166,7 @@ public class GroupByQueryConfig
    */
   long getActualMaxSelectorDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
   {
-    if (maxSelectorDictionarySize.getBytes() == AUTOMATIC) {
+    if (getConfiguredMaxSelectorDictionarySize() == AUTOMATIC) {
       final long heapForDictionaries = (long) (maxHeapSize * SELECTOR_DICTIONARY_HEAP_FRACTION);
 
       return Math.max(
@@ -175,7 +177,7 @@ public class GroupByQueryConfig
           )
       );
     } else {
-      return maxSelectorDictionarySize.getBytes();
+      return getConfiguredMaxSelectorDictionarySize();
     }
   }
 
@@ -321,8 +323,13 @@ public class GroupByQueryConfig
             getMaxOnDiskStorage().getBytes()
         )
     );
-    newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
-    newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
+
+    newConfig.maxSelectorDictionarySize = queryContext
+        .getHumanReadableBytes(CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE, getConfiguredMaxSelectorDictionarySize());
+
+    newConfig.maxMergingDictionarySize = queryContext
+        .getHumanReadableBytes(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getConfiguredMaxMergingDictionarySize());
+
     newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,

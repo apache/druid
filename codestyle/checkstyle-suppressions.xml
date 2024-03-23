@@ -24,28 +24,14 @@
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 
 <suppressions>
-  <!-- See http://checkstyle.sourceforge.net/config_filters.html#SuppressionFilter for examples -->
+  <!-- See https://checkstyle.org/filters/suppressionfilter.html for examples -->
 
   <!-- Code copied from TestNG to apply a bugfix -->
   <suppress checks="AvoidStaticImport" files="[\\/]org[\\/]testng[\\/]" />
 
-  <suppress checks="Header" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="NeedBraces" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="UnusedImports" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="AvoidStarImport" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="FileTabCharacter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+  <suppress checks=".*" files="[\\/]target[\\/]generated-sources[\\/]" />
+  <suppress checks=".*" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 
-  <suppress checks="WhitespaceAfter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="WhitespaceAround" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="ParenPad" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="SingleSpaceSeparator" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="NoWhitespaceBefore" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="NoWhitespaceAfter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-
-  <suppress checks="LeftCurly" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="RightCurly" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-
-  <suppress checks="Indentation" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="Indentation" files="ProtoTestEventWrapper.java" />
   <suppress checks="Regexp" id="argumentLineBreaking" files="ProtoTestEventWrapper.java" />
   <suppress checks="[a-zA-Z0-9]*" files="ProtoTestEventWrapper.java" />
@@ -56,7 +42,6 @@
   <suppress checks="ConstantName" files="Author" />
   <suppress checks="ConstantName" files="Book" />
 
-  <suppress checks="OneStatementPerLine" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 
   <!-- extendedset is a fork of Alessandro Colantonio's CONCISE (COmpressed 'N' Composable Integer SEt) repository
        and licensed to ASF under a CLA is not true. -->
@@ -67,7 +52,5 @@
   <!-- See https://github.com/checkstyle/checkstyle/issues/5510 and the ImportOrder definition in checkstyle.xml -->
   <suppress checks="ImportOrder" message="^'java\..*'.*" />
 
-  <suppress checks="ImportOrder" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="EmptyLineSeparator" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="AvoidStaticImport" files="[\\/]src[\\/](test)[\\/]"/>
 </suppressions>

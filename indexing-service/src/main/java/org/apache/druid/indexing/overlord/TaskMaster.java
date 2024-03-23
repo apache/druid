@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
@@ -94,7 +95,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final SupervisorManager supervisorManager,
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
-      final SegmentAllocationQueue segmentAllocationQueue
+      final SegmentAllocationQueue segmentAllocationQueue,
+      final ObjectMapper mapper
   )
   {
     this.supervisorManager = supervisorManager;
@@ -125,7 +127,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
               taskRunner,
               taskActionClientFactory,
               taskLockbox,
-              emitter
+              emitter,
+              mapper
           );
 
           // Sensible order to start stuff:
@@ -238,7 +241,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
-   * Returns true if it's the leader and its all services have been properly initialized.
+   * Returns true if it's the leader and all its services have been initialized.
    */
   public boolean isLeader()
   {

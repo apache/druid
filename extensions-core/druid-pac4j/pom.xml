@@ -29,17 +29,17 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>29.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <pac4j.version>3.8.3</pac4j.version>
+    <pac4j.version>4.5.7</pac4j.version>
 
-    <!-- Following must be updated along with any updates to pac4j version -->
+    <!-- Following must be updated along with any updates to pac4j version. One can find the compatible version of nimbus libraries in org.pac4j:pac4j-oidc dependencies-->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>
-    <nimbus.jose.jwt.version>7.9</nimbus.jose.jwt.version>
-    <oauth2.oidc.sdk.version>6.5</oauth2.oidc.sdk.version>
+    <nimbus.jose.jwt.version>8.22.1</nimbus.jose.jwt.version>
+    <oauth2.oidc.sdk.version>8.22</oauth2.oidc.sdk.version>
   </properties>
 
   <dependencies>
@@ -143,6 +143,11 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

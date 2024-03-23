@@ -320,13 +320,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     return (
       <ConnectExternalDataDialog
-        onSetExternalConfig={(externalConfig, isArrays, timeExpression, partitionedByHint) => {
+        onSetExternalConfig={(externalConfig, timeExpression, partitionedByHint, arrayMode) => {
           this.handleNewTab(
             WorkbenchQuery.fromInitExternalConfig(
               externalConfig,
-              isArrays,
               timeExpression,
               partitionedByHint,
+              arrayMode,
             ),
             'Ext ' + guessDataSourceNameFromInputSource(externalConfig.inputSource),
           );
@@ -496,7 +496,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                           const newTabEntry: TabEntry = {
                             id,
                             tabName: tabEntry.tabName + ' (copy)',
-                            query: tabEntry.query,
+                            query: tabEntry.query.changeLastExecution(undefined),
                           };
                           this.handleQueriesChange(
                             tabEntries.slice(0, i + 1).concat(newTabEntry, tabEntries.slice(i + 1)),

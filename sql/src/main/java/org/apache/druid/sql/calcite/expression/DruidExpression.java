@@ -366,6 +366,11 @@ public class DruidExpression
     return Preconditions.checkNotNull(simpleExtraction);
   }
 
+  public boolean isArray()
+  {
+    return druidType != null && druidType.isArray();
+  }
+
   /**
    * Get sub {@link DruidExpression} arguments of this expression
    */

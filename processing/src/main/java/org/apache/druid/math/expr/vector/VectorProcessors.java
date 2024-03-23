@@ -544,9 +544,11 @@ public class VectorProcessors
                 outputNulls[i] = rightNulls[i];
               } else {
                 output[i] = rightInput[i];
+                outputNulls[i] = false;
               }
             } else {
               output[i] = leftInput[i];
+              outputNulls[i] = false;
             }
           }
 
@@ -580,9 +582,11 @@ public class VectorProcessors
                 outputNulls[i] = rightNulls[i];
               } else {
                 output[i] = rightInput[i];
+                outputNulls[i] = false;
               }
             } else {
               output[i] = leftInput[i];
+              outputNulls[i] = false;
             }
           }
 
@@ -744,6 +748,7 @@ public class VectorProcessors
               }
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
+            outputNulls[i] = false;
           }
 
           @Override
@@ -793,6 +798,7 @@ public class VectorProcessors
               }
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
+            outputNulls[i] = false;
           }
 
           @Override
@@ -839,6 +845,7 @@ public class VectorProcessors
               return;
             }
             output[i] = Evals.asLong(Evals.asBoolean((String) leftInput[i]) || Evals.asBoolean((String) rightInput[i]));
+            outputNulls[i] = false;
           }
 
           @Override
@@ -907,6 +914,7 @@ public class VectorProcessors
               }
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
+            outputNulls[i] = false;
           }
 
           @Override
@@ -916,7 +924,7 @@ public class VectorProcessors
           }
         },
         () -> new BivariateFunctionVectorProcessor<double[], double[], long[]>(
-            ExpressionType.DOUBLE,
+            ExpressionType.LONG,
             left.asVectorProcessor(inputTypes),
             right.asVectorProcessor(inputTypes)
         )
@@ -956,6 +964,7 @@ public class VectorProcessors
               }
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
+            outputNulls[i] = false;
           }
 
           @Override
@@ -965,7 +974,7 @@ public class VectorProcessors
           }
         },
         () -> new BivariateFunctionVectorProcessor<Object[], Object[], long[]>(
-            ExpressionType.STRING,
+            ExpressionType.LONG,
             left.asVectorProcessor(inputTypes),
             right.asVectorProcessor(inputTypes)
         )
@@ -1004,6 +1013,7 @@ public class VectorProcessors
             output[i] = Evals.asLong(
                 Evals.asBoolean((String) leftInput[i]) && Evals.asBoolean((String) rightInput[i])
             );
+            outputNulls[i] = false;
           }
 
           @Override

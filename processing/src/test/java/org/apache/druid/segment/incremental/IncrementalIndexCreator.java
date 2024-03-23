@@ -180,7 +180,7 @@ public class IncrementalIndexCreator implements Closeable
    *
    * For example, for a parameterized test with the following constrctor:
    * {@code
-   *   public IncrementalIndexTest(String indexType, String mode, boolean deserializeComplexMetrics)
+   *   public IncrementalIndexTest(String indexType, String mode)
    *   {
    *     ...
    *   }
@@ -188,12 +188,11 @@ public class IncrementalIndexCreator implements Closeable
    *
    * we can test all the input combinations as follows:
    * {@code
-   *   @Parameterized.Parameters(name = "{index}: {0}, {1}, deserialize={2}")
+   *   @Parameterized.Parameters(name = "{index}: {0}, {1}")
    *   public static Collection<?> constructorFeeder()
    *   {
    *     return IncrementalIndexCreator.indexTypeCartesianProduct(
-   *         ImmutableList.of("rollup", "plain"),
-   *         ImmutableList.of(true, false)
+   *         ImmutableList.of("rollup", "plain")
    *     );
    *   }
    * }

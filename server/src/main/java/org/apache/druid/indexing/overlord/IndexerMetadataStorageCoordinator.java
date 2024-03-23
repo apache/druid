@@ -24,6 +24,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -84,7 +85,7 @@ public interface IndexerMetadataStorageCoordinator
   /**
    *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source and interval from the metadata store.
+   * given data source and list of intervals from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
@@ -92,18 +93,19 @@ public interface IndexerMetadataStorageCoordinator
    * if needed.
    *
    * @param dataSource The data source to query
-   * @param interval The interval to query
+   * @param intervals The list of interval to query
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals);
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
    * metadata store.
-   *
+   * <p>
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
+   * </p>
    *
    * @param dataSource The data source to query
    * @param intervals  The intervals for which all applicable and used segments are requested.
@@ -127,11 +129,27 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * see {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer)}
+   * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
+   * metadata store.
+   *
+   * @param dataSource  The data source the segments belong to
+   * @param interval    Filter the data segments to ones that include data in this interval exclusively.
+   * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                     with {@code used_status_last_updated} no later than this time will be included in the
+   *                                     kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                     from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
+   * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
+   * returned here may include data in the interval
    */
-  default List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
+  default List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
+  )
   {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null, limit, maxUsedStatusLastUpdatedTime);
   }
 
   /**
@@ -140,15 +158,22 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
+   * @param versions    An optional list of segment versions to retrieve in the given {@code interval}. If unspecified, all
+   *                    versions of unused segments in the {@code interval} must be retrieved.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
-   *
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                     with {@code used_status_last_updated} no later than this time will be included in the
+   *                                     kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                     from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval
    */
   List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable List<String> versions,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   );
 
   /**
@@ -433,13 +458,21 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
    * <br>
-   * If includeUnused is set, this also returns unused segments. Unused segments could be deleted by a kill task at any
-   * time and might lead to unexpected behaviour. This option exists mainly to provide a consistent view of the metadata,
-   * for example, in calls from MSQ controller and worker and would generally not be requrired.
+   * If {@code includeUnused} is set, the segment {@code id} retrieval should also consider the set of unused segments
+   * in the metadata store. Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
+   * This option exists mainly to provide a consistent view of the metadata, for example, in calls from MSQ controller
+   * and worker and would generally not be required.
    *
-   * @param id The segment id
+   * @param id The segment id to retrieve
    *
    * @return DataSegment used segment corresponding to given id
    */
   DataSegment retrieveSegmentForId(String id, boolean includeUnused);
+
+  /**
+   * Delete entries from the upgrade segments table after the corresponding replace task has ended
+   * @param taskId - id of the task with replace locks
+   * @return number of deleted entries from the metadata store
+   */
+  int deleteUpgradeSegmentsForTask(String taskId);
 }

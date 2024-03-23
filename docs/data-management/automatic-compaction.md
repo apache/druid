@@ -121,25 +121,15 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
-Compaction tasks typically fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+Compaction tasks typically fetch all [relevant segments](manual-compaction.md#compaction-io-configuration) prior to launching any subtasks,
 _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to
 maximize performance and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
-- [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
+- [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
+- [`dimensionsSpec`](manual-compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
-
-### Avoid conflicts with ingestion
-
-Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
-* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in this section below.
-* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
-
-The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
-
-To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
 
 ### Set frequency of compaction runs
 
@@ -151,6 +141,34 @@ druid.coordinator.dutyGroups=["compaction"]
 druid.coordinator.compaction.duties=["compactSegments"]
 druid.coordinator.compaction.period=PT60S
 ```
+
+## Avoid conflicts with ingestion
+
+Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
+
+* Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
+* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip compaction for latest segments](#skip-compaction-for-latest-segments).
+* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
+
+### Enable concurrent append and replace
+
+You can use concurrent append and replace to safely replace the existing data in an interval of a datasource while new data is being appended to that interval even during compaction.
+
+To do this, you need to update your datasource to allow concurrent append and replace tasks:
+
+* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": true`
+* If you're using the UI, enable **Use concurrent locks (experimental)** in the **Compaction config** for your datasource.
+
+You'll also need to update your ingestion jobs for the datasource to include the task context `"useConcurrentLocks": true`.
+
+For information on how to do this, see [Concurrent append and replace](../ingestion/concurrent-append-replace.md).
+
+### Skip compaction for latest segments
+
+The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
+
+To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
+
 
 ## View automatic compaction statistics
 
@@ -203,110 +221,11 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 }
 ```
 
-## Concurrent append and replace
-
-:::info
-Concurrent append and replace is an [experimental feature](../development/experimental.md) and is not currently available for SQL-based ingestion.
-:::
-
-This feature allows you to safely replace the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this is appending new data (using say streaming ingestion) to an interval while compaction of that interval is already in progress.
-
-To set up concurrent append and replace, you need to ensure that your ingestion jobs have the appropriate lock types:
-
-You can enable concurrent append and replace by ensuring the following:
-- The append task (with `appendToExisting` set to `true`) has `taskLockType` set to `APPEND` in the task context.
-- The replace task (with `appendToExisting` set to `false`) has `taskLockType` set to `REPLACE` in the task context.
-- The segment granularity of the append task is equal to or finer than the segment granularity of the replace task.
-
-:::info
-
-When using concurrent append and replace, keep the following in mind:
-
-- Concurrent append and replace fails if the task with `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
-
--  Only a single task can hold a `REPLACE` lock on a given interval of a datasource.
-  
-- Multiple tasks can hold `APPEND` locks on a given interval of a datasource and append data to that interval simultaneously.
-
-:::
-
-
-### Configure concurrent append and replace
-
-##### Update the compaction settings with the API
- 
- Prepare your datasource for concurrent append and replace by setting its task lock type to `REPLACE`.
-Add the `taskContext` like you would any other automatic compaction setting through the API:
-
-```shell
-curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "dataSource": "YOUR_DATASOURCE",
-    "taskContext": {
-        "taskLockType": "REPLACE"
-    }
-}'
-```
-
-##### Update the compaction settings with the UI
-
-In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
-
-#### Add a task lock type to your ingestion job
-
-Next, you need to configure the task lock type for your ingestion job: 
-
-- For streaming jobs, the context parameter goes in your supervisor spec, and the lock type is always `APPEND`
-- For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec, and the lock type can be either `APPEND` or `REPLACE`. 
- 
-You can provide the context parameter through the API like any other parameter for ingestion job or through the UI.
-
-##### Add the task lock type through the API
-
-Add the following JSON snippet to your supervisor or ingestion spec if you're using the API:
-
-```json
-"context": {
-   "taskLockType": LOCK_TYPE
-}   
-```
- 
-The `LOCK_TYPE` depends on what you're trying to accomplish.
-
-Set `taskLockType` to  `APPEND` if either of the following are true:
-
-- Dynamic partitioning with append to existing is set to `true`
-- The ingestion job is a streaming ingestion job
-
-If you have multiple ingestion jobs that append all targeting the same datasource and want them to run simultaneously, you need to also include the following context parameter:
-
-```json
-"useSharedLock": "true"
-```
-
-Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not use it with `REPLACE` task locks.
-
-
-Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you use any of the following partitioning types, use `REPLACE`:
-
-- hash partitioning 
-- range partitioning
-- dynamic partitioning with append to existing set to `false`
-
-
-##### Add a task lock using the Druid console
-
-As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
-
-- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
-- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
-
-
 ## Learn more
 
 See the following topics for more information:
-* [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
+* [Compaction](compaction.md) for an overview of compaction in Druid.
+* [Manual compaction](manual-compaction.md) for how to manually perform compaction tasks.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
 * [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
 

@@ -19,7 +19,8 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -32,9 +33,15 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
 {
   long lastValue;
 
+  public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
+  {
+    super(timeSelector, null, objectSelector);
+    lastValue = 0;
+  }
+
   public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, null);
     lastValue = 0;
   }
 
@@ -44,11 +51,10 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
     buf.putLong(position, 0);
   }
 
-
   @Override
   void putValue(ByteBuffer buf, int position, int index)
   {
-    lastValue = valueSelector.getLongVector()[index];
+    lastValue = valueSelector != null ? valueSelector.getLongVector()[index] : ((SerializablePairLongLong) objectSelector.getObjectVector()[index]).getRhs();
     buf.putLong(position, lastValue);
   }
 
@@ -61,6 +67,6 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
   public Object get(ByteBuffer buf, int position)
   {
     final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
+    return new SerializablePairLongLong(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
   }
 }

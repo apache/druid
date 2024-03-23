@@ -172,31 +172,22 @@ public class SqlStatementResourceHelper
       for (CounterSnapshots counterSnapshots : workerCounters.values()) {
         QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getMap()
                                                                     .getOrDefault("segmentGenerationProgress", null);
-        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof SegmentGenerationProgressCounter.Snapshot) {
+        if (queryCounterSnapshot instanceof SegmentGenerationProgressCounter.Snapshot) {
           rows += ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsPushed();
         }
       }
-      if (rows != 0L) {
-        return Optional.of(ImmutableList.of(new PageInformation(0, rows, null)));
-      } else {
-        return Optional.empty();
-      }
+      return Optional.of(ImmutableList.of(new PageInformation(0, rows, null)));
     } else if (msqDestination instanceof TaskReportMSQDestination) {
       long rows = 0L;
       long size = 0L;
       for (CounterSnapshots counterSnapshots : workerCounters.values()) {
         QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getMap().getOrDefault("output", null);
-        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
+        if (queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
           rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
           size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
         }
       }
-      if (rows != 0L) {
-        return Optional.of(ImmutableList.of(new PageInformation(0, rows, size)));
-      } else {
-        return Optional.empty();
-      }
-
+      return Optional.of(ImmutableList.of(new PageInformation(0, rows, size)));
     } else if (msqDestination instanceof DurableStorageMSQDestination) {
 
       return populatePagesForDurableStorageDestination(finalStage, workerCounters);
@@ -221,7 +212,6 @@ public class SqlStatementResourceHelper
       throw DruidException.defensive("Expected worker count to be set for stage[%d]", finalStage);
     }
 
-
     List<PageInformation> pages = new ArrayList<>();
     for (int partitionNumber = 0; partitionNumber < totalPartitions; partitionNumber++) {
       for (int workerNumber = 0; workerNumber < totalWorkerCount; workerNumber++) {
@@ -230,7 +220,7 @@ public class SqlStatementResourceHelper
         if (workerCounter != null && workerCounter.getMap() != null) {
           QueryCounterSnapshot channelCounters = workerCounter.getMap().get("output");
 
-          if (channelCounters != null && channelCounters instanceof ChannelCounters.Snapshot) {
+          if (channelCounters instanceof ChannelCounters.Snapshot) {
             long rows = 0L;
             long size = 0L;
 

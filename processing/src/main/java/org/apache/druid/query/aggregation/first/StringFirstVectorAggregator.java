@@ -76,7 +76,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
         continue;
       }
       index = i;
-      final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
+      final boolean foldNeeded = FirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index], SerializablePairLongString.class);
       if (foldNeeded) {
         final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
             timeSelector,
@@ -125,7 +125,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
       if (obj == null) {
         continue;
       } else {
-        foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(obj);
+        foldNeeded = FirstLastUtils.objectNeedsFoldCheck(obj, SerializablePairLongString.class);
         break;
       }
     }

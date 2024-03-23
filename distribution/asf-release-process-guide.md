@@ -370,17 +370,20 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 
 ### Update druid.staged.apache.org
 
-This repo is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
+> Before you start, you need the following: Python 3.11 (or later) and Node 16.14 (or later).
+
+This repo (`druid`) is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
 
 For more thorough instructions and a description of what the `do_all_things` script does, see the [`druid-website-src` README](https://github.com/apache/druid-website-src)
 
 1. Pull https://github.com/apache/druid-website and https://github.com/apache/druid-website-src. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
-2. From `druid-website`, checkout branch `asf-staging`.
+2. From `druid-website`, checkout a staging branch based off of the `asf-staging` branch.
 
-3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-docs`.
-   1. Update the version list in `static/js/version`.js with the version you're releasing and the release date. The highest release version goes in position 0. 
-   1. In `scripts`, run: 
+3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-staging`.
+   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file. If this is a patch release, replace the prior release of that version. For example, replace `27.0.0` with `27.0.1`. Don't add a new entry. 
+   2. In this file, also update the release date. This is a placeholder date since the final date isn't decided until voting completes. You'll need to update it again before doing the production steps.
+   3. In `scripts`, run: 
    
    ```python
    # Include `--skip-install` if you already have Docusaurus 2 installed in druid-website-src. 
@@ -394,10 +397,9 @@ For more thorough instructions and a description of what the `do_all_things` scr
   - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files 
   - In the `docs` directory at the root of the repo, the new Markdown files.
     
-    All these files should be part of your PR to `druid-website-src`.
-   <br />
+    All these files should be part of your PR to `druid-website-src`.  
     Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
-
+  - The PR to `druid-website-src` should not be merged. Leave it in draft for reference. It can be closed when you're ready to push to production. 
    
 
 5. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch using the contents of `published_versions` in `druid-website-src`. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
@@ -623,36 +625,42 @@ http://www.apache.org/legal/release-policy.html#release-announcements
 
 ### Update druid.apache.org
 
-1. Pull https://github.com/apache/druid-website and https://github.com/apache/druid-website-src. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
+> Before you start, you need the following: Python 3.11 (or later) and Node 16.14 (or later).
 
-2. To update the downloads page of the website, update the _config.yml file in the root of the website src repo. Versions are grouped by release branch:
+This repo (`druid`) is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
 
-```yaml
-druid_versions:
-  - release: 0.16
-    versions:
-      - version: 0.16.0-incubating
-        date: 2019-09-24
-  - release: 0.15
-    versions:
-      - version: 0.15.1-incubating
-        date: 2019-08-15
-```
+For more thorough instructions and a description of what the `do_all_things` script does, see the [`druid-website-src` README](https://github.com/apache/druid-website-src)
 
-3. From druid-website, checkout branch `asf-site`.
+1. Make sure you pull the latest commits from the `druid` release branch. There have likely been backported documentation PRs between the initial staging date and the release date.
 
-4. From druid-website-src, checkout the branch you created to update the staged Druid website.
+2. Pull the latest from `https://github.com/apache/druid-website` and `https://github.com/apache/druid-website-src`. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
-5. From druid-website-src, run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
+3. From `druid-website`, create a release branch based on the latest `asf-site` branch.
 
-* checkout the tag of the Druid release version
-* build the docs for that version into druid-website-src
-* build druid-website-src into druid-website
-* stage druid-website-src and druid-website repositories to git.
-
-6. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the master branch.
+4. From `druid-website-src`, check out a new branch for the release:
+   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file. If this is a patch release, replace the prior release of that version. For example, replace `27.0.0` with `27.0.1`. Don't add a new entry. 
+   2. In this file, also update the release date. **Set this as the actual date of the release.** When you updated this file for staging, you likely put in a placeholder date.
+   3. In `scripts`, run: 
    
-7. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch. Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
+   ```python
+   # This copies the Markdown files from `druid` and builds the website using them
+   # Include `--skip-install` if you already have Docusaurus 2 installed in druid-website-src. 
+   # The script assumes you use `npm`. If you use `yarn`, include `--yarn`.
+
+   python do_all_things.py -v VERSION --source /my/path/to/apache/druid
+   ```
+   
+
+5. Add the files to a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch you just created. In the changed files, you should see the following:
+  - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files. 
+  - In the `docs` directory at the root of the repo, the new Markdown files.
+    
+    All these files should be part of your PR to `druid-website-src`.  
+    Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
+
+6. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch using the contents of `published_versions` in `druid-website-src`. Once the website PR is pushed to `asf-site`, https://druid.apache.org/ will be updated near immediately with the new docs.
+
+7. When the site is published, the release PR to `druid-website-src` can also be merged. `asf-site` in `druid-website` and `published_versions` on the `master` branch in `druid-website-src` should align.
 
 ### Draft a release on github
 

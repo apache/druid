@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -142,6 +144,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
 
     // Compute key columns.
     final List<List<KeyColumn>> keyColumns = toKeyColumns(condition);
+    final int[] requiredNonNullKeyParts = toRequiredNonNullKeyParts(condition);
 
     // Stitch up the inputs and validate each input channel signature.
     // If validateInputFrameSignatures fails, it's a precondition violation: this class somehow got bad inputs.
@@ -180,6 +183,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
               rightPrefix,
               keyColumns,
+              requiredNonNullKeyParts,
               joinType,
               frameContext.memoryParameters().getSortMergeJoinMemory()
           );
@@ -215,6 +219,27 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     }
 
     return retVal;
+  }
+
+  /**
+   * Extracts a list of key parts that must be nonnull from a {@link JoinConditionAnalysis}. These are equality
+   * conditions for which {@link Equality#isIncludeNull()} is false.
+   *
+   * The condition must have been validated by {@link #validateCondition(JoinConditionAnalysis)}.
+   */
+  public static int[] toRequiredNonNullKeyParts(final JoinConditionAnalysis condition)
+  {
+    final IntList retVal = new IntArrayList(condition.getEquiConditions().size());
+
+    final List<Equality> equiConditions = condition.getEquiConditions();
+    for (int i = 0; i < equiConditions.size(); i++) {
+      Equality equiCondition = equiConditions.get(i);
+      if (!equiCondition.isIncludeNull()) {
+        retVal.add(i);
+      }
+    }
+
+    return retVal.toArray(new int[0]);
   }
 
   /**

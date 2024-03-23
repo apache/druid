@@ -126,10 +126,6 @@ are unique.
 queryableIndexSegment, and then evaluates search predicates. If some filters support bitmap indexes, the cursor can read
 only the rows which satisfy those filters, thereby saving I/O cost. However, it might be slow with filters of low selectivity.
 
-- "auto" strategy uses a cost-based planner for choosing an optimal search strategy. It estimates the cost of index-only
-and cursor-based execution plans, and chooses the optimal one. Currently, it is not enabled by default due to the overhead
-of cost estimation.
-
 ## Server configuration
 
 The following runtime properties apply:

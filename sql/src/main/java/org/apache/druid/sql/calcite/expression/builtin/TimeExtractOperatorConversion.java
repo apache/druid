@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -65,6 +66,23 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
     );
   }
 
+  public static DruidExpression applyTimeExtract(
+      final DruidExpression timeExpression,
+      final TimestampExtractExprMacro.Unit unit,
+      final DruidExpression timeZoneExpression
+  )
+  {
+    return DruidExpression.ofFunctionCall(
+        timeExpression.getDruidType(),
+        "timestamp_extract",
+        ImmutableList.of(
+            timeExpression,
+            DruidExpression.ofStringLiteral(unit.name()),
+            timeZoneExpression
+        )
+    );
+  }
+
   @Override
   public SqlFunction calciteOperator()
   {
@@ -89,13 +107,23 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
         StringUtils.toUpperCase(RexLiteral.stringValue(call.getOperands().get(1)))
     );
 
-    final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
-        call.getOperands(),
-        2,
-        operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
-        plannerContext.getTimeZone()
-    );
+    if (call.getOperands().size() > 2 && call.getOperands().get(2) instanceof RexInputRef) {
+      final RexNode timeZoneArg = call.getOperands().get(2);
+      final DruidExpression timeZoneExpression = Expressions.toDruidExpression(
+          plannerContext,
+          rowSignature,
+          timeZoneArg
+      );
+      return applyTimeExtract(timeExpression, unit, timeZoneExpression);
+    } else {
+      final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
+          call.getOperands(),
+          2,
+          operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
+          plannerContext.getTimeZone()
+      );
 
-    return applyTimeExtract(timeExpression, unit, timeZone);
+      return applyTimeExtract(timeExpression, unit, timeZone);
+    }
   }
 }

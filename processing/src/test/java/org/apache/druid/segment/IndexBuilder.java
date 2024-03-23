@@ -90,6 +90,8 @@ public class IndexBuilder
   @Nullable
   private File inputSourceTmpDir = null;
 
+  private boolean writeNullColumns = false;
+
   private IndexBuilder(ObjectMapper jsonMapper, ColumnConfig columnConfig)
   {
     this.jsonMapper = jsonMapper;
@@ -99,7 +101,7 @@ public class IndexBuilder
 
   public static IndexBuilder create()
   {
-    return new IndexBuilder(TestHelper.JSON_MAPPER, ColumnConfig.ALWAYS_USE_INDEXES);
+    return new IndexBuilder(TestHelper.JSON_MAPPER, ColumnConfig.DEFAULT);
   }
 
   public static IndexBuilder create(ColumnConfig columnConfig)
@@ -109,7 +111,7 @@ public class IndexBuilder
 
   public static IndexBuilder create(ObjectMapper jsonMapper)
   {
-    return new IndexBuilder(jsonMapper, ColumnConfig.ALWAYS_USE_INDEXES);
+    return new IndexBuilder(jsonMapper, ColumnConfig.DEFAULT);
   }
 
   public static IndexBuilder create(ObjectMapper jsonMapper, ColumnConfig columnConfig)
@@ -131,12 +133,13 @@ public class IndexBuilder
   public IndexBuilder segmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory);
+    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, writeNullColumns);
     return this;
   }
 
   public IndexBuilder writeNullColumns(boolean shouldWriteNullColumns)
   {
+    this.writeNullColumns = shouldWriteNullColumns;
     this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, shouldWriteNullColumns);
     return this;
   }

@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
@@ -32,6 +33,9 @@ import org.apache.druid.segment.nested.ScalarStringColumnSerializer;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.VariantColumnSerializer;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Common {@link DimensionSchema} for ingestion of 'standard' Druid built-in {@link ColumnType} datatypes.
@@ -62,12 +66,24 @@ public class AutoTypeColumnSchema extends DimensionSchema
 {
   public static final String TYPE = "auto";
 
+  @Nullable
+  private final ColumnType castToType;
+
   @JsonCreator
   public AutoTypeColumnSchema(
-      @JsonProperty("name") String name
+      @JsonProperty("name") String name,
+      @JsonProperty("castToType") @Nullable ColumnType castToType
   )
   {
     super(name, null, true);
+    // auto doesn't currently do FLOAT since expressions only support DOUBLE
+    if (ColumnType.FLOAT.equals(castToType)) {
+      this.castToType = ColumnType.DOUBLE;
+    } else if (ColumnType.FLOAT_ARRAY.equals(castToType)) {
+      this.castToType = ColumnType.DOUBLE_ARRAY;
+    } else {
+      this.castToType = castToType;
+    }
   }
 
   @Override
@@ -79,12 +95,55 @@ public class AutoTypeColumnSchema extends DimensionSchema
   @Override
   public ColumnType getColumnType()
   {
-    return ColumnType.NESTED_DATA;
+    return castToType != null ? castToType : ColumnType.NESTED_DATA;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public ColumnType getCastToType()
+  {
+    return castToType;
   }
 
   @Override
   public DimensionHandler<StructuredData, StructuredData, StructuredData> getDimensionHandler()
   {
-    return new NestedCommonFormatColumnHandler(getName());
+    return new NestedCommonFormatColumnHandler(getName(), castToType);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    AutoTypeColumnSchema that = (AutoTypeColumnSchema) o;
+    return Objects.equals(castToType, that.castToType);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), castToType);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DimensionSchema{" +
+           "name='" + getName() + '\'' +
+           ", valueType=" + getColumnType() +
+           ", typeName=" + getTypeName() +
+           ", multiValueHandling=" + getMultiValueHandling() +
+           ", createBitmapIndex=" + hasBitmapIndex() +
+           ", castToType=" + castToType +
+           '}';
   }
 }

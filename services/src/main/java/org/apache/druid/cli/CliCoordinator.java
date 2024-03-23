@@ -36,7 +36,6 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -44,6 +43,7 @@ import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.Jerseys;
@@ -53,6 +53,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
@@ -92,12 +93,12 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
-import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
@@ -155,7 +156,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.coordinator.centralizedTableSchema.enabled";
+  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = "druid.centralizedDatasourceSchema.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -194,6 +195,25 @@ public class CliCoordinator extends ServerRunnable
     modules.add(JettyHttpClientModule.global());
 
     if (isSegmentMetadataCacheEnabled) {
+      String serverViewType = (String) properties.getOrDefault(
+          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+          ServerViewModule.DEFAULT_SERVERVIEW_TYPE
+      );
+      if (!serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
+        throw DruidException
+            .forPersona(DruidException.Persona.ADMIN)
+            .ofCategory(DruidException.Category.UNSUPPORTED)
+            .build(
+                StringUtils.format(
+                    "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
+                    + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                    + "or disable the feature (set %4$s=false).",
+                    ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                    serverViewType,
+                    ServerViewModule.SERVERVIEW_TYPE_HTTP,
+                    CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
+                ));
+      }
       modules.add(new CoordinatorSegmentMetadataCacheModule());
       modules.add(new QueryableModule());
     }
@@ -246,10 +266,6 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataRuleManager.class)
                   .toProvider(MetadataRuleManagerProvider.class)
-                  .in(ManageLifecycle.class);
-
-            binder.bind(AuditManager.class)
-                  .toProvider(AuditManagerProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
@@ -373,7 +389,7 @@ public class CliCoordinator extends ServerRunnable
 
   private boolean isSegmentMetadataCacheEnabled(Properties properties)
   {
-    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED));
+    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }
 
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
@@ -479,6 +495,7 @@ public class CliCoordinator extends ServerRunnable
       JsonConfigProvider.bind(binder, "druid.coordinator.query.default", DefaultQueryConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.query.retryPolicy", RetryQueryRunnerConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
+      JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
 
       MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
       toolChests.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryQueryToolChest.class);

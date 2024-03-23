@@ -29,9 +29,6 @@ public abstract class AppendableIndexBuilder
 {
   @Nullable
   protected IncrementalIndexSchema incrementalIndexSchema = null;
-  protected boolean deserializeComplexMetrics = true;
-  protected boolean concurrentEventAdd = false;
-  protected boolean sortFacts = true;
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
   // When set to true, for any row that already has metric (with the same name defined in metricSpec),
@@ -85,24 +82,6 @@ public abstract class AppendableIndexBuilder
     IncrementalIndexSchema.Builder builder = new IncrementalIndexSchema.Builder().withMetrics(metrics);
     this.incrementalIndexSchema = rollup != null ? builder.withRollup(rollup).build() : builder.build();
     this.preserveExistingMetrics = preserveExistingMetrics != null ? preserveExistingMetrics : false;
-    return this;
-  }
-
-  public AppendableIndexBuilder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
-  {
-    this.deserializeComplexMetrics = deserializeComplexMetrics;
-    return this;
-  }
-
-  public AppendableIndexBuilder setConcurrentEventAdd(final boolean concurrentEventAdd)
-  {
-    this.concurrentEventAdd = concurrentEventAdd;
-    return this;
-  }
-
-  public AppendableIndexBuilder setSortFacts(final boolean sortFacts)
-  {
-    this.sortFacts = sortFacts;
     return this;
   }
 

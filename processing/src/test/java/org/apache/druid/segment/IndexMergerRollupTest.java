@@ -23,7 +23,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -39,6 +45,7 @@ import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -61,19 +68,27 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     indexSpec = IndexSpec.DEFAULT;
   }
 
-  private void testStringFirstLastRollup(
+  private void testFirstLastRollup(
       AggregatorFactory[] aggregatorFactories
   ) throws Exception
   {
     List<Map<String, Object>> eventsList = Arrays.asList(
-        ImmutableMap.of(
-            "d", "d1",
-            "m", "m1"
-        ),
-        ImmutableMap.of(
-            "d", "d1",
-            "m", "m2"
-        )
+        new HashMap<>(
+            ImmutableMap.of(
+                "d", "d1",
+                "m", "m2",
+                "l", 124L,
+                "f", 124.0F,
+                "dl", 124.5D
+            )),
+        new HashMap<>(
+            ImmutableMap.of(
+                "d", "d1",
+                "m", "m2",
+                "l", 124L,
+                "f", 124.0F,
+                "dl", 124.5D
+            ))
     );
 
     final File tempDir = temporaryFolder.newFolder();
@@ -96,20 +111,26 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testStringFirstRollup() throws Exception
+  public void testFirstRollup() throws Exception
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
-        new StringFirstAggregatorFactory("m", "m", null, 1024)
+        new StringFirstAggregatorFactory("m", "m", null, 1024),
+        new LongFirstAggregatorFactory("l", "l", null),
+        new FloatFirstAggregatorFactory("f", "f", null),
+        new DoubleFirstAggregatorFactory("dl", "dl", null),
     };
-    testStringFirstLastRollup(aggregatorFactories);
+    testFirstLastRollup(aggregatorFactories);
   }
 
   @Test
-  public void testStringLastRollup() throws Exception
+  public void testLastRollup() throws Exception
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
-        new StringLastAggregatorFactory("m", "m", null, 1024)
+        new StringLastAggregatorFactory("m", "m", null, 1024),
+        new LongLastAggregatorFactory("l", "l", null),
+        new FloatLastAggregatorFactory("f", "f", null),
+        new DoubleLastAggregatorFactory("dl", "dl", null),
     };
-    testStringFirstLastRollup(aggregatorFactories);
+    testFirstLastRollup(aggregatorFactories);
   }
 }

@@ -194,7 +194,7 @@ public class MetadataSegmentView
   )
   {
     // includeRealtimeSegments flag would additionally request realtime segments
-    // note that realtime segments are returned only when druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator
+    // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
     StringBuilder queryBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments");
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(

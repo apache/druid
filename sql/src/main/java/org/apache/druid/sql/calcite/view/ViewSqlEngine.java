@@ -27,6 +27,7 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature)
   {
     switch (feature) {
       // Use most permissive set of SELECT features, since our goal is to get the row type of the view.
@@ -59,6 +60,7 @@ public class ViewSqlEngine implements SqlEngine
       case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
@@ -75,6 +77,7 @@ public class ViewSqlEngine implements SqlEngine
       case TIMESERIES_QUERY:
       case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
+      case GROUPBY_IMPLICITLY_SORTS:
         return false;
 
       default:
@@ -109,7 +112,7 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+  public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
   {
     // Can't have views of INSERT or REPLACE statements.
     throw new UnsupportedOperationException();

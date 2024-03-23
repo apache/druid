@@ -177,10 +177,9 @@ Example:
 
 The first and last aggregators determine the metric values that respectively correspond to the earliest and latest values of a time column.
 
-Do not use first and last aggregators for the double, float, and long types in an ingestion spec. They are only supported for queries.
-The string-typed aggregators, `stringFirst` and `stringLast`, are supported for both ingestion and querying.
-
-Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the raw ingested data.
+Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the 
+raw ingested data. The `timeColumn` will get ignored in such cases, and the aggregation will use the original value of the time column
+stored at the time the segment was created.
 
 #### Numeric first and last aggregators
 
@@ -372,6 +371,7 @@ Example:
 | `name` | Output name for the value. | Yes |
 | `fieldName` | Name of the input column to compute the value over. | Yes |
 | `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No. Defaults to 1024. |
+| `aggregateMultipleValues` | `aggregateMultipleValues` is an optional boolean flag controls the behavior of aggregating a [multi-value dimension](./multi-value-dimensions.md). `aggregateMultipleValues` is set as true by default and returns the stringified array in case of a multi-value dimension. By setting it to false, function will return first value instead. | No. Defaults to true. |
 
 Example:
 ```json

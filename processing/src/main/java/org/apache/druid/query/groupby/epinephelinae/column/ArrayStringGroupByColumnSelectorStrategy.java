@@ -31,7 +31,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ComparableIntArray;
-import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -46,7 +45,7 @@ public class ArrayStringGroupByColumnSelectorStrategy implements GroupByColumnSe
   // for eg : [a,b,c] is the col value. dictionaryToInt will contain { a <-> 1, b <-> 2, c <-> 3}
   private final BiMap<String, Integer> dictionaryToInt;
 
-  // stores each row as a integer array where the int represents the value in dictionaryToInt
+  // stores each row as an integer array where the int represents the value in dictionaryToInt
   // for eg : [a,b,c] would be converted to [1,2,3] and assigned a integer value 1.
   // [1,2,3] <-> 1
   private final BiMap<ComparableIntArray, Integer> intListToInt;
@@ -88,12 +87,13 @@ public class ArrayStringGroupByColumnSelectorStrategy implements GroupByColumnSe
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows
     if (id != GROUP_BY_MISSING_VALUE) {
       final int[] intRepresentation = intListToInt.inverse()
-                                                  .get(id).getDelegate();
-      final String[] stringRepresentaion = new String[intRepresentation.length];
+                                                  .get(id)
+                                                  .getDelegate();
+      final Object[] stringRepresentaion = new Object[intRepresentation.length];
       for (int i = 0; i < intRepresentation.length; i++) {
         stringRepresentaion[i] = dictionaryToInt.inverse().get(intRepresentation[i]);
       }
-      resultRow.set(selectorPlus.getResultRowPosition(), ComparableStringArray.of(stringRepresentaion));
+      resultRow.set(selectorPlus.getResultRowPosition(), stringRepresentaion);
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), null);
     }

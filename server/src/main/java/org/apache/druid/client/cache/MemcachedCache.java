@@ -413,7 +413,7 @@ public class MemcachedCache implements Cache
       // Build SSLContext
       TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
       tmf.init((KeyStore) null);
-      SSLContext sslContext = SSLContext.getInstance("TLS");
+      SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
       sslContext.init(null, tmf.getTrustManagers(), null);
       // Create the client in TLS mode
       connectionFactoryBuilder.setSSLContext(sslContext);

@@ -41,6 +41,9 @@ module.exports={
   },
   "onBrokenLinks": "log",
   "onBrokenMarkdownLinks": "throw",
+  markdown: {
+    mermaid: true,
+  },
   "presets": [
     [
       "@docusaurus/preset-classic",
@@ -72,7 +75,9 @@ module.exports={
         ],
         "redirects": Redirects
       }
-    ]
+    ],
+    "docusaurus-lunr-search",
+    "@docusaurus/theme-mermaid"
   ],
   "themeConfig": {
     colorMode: {

@@ -37,7 +37,6 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -169,27 +168,15 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
-  public boolean canIterate()
+  public boolean supportsAsMap()
   {
     return false;
   }
 
   @Override
-  public boolean canGetKeySet()
+  public Map<String, String> asMap()
   {
-    return false;
-  }
-
-  @Override
-  public Iterable<Map.Entry<String, String>> iterable()
-  {
-    throw new UnsupportedOperationException("Cannot iterate");
-  }
-
-  @Override
-  public Set<String> keySet()
-  {
-    throw new UnsupportedOperationException("Cannot get key set");
+    throw new UnsupportedOperationException("Cannot get map view");
   }
 
   @Override

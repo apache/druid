@@ -18,6 +18,8 @@
 
 import { deepDelete, deepSet } from '../../utils';
 
+export type ArrayIngestMode = 'array' | 'mvd';
+
 export interface QueryContext {
   useCache?: boolean;
   populateCache?: boolean;
@@ -32,6 +34,7 @@ export interface QueryContext {
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
+  arrayIngestMode?: ArrayIngestMode;
 
   [key: string]: any;
 }
@@ -146,6 +149,22 @@ export function changeTaskAssigment(
     : deepDelete(context, 'taskAssignment');
 }
 
+// failOnEmptyInsert
+
+export function getFailOnEmptyInsert(context: QueryContext): boolean | undefined {
+  const { failOnEmptyInsert } = context;
+  return typeof failOnEmptyInsert === 'boolean' ? failOnEmptyInsert : undefined;
+}
+
+export function changeFailOnEmptyInsert(
+  context: QueryContext,
+  failOnEmptyInsert: boolean | undefined,
+): QueryContext {
+  return typeof failOnEmptyInsert === 'boolean'
+    ? deepSet(context, 'failOnEmptyInsert', failOnEmptyInsert)
+    : deepDelete(context, 'failOnEmptyInsert');
+}
+
 // finalizeAggregations
 
 export function getFinalizeAggregations(context: QueryContext): boolean | undefined {
@@ -229,5 +248,22 @@ export function changeMaxParseExceptions(
     return deepSet(context, 'maxParseExceptions', maxParseExceptions);
   } else {
     return deepDelete(context, 'maxParseExceptions');
+  }
+}
+
+// arrayIngestMode
+
+export function getArrayIngestMode(context: QueryContext): ArrayIngestMode | undefined {
+  return context.arrayIngestMode;
+}
+
+export function changeArrayIngestMode(
+  context: QueryContext,
+  arrayIngestMode: ArrayIngestMode | undefined,
+): QueryContext {
+  if (arrayIngestMode) {
+    return deepSet(context, 'arrayIngestMode', arrayIngestMode);
+  } else {
+    return deepDelete(context, 'arrayIngestMode');
   }
 }

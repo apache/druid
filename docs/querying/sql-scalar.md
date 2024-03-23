@@ -93,35 +93,36 @@ String functions accept strings, and return a type appropriate to the function.
 |--------|-----|
 |`CONCAT(expr, expr...)`|Concats a list of expressions. Also see the [concatenation operator](sql-operators.md#concatenation-operator).|
 |`TEXTCAT(expr, expr)`|Two argument version of `CONCAT`.|
-|`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
+|`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
+|`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
+|`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
+|`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
+|`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
 |`STRLEN(expr)`|Alias for `LENGTH`.|
-|`LOOKUP(expr, lookupName, [replaceMissingValueWith])`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql.md#from). Optional constant replaceMissingValueWith can be passed as 3rd argument to be returned when value is missing from lookup.|
+|`LOOKUP(expr, lookupName, [replaceMissingValueWith])`|Look up `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. The optional constant `replaceMissingValueWith`, if provided, is returned when the `expr` is null or when the lookup does not contain a value for `expr`.<br /><br />Lookups can also be queried directly using the [`lookup` schema](sql.md#from).|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`UPPER(expr)`|Returns `expr` in all uppercase.|
+|`LPAD(expr, length, [chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|`RPAD(expr, length, [chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of `needle` within `haystack`, with indexes starting from 1. The search will begin at `fromIndex`, or 1 if `fromIndex` is not specified. If `needle` is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
-|`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
-|`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
+|`REPEAT(expr, [N])`|Repeats `expr` N times.|
+|`REVERSE(expr)`|Reverses `expr`.|
+|`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`STRPOS(haystack, needle)`|Returns the index of `needle` within `haystack`, with indexes starting from 1. If `needle` is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of `expr` starting at index, with a max length, both measured in UTF-16 code units.|
-|`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
-|`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
 |`SUBSTR(expr, index, [length])`|Alias for `SUBSTRING`.|
-|`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [chars FROM] expr)`|Returns `expr` with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [chars FROM] expr)`|Returns `expr` with characters removed from the leading, trailing, or both ends of `expr` if they are in `chars`. If `chars` is not provided, it defaults to `''` (a space). If the directional argument is not provided, it defaults to `BOTH`.|
 |`BTRIM(expr, [chars])`|Alternate form of `TRIM(BOTH chars FROM expr)`.|
 |`LTRIM(expr, [chars])`|Alternate form of `TRIM(LEADING chars FROM expr)`.|
 |`RTRIM(expr, [chars])`|Alternate form of `TRIM(TRAILING chars FROM expr)`.|
-|`REVERSE(expr)`|Reverses `expr`.|
-|`REPEAT(expr, [N])`|Repeats `expr` N times|
-|`LPAD(expr, length, [chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
-|`RPAD(expr, length, [chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 
 ## Date and time functions 
@@ -200,11 +201,14 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 (e.g., "192.168.0.1") or an IP address represented as an integer (e.g., 3232235521). The `subnet`
 argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
 
+For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. "75e9:efa4:29c6:85f6::232c"). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. "75e9:efa4:29c6:85f6::/64").
+
 |Function|Notes|
 |---|---|
 |`IPV4_MATCH(address, subnet)`|Returns true if the `address` belongs to the `subnet` literal, else false. If `address` is not a valid IPv4 address, then false is returned. This function is more efficient if `address` is an integer instead of a string.|
 |`IPV4_PARSE(address)`|Parses `address` into an IPv4 address stored as an integer . If `address` is an integer that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
 |`IPV4_STRINGIFY(address)`|Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+| IPV6_MATCH(address, subnet) | Returns 1 if the IPv6 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv6 address, then 0 is returned.|
 
 ## Sketch functions
 
@@ -268,11 +272,11 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 
 |Function|Notes|
 |--------|-----|
-|`CAST(value AS TYPE)`|Cast value to another type. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
+|`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details. See the [`BLOOM_FILTER` function](sql-aggregations.md) for computing Bloom filters.|
 |`CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`|Simple CASE.|
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
-|`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
+|`CAST(value AS TYPE)`|Cast value to another type. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
+|`DECODE_BASE64_COMPLEX(dataType, expr)`| Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode. The `hyperUnique` and `serializablePairLongString` data types are supported by default. You can enable support for the following complex data types by loading their extensions:<br/><ul><li>`druid-bloom-filter`: `bloom`</li><li>`druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`</li><li>`druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`</li><li>`druid-stats`: `variance`</li><li>`druid-compressed-big-decimal`: `compressedBigDecimal`</li><li>`druid-momentsketch`: `momentSketch`</li><li>`druid-tdigestsketch`: `tDigestSketch`</li></ul>|
+|`NULLIF(value1, value2)`|Returns NULL if `value1` and `value2` match, else returns `value1`.|
 |`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|
-|`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details. See the [`BLOOM_FILTER` function](sql-aggregations.md) for computing Bloom filters.|
-

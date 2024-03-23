@@ -37,6 +37,7 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.server.DruidNode;
@@ -47,8 +48,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentMatchers;
 
 import javax.ws.rs.core.Response;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,7 +73,7 @@ public class NamespaceLookupExtractorFactoryTest
   static {
     NullHandling.initializeForTests();
   }
-  
+
   private final ObjectMapper mapper = new DefaultObjectMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -183,7 +186,7 @@ public class NamespaceLookupExtractorFactoryTest
   {
     final ExtractionNamespace extractionNamespace = () -> 0;
     when(scheduler.scheduleAndWait(extractionNamespace, 1L))
-            .thenReturn(null);
+        .thenReturn(null);
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -239,8 +242,8 @@ public class NamespaceLookupExtractorFactoryTest
     final ExtractionNamespace extractionNamespace = () -> 0;
     expectScheduleAndWaitOnce(extractionNamespace);
     when(entry.getCacheState()).thenReturn(versionedCache);
-    when(entry.getCache()).thenReturn(new HashMap<String, String>());
-    when(versionedCache.getCache()).thenReturn(new HashMap<>());
+    when(versionedCache.asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any()))
+        .thenReturn(new MapLookupExtractor(new HashMap<>(), false));
     when(versionedCache.getVersion()).thenReturn("0");
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
@@ -256,7 +259,7 @@ public class NamespaceLookupExtractorFactoryTest
     verify(entry).getCacheState();
     verify(entry).close();
     verify(versionedCache).getVersion();
-    verify(versionedCache, atLeastOnce()).getCache();
+    verify(versionedCache, atLeastOnce()).asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any());
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
@@ -455,8 +458,8 @@ public class NamespaceLookupExtractorFactoryTest
       Assert.assertNotNull(clazz.getMethod("getVersion").invoke(handler));
       Assert.assertEquals(ImmutableSet.of("foo"), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
       Assert.assertEquals(
-          ImmutableSet.of("bar"),
-          ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity()
+          ImmutableList.of("bar"),
+          ImmutableList.copyOf((Collection) ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity())
       );
       Assert.assertEquals(
           ImmutableMap.builder().put("foo", "bar").build(),

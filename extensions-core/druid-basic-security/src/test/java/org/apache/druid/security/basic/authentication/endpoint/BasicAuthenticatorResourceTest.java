@@ -58,7 +58,7 @@ public class BasicAuthenticatorResourceTest
            .when(authValidator)
            .validateAuthenticatorName(INVALID_AUTHENTICATOR_NAME);
 
-    target = new BasicAuthenticatorResource(handler, authValidator);
+    target = new BasicAuthenticatorResource(handler, authValidator, null);
   }
 
   @Test

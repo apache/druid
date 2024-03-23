@@ -40,7 +40,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
-Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query) endpoint.
+Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query).
 
 #### URL
 
@@ -51,20 +51,44 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 The request body takes the following properties:
 
 * `query`: SQL query string.
+
 * `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
-  * `object`: Returns a JSON array of JSON objects with the HTTP header `Content-Type: application/json`.
-  * `array`: Returns a JSON array of JSON arrays with the HTTP header `Content-Type: application/json`.
-  * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`.
-  * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`.
-  * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP header `Content-Type: text/csv`.
+  * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
+     Object field names match the columns returned by the SQL query in the same order as the SQL query.
+
+  * `array`: Returns a JSON array of JSON arrays with the HTTP response header `Content-Type: application/json`.  
+     Each inner array has elements matching the columns returned by the SQL query, in order.
+
+  * `objectLines`: Returns newline-delimited JSON objects with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
+     This format includes a single trailing newline character so you can detect a truncated response.
+
+  * `arrayLines`: Returns newline-delimited JSON arrays with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
+     This format includes a single trailing newline character so you can detect a truncated response.
+
+  * `csv`: Returns comma-separated values with one row per line. Sent with the HTTP response header `Content-Type: text/csv`.  
+     Druid uses double quotes to escape individual field values. For example, a value with a comma returns `"A,B"`.
+     If the field value contains a double quote character, Druid escapes it with a second double quote character.
+     For example, `foo"bar` becomes `foo""bar`.
+      This format includes a single trailing newline character so you can detect a truncated response.
+
 * `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
+
 * `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed.
+
 * `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
+
+   For compatibility, Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes` when all of the following conditions are met:
+   * The `header` property is set to true.
+   * The version of Druid supports `typesHeader` and `sqlTypesHeader`, regardless of whether either property is set.
+
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
+
 * `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
 
     For example:
-    ```
+    ```json
     "parameters": [
         {
             "type": "VARCHAR",
@@ -114,7 +138,16 @@ The request body takes the following properties:
 </TabItem>
 </Tabs>
 
-Older versions of Druid that support  the `typesHeader` and `sqlTypesHeader` parameters return the HTTP header `X-Druid-SQL-Header-Included: yes` when you set `header` to `true`. Druid returns the HTTP response header for compatibility, regardless of whether `typesHeader` and `sqlTypesHeader` are set.
+#### Client-side error handling and truncated responses
+
+Druid reports errors that occur before the response body is sent as JSON with an HTTP 500 status code. The errors are reported using the same format as [native Druid query errors](../querying/querying.md#query-errors).
+If an error occurs while Druid is sending the response body, the server handling the request stops the response midstream and logs an error.
+
+This means that when you call the SQL API, you must properly handle response truncation.
+For  `object` and `array` formats, truncated responses are invalid JSON.
+For line-oriented formats, Druid includes a newline character as the final character of every complete response. Absence of a final newline character indicates a truncated response.
+
+If you detect a truncated response, treat it as an error.
 
 ---
 
@@ -346,10 +379,12 @@ A successful response results in an `HTTP 202` message code and an empty respons
 
 ### Query output format
 
-The following table shows examples of how Druid returns the column names and data types based on the result format and the type request. The examples includes the first row of results, where the value of `user` is `BlueMoon2662`.
+The following table shows examples of how Druid returns the column names and data types based on the result format and the type request.
+In all cases, `header` is true.
+The examples includes the first row of results, where the value of `user` is `BlueMoon2662`.
 
 ```
-| Format | typesHeader | sqlTypesHeader | Example Output                                                                             |
+| Format | typesHeader | sqlTypesHeader | Example output                                                                             |
 |--------|-------------|----------------|--------------------------------------------------------------------------------------------|
 | object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "BlueMoon2662" } ]                        |
 | object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ] |

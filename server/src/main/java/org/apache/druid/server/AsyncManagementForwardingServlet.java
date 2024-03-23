@@ -63,6 +63,9 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private static final String ARBITRARY_COORDINATOR_BASE_PATH = "/proxy/coordinator";
   private static final String ARBITRARY_OVERLORD_BASE_PATH = "/proxy/overlord";
 
+  // This path is used to check if the managment proxy is enabled, it simply returns {"enabled":true}
+  private static final String ENABLED_PATH = "/proxy/enabled";
+
   private final ObjectMapper jsonMapper;
   private final Provider<HttpClient> httpClientProvider;
   private final DruidHttpClientConfig httpClientConfig;
@@ -106,17 +109,26 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
           MODIFIED_PATH_ATTRIBUTE,
           request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
+    } else if (ENABLED_PATH.equals(requestURI)) {
+      handleEnabledRequest(response);
+      return;
     } else {
-      handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
+      handleInvalidRequest(
+          response,
+          StringUtils.format("Unsupported proxy destination[%s]", request.getRequestURI()),
+          HttpServletResponse.SC_BAD_REQUEST
+      );
       return;
     }
 
     if (currentLeader == null) {
-      handleBadRequest(
+      handleInvalidRequest(
           response,
           StringUtils.format(
-              "Unable to determine destination for [%s]; is your coordinator/overlord running?", request.getRequestURI()
-          )
+              "Unable to determine destination[%s]; is your coordinator/overlord running?",
+              request.getRequestURI()
+          ),
+          HttpServletResponse.SC_SERVICE_UNAVAILABLE
       );
       return;
     }
@@ -179,12 +191,22 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
-  private void handleBadRequest(HttpServletResponse response, String errorMessage) throws IOException
+  private void handleInvalidRequest(HttpServletResponse response, String errorMessage, int statusCode) throws IOException
   {
     if (!response.isCommitted()) {
       response.resetBuffer();
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      response.setStatus(statusCode);
       jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("error", errorMessage));
+    }
+    response.flushBuffer();
+  }
+
+  private void handleEnabledRequest(HttpServletResponse response) throws IOException
+  {
+    if (!response.isCommitted()) {
+      response.resetBuffer();
+      response.setStatus(HttpServletResponse.SC_OK);
+      jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("enabled", true));
     }
     response.flushBuffer();
   }

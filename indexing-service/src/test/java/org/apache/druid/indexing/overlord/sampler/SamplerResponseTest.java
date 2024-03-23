@@ -65,7 +65,7 @@ public class SamplerResponseTest
                 new StringDimensionSchema("dim1")
             ),
             ImmutableList.of(
-                new AutoTypeColumnSchema("dim1")
+                new AutoTypeColumnSchema("dim1", null)
             ),
             RowSignature.builder().addTimeColumn().add("dim1", ColumnType.STRING).add("met1", ColumnType.LONG).build(),
             data

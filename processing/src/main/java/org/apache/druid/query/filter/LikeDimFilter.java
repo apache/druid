@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
@@ -146,12 +145,6 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return new LikeFilter(dimension, extractionFn, likeMatcher, filterTuning);
@@ -224,12 +217,16 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     // Regex pattern that describes matching strings.
     private final Pattern pattern;
 
+    private final String likePattern;
+
     private LikeMatcher(
+        final String likePattern,
         final SuffixMatch suffixMatch,
         final String prefix,
         final Pattern pattern
     )
     {
+      this.likePattern = likePattern;
       this.suffixMatch = Preconditions.checkNotNull(suffixMatch, "suffixMatch");
       this.prefix = NullHandling.nullToEmptyIfNeeded(prefix);
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
@@ -270,7 +267,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         }
       }
 
-      return new LikeMatcher(suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
+      return new LikeMatcher(likePattern, suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
     }
 
     private static void addPatternCharacter(final StringBuilder patternBuilder, final char c)
@@ -282,27 +279,30 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       }
     }
 
-    public boolean matches(@Nullable final String s)
+    public DruidPredicateMatch matches(@Nullable final String s)
     {
       return matches(s, pattern);
     }
 
-    private static boolean matches(@Nullable final String s, Pattern pattern)
+    private static DruidPredicateMatch matches(@Nullable final String s, Pattern pattern)
     {
       String val = NullHandling.nullToEmptyIfNeeded(s);
-      return val != null && pattern.matcher(val).matches();
+      if (val == null) {
+        return DruidPredicateMatch.UNKNOWN;
+      }
+      return DruidPredicateMatch.of(pattern.matcher(val).matches());
     }
 
     /**
      * Checks if the suffix of "value" matches the suffix of this matcher. The first prefix.length() characters
      * of "value" are ignored. This method is useful if you've already independently verified the prefix.
      */
-    public boolean matchesSuffixOnly(@Nullable String value)
+    public DruidPredicateMatch matchesSuffixOnly(@Nullable String value)
     {
       if (suffixMatch == SuffixMatch.MATCH_ANY) {
-        return true;
+        return DruidPredicateMatch.TRUE;
       } else if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
-        return value == null ? matches(null) : value.length() == prefix.length();
+        return value == null ? matches(null) : DruidPredicateMatch.of(value.length() == prefix.length());
       } else {
         // suffixMatch is MATCH_PATTERN
         return matches(value);
@@ -337,7 +337,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       }
 
       @Override
-      public Predicate<String> makeStringPredicate()
+      public DruidObjectPredicate<String> makeStringPredicate()
       {
         if (extractionFn != null) {
           return input -> matches(extractionFn.apply(input), pattern);
@@ -416,6 +416,12 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     public int hashCode()
     {
       return Objects.hash(getSuffixMatch(), getPrefix(), pattern.toString());
+    }
+
+    @Override
+    public String toString()
+    {
+      return likePattern;
     }
   }
 }

@@ -22,48 +22,24 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
-import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
-import org.apache.druid.frame.segment.FrameCursorUtils;
-import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriterUtils;
-import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
-import javax.annotation.Nullable;
-
-import java.io.Closeable;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -178,50 +154,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public RowSignature resultArraySignature(final ScanQuery query)
   {
-    if (query.getColumns() == null || query.getColumns().isEmpty()) {
-      // Note: if no specific list of columns is provided, then since we can't predict what columns will come back, we
-      // unfortunately can't do array-based results. In this case, there is a major difference between standard and
-      // array-based results: the standard results will detect and return _all_ columns, whereas the array-based results
-      // will include none of them.
-      return RowSignature.empty();
-    } else {
-      final RowSignature.Builder builder = RowSignature.builder();
-
-      if (query.withNonNullLegacy(scanQueryConfig).isLegacy()) {
-        builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
-      }
-
-      for (String columnName : query.getColumns()) {
-        // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
-        final ColumnType columnType;
-
-        final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
-        if (virtualColumn != null) {
-          final ColumnCapabilities capabilities = virtualColumn.capabilities(c -> null, columnName);
-          columnType = capabilities != null ? capabilities.toColumnType() : null;
-        } else {
-          columnType = getDataSourceColumnType(query.getDataSource(), columnName);
-        }
-
-        builder.add(columnName, columnType);
-      }
-
-      return builder.build();
-    }
-  }
-
-  @Nullable
-  private ColumnType getDataSourceColumnType(DataSource dataSource, String columnName)
-  {
-    if (dataSource instanceof InlineDataSource) {
-      InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
-      ColumnCapabilities caps = inlineDataSource.getRowSignature().getColumnCapabilities(columnName);
-      if (caps != null) {
-        return caps.toColumnType();
-      }
-    }
-    // Unknown type. In the future, it would be nice to have a way to fill these in.
-    return null;
+    boolean defaultIsLegacy = scanQueryConfig.isLegacy();
+    return query.getRowSignature(defaultIsLegacy);
   }
 
   /**
@@ -238,99 +172,17 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final RowSignature defaultRowSignature = resultArraySignature(query);
-    ScanResultValueIterator resultSequenceIterator = new ScanResultValueIterator(resultSequence);
-
-    Iterable<Sequence<FrameSignaturePair>> retVal = () -> new Iterator<Sequence<FrameSignaturePair>>()
-    {
-      PeekingIterator<ScanResultValue> scanResultValuePeekingIterator = Iterators.peekingIterator(resultSequenceIterator);
-
-      @Override
-      public boolean hasNext()
-      {
-        return scanResultValuePeekingIterator.hasNext();
-      }
-
-      @Override
-      public Sequence<FrameSignaturePair> next()
-      {
-        final List<ScanResultValue> batch = new ArrayList<>();
-        final ScanResultValue scanResultValue = scanResultValuePeekingIterator.next();
-        batch.add(scanResultValue);
-        // If the rowSignature is not provided, assume that the scanResultValue can contain any number of the columns
-        // that appear in the original scan query
-        final RowSignature rowSignature = scanResultValue.getRowSignature() != null
-                                          ? scanResultValue.getRowSignature()
-                                          : defaultRowSignature;
-        while (scanResultValuePeekingIterator.hasNext()) {
-          RowSignature nextRowSignature = scanResultValuePeekingIterator.peek().getRowSignature();
-          if (nextRowSignature == null) {
-            nextRowSignature = defaultRowSignature;
-          }
-          if (nextRowSignature != null && nextRowSignature.equals(rowSignature)) {
-            batch.add(scanResultValuePeekingIterator.next());
-          } else {
-            break;
-          }
-        }
-        return convertScanResultValuesToFrame(
-            batch,
-            rowSignature,
-            query,
-            memoryAllocatorFactory,
-            useNestedForUnknownTypes
-        );
-      }
-    };
-    return Optional.of(Sequences.concat(retVal).withBaggage(resultSequenceIterator));
-  }
-
-  private Sequence<FrameSignaturePair> convertScanResultValuesToFrame(
-      List<ScanResultValue> batch,
-      RowSignature rowSignature,
-      ScanQuery query,
-      MemoryAllocatorFactory memoryAllocatorFactory,
-      boolean useNestedForUnknownTypes
-  )
-  {
-    Preconditions.checkNotNull(rowSignature, "'rowSignature' must be provided");
-
-    List<Cursor> cursors = new ArrayList<>();
-    Closer closer = Closer.create();
-
-    for (ScanResultValue scanResultValue : batch) {
-      final List rows = (List) scanResultValue.getEvents();
-      final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames());
-      final Iterable<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(rows, (Function) mapper));
-
-      Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromIterable(
-          formattedRows,
-          rowSignature
-      );
-      Cursor cursor = cursorAndCloseable.lhs;
-      Closeable closeable = cursorAndCloseable.rhs;
-      cursors.add(cursor);
-      // Cursors created from iterators don't have any resources, therefore this is mostly a defensive check
-      closer.register(closeable);
-    }
-
-    RowSignature modifiedRowSignature = useNestedForUnknownTypes
-                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
-                                        : rowSignature;
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
-        memoryAllocatorFactory,
-        modifiedRowSignature,
-        new ArrayList<>()
+    return Optional.of(
+        Sequences.simple(
+            new ScanResultValueFramesIterable(
+                resultSequence,
+                memoryAllocatorFactory,
+                useNestedForUnknownTypes,
+                defaultRowSignature,
+                rowSignature -> getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames())
+            )
+        )
     );
-
-
-    Cursor concatCursor = new ConcatCursor(cursors);
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
-        concatCursor,
-        frameWriterFactory
-    );
-
-    return frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)).withBaggage(closer);
   }
 
   @Override
@@ -348,7 +200,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     );
   }
 
-  private Function<?, Object[]> getResultFormatMapper(ScanQuery.ResultFormat resultFormat, List<String> fields)
+  private static Function<?, Object[]> getResultFormatMapper(ScanQuery.ResultFormat resultFormat, List<String> fields)
   {
     Function<?, Object[]> mapper;
 

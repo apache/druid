@@ -34,11 +34,11 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.AggregateResult;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
@@ -64,63 +64,20 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+/**
+ * Contains logic to process a groupBy query on a single {@link StorageAdapter} in a vectorized manner.
+ * This code runs on anything that processes {@link StorageAdapter} directly, typically data servers like Historicals.
+ * <p>
+ * Used for vectorized processing by
+ * {@link GroupingEngine#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
+ *
+ * @see org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine for non-vectorized version of this logic
+ */
 public class VectorGroupByEngine
 {
   private VectorGroupByEngine()
   {
     // No instantiation.
-  }
-
-  public static boolean canVectorize(
-      final GroupByQuery query,
-      final StorageAdapter adapter,
-      @Nullable final Filter filter
-  )
-  {
-    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
-
-    return adapter.canVectorize(filter, query.getVirtualColumns(), false)
-           && canVectorizeDimensions(inspector, query.getDimensions())
-           && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-           && query.getAggregatorSpecs()
-                   .stream()
-                   .allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector));
-  }
-
-  public static boolean canVectorizeDimensions(
-      final ColumnInspector inspector,
-      final List<DimensionSpec> dimensions
-  )
-  {
-    return dimensions
-        .stream()
-        .allMatch(
-            dimension -> {
-              if (!dimension.canVectorize()) {
-                return false;
-              }
-
-              if (dimension.mustDecorate()) {
-                // group by on multi value dimensions are not currently supported
-                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
-                // To be safe, we must return false here.
-                return false;
-              }
-
-              if (dimension.getOutputType().isArray()) {
-                // group by on arrays is not currently supported in the vector processing engine
-                return false;
-              }
-
-              // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              // null here currently means the column does not exist, nil columns can be vectorized
-              if (columnCapabilities == null) {
-                return true;
-              }
-              // must be single valued
-              return columnCapabilities.hasMultipleValues().isFalse();
-            });
   }
 
   public static Sequence<ResultRow> process(
@@ -224,6 +181,58 @@ public class VectorGroupByEngine
           }
         }
     );
+  }
+
+  public static boolean canVectorize(
+      final GroupByQuery query,
+      final StorageAdapter adapter,
+      @Nullable final Filter filter
+  )
+  {
+    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
+
+    return adapter.canVectorize(filter, query.getVirtualColumns(), false)
+           && canVectorizeDimensions(inspector, query.getDimensions())
+           && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
+           && query.getAggregatorSpecs()
+                   .stream()
+                   .allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector));
+  }
+
+  private static boolean canVectorizeDimensions(
+      final ColumnInspector inspector,
+      final List<DimensionSpec> dimensions
+  )
+  {
+    return dimensions
+        .stream()
+        .allMatch(
+            dimension -> {
+              if (!dimension.canVectorize()) {
+                return false;
+              }
+
+              if (dimension.mustDecorate()) {
+                // group by on multi value dimensions are not currently supported
+                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+                // To be safe, we must return false here.
+                return false;
+              }
+
+              if (dimension.getOutputType().isArray()) {
+                // group by on arrays is not currently supported in the vector processing engine
+                return false;
+              }
+
+              // Now check column capabilities.
+              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
+              // null here currently means the column does not exist, nil columns can be vectorized
+              if (columnCapabilities == null) {
+                return true;
+              }
+              // must be single valued
+              return columnCapabilities.hasMultipleValues().isFalse();
+            });
   }
 
   @VisibleForTesting
@@ -347,7 +356,7 @@ public class VectorGroupByEngine
     {
       final VectorGrouper grouper;
 
-      final int cardinalityForArrayAggregation = GroupByQueryEngineV2.getCardinalityForArrayAggregation(
+      final int cardinalityForArrayAggregation = GroupingEngine.getCardinalityForArrayAggregation(
           querySpecificConfig,
           query,
           storageAdapter,
@@ -474,7 +483,7 @@ public class VectorGroupByEngine
             }
 
             // Convert dimension values to desired output types, possibly.
-            GroupByQueryEngineV2.convertRowTypesToOutputTypes(
+            GroupingEngine.convertRowTypesToOutputTypes(
                 query.getDimensions(),
                 resultRow,
                 resultRowDimensionStart

@@ -295,6 +295,4 @@ Check out the [Querying data tutorial](../tutorials/tutorial-query.md) to run so
 
 For more information, see the following topics:
 
-- [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md) for more information on loading data from Kafka streams.
-- [Apache Kafka supervisor reference](../development/extensions-core/kafka-supervisor-reference.md) for Kafka supervisor configuration information.
-- [Apache Kafka supervisor operations reference](../development/extensions-core/kafka-supervisor-operations.md) for information on running and maintaining Kafka supervisors for Druid.
+- [Apache Kafka ingestion](../ingestion/kafka-ingestion.md) for information on loading data from Kafka streams and maintaining Kafka supervisors for Druid.

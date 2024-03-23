@@ -48,13 +48,15 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
-  protected final int maxStringBytes;
+  private final int maxStringBytes;
+  private final boolean aggregateMultipleValues;
 
   @JsonCreator
   public StringAnyAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes
+      @JsonProperty("maxStringBytes") Integer maxStringBytes,
+      @JsonProperty("aggregateMultipleValues") @Nullable final Boolean aggregateMultipleValues
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -67,18 +69,19 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
+    this.aggregateMultipleValues = aggregateMultipleValues == null ? true : aggregateMultipleValues;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new StringAnyAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes);
+    return new StringAnyAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new StringAnyBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes);
+    return new StringAnyBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
@@ -90,13 +93,15 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
       return new StringAnyVectorAggregator(
           null,
           selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-          maxStringBytes
+          maxStringBytes,
+          aggregateMultipleValues
       );
     } else {
       return new StringAnyVectorAggregator(
           selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
           null,
-          maxStringBytes
+          maxStringBytes,
+          aggregateMultipleValues
       );
     }
   }
@@ -122,7 +127,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringAnyAggregatorFactory(name, name, maxStringBytes);
+    return new StringAnyAggregatorFactory(name, name, maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
@@ -154,6 +159,11 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   public Integer getMaxStringBytes()
   {
     return maxStringBytes;
+  }
+  @JsonProperty
+  public boolean getAggregateMultipleValues()
+  {
+    return aggregateMultipleValues;
   }
 
   @Override
@@ -192,7 +202,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new StringAnyAggregatorFactory(newName, getFieldName(), getMaxStringBytes());
+    return new StringAnyAggregatorFactory(newName, getFieldName(), getMaxStringBytes(), getAggregateMultipleValues());
   }
 
   @Override

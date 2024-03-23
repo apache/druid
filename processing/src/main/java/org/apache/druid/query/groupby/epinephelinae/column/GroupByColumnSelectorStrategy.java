@@ -25,6 +25,7 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
@@ -89,6 +90,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
    * memory did not increase as a result of this operation. Will not be negative.
    */
+  @CheckReturnValue
   int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
 
   /**
@@ -144,6 +146,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
    * memory did not increase as a result of this operation. Will not be negative.
    */
+  @CheckReturnValue
   int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer);
 
   /**

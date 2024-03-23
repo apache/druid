@@ -22,6 +22,9 @@ package org.apache.druid.server.security;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.audit.AuditManager;
+import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
@@ -87,6 +90,58 @@ public class AuthorizationUtils
     }
 
     return authenticationResult;
+  }
+
+  /**
+   * Extracts the identity from the authentication result if set as an atrribute
+   * of this request.
+   */
+  public static String getAuthenticatedIdentity(HttpServletRequest request)
+  {
+    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT
+    );
+
+    if (authenticationResult == null) {
+      return null;
+    } else {
+      return authenticationResult.getIdentity();
+    }
+  }
+
+  /**
+   * Builds an AuditInfo for the given request by extracting the following from
+   * it:
+   * <ul>
+   * <li>Header {@link AuditManager#X_DRUID_AUTHOR}</li>
+   * <li>Header {@link AuditManager#X_DRUID_COMMENT}</li>
+   * <li>Attribute {@link AuthConfig#DRUID_AUTHENTICATION_RESULT}</li>
+   * <li>IP address using {@link HttpServletRequest#getRemoteAddr()}</li>
+   * </ul>
+   */
+  public static AuditInfo buildAuditInfo(HttpServletRequest request)
+  {
+    final String author = request.getHeader(AuditManager.X_DRUID_AUTHOR);
+    final String comment = request.getHeader(AuditManager.X_DRUID_COMMENT);
+    return new AuditInfo(
+        author == null ? "" : author,
+        getAuthenticatedIdentity(request),
+        comment == null ? "" : comment,
+        request.getRemoteAddr()
+    );
+  }
+
+  /**
+   * Builds a RequestInfo object that can be used for auditing purposes.
+   */
+  public static RequestInfo buildRequestInfo(String service, HttpServletRequest request)
+  {
+    return new RequestInfo(
+        service,
+        request.getMethod(),
+        request.getRequestURI(),
+        request.getQueryString()
+    );
   }
 
   /**

@@ -57,18 +57,22 @@ public class AzureTestUtils extends EasyMockSupport
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       int maxListingLength,
       URI PREFIX_URI,
-      List<CloudBlobHolder> objects)
+      List<CloudBlobHolder> objects,
+      AzureStorage azureStorage
+  )
   {
     AzureCloudBlobIterable azureCloudBlobIterable = EasyMock.createMock(AzureCloudBlobIterable.class);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(objects.iterator());
-    EasyMock.expect(azureCloudBlobIterableFactory.create(ImmutableList.of(PREFIX_URI), maxListingLength)).andReturn(azureCloudBlobIterable);
+    EasyMock.expect(azureCloudBlobIterableFactory.create(ImmutableList.of(PREFIX_URI), maxListingLength, azureStorage)).andReturn(azureCloudBlobIterable);
     return azureCloudBlobIterable;
   }
 
   public static void expectDeleteObjects(
       AzureStorage storage,
       List<CloudBlobHolder> deleteRequestsExpected,
-      Map<CloudBlobHolder, Exception> deleteRequestToException) throws Exception
+      Map<CloudBlobHolder, Exception> deleteRequestToException,
+      Integer maxTries
+  )
   {
     Map<CloudBlobHolder, IExpectationSetters<CloudBlobHolder>> requestToResultExpectationSetter = new HashMap<>();
 
@@ -77,7 +81,7 @@ public class AzureTestUtils extends EasyMockSupport
       Exception exception = requestsAndErrors.getValue();
       IExpectationSetters<CloudBlobHolder> resultExpectationSetter = requestToResultExpectationSetter.get(deleteObject);
       if (resultExpectationSetter == null) {
-        storage.emptyCloudBlobDirectory(deleteObject.getContainerName(), deleteObject.getName());
+        storage.emptyCloudBlobDirectory(deleteObject.getContainerName(), deleteObject.getName(), maxTries);
         resultExpectationSetter = EasyMock.<CloudBlobHolder>expectLastCall().andThrow(exception);
         requestToResultExpectationSetter.put(deleteObject, resultExpectationSetter);
       } else {
@@ -88,7 +92,7 @@ public class AzureTestUtils extends EasyMockSupport
     for (CloudBlobHolder deleteObject : deleteRequestsExpected) {
       IExpectationSetters<CloudBlobHolder> resultExpectationSetter = requestToResultExpectationSetter.get(deleteObject);
       if (resultExpectationSetter == null) {
-        storage.emptyCloudBlobDirectory(deleteObject.getContainerName(), deleteObject.getName());
+        storage.emptyCloudBlobDirectory(deleteObject.getContainerName(), deleteObject.getName(), maxTries);
         resultExpectationSetter = EasyMock.expectLastCall();
         requestToResultExpectationSetter.put(deleteObject, resultExpectationSetter);
       }
@@ -99,7 +103,7 @@ public class AzureTestUtils extends EasyMockSupport
   public static CloudBlobHolder newCloudBlobHolder(
       String container,
       String prefix,
-      long lastModifiedTimestamp) throws Exception
+      long lastModifiedTimestamp)
   {
     CloudBlobHolder object = EasyMock.createMock(CloudBlobHolder.class);
     EasyMock.expect(object.getContainerName()).andReturn(container).anyTimes();

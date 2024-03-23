@@ -21,6 +21,7 @@ import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@dru
 import {
   deepGet,
   deleteKeys,
+  formatDuration,
   formatInteger,
   nonEmptyArray,
   oneOf,
@@ -31,7 +32,12 @@ import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { QueryContext } from '../query-context/query-context';
 import { Stages } from '../stages/stages';
-import type { MsqTaskPayloadResponse, MsqTaskReportResponse, TaskStatus } from '../task/task';
+import type {
+  MsqTaskPayloadResponse,
+  MsqTaskReportResponse,
+  SegmentLoadWaiterStatus,
+  TaskStatus,
+} from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
   '__asyncIdentity__',
@@ -71,7 +77,7 @@ export type ExecutionDestination =
       numTotalRows?: number;
     }
   | { type: 'durableStorage'; numTotalRows?: number }
-  | { type: 'dataSource'; dataSource: string; numTotalRows?: number; loaded?: boolean };
+  | { type: 'dataSource'; dataSource: string; numTotalRows?: number };
 
 export interface ExecutionDestinationPage {
   id: number;
@@ -164,18 +170,6 @@ function formatPendingMessage(
   }
 }
 
-interface SegmentStatus {
-  duration: number;
-  onDemandSegments: number;
-  pendingSegments: number;
-  precachedSegments: number;
-  startTime: Date;
-  state: 'INIT' | 'WAITING' | 'SUCCESS';
-  totalSegments: number;
-  unknownSegments: number;
-  usedSegments: number;
-}
-
 export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
@@ -194,7 +188,7 @@ export interface ExecutionValue {
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
   _payload?: MsqTaskPayloadResponse;
-  segmentStatus?: SegmentStatus;
+  segmentStatus?: SegmentLoadWaiterStatus;
 }
 
 export class Execution {
@@ -305,7 +299,7 @@ export class Execution {
     const startTime = new Date(deepGet(taskReport, 'multiStageQuery.payload.status.startTime'));
     const durationMs = deepGet(taskReport, 'multiStageQuery.payload.status.durationMs');
 
-    const segmentLoaderStatus = deepGet(
+    const segmentLoaderStatus: SegmentLoadWaiterStatus = deepGet(
       taskReport,
       'multiStageQuery.payload.status.segmentLoadWaiterStatus',
     );
@@ -388,7 +382,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
-  public readonly segmentStatus?: SegmentStatus;
+  public readonly segmentStatus?: SegmentLoadWaiterStatus;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -521,19 +515,6 @@ export class Execution {
     return new Execution(value);
   }
 
-  public markDestinationDatasourceLoaded(): Execution {
-    const { destination } = this;
-    if (destination?.type !== 'dataSource') return this;
-
-    return new Execution({
-      ...this.valueOf(),
-      destination: {
-        ...destination,
-        loaded: true,
-      },
-    });
-  }
-
   public isProcessingData(): boolean {
     const { status, stages } = this;
     return Boolean(
@@ -555,15 +536,15 @@ export class Execution {
 
     switch (segmentStatus?.state) {
       case 'INIT':
-        label = 'Waiting for segments loading to start...';
+        label = 'Waiting for segment loading to start...';
         break;
 
       case 'WAITING':
-        label = 'Waiting for segments loading to complete...';
+        label = 'Waiting for segment loading to complete...';
         break;
 
       case 'SUCCESS':
-        label = 'Segments loaded successfully in ' + segmentStatus.duration + 'ms.';
+        label = `Segments loaded successfully in ${formatDuration(segmentStatus.duration)}`;
         break;
 
       default:
@@ -576,17 +557,6 @@ export class Execution {
     };
   }
 
-  public isFullyComplete(): boolean {
-    if (this.isWaitingForQuery()) return false;
-
-    const { status, destination } = this;
-    if (status === 'SUCCESS' && destination?.type === 'dataSource') {
-      return Boolean(destination.loaded);
-    }
-
-    return true;
-  }
-
   public getIngestDatasource(): string | undefined {
     const { destination } = this;
     if (destination?.type !== 'dataSource') return;
@@ -597,10 +567,8 @@ export class Execution {
     return this.destination?.numTotalRows;
   }
 
-  public isSuccessfulInsert(): boolean {
-    return Boolean(
-      this.isFullyComplete() && this.getIngestDatasource() && this.status === 'SUCCESS',
-    );
+  public isSuccessfulIngest(): boolean {
+    return Boolean(this.status === 'SUCCESS' && this.getIngestDatasource());
   }
 
   public getErrorMessage(): string | undefined {

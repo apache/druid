@@ -19,20 +19,21 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class FloatFirstBufferAggregator extends NumericFirstBufferAggregator<BaseFloatColumnValueSelector>
+public class FloatFirstBufferAggregator extends NumericFirstBufferAggregator
 {
   public FloatFirstBufferAggregator(
       BaseLongColumnValueSelector timeSelector,
-      BaseFloatColumnValueSelector valueSelector
+      ColumnValueSelector valueSelector,
+      boolean needsFoldCheck
   )
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, needsFoldCheck);
   }
 
   @Override
@@ -42,16 +43,22 @@ public class FloatFirstBufferAggregator extends NumericFirstBufferAggregator<Bas
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position, ColumnValueSelector valueSector)
   {
-    buf.putFloat(position, valueSelector.getFloat());
+    buf.putFloat(position, valueSector.getFloat());
+  }
+
+  @Override
+  void putValue(ByteBuffer buf, int position, Number value)
+  {
+    buf.putFloat(position, value.floatValue());
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
     final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
+    return new SerializablePairLongFloat(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
   }
 
   @Override

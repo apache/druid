@@ -112,7 +112,7 @@ public class NestedDataModule implements DruidModule
     @Override
     public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
     {
-      return new NestedCommonFormatColumnHandler(dimensionName);
+      return new NestedCommonFormatColumnHandler(dimensionName, null);
     }
   }
 

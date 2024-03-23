@@ -187,6 +187,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   )
   {
     return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
+        toolbox.getSegmentLoaderConfig(),
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
@@ -205,7 +206,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
         parseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 

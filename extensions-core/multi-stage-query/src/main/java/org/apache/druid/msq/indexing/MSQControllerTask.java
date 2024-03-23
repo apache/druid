@@ -57,6 +57,7 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.Interval;
@@ -65,6 +66,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @JsonTypeName(MSQControllerTask.TYPE)
@@ -271,6 +273,12 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     } else {
       return DUMMY_DATASOURCE_FOR_SELECT;
     }
+  }
+
+  @Override
+  public Optional<Resource> getDestinationResource()
+  {
+    return querySpec.getDestination().getDestinationResource();
   }
 
   public static boolean isIngestion(final MSQSpec querySpec)

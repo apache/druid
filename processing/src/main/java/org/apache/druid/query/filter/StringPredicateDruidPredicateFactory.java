@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
@@ -30,26 +28,27 @@ public class StringPredicateDruidPredicateFactory implements DruidPredicateFacto
 {
   public static StringPredicateDruidPredicateFactory equalTo(@Nullable String value)
   {
-    return new StringPredicateDruidPredicateFactory(Predicates.equalTo(value), value != null);
+    if (value == null) {
+      return new StringPredicateDruidPredicateFactory(DruidObjectPredicate.isNull());
+    }
+    return new StringPredicateDruidPredicateFactory(DruidObjectPredicate.equalTo(value));
   }
 
-  public static StringPredicateDruidPredicateFactory of(@Nullable Predicate<String> predicate, boolean isNullInputUnknown)
+  public static StringPredicateDruidPredicateFactory of(@Nullable DruidObjectPredicate<String> predicate)
   {
-    return new StringPredicateDruidPredicateFactory(predicate, isNullInputUnknown);
+    return new StringPredicateDruidPredicateFactory(predicate);
   }
 
-  private final boolean isNullInputUnknown;
   @Nullable
-  private final Predicate<String> predicate;
+  private final DruidObjectPredicate<String> predicate;
 
-  public StringPredicateDruidPredicateFactory(Predicate<String> predicate, boolean isNullInputUnknown)
+  private StringPredicateDruidPredicateFactory(DruidObjectPredicate<String> predicate)
   {
     this.predicate = predicate;
-    this.isNullInputUnknown = isNullInputUnknown;
   }
 
   @Override
-  public Predicate<String> makeStringPredicate()
+  public DruidObjectPredicate<String> makeStringPredicate()
   {
     return predicate;
   }
@@ -73,12 +72,6 @@ public class StringPredicateDruidPredicateFactory implements DruidPredicateFacto
   }
 
   @Override
-  public boolean isNullInputUnknown()
-  {
-    return isNullInputUnknown;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -88,12 +81,12 @@ public class StringPredicateDruidPredicateFactory implements DruidPredicateFacto
       return false;
     }
     StringPredicateDruidPredicateFactory that = (StringPredicateDruidPredicateFactory) o;
-    return isNullInputUnknown == that.isNullInputUnknown && Objects.equals(predicate, that.predicate);
+    return Objects.equals(predicate, that.predicate);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(isNullInputUnknown, predicate);
+    return Objects.hash(predicate);
   }
 }

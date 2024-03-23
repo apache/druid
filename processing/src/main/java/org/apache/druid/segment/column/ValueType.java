@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.errorprone.annotations.Immutable;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -39,6 +40,7 @@ import javax.annotation.Nullable;
  * @see ColumnType
  * @see TypeSignature
  */
+@Immutable
 public enum ValueType implements TypeDescriptor
 {
   /**

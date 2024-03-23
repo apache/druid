@@ -18,57 +18,72 @@
   ~ under the License.
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
-  <suppress>
-    <!-- druid-indexing-hadoop.jar is mistaken for hadoop -->
-    <notes><![CDATA[
-   file name: org.apache.druid:druid-indexing-hadoop
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
-    <cve>CVE-2012-4449</cve>
-    <cve>CVE-2017-3162</cve>
-    <cve>CVE-2018-8009</cve>
-    <cve>CVE-2022-26612</cve>
-  </suppress>
-  <suppress>
-    <!-- druid-processing.jar is mistaken for org.processing:processing -->
-    <notes><![CDATA[
-   file name: org.apache.druid:druid-processing
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-processing@.*$</packageUrl>
-    <cve>CVE-2018-1000840</cve>
-  </suppress>
-  <suppress>
-    <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
-    <notes><![CDATA[
-   file name: openstack-swift
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-swift@.*$</packageUrl>
-    <cve>CVE-2013-7109</cve>
-    <cve>CVE-2016-0737</cve>
-    <cve>CVE-2016-0738</cve>
-    <cve>CVE-2017-16613</cve>
-  </suppress>
+  <!-- False positives -->
   <suppress>
     <notes><![CDATA[
-   file name: openstack-keystone-1.9.1.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-keystone@.*$</packageUrl>
-    <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
-    <cve>CVE-2015-7546</cve>
-    <cve>CVE-2020-12689</cve>
-    <cve>CVE-2020-12690</cve>
-    <cve>CVE-2020-12691</cve>
-
-    <!-- This CVE affects the server -->
-    <cve>CVE-2021-3563</cve>
-  </suppress>
-
-  <suppress>
-    <notes><![CDATA[
-     file name: json-path-2.3.0.jar
+     file name: json-path-2.9.0.jar jackson-core-2.12.7.jar
      ]]></notes>
-    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-path@.*$</packageUrl>
     <cve>CVE-2022-45688</cve>
+    <cve>CVE-2023-35116</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: grpc-context-1.27.2.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
+    <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
+    <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+    <cve>CVE-2023-32732</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
+    <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
+    <notes><![CDATA[
+      file name: commons-compress-1.23.0.jar
+    ]]></notes>
+    <cve>CVE-2023-42503</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: guava-31.1-jre.jar
+    ]]></notes>
+    <cve>CVE-2020-8908</cve>
+  </suppress>
+
+  <!-- CVE-2022-4244 is affecting plexus-utils package,
+  plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
+  <suppress base="true">
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
+    <cve>CVE-2022-4244</cve>
+    <cve>CVE-2022-4245</cve>
+  </suppress>
+
+  <suppress>
+    <!-- This presumably applies to maven build system -->
+    <notes><![CDATA[
+     file name: maven-settings
+     ]]></notes>
+    <cve>CVE-2021-26291</cve>
+  </suppress>
+
+  <suppress>
+    <!-- LDAP authentication check bypass FP no exploitability analysis -->
+    <notes><![CDATA[
+     file name: derby-10.14.2.0.jar
+     ]]></notes>
+    <cve>CVE-2022-46337</cve>
+  </suppress>
+
+  <suppress>
+    <!-- False positive fixed in 9.4.52
+    https://nvd.nist.gov/vuln/detail/CVE-2023-36479 -->
+    <notes><![CDATA[
+     file name: jetty-servlets-9.4.53.v20231009.jar
+     ]]></notes>
+    <cve>CVE-2023-36479</cve>
   </suppress>
 
   <suppress>
@@ -87,84 +102,125 @@
     <cve>CVE-2022-42004</cve>
   </suppress>
 
-
   <suppress>
-    <!-- Not much for us to do as a user of the client lib, and no patch is available,
-     see https://github.com/kubernetes/kubernetes/issues/97076 -->
+    <!-- Avatica server itself is not affected. Vulnerability exists only on client. -->
     <notes><![CDATA[
-   file name: client-java-10.0.1.jar
+   file name: avatica-server-1.23.0.jar
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.kubernetes/client\-java.*@10.0.1$</packageUrl>
-    <cve>CVE-2020-8554</cve>
+    <cve>CVE-2022-36364</cve>
+    <cve>CVE-2022-39135</cve>
+    <cve>CVE-2020-13955</cve>
   </suppress>
 
-  <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->
+  <!-- DoS when using expression evaluator.guess -->
+  <suppress>
+    <notes><![CDATA[
+    file name: janino-3.1.9.jar
+    ]]></notes>
+    <cve>CVE-2023-33546</cve>
+  </suppress>
+
+  <suppress>
+    <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
+    <notes><![CDATA[
+     file name: hadoop-client-runtime-3.3.6.jar
+     ]]></notes>
+    <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
+    <cve>CVE-2022-26612</cve>
+    <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
+    <cve>CVE-2023-25613</cve>
+    <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
+    <!-- CVE from shaded dependency nimbus-jose-jwt, fixed in upcoming Hadoop release version -
+    https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
+    <cve>CVE-2023-1370</cve>
+    <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
+    <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
+    <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+    <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+  </suppress>
+
+  <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->
+  <suppress>
+      <notes><![CDATA[
+      file name: hadoop-*-3.3.1.jar
+      ]]></notes>
+        <cve>CVE-2015-7430</cve>
+        <cve>CVE-2017-3162</cve>
+        <cve>CVE-2021-31684</cve>
+        <cve>CVE-2022-3509</cve>
+        <cve>CVE-2022-40152</cve>
+    </suppress>
+
   <suppress>
     <!--
-      ~ TODO: Fix by updating hibernate-validator.
-
-      ~ Note hibernate-validator:5.3.1 introduces a change that requires an EL implementation to be in the classpath:
-      ~ https://developer.jboss.org/wiki/HibernateValidatorMigrationGuide#jive_content_id_531Final
-      ~
-      ~ For example, updating hibernate-validator causes hadoop ingestion tasks to fail:
-      ~
-      ~   Error: com.google.inject.CreationException: Unable to create injector, see the following errors:
-      ~
-      ~   1) An exception was caught and reported. Message: HV000183: Unable to initialize 'javax.el.ExpressionFactory'. Check that you have the EL dependencies on the classpath, or use ParameterMessageInterpolator instead
-      ~     at com.google.inject.internal.InjectorShell$Builder.build(InjectorShell.java:138)
-      ~
-      ~   2) No implementation for javax.validation.Validator was bound.
-      ~     at org.apache.druid.guice.ConfigModule.configure(ConfigModule.java:39)
-      ~
-      ~   2 errors
-      ~       at com.google.inject.internal.Errors.throwCreationExceptionIfErrorsExist(Errors.java:470)
-      ~       at com.google.inject.internal.InternalInjectorCreator.initializeStatically(InternalInjectorCreator.java:155)
-      ~       at com.google.inject.internal.InternalInjectorCreator.build(InternalInjectorCreator.java:107)
-      ~       at com.google.inject.Guice.createInjector(Guice.java:99)
-      ~       at com.google.inject.Guice.createInjector(Guice.java:73)
-      ~       at org.apache.druid.guice.GuiceInjectors.makeStartupInjector(GuiceInjectors.java:56)
-      ~       at org.apache.druid.indexer.HadoopDruidIndexerConfig.<clinit>(HadoopDruidIndexerConfig.java:102)
-      ~       at org.apache.druid.indexer.HadoopDruidIndexerMapper.setup(HadoopDruidIndexerMapper.java:53)
-      ~       at org.apache.druid.indexer.DetermineHashedPartitionsJob$DetermineCardinalityMapper.setup(DetermineHashedPartitionsJob.java:279)
-      ~       at org.apache.druid.indexer.DetermineHashedPartitionsJob$DetermineCardinalityMapper.run(DetermineHashedPartitionsJob.java:334)
-      ~       at org.apache.hadoop.mapred.MapTask.runNewMapper(MapTask.java:787)
-      ~       at org.apache.hadoop.mapred.MapTask.run(MapTask.java:341)
-      ~       at org.apache.hadoop.mapred.YarnChild$2.run(YarnChild.java:175)
-      ~       at java.security.AccessController.doPrivileged(Native Method)
-      ~       at javax.security.auth.Subject.doAs(Subject.java:422)
-      ~       at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1844)
-      ~       at org.apache.hadoop.mapred.YarnChild.main(YarnChild.java:169)
-      ~   Caused by: javax.validation.ValidationException: HV000183: Unable to initialize 'javax.el.ExpressionFactory'. Check that you have the EL dependencies on the classpath, or use ParameterMessageInterpolator instead
-      ~       at org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator.buildExpressionFactory(ResourceBundleMessageInterpolator.java:102)
-      ~       at org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator.<init>(ResourceBundleMessageInterpolator.java:45)
-      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.getDefaultMessageInterpolator(ConfigurationImpl.java:423)
-      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.getDefaultMessageInterpolatorConfiguredWithClassLoader(ConfigurationImpl.java:575)
-      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.getMessageInterpolator(ConfigurationImpl.java:364)
-      ~       at org.hibernate.validator.internal.engine.ValidatorFactoryImpl.<init>(ValidatorFactoryImpl.java:148)
-      ~       at org.hibernate.validator.HibernateValidator.buildValidatorFactory(HibernateValidator.java:38)
-      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.buildValidatorFactory(ConfigurationImpl.java:331)
-      ~       at javax.validation.Validation.buildDefaultValidatorFactory(Validation.java:110)
-      ~       at org.apache.druid.guice.ConfigModule.configure(ConfigModule.java:39)
-      ~       at com.google.inject.spi.Elements$RecordingBinder.install(Elements.java:340)
-      ~       at com.google.inject.spi.Elements.getElements(Elements.java:110)
-      ~       at com.google.inject.internal.InjectorShell$Builder.build(InjectorShell.java:138)
-      ~       at com.google.inject.internal.InternalInjectorCreator.build(InternalInjectorCreator.java:104)
-      ~       ... 14 more
-      ~   Caused by: java.lang.NoSuchMethodError: javax.el.ExpressionFactory.newInstance()Ljavax/el/ExpressionFactory;
-      ~       at org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator.buildExpressionFactory(ResourceBundleMessageInterpolator.java:98)
-      ~       ... 27 more
-      -->
+      1. hive-storage-api has the thrift vulnerability too
+      2. CVE-2021-34538 pertains to Hive server.
+      3. CVE-2021-4125 only applies to the OpenShift Metering hive container images
+     -->
     <notes><![CDATA[
-   file name: hibernate-validator-5.3.6.Final.jar
-   file name: hibernate-validator-5.2.5.Final.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.hibernate/hibernate\-validator@.*$</packageUrl>
-    <cve>CVE-2017-7536</cve>
-    <cve>CVE-2019-10219</cve> <!-- We don't use SafeHtml validator annotation https://nvd.nist.gov/vuln/detail/CVE-2019-10219 -->
-    <cve>CVE-2019-14900</cve> <!-- Not applicable to hibernate validator https://github.com/hibernate/hibernate-orm/pull/3438 -->
-    <cve>CVE-2020-10693</cve> <!-- We don't take user input in constraint violation message https://hibernate.atlassian.net/browse/HV-1774 -->
-    <cve>CVE-2020-25638</cve>
+     file name: hive-storage-api-2.8.1.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive.*</packageUrl>
+    <cve>CVE-2020-13949</cve>
+    <cve>CVE-2021-34538</cve>
+    <cve>CVE-2021-4125</cve>
   </suppress>
+
+  <suppress>
+    <!-- These are for wildfly-openssl. -->
+    <notes><![CDATA[
+    file name: wildfly-openssl-1.0.7.Final.jar
+    ]]></notes>
+    <cve>CVE-2020-10740</cve>
+    <cve>CVE-2020-25644</cve>
+    <cve>CVE-2020-10718</cve>
+    <cve>CVE-2022-1278</cve>
+  </suppress>
+
+
+  <suppress>
+    <notes><![CDATA[
+    file name: kafka-clients-3.2.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka\-clients@.*$</packageUrl>
+    <cve>CVE-2022-34917</cve>
+    <cve>CVE-2023-25194</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: woodstox-core-6.2.4.jar
+    ]]></notes>
+    <cve>CVE-2023-34411</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: spatial4j-0.7.jar:
+    ]]></notes>
+    <cve>CVE-2014-125074</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
+    <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
+    <notes><![CDATA[
+    file name: jose4j-0.7.3.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.bitbucket\.b_c/jose4j@.*$</packageUrl>
+    <cve>CVE-2023-31582</cve>
+  </suppress>
+
+  <suppress>
+    <!-- okhttp -->
+    <notes><![CDATA[
+   file name: okhttp-*.jar
+   ]]></notes>
+    <cve>CVE-2021-0341</cve>  <!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2023-0833</cve>  <!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
+  </suppress>
+
   <suppress>
     <!-- TODO: Fix by updating curator-x-discovery to > 4.2.0 and updating hadoop -->
     <notes><![CDATA[
@@ -173,6 +229,7 @@
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
     <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
   </suppress>
+
   <suppress>
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
     <notes><![CDATA[
@@ -193,32 +250,17 @@
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
+
   <suppress>
-    <!-- TODO: Fix by upgrading hadoop-auth version -->
+    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
     <notes><![CDATA[
-   file name: nimbus-jose-jwt-4.41.1.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.nimbusds/nimbus\-jose\-jwt@4.41.1$</packageUrl>
-    <cve>CVE-2019-17195</cve>
-  </suppress>
-  <suppress>
-    <!-- This CVE is a false positive. The CVE is not for apacheds-i18n -->
-    <notes><![CDATA[
-   file name: apacheds-i18n-2.0.0-M15.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.directory\.server/apacheds\-i18n@.*$</packageUrl>
-    <cve>CVE-2020-7791</cve>
-  </suppress>
-  <suppress>
-      <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
-      <notes><![CDATA[
    file name: libthrift-0.6.1.jar
    ]]></notes>
       <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.6.1$</packageUrl>
-      <cve>CVE-2016-5397</cve>
       <cve>CVE-2018-1320</cve>
       <cve>CVE-2019-0205</cve>
   </suppress>
+
   <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage     -->
     <notes><![CDATA[
@@ -231,54 +273,31 @@
     <cve>CVE-2022-45693</cve>
     <cve>CVE-2023-1436</cve>
   </suppress>
+
   <suppress>
-    <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
-    <!-- We need to update several other components to move to Snakeyaml 2.0 to address CVE-2022-1471 -->
-    <!-- Snakeyaml 1.33 added to dependencyManagement in main pom file -->
+    <!-- The main use of snakeyaml in Druid is coming in test scope from:
+     com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:jar:2.12.7
+     (version 1.27)
+     The contrib extension: druid-cassandra-storage uses version 1.6 in compile
+     scope
+     The integration tests use version 1.27 in compile scope.
+     Previous pinning of version to 1.33 forced the usage of the version across
+     all the modules, downgrading the version for some of them.
+     The removal of the pin in the main POM allows the modules choose which version
+     to be used, enabling the users to disable contrib extensions and use the
+     CVE free version of Snakeyaml in core extensions.
+      -->
+
     <notes><![CDATA[
-    file name: snakeyaml-1.33.jar
+    file name: snakeyaml-1.27.jar snakeyaml-1.33.jar
     ]]></notes>
+    <!-- Snakeyaml is used only in test scope in Druid core with trusted inputs -->
     <cve>CVE-2022-1471</cve>
     <!-- false positive -->
     <cve>CVE-2023-2251</cve>
     <cve>CVE-2022-3064</cve>
   </suppress>
-  <suppress>
-    <notes><![CDATA[
-   file name: htrace-core4-4.0.1-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-annotations:2.4.0)
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-annotations@2.4.0$</packageUrl>
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-annotations:2.4.0 since it is via htrace-core4 -->
-  </suppress>
-  <suppress>
-    <notes><![CDATA[
-   file name: htrace-core4-4.0.1-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-core:2.4.0)
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-core@2.4.0$</packageUrl>
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-core:2.4.0 since it is via htrace-core4 -->
-  </suppress>
-  <suppress>
-    <!--
-      ~ TODO: Fix by updating hadoop-common used by extensions-core/parquet-extensions. Possibly need to change
-      ~ HdfsStorageDruidModule.configure()->FileSystem.get(conf) as well.
-      -->
-    <notes><![CDATA[
-   file name: htrace-core4-4.0.1-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-databind:2.4.0)
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@2.4.0$</packageUrl>
-    <cve>CVE-2018-14721</cve>  <!-- cvss of 10.0 -->
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-databind:2.4.0 since it is via htrace-core4 -->
-  </suppress>
-  <suppress>
-    <!--
-      ~ TODO: Fix by updating parquet version in extensions-core/parquet-extensions.
-      -->
-    <notes><![CDATA[
-   file name: parquet-jackson-1.11.0.jar (shaded: com.fasterxml.jackson.core:jackson-{core,databind}:2.9.10)
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-.*@2.9.10$</packageUrl>
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-{core,databind}:2.9.0 since it is via parquet transitive dependencies -->
-  </suppress>
+
   <suppress>
      <notes><![CDATA[
      file name: node-sass:4.13.1
@@ -290,138 +309,6 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:npm/node\-sass@.*$</packageUrl>
      <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
-  </suppress>
-  <suppress>
-    <!--
-      ~ TODO: Fix when Apache Ranger 2.1 is released
-      -->
-    <notes><![CDATA[
-    file name: kafka_2.11-2.0.0.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka_2.11@2.0.0$</packageUrl>
-    <cve>CVE-2019-12399</cve>
-    <cve>CVE-2018-17196</cve>
-  </suppress>
-  <suppress>
-    <!--
-      ~ TODO: Fix when Apache Ranger 2.1 is released
-      - transitive dep from apache-ranger, upgrading to 2.1.0 adds other CVEs, staying at ranger 2.0.0 for now
-      -->
-    <notes><![CDATA[
-    file name: kafka-clients-2.0.0.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
-    <cve>CVE-2019-12399</cve>
-    <cve>CVE-2018-17196</cve>
-    <cve>CVE-2023-25194</cve>
-  </suppress>
-  <suppress>
-    <notes><![CDATA[
-    file name: kafka-clients-3.2.0.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka\-clients@.*$</packageUrl>
-    <cve>CVE-2022-34917</cve>
-  </suppress>
-  <suppress>
-    <!--
-      ~ ambari-metrics-emitter, druid-ranger-security
-      -->
-    <notes><![CDATA[
-    file name: log4j-1.2.17.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
-    <cve>CVE-2019-17571</cve>
-    <cve>CVE-2021-4104</cve>
-    <cve>CVE-2020-9493</cve>
-    <cve>CVE-2022-23307</cve>
-    <cve>CVE-2022-23305</cve>
-    <cve>CVE-2022-23302</cve>
-    <cve>CVE-2023-26464</cve>
-  </suppress>
-  <suppress>
-    <notes><![CDATA[
-    file name: log4j-core-2.17.1.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1$</packageUrl>
-    <cve>CVE-2022-33915</cve>
-  </suppress>
-  <suppress>
-     <notes><![CDATA[
-     file name: ambari-metrics-common-2.7.0.0.0.jar
-    ]]></notes>
-    <cve>CVE-2022-45855</cve>
-    <cve>CVE-2022-42009</cve>
-    <!-- Suppress hadoop CVEs that not applicable to hadoop-annotations -->
-    <cve>CVE-2022-25168</cve> <!-- Affected FileUtil.unTar(File, File) API isn't present in hadoop-annotations -->
-    <cve>CVE-2021-33036</cve> <!-- Only applicable to hadoop-yarn-server -->
-  </suppress>
-  <suppress>
-    <!--
-      - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
-      -->
-    <notes><![CDATA[
-    file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: io.netty:netty:3.10.5.Final)
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.5.Final$</packageUrl>
-    <cve>CVE-2019-16869</cve>
-    <cve>CVE-2019-20444</cve>
-    <cve>CVE-2019-20445</cve>
-    <cve>CVE-2021-37136</cve>
-    <cve>CVE-2021-37137</cve>
-    <cve>CVE-2021-4104</cve>
-    <cve>CVE-2020-9493</cve>
-    <cve>CVE-2022-23307</cve>
-    <cve>CVE-2022-23305</cve>
-    <cve>CVE-2022-23302</cve>
-    <cve>CVE-2022-41881</cve>
-    <cve>CVE-2020-11612</cve>
-  </suppress>
-  <suppress>
-       <!--
-         - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
-         -->
-     <notes><![CDATA[
-     file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: org.apache.hadoop:hadoop-annotations:2.6.0)
-     ]]></notes>
-     <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-annotations@.*$</packageUrl>
-     <cve>CVE-2015-1776</cve>
-     <cve>CVE-2016-3086</cve>
-     <cve>CVE-2016-5393</cve>
-     <cve>CVE-2016-6811</cve>
-     <cve>CVE-2017-3162</cve>
-     <cve>CVE-2018-11768</cve>
-     <cve>CVE-2018-1296</cve>
-     <cve>CVE-2018-8009</cve>
-     <cve>CVE-2018-8029</cve>
-  </suppress>
-  <suppress>
-    <notes><![CDATA[
-     file name: hadoop-*-3.3.1.jar
-     ]]></notes>
-    <cve>CVE-2018-11765</cve>
-    <cve>CVE-2020-9492</cve>
-    <cve>CVE-2021-31684</cve>
-    <cve>CVE-2021-35517</cve>
-    <cve>CVE-2021-35516</cve>
-    <cve>CVE-2021-35515</cve>
-    <cve>CVE-2021-36090</cve>
-    <cve>CVE-2022-2048</cve>
-    <cve>CVE-2022-3509</cve>
-    <cve>CVE-2022-40152</cve>
-  </suppress>
-  <suppress>
-    <!-- The CVE is not applicable to kafka-clients. -->
-    <notes><![CDATA[
-     file name: kafka-clients-2.8.0.jar
-     ]]></notes>
-    <cve>CVE-2021-26291</cve>
-  </suppress>
-  <suppress until="2021-12-30">
-    <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
-    <notes><![CDATA[
-     This vulnerability should be fixed soon and the suppression should be removed.
-     ]]></notes>
-    <cve>CVE-2020-13949</cve>
   </suppress>
 
   <suppress>
@@ -435,153 +322,15 @@
      <cve>CVE-2022-42003</cve>
      <cve>CVE-2022-42004</cve>
   </suppress>
-  <suppress>
-    <!-- aliyun-oss -->
-    <notes><![CDATA[
-    file name: ini4j-0.5.4.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.ini4j/ini4j@.*$</packageUrl>
-    <vulnerabilityName>CVE-2022-41404</vulnerabilityName>
-  </suppress>
-  <suppress>
-    <!-- Transitive dependency from apache-ranger, latest ranger version 2.1.0 still uses solr 7.7.1-->
-    <notes><![CDATA[
-     file name: solr-solrj-7.7.1.jar
-     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.solr/solr-solrj@7.7.1$</packageUrl>
-    <cve>CVE-2020-13957</cve>
-    <cve>CVE-2019-17558</cve>
-    <cve>CVE-2019-0193</cve>
-    <cve>CVE-2020-13941</cve>
-    <cve>CVE-2021-29943</cve>
-    <cve>CVE-2021-27905</cve>
-    <cve>CVE-2021-29262</cve>
-    <cve>CVE-2021-44548</cve>
-  </suppress>
-
-  <suppress>
-    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
-    <notes><![CDATA[
-     file name: jdom2-2.0.6.jar
-     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.jdom/jdom2@2.0.6$</packageUrl>
-    <cve>CVE-2021-33813</cve>
-  </suppress>
 
   <suppress>
     <!-- Upgrading to libthrift-0.14.2 adds many tomcat CVEs, suppress and stay at 0.13.0 for now-->
+    <!-- valid issue, worth investigating overhauling to e.g., 	0.19.0 -->
     <notes><![CDATA[
      file name: libthrift-0.13.0.jar
      ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@.*</packageUrl>
     <cve>CVE-2020-13949</cve>
-  </suppress>
-  <suppress>
-    <!--
-      1. hive-storage-api has the thrift vulnerability too
-      2. CVE-2021-34538 pertains to Hive server.
-      3. CVE-2021-4125 only applies to the OpenShift Metering hive container images
-     -->
-    <notes><![CDATA[
-     file name: hive-storage-api-2.8.1.jar
-     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
-    <cve>CVE-2020-13949</cve>
-    <cve>CVE-2021-34538</cve>
-    <cve>CVE-2021-4125</cve>
-  </suppress>
-  <suppress>
-    <!--
-    the scanner misattributes this to Apache DataSketches
-    the actual vulnerability affects some collaboration tool called Sketch, and impacts some 'library feeds' feature
-    which seems to relate to how the tool handles sharing designs or something, so we are doing a blanket ignore
-    because it seems nearly impossible for us to be affected by this
-     -->
-    <cve>CVE-2021-40531</cve>
-  </suppress>
-  <suppress>
-    <!-- These are for wildfly-openssl. -->
-    <notes><![CDATA[
-    file name: wildfly-openssl-1.0.7.Final.jar
-    ]]></notes>
-    <cve>CVE-2020-10740</cve>
-    <cve>CVE-2020-25644</cve>
-    <cve>CVE-2020-10718</cve>
-    <cve>CVE-2022-1278</cve>
-  </suppress>
-
-  <suppress>
-    <!-- Suppress aws-java-sdk-bundle cves -->
-    <notes><![CDATA[
-    file name: aws-java-sdk-bundle-1.11.901.jar
-    ]]></notes>
-    <cve>CVE-2020-8570</cve>
-    <cve>CVE-2015-8559</cve>
-    <cve>CVE-2021-20291</cve>
-    <cve>CVE-2017-17485</cve>
-    <cve>CVE-2018-5968</cve>
-    <cve>CVE-2017-15095</cve>
-    <cve>CVE-2019-16942</cve>
-    <cve>CVE-2020-25649</cve>
-    <cve>CVE-2020-35491</cve>
-    <cve>CVE-2019-16943</cve>
-    <cve>CVE-2020-35490</cve>
-    <cve>CVE-2019-20330</cve>
-    <cve>CVE-2020-10673</cve>
-    <cve>CVE-2018-11307</cve>
-    <cve>CVE-2018-7489</cve>
-    <cve>CVE-2019-17267</cve>
-    <cve>CVE-2019-17531</cve>
-    <cve>CVE-2019-16335</cve>
-    <cve>CVE-2019-14893</cve>
-    <cve>CVE-2019-14540</cve>
-    <cve>CVE-2021-37136</cve>
-    <cve>CVE-2021-37137</cve>
-  </suppress>
-
-  <suppress>
-    <!-- Suppress hadoop-shaded-guava cves -->
-    <notes><![CDATA[
-    file name: hadoop-shaded-guava-1.1.1.jar
-    ]]></notes>
-    <cve>CVE-2015-7430</cve>
-    <cve>CVE-2017-3162</cve>
-  </suppress>
-
-  <suppress>
-    <!-- Suppress avro cves that are only applicable to .NET SDK-->
-    <notes><![CDATA[
-    file name: avro-1.9.2.jar or avro-ipc-jetty-1.9.2.jar
-    ]]></notes>
-    <cve>CVE-2021-43045</cve>
-  </suppress>
-
-  <suppress>
-    <!-- False alarm for the Async javascript library (https://github.com/caolan/async) which is a dev dependency for the web console -->
-    <notes><![CDATA[
-   file name: async-http-client-netty-utils-2.5.3.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
-    <cve>CVE-2021-43138</cve>
-  </suppress>
-
-  <suppress>
-    <!-- False alarm for the Async javascript library (https://github.com/caolan/async) which is a dev dependency for the web console -->
-    <notes><![CDATA[
-   file name: async-http-client-2.5.3.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client@2.5.3$</packageUrl>
-    <cve>CVE-2021-43138</cve>
-  </suppress>
-
-
-  <suppress>
-    <!-- Jackson CVEs when processing objects of large depth. Consider updating -->
-
-    <notes><![CDATA[
-   file name: *jackson-*.jar
-   ]]></notes>
-    <cve>CVE-2022-45688</cve>
   </suppress>
 
   <suppress>
@@ -593,82 +342,13 @@
   </suppress>
 
   <suppress>
-    <!-- Non-applicable CVE for jedis, since we don't use lua scripts -->
+    <!-- 4.5.5 is a fixed version as per https://nvd.nist.gov/vuln/detail/CVE-2021-44878. -->
+    <!-- However, vulnerability scan still shows this CVE. Pac4j release notes mention 5.3.1 as "fully fixed" version. -->
+    <!-- Remove suppression once upgraded to 5.3.1. -->
     <notes><![CDATA[
-   file name: jedis-2.9.0.jar
-   ]]></notes>
-    <cve>CVE-2021-32626</cve>
-    <cve>CVE-2022-24735</cve>
-  </suppress>
-
-  <suppress>
-    <!-- pac4j-core-3.8.3 -->
-    <notes><![CDATA[
-   file name: pac4j-core-3.8.3.jar
+   file name: pac4j-core-4.5.7.jar
    ]]></notes>
     <cve>CVE-2021-44878</cve>
-  </suppress>
-
-  <suppress>
-    <!-- cassandra-all-1.0.8.jar -->
-    <notes><![CDATA[
-   file name: cassandra-all-1.0.8.jar
-   ]]></notes>
-    <cve>CVE-2020-17516</cve>
-  </suppress>
-
-  <suppress>
-    <!-- okhttp -->
-    <notes><![CDATA[
-   file name: okhttp-*.jar
-   ]]></notes>
-    <cve>CVE-2021-0341</cve>
-    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
-  </suppress>
-
-  <suppress>
-    <!-- parquet-format-structures-1.12.0.jar -->
-    <notes><![CDATA[
-   file name: parquet-format-structures-1.12.0.jar
-   ]]></notes>
-    <cve>CVE-2021-41561</cve>
-  </suppress>
-
-  <suppress>
-    <!-- Avatica server itself is not affected. Vulnerability exists only on client. -->
-    <notes><![CDATA[
-   file name: avatica-server-1.17.0.jar
-   ]]></notes>
-    <cve>CVE-2022-36364</cve>
-    <cve>CVE-2022-39135</cve>
-  </suppress>
-  <suppress>
-    <notes><![CDATA[
-    file name: calcite-core-1.21.0.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.calcite/calcite\-core@.*$</packageUrl>
-    <cve>CVE-2020-13955</cve>
-  </suppress>
-  <suppress>
-    <!-- avatica-server-1.17.0.jar -->
-    <notes><![CDATA[
-   file name: avatica-server-1.17.0.jar
-   ]]></notes>
-    <!--
-    We do not expose any of the SQL operators that were found vulnerable in this CVE.
-    -->
-    <cve>CVE-2022-39135</cve>
-  </suppress>
-
-  <suppress>
-    <!-- calcite-core-1.21.0.jar -->
-    <notes><![CDATA[
-   file name: calcite-core-1.21.0.jar
-   ]]></notes>
-    <!--
-    We do not expose any of the SQL operators that were found vulnerable in this CVE.
-    -->
-    <cve>CVE-2022-39135</cve>
   </suppress>
 
   <suppress>
@@ -691,6 +371,7 @@
      <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
      <vulnerabilityName>1084597</vulnerabilityName>
    </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: protobuf-java-3.11.0.jar
@@ -698,6 +379,7 @@
      <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java@.*$</packageUrl>
      <cve>CVE-2022-3171</cve>
    </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: protobuf-java-util-3.11.0.jar
@@ -705,6 +387,7 @@
      <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java\-util@.*$</packageUrl>
      <cve>CVE-2022-3171</cve>
    </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: ansi-regex:5.0.0
@@ -713,6 +396,7 @@
      <vulnerabilityName>1084697</vulnerabilityName>
      <cve>CVE-2021-3807</cve>
    </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: glob-parent:5.1.1
@@ -721,6 +405,7 @@
      <vulnerabilityName>1081884</vulnerabilityName>
      <cve>CVE-2020-28469</cve>
    </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: minimatch:3.0.4
@@ -728,22 +413,7 @@
      <packageUrl regex="true">^pkg:npm/minimatch@.*$</packageUrl>
      <vulnerabilityName>1084765</vulnerabilityName>
    </suppress>
-   <suppress>
-     <notes><![CDATA[
-     file name: y18n:4.0.0
-     ]]></notes>
-     <packageUrl regex="true">^pkg:npm/y18n@.*$</packageUrl>
-     <vulnerabilityName>1070209</vulnerabilityName>
-     <cve>CVE-2020-7774</cve>
-   </suppress>
-  <suppress>
-    <!-- druid-ranger-security -->
-    <notes><![CDATA[
-     file name: ranger-plugins-common-2.0.0.jar
-     ]]></notes>
-    <!-- seems not applicable to plugin -->
-    <cve>CVE-2022-45048</cve>
-  </suppress>
+
   <suppress>
     <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
     <notes><![CDATA[
@@ -760,7 +430,9 @@
     <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
     <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
     <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+    <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
   </suppress>
+
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
     <notes><![CDATA[
@@ -769,14 +441,7 @@
     <vulnerabilityName>prototype pollution</vulnerabilityName>
     <cve>CVE-2020-28458</cve>
   </suppress>
-  <suppress>
-    <notes><![CDATA[
-     file name: ranger-plugins-*-2.0.0.jar
-     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.ranger/ranger\-plugins\-.*@2.0.0$</packageUrl>
-    <!-- applies to ranger-hive-plugin which afaict we do not use https://nvd.nist.gov/vuln/detail/CVE-2021-40331 -->
-    <cve>CVE-2021-40331</cve>
-  </suppress>
+
 
   <!-- filed against random script set, doesn't apply to any Maven artifacts - https://github.com/jeremylong/DependencyCheck/issues/5213 -->
   <suppress>
@@ -788,21 +453,13 @@
     <cve>CVE-2021-4277</cve>
   </suppress>
 
+<!-- the remaining uses of vulnerable okio are in contrib-extensions -->
   <suppress>
     <notes><![CDATA[
       file name: okio-1.17.2.jar, okio-1.15.0.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@1..*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@..*$</packageUrl>
     <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
-  </suppress>
-
-  <suppress>
-    <notes><![CDATA[
-      file name: grpc-context-1.27.2.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
-    <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
-    <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
   </suppress>
 
   <!-- CVE-2022-4244 is affecting plexus-utils package, plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
@@ -817,18 +474,6 @@
     <cve>CVE-2023-5072</cve>
   </suppress>
 
-  <!--
-    ~ CVE-2023-44981 seems to affect Zookeeper servers. While we ship with a previous version of the Zookeeper, Druid only
-    ~ only uses the client classes of the Zookeeper. We do use the older version in the quickstart & example docker file,
-    ~ however in production it is recomended to use your own Zookeeper server with the CVE patched up, which the Druid's
-    ~ older ZK library is still compatible with.
-    -->
-  <suppress>
-    <notes><![CDATA[
-      file name: zookeeper-3.5.10.jar
-    ]]></notes>
-    <cve>CVE-2023-44981</cve>
-  </suppress>
 
   <!--
    ~ Hostname verification is disabled by default in Netty 4.x, therefore the version that Druid is using gets flagged,
@@ -838,5 +483,185 @@
       file name: netty-transport-4.1.100.Final.jar
     ]]></notes>
     <cve>CVE-2023-4586</cve>
+  </suppress>
+
+  <!-- druid cassandra storage exclusions -->
+  <suppress>
+      <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
+      <notes><![CDATA[
+   file name: libthrift-0.6.1.jar
+   ]]></notes>
+      <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@.*$</packageUrl>
+      <cve>CVE-2016-5397</cve>
+      <cve>CVE-2018-1320</cve>
+      <cve>CVE-2019-0205</cve>
+      <cve>CVE-2015-3254</cve>
+  </suppress>
+  <!-- mostly false positives, need to use dependencies from current decade  -->
+  <suppress>
+      <notes><![CDATA[
+   file name: avro-1.4.0-cassandra-1.jar  cassandra-all-1.0.8.jar
+   ]]></notes>
+      <cve>CVE-2012-6708</cve>
+      <cve>CVE-2015-9251</cve>
+      <cve>CVE-2019-11358</cve>
+      <cve>CVE-2020-11022</cve>
+      <cve>CVE-2020-11023</cve>
+      <cve>CVE-2020-7656</cve>
+      <cve>CVE-2011-4969</cve>
+      <cve>CVE-2020-17516</cve>
+      <cve>CVE-2020-13946</cve>
+  </suppress>
+  <!-- end of druid cassandra storage exclusions -->
+
+
+  <!-- druid-cloudfiles-extensions exclusions -->
+  <suppress>
+     <!-- CVEs added for completeness in pretty much dead extension  -->
+      <notes><![CDATA[
+   file name: openstack*-2.5.0.jar
+   ]]></notes>
+      <cve>CVE-2020-12689</cve>
+      <cve>CVE-2020-12691</cve>
+      <cve>CVE-2020-12690</cve>
+      <cve>CVE-2021-3563</cve>
+      <cve>CVE-2016-0738</cve>
+      <cve>CVE-2017-16613</cve>
+  </suppress>
+  <!-- end of druid-cloudfiles-extensions exclusions -->
+
+  <!-- graphite-emitter exclusions -->
+  <suppress>
+     <!-- CVEs added for completeness  -->
+      <notes><![CDATA[
+   file name: amqp-client-5.17.0.jar
+   ]]></notes>
+      <cve>CVE-2023-46120</cve>
+  </suppress>
+  <!-- end of graphite-emitter exclusions -->
+
+  <!-- ambari-metics-emitter exclusions -->
+  <suppress>
+       <!--
+         - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
+         -->
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: org.apache.hadoop:hadoop-annotations:2.6.0)
+     ]]></notes>
+     <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-annotations@.*$</packageUrl>
+     <cve>CVE-2015-1776</cve>
+     <cve>CVE-2016-3086</cve>
+     <cve>CVE-2016-5393</cve>
+     <cve>CVE-2016-6811</cve>
+     <cve>CVE-2017-3162</cve>
+     <cve>CVE-2018-11768</cve>
+     <cve>CVE-2018-1296</cve>
+     <cve>CVE-2018-8009</cve>
+     <cve>CVE-2018-8029</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: log4j-1.2.17.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
+    <cve>CVE-2019-17571</cve>
+    <cve>CVE-2021-4104</cve>
+    <cve>CVE-2020-9493</cve>
+    <cve>CVE-2022-23307</cve>
+    <cve>CVE-2022-23305</cve>
+    <cve>CVE-2022-23302</cve>
+    <cve>CVE-2023-26464</cve>
+  </suppress>
+
+  <suppress>
+    <!--
+      - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
+      -->
+    <notes><![CDATA[
+    file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: io.netty:netty:3.10.5.Final)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.5.Final$</packageUrl>
+    <cve>CVE-2019-16869</cve>
+    <cve>CVE-2019-20444</cve>
+    <cve>CVE-2019-20445</cve>
+    <cve>CVE-2021-37136</cve>
+    <cve>CVE-2021-37137</cve>
+    <cve>CVE-2021-4104</cve>
+    <cve>CVE-2020-9493</cve>
+    <cve>CVE-2022-23307</cve>
+    <cve>CVE-2022-23305</cve>
+    <cve>CVE-2022-23302</cve>
+    <cve>CVE-2022-41881</cve>
+    <cve>CVE-2020-11612</cve>
+  </suppress>
+
+  <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
+    <!-- Suppress hadoop CVEs that not applicable to hadoop-annotations -->
+    <cve>CVE-2022-25168</cve> <!-- Affected FileUtil.unTar(File, File) API isn't present in hadoop-annotations -->
+    <cve>CVE-2021-33036</cve> <!-- Only applicable to hadoop-yarn-server -->
+     <cve>CVE-2020-9492</cve> <!-- Applicable to webHDFS client -->
+  </suppress>
+  <!-- end of ambari-metics-emitter exclusions -->
+
+  <!-- aliyun-oss exclusions -->
+  <suppress>
+   <!-- Transitive dependency from aliyun-sdk-oss, -->
+    <notes><![CDATA[
+    file name: ini4j-0.5.4.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.ini4j/ini4j@.*$</packageUrl>
+    <vulnerabilityName>CVE-2022-41404</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
+    <notes><![CDATA[
+     file name: jdom2-2.0.6.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jdom/jdom2@2.0.6$</packageUrl>
+    <cve>CVE-2021-33813</cve>
+  </suppress>
+  <!-- end of aliyun-oss exclusions -->
+
+  <!-- iceberg exclusions -->
+  <suppress>
+    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
+    <notes><![CDATA[
+     file name: libfb303-0.9.3.jar libthrift-0.9.3.jar
+     ]]></notes>
+      <cve>CVE-2016-5397</cve>
+      <cve>CVE-2018-1320</cve>
+      <cve>CVE-2019-0210</cve>
+      <cve>CVE-2020-13949</cve>
+      <cve>CVE-2019-0205</cve>
+      <cve>CVE-2019-0210</cve>
+      <cve>CVE-2020-13949</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+        FP per issue #6100 - CVE-2023-36052 since it is related to Azure-cli not to the azure-core libraries
+        ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.azure/azure*@*.*$</packageUrl>
+    <cve>CVE-2023-36052</cve>
+  </suppress>
+  <suppress>
+    <!-- CVE is for a totally unrelated Sketch mac app -->
+    <notes><![CDATA[
+     file name: sketches-java-0.8.2.jar
+     ]]></notes>
+    <cve>CVE-2021-40531</cve>
+  </suppress>
+  <suppress>
+    <!-- CVE reports versions until 1.10.2 affected. The current version 1.11.1 is already greater and the latest. -->
+    <notes><![CDATA[
+      file name: azure-identity-1.11.1.jar
+    ]]></notes>
+    <cve>CVE-2023-36415</cve>
   </suppress>
 </suppressions>

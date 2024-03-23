@@ -1165,8 +1165,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     // the last row has parse exception when indexing, check if rawColumns and exception message match the expected
     //
     String indexParseExceptioMessage = ParserType.STR_CSV.equals(parserType)
-           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
-           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
+           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row={timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
+           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row={timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             rawColumns4ParseExceptionRow,

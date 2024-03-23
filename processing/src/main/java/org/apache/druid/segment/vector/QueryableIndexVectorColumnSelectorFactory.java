@@ -251,9 +251,6 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   @Override
   public ColumnCapabilities getColumnCapabilities(final String columnName)
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(columnCache, columnName);
-    }
-    return columnCache.getColumnCapabilities(columnName);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnCache, columnName);
   }
 }

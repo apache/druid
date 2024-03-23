@@ -287,6 +287,16 @@ The response shows an example report for a query.
         "status": "SUCCESS",
         "startTime": "2022-09-14T22:12:09.266Z",
         "durationMs": 28227,
+        "workers": {
+          "0": [
+            {
+              "workerId": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e-worker0_0",
+              "state": "SUCCESS",
+              "durationMs": 15511,
+              "pendingMs": 137
+            }
+          ]
+        },
         "pendingTasks": 0,
         "runningTasks": 2,
         "segmentLoadStatus": {
@@ -607,7 +617,8 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.workers.<workerNumber>` | Array of worker tasks including retries. |
 | `multiStageQuery.payload.status.workers.<workerNumber>[].workerId` | Id of the worker task.| |
 | `multiStageQuery.payload.status.workers.<workerNumber>[].status` | RUNNING, SUCCESS, or FAILED.|
-| `multiStageQuery.payload.status.workers.<workerNumber>[].durationMs` | Milliseconds elapsed after the worker task started running. It is -1 for worker tasks with status RUNNING.|
+| `multiStageQuery.payload.status.workers.<workerNumber>[].durationMs` | Milliseconds elapsed between when the worker task was first requested and when it finished. It is -1 for worker tasks with status RUNNING.|
+| `multiStageQuery.payload.status.workers.<workerNumber>[].pendingMs` | Milliseconds elapsed between when the worker task was first requested and when it fully started RUNNING. Actual work time can be calculated using `actualWorkTimeMS = durationMs - pendingMs`.|
 | `multiStageQuery.payload.status.pendingTasks` | Number of tasks that are not fully started. -1 denotes that the number is currently unknown. |
 | `multiStageQuery.payload.status.runningTasks` | Number of currently running tasks. Should be at least 1 since the controller is included. |
 | `multiStageQuery.payload.status.segmentLoadStatus` | Segment loading container. Only present after the segments have been published. |

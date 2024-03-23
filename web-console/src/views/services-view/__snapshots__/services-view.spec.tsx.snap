@@ -41,7 +41,7 @@ exports[`ServicesView renders data 1`] = `
         icon="application"
         multiline={false}
         onClick={[Function]}
-        popoverProps={Object {}}
+        popoverProps={{}}
         selected={false}
         shouldDismissPopover={true}
         text="View SQL query for table"
@@ -49,7 +49,7 @@ exports[`ServicesView renders data 1`] = `
     </Memo(MoreButton)>
     <Memo(TableColumnSelector)
       columns={
-        Array [
+        [
           "Service",
           "Type",
           "Tier",
@@ -64,7 +64,7 @@ exports[`ServicesView renders data 1`] = `
         ]
       }
       onChange={[Function]}
-      tableColumnsHidden={Array []}
+      tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -91,7 +91,7 @@ exports[`ServicesView renders data 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -107,24 +107,24 @@ exports[`ServicesView renders data 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Service",
@@ -132,14 +132,14 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 300,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Type",
           "accessor": "service_type",
           "show": true,
           "width": 150,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Tier",
           "accessor": [Function],
@@ -147,7 +147,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 180,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Host",
@@ -155,7 +155,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 200,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Port",
@@ -164,7 +164,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 100,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Current size",
@@ -175,7 +175,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 100,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Max size",
@@ -186,7 +186,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 100,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Usage",
@@ -197,7 +197,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 140,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Start time",
@@ -205,7 +205,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 200,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Detail",
@@ -216,7 +216,7 @@ exports[`ServicesView renders data 1`] = `
           "show": true,
           "width": 400,
         },
-        Object {
+        {
           "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Actions",
@@ -229,9 +229,9 @@ exports[`ServicesView renders data 1`] = `
       ]
     }
     data={
-      Array [
-        Array [
-          Object {
+      [
+        [
+          {
             "curr_size": 0,
             "host": "localhost",
             "is_leader": 0,
@@ -243,7 +243,7 @@ exports[`ServicesView renders data 1`] = `
             "tier": null,
             "tls_port": -1,
           },
-          Object {
+          {
             "curr_size": 179744287,
             "host": "localhost",
             "is_leader": 0,
@@ -262,17 +262,17 @@ exports[`ServicesView renders data 1`] = `
         ],
       ]
     }
-    defaultExpanded={Object {}}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={50}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={[]}
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -280,7 +280,7 @@ exports[`ServicesView renders data 1`] = `
       }
     }
     filterable={true}
-    filtered={Array []}
+    filtered={[]}
     freezeWhenExpanded={false}
     getLoadingProps={[Function]}
     getNoDataProps={[Function]}
@@ -318,15 +318,15 @@ exports[`ServicesView renders data 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         50,
         100,
         200,
       ]
     }
     pageText="Page"
-    pivotBy={Array []}
-    pivotDefaults={Object {}}
+    pivotBy={[]}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -340,7 +340,7 @@ exports[`ServicesView renders data 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
 </div>

@@ -26,7 +26,6 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -215,7 +214,11 @@ public class TombstoneHelper
           continue;
         }
 
-        if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
+        if (Intervals.isEternity(overlap)) {
+          // Generate a tombstone interval covering eternity.
+          buckets = validateAndIncrementBuckets(buckets, maxBuckets);
+          retVal.add(overlap);
+        } else if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
           // Generate a tombstone interval covering the negative eternity interval.
           buckets = validateAndIncrementBuckets(buckets, maxBuckets);
           retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketStart(overlap.getEnd())));
@@ -305,9 +308,7 @@ public class TombstoneHelper
       Collection<DataSegment> usedSegmentsInInputInterval =
           taskActionClient.submit(new RetrieveUsedSegmentsAction(
               dataSource,
-              null,
-              condensedInputIntervals,
-              Segments.ONLY_VISIBLE
+              condensedInputIntervals
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {

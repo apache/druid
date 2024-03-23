@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
@@ -40,7 +41,6 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -49,13 +49,16 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -135,18 +138,95 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyResults();
   }
 
-
   @Test
-  public void testInsertCannotBeEmptyFault()
+  public void testInsertCannotBeEmptyFaultWithInsertQuery()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    //Insert with a condition which results in 0 rows being inserted
+    // Insert with a condition which results in 0 rows being inserted
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithReplaceQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY day"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithInsertLimitQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithReplaceLimitQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
@@ -214,7 +294,7 @@ public class MSQFaultsTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .build();
 
-    File file = MSQTestFileUtils.generateTemporaryNdJsonFile(temporaryFolder, 30000, 1);
+    File file = createNdJsonFile(newTempFile("ndjson30k"), 30000, 1);
     String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
@@ -233,6 +313,27 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyResults();
 
   }
+
+  /**
+   * Helper method that populates a file with {@code numRows} rows and {@code numColumns} columns where the
+   * first column is a string 'timestamp' while the rest are string columns with junk value
+   */
+  public static File createNdJsonFile(File file, final int numRows, final int numColumns) throws IOException
+  {
+    for (int currentRow = 0; currentRow < numRows; ++currentRow) {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{");
+      sb.append("\"timestamp\":\"2016-06-27T00:00:11.080Z\"");
+      for (int currentColumn = 1; currentColumn < numColumns; ++currentColumn) {
+        sb.append(StringUtils.format(",\"column%s\":\"val%s\"", currentColumn, currentRow));
+      }
+      sb.append("}");
+      Files.write(file.toPath(), ImmutableList.of(sb.toString()), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+    }
+    return file;
+  }
+
+
 
   @Test
   public void testInsertWithManyColumns()
@@ -322,7 +423,7 @@ public class MSQFaultsTest extends MSQTestBase
 
     final int numFiles = 20000;
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));

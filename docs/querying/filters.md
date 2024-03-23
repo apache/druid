@@ -44,7 +44,7 @@ The simplest filter is a selector filter. The selector filter matches a specific
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "selector".| Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `value` | String value to match. | No. If not specified the filter matches NULL values. |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -75,7 +75,7 @@ Druid's SQL planner uses the equality filter by default instead of selector filt
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "equality".| Yes |
-| `column` | Input column or virtual column name to filter. | Yes |
+| `column` | Input column or virtual column name to filter on. | Yes |
 | `matchValueType` | String specifying the type of value to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column`. | Yes |
 | `matchValue` | Value to match, must not be null. | Yes |
 
@@ -107,7 +107,7 @@ Druid's SQL planner uses the null filter by default instead of selector filter w
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "null".| Yes |
-| `column` | Input column or virtual column name to filter. | Yes |
+| `column` | Input column or virtual column name to filter on. | Yes |
 
 ### Example: equivalent of `WHERE someColumn IS NULL`
 
@@ -209,7 +209,7 @@ The in filter can match input rows against a set of values, where a match occurs
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "in".| Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `values` | List of string value to match. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -239,7 +239,7 @@ greater than, less than, greater than or equal to, less than or equal to, and "b
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "bound". | Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `lower` | The lower bound string match value for the filter. | No |
 | `upper`| The upper bound string match value for the filter. | No |
 | `lowerStrict` | Boolean indicating whether to perform strict comparison on the `lower` bound (">" instead of ">="). | No, default: `false` |
@@ -323,7 +323,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "range".| Yes |
-| `column` | Input column or virtual column name to filter. | Yes |
+| `column` | Input column or virtual column name to filter on. | Yes |
 | `matchValueType` | String specifying the type of bounds to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column` and also defines the type of comparison used when matching values. | Yes |
 | `lower` | Lower bound value to match. | No. At least one of `lower` or `upper` must not be null. |
 | `upper` | Upper bound value to match. | No. At least one of `lower` or `upper` must not be null. |
@@ -414,7 +414,7 @@ supported are "%" (matches any number of characters) and "\_" (matches any one c
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "like".| Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `pattern` | String LIKE pattern, such as "foo%" or "___bar".| Yes |
 | `escape`| A string escape character that can be used to escape special characters. | No |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
@@ -438,7 +438,7 @@ The regular expression filter is similar to the selector filter, but using regul
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "regex".| Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `pattern` | String pattern to match - any standard [Java regular expression](http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html). | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -450,6 +450,56 @@ Note that it is often more optimal to use a like filter instead of a regex for s
 { "type": "regex", "dimension": "someColumn", "pattern": ^50.* }
 ```
 
+## Array contains element filter
+
+The `arrayContainsElement` filter checks if an `ARRAY` contains a specific element but can also match against any type of column. When matching against scalar columns, scalar columns are treated as single-element arrays.
+
+| Property | Description | Required |
+| -------- | ----------- | -------- |
+| `type` | Must be "arrayContainsElement".| Yes |
+| `column` | Input column or virtual column name to filter on. | Yes |
+| `elementMatchValueType` | String specifying the type of element value to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `elementMatchValueType` determines how Druid interprets the `elementMatchValue` to assist in converting to the type of elements contained in the matched `column`. | Yes |
+| `elementMatchValue` | Array element value to match. This value can be null. | Yes |
+
+### Example: equivalent of `WHERE ARRAY_CONTAINS(someArrayColumn, 'hello')`
+
+```json
+{ "type": "arrayContainsElement", "column": "someArrayColumn", "elementMatchValueType": "STRING", "elementMatchValue": "hello" }
+```
+
+### Example: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, 1.23)`
+
+```json
+{ "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "DOUBLE", "elementMatchValue": 1.23 }
+```
+
+### Example: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, ARRAY[1, 2, 3])`
+
+```json
+{
+  "type": "and",
+  "fields": [
+    { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 1 },
+    { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 2 },
+    { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 3 }
+  ]
+}
+
+```
+
+### Example: equivalent of `WHERE ARRAY_OVERLAPS(someNumericArrayColumn, ARRAY[1, 2, 3])`
+
+```json
+{
+ "type": "or",
+ "fields": [
+  { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 1 },
+  { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 2 },
+  { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 3 }
+ ]
+}
+```
+
 ## Interval filter
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
@@ -459,7 +509,7 @@ This filter converts the ISO 8601 intervals to long millisecond start/end ranges
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "interval". | Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `intervals` | A JSON array containing ISO-8601 interval strings that defines the time ranges to filter on. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -544,7 +594,7 @@ You can use search filters to filter on partial string matches.
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "search". | Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `query`| A JSON object for the type of search. See [search query spec](#search-query-spec) for more information. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -604,7 +654,7 @@ The JavaScript filter matches a dimension against the specified JavaScript funct
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "javascript" | Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `function` | JavaScript function which accepts the dimension value as a single argument, and returns either true or false. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -636,7 +686,7 @@ The following filter matches the values for which the extraction function has a 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "extraction" | Yes |
-| `dimension` | Input column or virtual column name to filter. | Yes |
+| `dimension` | Input column or virtual column name to filter on. | Yes |
 | `value` | String value to match. | No. If not specified the filter will match NULL values. |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 

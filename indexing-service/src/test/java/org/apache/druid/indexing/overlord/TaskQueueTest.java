@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,8 +29,14 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.HttpInputSource;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -37,10 +46,14 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
 import org.apache.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
@@ -52,9 +65,11 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerTest;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -63,8 +78,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -77,6 +96,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -109,7 +129,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
@@ -154,7 +175,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
 
@@ -182,8 +204,34 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
   }
 
+  @Test(expected = DruidException.class)
+  public void testTaskErrorWhenExceptionIsThrownDueToQueueSize()
+  {
+    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
+    final TaskQueue taskQueue = new TaskQueue(
+            new TaskLockConfig(),
+            new TaskQueueConfig(1, null, null, null, null),
+            new DefaultTaskConfig(),
+            getTaskStorage(),
+            new SimpleTaskRunner(actionClientFactory),
+            actionClientFactory,
+            getLockbox(),
+            new NoopServiceEmitter(),
+            getObjectMapper()
+    );
+    taskQueue.setActive(true);
+
+    // Create a Task and add it to the TaskQueue
+    final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    final TestTask task2 = new TestTask("t2", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task1);
+
+    // we will get exception here as taskQueue size is 1 druid.indexer.queue.maxSize is already 1
+    taskQueue.add(task2);
+  }
+
   @Test
-  public void testSetUseLineageBasedSegmentAllocationByDefault() throws EntryExistsException
+  public void testSetUseLineageBasedSegmentAllocationByDefault()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -194,7 +242,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -208,7 +257,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
+  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -229,7 +278,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -243,7 +293,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
+  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -254,7 +304,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask(
@@ -275,7 +326,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testLockConfigTakePrecedenceThanDefaultTaskContext() throws EntryExistsException
+  public void testLockConfigTakePrecedenceThanDefaultTaskContext()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -296,7 +347,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -308,7 +360,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedContextOverrideLockConfig() throws EntryExistsException
+  public void testUserProvidedContextOverrideLockConfig()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -319,7 +371,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask(
@@ -338,7 +391,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException
+  public void testTaskStatusWhenExceptionIsThrownInIsReady()
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -349,7 +402,8 @@ public class TaskQueueTest extends IngestionTestBase
         new SimpleTaskRunner(actionClientFactory),
         actionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"))
@@ -374,7 +428,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException
+  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws InterruptedException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));
@@ -396,7 +450,8 @@ public class TaskQueueTest extends IngestionTestBase
         taskRunner,
         actionClientFactory,
         getLockbox(),
-        metricsVerifier
+        metricsVerifier,
+        getObjectMapper()
     );
     taskQueue.setActive(true);
     final Task task = new TestTask(
@@ -432,6 +487,152 @@ public class TaskQueueTest extends IngestionTestBase
     CoordinatorRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
     Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+  }
+
+  @Test
+  public void testGetTaskStatus()
+  {
+    final String newTask = "newTask";
+    final String waitingTask = "waitingTask";
+    final String pendingTask = "pendingTask";
+    final String runningTask = "runningTask";
+    final String successfulTask = "successfulTask";
+    final String failedTask = "failedTask";
+
+    TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    EasyMock.expect(taskStorage.getStatus(newTask))
+            .andReturn(Optional.of(TaskStatus.running(newTask)));
+    EasyMock.expect(taskStorage.getStatus(successfulTask))
+            .andReturn(Optional.of(TaskStatus.success(successfulTask)));
+    EasyMock.expect(taskStorage.getStatus(failedTask))
+            .andReturn(Optional.of(TaskStatus.failure(failedTask, failedTask)));
+    EasyMock.replay(taskStorage);
+
+    TaskRunner taskRunner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(taskRunner.getRunnerTaskState(newTask))
+            .andReturn(null);
+    EasyMock.expect(taskRunner.getRunnerTaskState(waitingTask))
+            .andReturn(RunnerTaskState.WAITING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(pendingTask))
+            .andReturn(RunnerTaskState.PENDING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(runningTask))
+            .andReturn(RunnerTaskState.RUNNING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(successfulTask))
+            .andReturn(RunnerTaskState.NONE);
+    EasyMock.expect(taskRunner.getRunnerTaskState(failedTask))
+            .andReturn(RunnerTaskState.NONE);
+    EasyMock.expect(taskRunner.getTaskLocation(waitingTask))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.expect(taskRunner.getTaskLocation(pendingTask))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.expect(taskRunner.getTaskLocation(runningTask))
+            .andReturn(TaskLocation.create("host", 8100, 8100));
+    EasyMock.replay(taskRunner);
+
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null),
+        new DefaultTaskConfig(),
+        taskStorage,
+        taskRunner,
+        createActionClientFactory(),
+        getLockbox(),
+        new StubServiceEmitter("druid/overlord", "testHost"),
+        getObjectMapper()
+    );
+    taskQueue.setActive(true);
+
+    Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
+    Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());
+    Assert.assertEquals(TaskStatus.running(pendingTask), taskQueue.getTaskStatus(pendingTask).get());
+    Assert.assertEquals(TaskStatus.running(runningTask), taskQueue.getTaskStatus(runningTask).get());
+    Assert.assertEquals(TaskStatus.success(successfulTask), taskQueue.getTaskStatus(successfulTask).get());
+    Assert.assertEquals(TaskStatus.failure(failedTask, failedTask), taskQueue.getTaskStatus(failedTask).get());
+  }
+
+  @Test
+  public void testGetActiveTaskRedactsPassword() throws JsonProcessingException
+  {
+    final String password = "AbCd_1234";
+    final ObjectMapper mapper = getObjectMapper();
+
+    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"));
+    mapper.setInjectableValues(new InjectableValues.Std()
+                                   .addValue(HttpInputSourceConfig.class, httpInputSourceConfig)
+                                   .addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
+
+    final SQLMetadataConnector derbyConnector = derbyConnectorRule.getConnector();
+    final TaskStorage taskStorage = new MetadataTaskStorage(
+        derbyConnector,
+        new TaskStorageConfig(null),
+        new DerbyMetadataStorageActionHandlerFactory(
+            derbyConnector,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            mapper
+        )
+    );
+
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null),
+        new DefaultTaskConfig(),
+        taskStorage,
+        EasyMock.createMock(HttpRemoteTaskRunner.class),
+        createActionClientFactory(),
+        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
+        new StubServiceEmitter("druid/overlord", "testHost"),
+        mapper
+    );
+
+    final DataSchema dataSchema = new DataSchema(
+        "DS",
+        new TimestampSpec(null, null, null),
+        new DimensionsSpec(null),
+        null,
+        new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null),
+        null
+    );
+    final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+        null,
+        new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
+                            "user",
+                            new DefaultPasswordProvider(password),
+                            null,
+                            httpInputSourceConfig),
+        new NoopInputFormat(),
+        null,
+        null
+    );
+    final ParallelIndexSupervisorTask taskWithPassword = new ParallelIndexSupervisorTask(
+        "taskWithPassword",
+        "taskWithPassword",
+        null,
+        new ParallelIndexIngestionSpec(
+            dataSchema,
+            ioConfig,
+            null
+        ),
+        null,
+        null,
+        false
+    );
+    Assert.assertTrue(mapper.writeValueAsString(taskWithPassword).contains(password));
+
+    taskQueue.start();
+    taskQueue.add(taskWithPassword);
+
+    final Optional<Task> taskInStorage = taskStorage.getTask(taskWithPassword.getId());
+    Assert.assertTrue(taskInStorage.isPresent());
+    final String taskInStorageAsString = mapper.writeValueAsString(taskInStorage.get());
+    Assert.assertFalse(taskInStorageAsString.contains(password));
+
+    final Optional<Task> taskInQueue = taskQueue.getActiveTask(taskWithPassword.getId());
+    Assert.assertTrue(taskInQueue.isPresent());
+    final String taskInQueueAsString = mapper.writeValueAsString(taskInQueue.get());
+    Assert.assertFalse(taskInQueueAsString.contains(password));
+
+    Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner(List<String> runningTasks)

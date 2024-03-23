@@ -620,7 +620,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 getTaskCompletionRowStats(),
                 errorMsg,
                 errorMsg == null,
-                0L
+                0L,
+                Collections.emptyMap(),
+                null,
+                null
             )
         )
     );
@@ -775,6 +778,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   )
   {
     return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
+        null,
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
@@ -793,7 +797,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
         parseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
