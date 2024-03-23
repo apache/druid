@@ -52,13 +52,9 @@ public class KafkaStringHeaderReader implements KafkaHeaderReader
     for (Header hdr : headers) {
       byte[] value = hdr.value();
 
-      if (value != null) {
-        String s = new String(value, this.encoding);
-        String newKey = this.headerLabelPrefix + hdr.key();
-        events.add(Pair.of(newKey, s));
-      } else {
-        log.warn("Header '" + hdr.key() + "' skipped because it had no value");
-      }
+      String s = value == null ? null : new String(value, this.encoding);
+      String newKey = this.headerLabelPrefix + hdr.key();
+      events.add(Pair.of(newKey, s));
     }
     return events;
   }
