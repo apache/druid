@@ -47,24 +47,27 @@ public class DefaultTaskIdentitiesProviderTest
   public void testReturnDefaultTaskIdentifierWhenGroupIdIsNull()
   {
     task = new NoopTask("id", null, "datasource", 0, 0, null);
-    Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
-    assertEquals(task.getType(), taskMetricTags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
+    provider.enrichTaskTags(task);
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+    assertEquals(task.getType(), tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
   }
 
   @Test
   public void testReturnCompactTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedCompact()
   {
     task = new NoopTask("id", "coordinator-issued_compact_random_id", "datasource", 0, 0, null);
-    Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
-    assertEquals("compact", taskMetricTags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
+    provider.enrichTaskTags(task);
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+    assertEquals("compact", tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
   }
 
   @Test
   public void testReturnKillTaskIdentifierWhenGroupIdStartsWithCoordinatorIssuedKill()
   {
     task = new NoopTask("id", "coordinator-issued_kill_random_id", "datasource", 0, 0, null);
-    Map<String, Object> taskMetricTags = provider.getTaskMetricTags(task);
-    assertEquals("kill", taskMetricTags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
+    provider.enrichTaskTags(task);
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+    assertEquals("kill", tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));
   }
 
   @Test
@@ -73,7 +76,8 @@ public class DefaultTaskIdentitiesProviderTest
     Map<String, Object> inputTags = ImmutableMap.of("tag1", "value1", "tag2", "value2");
     task = new NoopTask("id", null, "datasource", 0, 0, ImmutableMap.of(DruidMetrics.TAGS, inputTags));
 
-    Map<String, Object> tags = provider.getTaskMetricTags(task);
+    provider.enrichTaskTags(task);
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
 
     assertEquals(3, tags.size());
     assertEquals("noop", tags.get(TaskIdentitiesProvider.TASK_IDENTIFIER));

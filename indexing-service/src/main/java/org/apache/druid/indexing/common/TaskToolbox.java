@@ -35,6 +35,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -111,6 +112,7 @@ public class TaskToolbox
   private final CachePopulatorStats cachePopulatorStats;
   private final IndexMergerV9 indexMergerV9;
   private final TaskReportFileWriter taskReportFileWriter;
+  private final TaskIdentitiesProvider taskIdentitiesProvider;
 
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
@@ -174,7 +176,8 @@ public class TaskToolbox
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       String attemptId,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIdentitiesProvider taskIdentitiesProvider
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -206,6 +209,7 @@ public class TaskToolbox
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
+    this.taskIdentitiesProvider = taskIdentitiesProvider;
     this.taskReportFileWriter.setObjectMapper(this.jsonMapper);
     this.intermediaryDataManager = intermediaryDataManager;
     this.authorizerMapper = authorizerMapper;
@@ -496,6 +500,11 @@ public class TaskToolbox
     return centralizedDatasourceSchemaConfig;
   }
 
+  public TaskIdentitiesProvider getTaskIdentitiesProvider()
+  {
+    return taskIdentitiesProvider;
+  }
+
   /**
    * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
    * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
@@ -563,6 +572,7 @@ public class TaskToolbox
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+    private TaskIdentitiesProvider taskIdentitiesProvider;
 
     public Builder()
     {
@@ -609,6 +619,7 @@ public class TaskToolbox
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
       this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
+      this.taskIdentitiesProvider = other.taskIdentitiesProvider;
     }
 
     public Builder config(final SegmentLoaderConfig segmentLoaderConfig)
@@ -857,6 +868,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder taskIdentitiesProvider(final TaskIdentitiesProvider taskIdentitiesProvider)
+    {
+      this.taskIdentitiesProvider = taskIdentitiesProvider;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -900,7 +917,8 @@ public class TaskToolbox
           shuffleClient,
           taskLogPusher,
           attemptId,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskIdentitiesProvider
       );
     }
   }

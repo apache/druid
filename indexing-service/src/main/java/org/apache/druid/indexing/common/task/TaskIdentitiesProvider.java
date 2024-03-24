@@ -21,13 +21,12 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
-import java.util.Map;
-
 /**
- * The TaskIdentitiesProvider interface helps add metric tags to tasks.
- * It's meant to make task management, monitoring, and reporting better by providing extra information
- * about tasks. Both user-defined and system-generated tags are included, making details about task
- * performance and characteristics clearer in reports and summaries.
+ * This interface is tasked with enriching tasks with tags.
+ * This enrichment is aimed at enhancing task management, monitoring, and reporting
+ * by providing additional information about tasks through tags. These tags
+ * contribute to making details about task purpose and characteristics more
+ * transparent in reports and metrics.
  */
 @ExtensionPoint
 public interface TaskIdentitiesProvider
@@ -35,14 +34,15 @@ public interface TaskIdentitiesProvider
   String TASK_IDENTIFIER = "taskIdentifier";
 
   /**
-   * Creates a map of metric tags for a given task. These tags add more information to tasks,
-   * useful for monitoring and reporting. The tags include both information set by users and
-   * information automatically added by the system. This makes sure tasks are well-described in
-   * metrics reports and summaries, helping with detailed analysis and better task handling.
+   * Enriches a task with tags. This method updates the task's context with additional
+   * tags to aid in its description. The enriched tags are essential for the creation
+   * of comprehensive task reports and for serving as dimensions in metrics reporting,
+   * thus providing a clearer insight into task performance and facilitating
+   * effective task management.
    *
-   * @param task The Druid task that needs metric tags.
-   * @return A map with tag names as keys and tag values as values. This extra information
-   * helps with reporting metrics, providing a clear picture of tasks.
+   * @param task The Druid task to be enriched with tags. The process may update
+   *             existing tags or add new ones to enhance the task's descriptive
+   *             details.
    */
-  Map<String, Object> getTaskMetricTags(Task task);
+  void enrichTaskTags(Task task);
 }

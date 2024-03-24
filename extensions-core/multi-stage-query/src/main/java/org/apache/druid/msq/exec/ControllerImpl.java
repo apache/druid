@@ -76,7 +76,6 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -314,13 +313,11 @@ public class ControllerImpl implements Controller
   private boolean isDurableStorageEnabled;
   private final boolean isFaultToleranceEnabled;
   private final boolean isFailOnEmptyInsertEnabled;
-  private final TaskIdentitiesProvider taskIdentitiesProvider;
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
 
   public ControllerImpl(
       final MSQControllerTask task,
-      final ControllerContext context,
-      final TaskIdentitiesProvider taskIdentitiesProvider
+      final ControllerContext context
   )
   {
     this.task = task;
@@ -334,7 +331,6 @@ public class ControllerImpl implements Controller
     this.isFailOnEmptyInsertEnabled = MultiStageQueryContext.isFailOnEmptyInsertEnabled(
         task.getQuerySpec().getQuery().context()
     );
-    this.taskIdentitiesProvider = taskIdentitiesProvider;
   }
 
   @Override
@@ -580,7 +576,7 @@ public class ControllerImpl implements Controller
           id(),
           TaskReport.buildTaskReports(new MSQTaskReport(
               id(),
-              taskIdentitiesProvider.getTaskMetricTags(task),
+              task.getContextValue(DruidMetrics.TAGS),
               taskReportPayload
           ))
       );
@@ -707,7 +703,7 @@ public class ControllerImpl implements Controller
     );
 
     // propagate the controller's tags to the worker task
-    taskContextOverridesBuilder.put(DruidMetrics.TAGS, taskIdentitiesProvider.getTaskMetricTags(task));
+    taskContextOverridesBuilder.put(DruidMetrics.TAGS, task.getContextValue(DruidMetrics.TAGS, new HashMap()));
 
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
