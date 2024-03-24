@@ -51,7 +51,6 @@ import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
-import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
@@ -86,7 +85,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -303,26 +301,21 @@ public class CliPeon extends GuiceRunnable
             if ("true".equals(loadBroadcastSegments)) {
               binder.install(new BroadcastSegmentLoadingModule());
             }
-
-            IndexingServiceModuleHelper.configureTaskIdentitiesProvider(binder);
           }
 
           @Provides
           @LazySingleton
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
-          public Supplier<Map<String, Object>> heartbeatDimensions(
-              Task task,
-              TaskIdentitiesProvider taskIdentitiesProvider
-          )
+          public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
             ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
             builder.put(DruidMetrics.TASK_ID, task.getId());
             builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
             builder.put(DruidMetrics.TASK_TYPE, task.getType());
             builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
-            Map<String, Object> taskMetricTags = taskIdentitiesProvider.getTaskMetricTags(task);
-            if (!taskMetricTags.isEmpty()) {
-              builder.put(DruidMetrics.TAGS, taskMetricTags);
+            Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+            if (tags != null && !tags.isEmpty()) {
+              builder.put(DruidMetrics.TAGS, tags);
             }
 
             return Suppliers.ofInstance(

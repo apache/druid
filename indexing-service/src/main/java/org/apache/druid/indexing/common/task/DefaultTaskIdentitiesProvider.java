@@ -30,7 +30,7 @@ public class DefaultTaskIdentitiesProvider implements TaskIdentitiesProvider
   public static final String TYPE = "default";
 
   @Override
-  public Map<String, Object> getTaskMetricTags(Task task)
+  public void enrichTaskTags(Task task)
   {
     String taskIdentifier = task.getType();
     String groupId = task.getGroupId();
@@ -43,9 +43,9 @@ public class DefaultTaskIdentitiesProvider implements TaskIdentitiesProvider
     }
 
     Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
-    Map<String, Object> metricTags = tags == null ? new HashMap<>() : new HashMap<>(tags);
-    metricTags.put(TASK_IDENTIFIER, taskIdentifier);
+    Map<String, Object> overrideTags = tags == null ? new HashMap<>() : new HashMap<>(tags);
+    overrideTags.put(TASK_IDENTIFIER, taskIdentifier);
 
-    return metricTags;
+    task.addToContext(DruidMetrics.TAGS, overrideTags);
   }
 }

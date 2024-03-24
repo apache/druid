@@ -75,6 +75,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
+import org.apache.druid.indexing.common.task.DefaultTaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
@@ -666,7 +667,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new DefaultTaskIdentitiesProvider()
     );
   }
 

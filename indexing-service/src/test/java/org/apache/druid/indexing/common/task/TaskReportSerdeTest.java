@@ -72,7 +72,10 @@ public class TaskReportSerdeTest
             1000L,
             ImmutableMap.of("PartitionA", 5000L),
             5L,
-            10L
+            10L,
+            ImmutableMap.of(
+                "tag", "value"
+            )
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
@@ -129,6 +132,7 @@ public class TaskReportSerdeTest
             "an error message",
             true,
             1000L,
+            null,
             null,
             null,
             null

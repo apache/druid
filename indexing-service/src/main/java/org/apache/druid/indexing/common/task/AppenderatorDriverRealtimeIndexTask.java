@@ -66,6 +66,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -623,7 +624,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 0L,
                 Collections.emptyMap(),
                 null,
-                null
+                null,
+                getContextValue(DruidMetrics.TAGS)
             )
         )
     );

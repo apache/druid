@@ -1647,7 +1647,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new DefaultTaskIdentitiesProvider()
     );
   }
 

@@ -56,6 +56,10 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private Long segmentsPublished;
 
+  @JsonProperty
+  @Nullable
+  private final Map<String, Object> tags;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
@@ -65,7 +69,8 @@ public class IngestionStatsAndErrorsTaskReportData
       @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
       @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed,
       @Nullable @JsonProperty("segmentsRead") Long segmentsRead,
-      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished
+      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished,
+      @JsonProperty("tags") @Nullable final Map<String, Object> tags
   )
   {
     this.ingestionState = ingestionState;
@@ -77,6 +82,7 @@ public class IngestionStatsAndErrorsTaskReportData
     this.recordsProcessed = recordsProcessed;
     this.segmentsRead = segmentsRead;
     this.segmentsPublished = segmentsPublished;
+    this.tags = tags;
   }
 
   @JsonProperty
@@ -139,6 +145,13 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentsPublished;
   }
 
+  @JsonProperty
+  @Nullable
+  public Map<String, Object> getTags()
+  {
+    return tags;
+  }
+
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -165,7 +178,8 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
            Objects.equals(getRecordsProcessed(), that.getRecordsProcessed()) &&
            Objects.equals(getSegmentsRead(), that.getSegmentsRead()) &&
-           Objects.equals(getSegmentsPublished(), that.getSegmentsPublished());
+           Objects.equals(getSegmentsPublished(), that.getSegmentsPublished()) &&
+           Objects.equals(getTags(), that.getTags());
   }
 
   @Override
@@ -180,7 +194,8 @@ public class IngestionStatsAndErrorsTaskReportData
         getSegmentAvailabilityWaitTimeMs(),
         getRecordsProcessed(),
         getSegmentsRead(),
-        getSegmentsPublished()
+        getSegmentsPublished(),
+        getTags()
     );
   }
 
@@ -197,6 +212,7 @@ public class IngestionStatsAndErrorsTaskReportData
            ", recordsProcessed=" + recordsProcessed +
            ", segmentsRead=" + segmentsRead +
            ", segmentsPublished=" + segmentsPublished +
+           ", tags=" + tags +
            '}';
   }
 }
