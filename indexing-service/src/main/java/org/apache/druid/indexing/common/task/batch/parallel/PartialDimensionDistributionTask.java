@@ -62,7 +62,6 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -232,15 +231,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
     );
-    final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
-
     try (
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             toolbox.getIndexingTmpDir(),
             dataSchema,
             inputSource,
             inputFormat,
-            determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
+            allowNonNullRowsWithinInputIntervalsOf(granularitySpec),
             buildSegmentsMeters,
             parseExceptionHandler
         );

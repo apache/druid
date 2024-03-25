@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
@@ -383,7 +382,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
-    final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
     final boolean useLineageBasedSegmentAllocation = getContextValue(
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
         SinglePhaseParallelIndexTaskRunner.LEGACY_DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
@@ -427,16 +425,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             dataSchema,
             inputSource,
             inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
-            inputRow -> {
-              if (inputRow == null) {
-                return false;
-              }
-              if (explicitIntervals) {
-                final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-                return optInterval.isPresent();
-              }
-              return true;
-            },
+            allowNonNullRowsWithinInputIntervalsOf(granularitySpec),
             rowIngestionMeters,
             parseExceptionHandler
         )
