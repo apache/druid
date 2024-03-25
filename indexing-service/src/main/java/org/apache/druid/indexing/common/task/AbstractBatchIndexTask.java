@@ -225,15 +225,35 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
   }
 
-  protected static Predicate<InputRow> defaultRowFilter(GranularitySpec granularitySpec)
+  /**
+   * Creates a predicate that is true for input rows which (a) are non-null and
+   * (b) can be bucketed into an interval using the given granularity spec.
+   * This predicate filters out all rows if the granularity spec has no
+   * input intervals.
+   */
+  protected static Predicate<InputRow> allowNonNullRowsStrictlyWithinInputIntervalsOf(
+      GranularitySpec granularitySpec
+  )
   {
-    return inputRow -> {
-      if (inputRow == null) {
-        return false;
-      }
-      final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-      return optInterval.isPresent();
-    };
+    return inputRow ->
+        inputRow != null
+        && granularitySpec.bucketInterval(inputRow.getTimestamp()).isPresent();
+  }
+
+  /**
+   * Creates a predicate that is true for input rows which (a) are non-null and
+   * (b) can be bucketed into an interval using the given granularity spec.
+   * This predicate allows all non-null rows if the granularity spec has
+   * no input intervals.
+   */
+  protected static Predicate<InputRow> allowNonNullRowsWithinInputIntervalsOf(
+      GranularitySpec granularitySpec
+  )
+  {
+    return inputRow ->
+        inputRow != null
+        && (granularitySpec.inputIntervals().isEmpty()
+            || granularitySpec.bucketInterval(inputRow.getTimestamp()).isPresent());
   }
 
   /**
