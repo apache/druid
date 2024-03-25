@@ -403,11 +403,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class DynamicAllocationTasksNotice implements Notice
   {
     Callable<Integer> scaleAction;
+    ServiceEmitter emitter;
+    ServiceMetricEvent.Builder event;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
-    DynamicAllocationTasksNotice(Callable<Integer> scaleAction)
+    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, ServiceEmitter emitter)
     {
       this.scaleAction = scaleAction;
+      this.emitter = emitter;
+      this.event = new ServiceMetricEvent.Builder()
+          .setDimension(DruidMetrics.DATASOURCE, dataSource)
+          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+          .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS));
     }
 
     /**
@@ -448,6 +455,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               return;
             }
           }
+          final Integer desriedTaskCount = scaleAction.call();
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
                 "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
@@ -455,9 +463,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(),
                 dataSource
             );
+
+            int currentActiveTasks = currentActiveTaskCount();
+            if (desriedTaskCount > currentActiveTasks) {
+              emitter.emit(event.setMetric("ingest/scale/up/skip", 1));
+            } else if (desriedTaskCount < currentActiveTasks && desriedTaskCount > 0) {
+              emitter.emit(event.setMetric("ingest/scale/down/skip", 1));
+            }
             return;
           }
-          final Integer desriedTaskCount = scaleAction.call();
           boolean allocationSuccess = changeTaskCount(desriedTaskCount);
           if (allocationSuccess) {
             dynamicTriggerLastRunTime = nowTime;
@@ -493,9 +507,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
-    int currentActiveTaskCount;
-    Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
-    currentActiveTaskCount = activeTaskGroups.size();
+    int currentActiveTaskCount = currentActiveTaskCount();
 
     if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
@@ -512,6 +524,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }
+  }
+
+  private int currentActiveTaskCount()
+  {
+    return activelyReadingTaskGroups.values().size();
   }
 
   private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
@@ -1208,9 +1225,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction, ServiceEmitter emitter)
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, emitter));
   }
 
   private Runnable buildRunTask()
