@@ -158,7 +158,8 @@ public class SqlSegmentsMetadataQuery
    * @param dataSource    The name of the datasource
    * @param intervals     The intervals to search over
    * @param versions      An optional list of unused segment versions to retrieve in the given {@code intervals}.
-   *                      If unspecified, all versions of unused segments in the {@code intervals} must be retrieved.
+   *                      If unspecified, all versions of unused segments in the {@code intervals} must be retrieved. If an
+   *                      empty list is passed, no segments are retrieved.
    * @param limit         The limit of segments to return
    * @param lastSegmentId the last segment id from which to search for results. All segments returned are >
    *                      this segment lexigraphically if sortOrder is null or ASC, or < this segment
