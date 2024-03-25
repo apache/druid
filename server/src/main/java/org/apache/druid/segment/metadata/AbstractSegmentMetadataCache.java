@@ -209,7 +209,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Currently, there are 2 threads that can access these variables.
    *
    * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
-   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
+   * - {@code cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
    *   based on the information collected via timeline callbacks.
    */
   protected final Object lock = new Object();
@@ -244,101 +244,98 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     this.emitter = emitter;
   }
 
-  protected void startCacheExec()
+  protected void cacheExecLoop()
   {
-    cacheExec.submit(
-        () -> {
-          final Stopwatch stopwatch = Stopwatch.createStarted();
-          long lastRefresh = 0L;
-          long lastFailure = 0L;
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    long lastRefresh = 0L;
+    long lastFailure = 0L;
 
-          try {
-            additionalRefreshWaitCondition();
-            while (!Thread.currentThread().isInterrupted()) {
-              final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
-              final Set<String> dataSourcesToRebuild = new TreeSet<>();
+    try {
+      additionalRefreshWaitCondition();
+      while (!Thread.currentThread().isInterrupted()) {
+        final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
+        final Set<String> dataSourcesToRebuild = new TreeSet<>();
 
-              try {
-                synchronized (lock) {
-                  final long nextRefreshNoFuzz = DateTimes
-                      .utc(lastRefresh)
-                      .plus(config.getMetadataRefreshPeriod())
-                      .getMillis();
+        try {
+          synchronized (lock) {
+            final long nextRefreshNoFuzz = DateTimes
+                .utc(lastRefresh)
+                .plus(config.getMetadataRefreshPeriod())
+                .getMillis();
 
-                  // Fuzz a bit to spread load out when we have multiple brokers.
-                  final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
+            // Fuzz a bit to spread load out when we have multiple brokers.
+            final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
-                  while (true) {
-                    // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
-                    final boolean wasRecentFailure = DateTimes.utc(lastFailure)
-                                                              .plus(config.getMetadataRefreshPeriod())
-                                                              .isAfterNow();
+            while (true) {
+              // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
+              final boolean wasRecentFailure = DateTimes.utc(lastFailure)
+                                                        .plus(config.getMetadataRefreshPeriod())
+                                                        .isAfterNow();
 
-                    if (isServerViewInitialized &&
-                        !wasRecentFailure &&
-                        (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
-                        (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
-                      // We need to do a refresh. Break out of the waiting loop.
-                      break;
-                    }
+              if (isServerViewInitialized &&
+                  !wasRecentFailure &&
+                  (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                  (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                // We need to do a refresh. Break out of the waiting loop.
+                break;
+              }
 
-                    // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
-                    // so that even if ServerView is initialized, we can't let broker complete initialization.
-                    if (isServerViewInitialized && lastFailure == 0L) {
-                      // Server view is initialized, but we don't need to do a refresh. Could happen if there are
-                      // no segments in the system yet. Just mark us as initialized, then.
-                      setInitializedAndReportInitTime(stopwatch);
-                    }
-
-                    // Wait some more, we'll wake up when it might be time to do another refresh.
-                    lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
-                  }
-
-                  segmentsToRefresh.addAll(segmentsNeedingRefresh);
-                  segmentsNeedingRefresh.clear();
-
-                  // Mutable segments need a refresh every period, since new columns could be added dynamically.
-                  segmentsNeedingRefresh.addAll(mutableSegments);
-
-                  lastFailure = 0L;
-                  lastRefresh = System.currentTimeMillis();
-                  refreshImmediately = false;
-                }
-
-                refresh(segmentsToRefresh, dataSourcesToRebuild);
-
+              // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
+              // so that even if ServerView is initialized, we can't let broker complete initialization.
+              if (isServerViewInitialized && lastFailure == 0L) {
+                // Server view is initialized, but we don't need to do a refresh. Could happen if there are
+                // no segments in the system yet. Just mark us as initialized, then.
                 setInitializedAndReportInitTime(stopwatch);
               }
-              catch (InterruptedException e) {
-                // Fall through.
-                throw e;
-              }
-              catch (Exception e) {
-                log.warn(e, "Metadata refresh failed, trying again soon.");
 
-                synchronized (lock) {
-                  // Add our segments and datasources back to their refresh and rebuild lists.
-                  segmentsNeedingRefresh.addAll(segmentsToRefresh);
-                  dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
-                  lastFailure = System.currentTimeMillis();
-                }
-              }
+              // Wait some more, we'll wake up when it might be time to do another refresh.
+              lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
             }
+
+            segmentsToRefresh.addAll(segmentsNeedingRefresh);
+            segmentsNeedingRefresh.clear();
+
+            // Mutable segments need a refresh every period, since new columns could be added dynamically.
+            segmentsNeedingRefresh.addAll(mutableSegments);
+
+            lastFailure = 0L;
+            lastRefresh = System.currentTimeMillis();
+            refreshImmediately = false;
           }
-          catch (InterruptedException e) {
-            // Just exit.
-          }
-          catch (Throwable e) {
-            // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like
-            // OOMEs. Anyway, let's just emit an alert and stop refreshing metadata.
-            log.makeAlert(e, "Metadata refresh failed permanently").emit();
-            throw e;
-          }
-          finally {
-            log.info("Metadata refresh stopped.");
+
+          log.info("Executing refresh.");
+          refresh(segmentsToRefresh, dataSourcesToRebuild);
+
+          setInitializedAndReportInitTime(stopwatch);
+        }
+        catch (InterruptedException e) {
+          // Fall through.
+          throw e;
+        }
+        catch (Exception e) {
+          log.warn(e, "Metadata refresh failed, trying again soon.");
+
+          synchronized (lock) {
+            // Add our segments and datasources back to their refresh and rebuild lists.
+            segmentsNeedingRefresh.addAll(segmentsToRefresh);
+            dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
+            lastFailure = System.currentTimeMillis();
           }
         }
-    );
+      }
+    }
+    catch (InterruptedException e) {
+      // Just exit.
+    }
+    catch (Throwable e) {
+      // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like
+      // OOMEs. Anyway, let's just emit an alert and stop refreshing metadata.
+      log.makeAlert(e, "Metadata refresh failed permanently").emit();
+      throw e;
+    }
+    finally {
+      log.info("Metadata refresh stopped.");
+    }
   }
 
   private void setInitializedAndReportInitTime(Stopwatch stopwatch)

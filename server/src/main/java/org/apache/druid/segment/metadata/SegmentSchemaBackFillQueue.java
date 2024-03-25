@@ -20,10 +20,7 @@
 package org.apache.druid.segment.metadata;
 
 import com.google.inject.Inject;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.RowSignature;
@@ -54,6 +51,8 @@ public class SegmentSchemaBackFillQueue
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaManager segmentSchemaManager;
   private final FingerprintGenerator fingerprintGenerator;
+  private final ScheduledExecutorFactory scheduledExecutorFactory;
+  private final CentralizedDatasourceSchemaConfig config;
   private ScheduledExecutorService executor;
 
   @Inject
@@ -65,9 +64,8 @@ public class SegmentSchemaBackFillQueue
       CentralizedDatasourceSchemaConfig config
   )
   {
-    if (config.isEnabled() && config.isBackFillEnabled()) {
-      this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s");
-    }
+    this.config = config;
+    this.scheduledExecutorFactory = scheduledExecutorFactory;
     this.segmentSchemaManager = segmentSchemaManager;
     this.segmentSchemaCache = segmentSchemaCache;
     this.executionPeriod = config.getBackFillPeriod();
@@ -77,6 +75,7 @@ public class SegmentSchemaBackFillQueue
   public void start()
   {
     if (isEnabled()) {
+      this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s");
       scheduleQueuePoll(executionPeriod);
     }
   }
@@ -106,7 +105,7 @@ public class SegmentSchemaBackFillQueue
 
   public boolean isEnabled()
   {
-    return executor != null && !executor.isShutdown();
+    return config.isEnabled() && config.isBackFillEnabled();
   }
 
   private void scheduleQueuePoll(long delay)

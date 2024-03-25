@@ -97,7 +97,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
-import org.apache.druid.segment.metadata.SegmentSchemaBackFillQueue;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -516,8 +516,10 @@ public class CliCoordinator extends ServerRunnable
             .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
             .in(LazySingleton.class);
       binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-
+      binder.bind(SegmentSchemaCache.class).in(LazySingleton.class);
       binder.bind(QuerySegmentWalker.class).to(SegmentMetadataQuerySegmentWalker.class).in(LazySingleton.class);
+
+      LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
     }
 
     @LazySingleton

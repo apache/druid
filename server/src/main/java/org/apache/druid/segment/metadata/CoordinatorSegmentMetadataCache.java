@@ -22,7 +22,6 @@ package org.apache.druid.segment.metadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.InternalQueryConfig;
@@ -30,7 +29,6 @@ import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -56,6 +54,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -81,6 +80,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
+  private @Nullable Future<?> cacheExecFuture = null;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -99,6 +99,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.segmentSchemaCache = segmentSchemaCache;
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
+
     initServerViewTimelineCallback(serverView);
   }
 
@@ -153,24 +154,36 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     );
   }
 
-  public void start()
+  @LifecycleStop
+  public void stop()
+  {
+    callbackExec.shutdownNow();
+    cacheExec.shutdownNow();
+  }
+
+  public void leaderStart()
   {
     log.info("%s starting cache initialization.", getClass().getSimpleName());
     try {
       segmentSchemaBackfillQueue.start();
-      startCacheExec();
-    } catch (Exception e) {
+      cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
+      if (config.isAwaitInitializationOnStart()) {
+        awaitInitialization();
+      }
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
     log.info("CoordinatorSegmentMetadataCache start complete.");
   }
 
-  public void stop()
+  public void leaderStop()
   {
-    cacheExec.shutdownNow();
-    callbackExec.shutdownNow();
+    log.info("Stopping CoordinatorSegmentMetadataCache.");
+    cacheExecFuture.cancel(false);
     segmentSchemaCache.uninitialize();
     segmentSchemaBackfillQueue.stop();
+    log.info("Complete stopping CoordinatorSegmentMetadataCache.");
   }
 
   /**
@@ -179,7 +192,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public synchronized void additionalRefreshWaitCondition() throws InterruptedException
   {
+    log.info("Waiting for refresh condition to be met.");
     segmentSchemaCache.awaitInitialization();
+    log.info("Refresh condition met.");
   }
 
   @Override

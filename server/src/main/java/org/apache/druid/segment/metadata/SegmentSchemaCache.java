@@ -33,13 +33,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-
-// SMC on Coordinator
-// schema -> smq or db poll
-// if schema is in db, good
-// ow, execute smq -> backfill schema in db
-//
-
 /**
  * In-memory cache of segment schema.
  * <p>
@@ -61,7 +54,7 @@ public class SegmentSchemaCache
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaCache.class);
 
   // Cache is marked initialized after first DB poll.
-  private AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
+  private final AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
 
   /**
    * Mapping from segmentId to segment level information which includes numRows and schemaId.
@@ -92,23 +85,27 @@ public class SegmentSchemaCache
    */
   private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
-  public synchronized void setInitialized()
+  public void setInitialized()
   {
-    initialized.get().countDown();
-
-    log.info("SegmentSchemaCache is initialized.");
+    log.info("Marking cache as initialized.");
+    if (initialized.get().getCount() == 1) {
+      initialized.get().countDown();
+      log.info("SegmentSchemaCache is initialized.");
+    }
   }
 
   /**
    * Uninitialize is called when the current node is no longer the leader.
    */
-  public synchronized void uninitialize()
+  public void uninitialize()
   {
     initialized.set(new CountDownLatch(1));
 
+    // note we do not clear the realtime schema map,
+    // since the follower nodes continue receiving relatime schema updates.
+
     finalizedSegmentSchema.clear();
     finalizedSegmentStats.clear();
-    realtimeSegmentSchemaMap.clear();
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
 
@@ -119,7 +116,7 @@ public class SegmentSchemaCache
    * {@link CoordinatorSegmentMetadataCache} startup waits on the cache initialization.
    * This is being done to ensure that we don't execute SMQ for segment with schema already present in the DB.
    */
-  public synchronized void awaitInitialization() throws InterruptedException
+  public void awaitInitialization() throws InterruptedException
   {
     initialized.get().await();
   }
@@ -175,7 +172,6 @@ public class SegmentSchemaCache
 
   public Optional<SegmentSchemaMetadata> getSchemaForSegment(SegmentId segmentId)
   {
-    // consider potential race
     // We first look up the schema in the realtime map. This ensures that during handoff
     // there is no window where segment schema is missing from the cache.
     // If were to look up the finalized segment map first, during handoff it is possible
@@ -227,16 +223,19 @@ public class SegmentSchemaCache
    */
   public boolean isSchemaCached(SegmentId segmentId)
   {
-    if (finalizedSegmentStats.containsKey(segmentId)) {
-      Long schemaId = finalizedSegmentStats.get(segmentId).getSchemaId();
-      if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {
-        return true;
-      }
-    }
-
     return realtimeSegmentSchemaMap.containsKey(segmentId) ||
            inTransitSMQResults.containsKey(segmentId) ||
-           inTransitSMQPublishedResults.containsKey(segmentId);
+           inTransitSMQPublishedResults.containsKey(segmentId) ||
+           isFinalizedSegmentSchemaCached(segmentId);
+  }
+
+  private boolean isFinalizedSegmentSchemaCached(SegmentId segmentId)
+  {
+    if (finalizedSegmentStats.containsKey(segmentId)) {
+      Long schemaId = finalizedSegmentStats.get(segmentId).getSchemaId();
+      return schemaId != null && finalizedSegmentSchema.containsKey(schemaId);
+    }
+    return false;
   }
 
   /**
