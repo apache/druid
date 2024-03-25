@@ -51,10 +51,12 @@ public class ExportMetadataManager
   public void writeMetadata(List<String> exportedFiles) throws IOException
   {
     final StorageConnector storageConnector = exportStorageProvider.get();
-    log.info("Writing manifest file at [%s]", exportStorageProvider.getBasePath());
+    log.info("Writing manifest file at location [%s]", exportStorageProvider.getBasePath());
 
     if (storageConnector.pathExists(MANIFEST_FILE) || storageConnector.pathExists(META_FILE)) {
-      throw DruidException.defensive("Found existing manifest file already present at path.");
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Found existing manifest file already present at path.");
     }
 
     createManifestFile(storageConnector, exportedFiles);

@@ -173,12 +173,11 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   @Override
   public Object mergeAccumulatedResult(Object accumulated, Object otherAccumulated)
   {
-    // Maintain upgrade compatibility, if a worker does not return a list, ignore it.
-    if (!(accumulated instanceof List)) {
-      return otherAccumulated;
-    }
-    if (!(otherAccumulated instanceof List)) {
-      return accumulated;
+    // If a worker does not return a list, fail the query
+    if (!(accumulated instanceof List) || !(otherAccumulated instanceof List)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Expected a list result from worker, received [%s] instead. This might be due to workers having an older version.");
     }
     ((List<String>) accumulated).addAll((List<String>) otherAccumulated);
     return accumulated;
