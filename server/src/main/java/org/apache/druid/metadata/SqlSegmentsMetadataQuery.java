@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
@@ -256,7 +255,7 @@ public class SqlSegmentsMetadataQuery
 
   private List<DataSegmentPlus> retrieveSegmentBatchById(String datasource, List<String> segmentIds)
   {
-    if (CollectionUtils.isNullOrEmpty(segmentIds)) {
+    if (segmentIds.isEmpty()) {
       return Collections.emptyList();
     }
 
@@ -344,6 +343,10 @@ public class SqlSegmentsMetadataQuery
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval, @Nullable final List<String> versions)
   {
+    if (versions != null && versions.isEmpty()) {
+      return 0;
+    }
+
     if (Intervals.isEternity(interval)) {
       final StringBuilder sb = new StringBuilder();
       sb.append(
@@ -354,9 +357,7 @@ public class SqlSegmentsMetadataQuery
           )
       );
 
-      final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
-
-      if (hasVersions) {
+      if (versions != null) {
         sb.append(getParameterizedInConditionForColumn("version", versions));
       }
 
@@ -366,7 +367,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used", false)
           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
 
-      if (hasVersions) {
+      if (versions != null) {
         bindColumnValuesToQueryWithInCondition("version", versions, stmt);
       }
 
@@ -386,9 +387,7 @@ public class SqlSegmentsMetadataQuery
           )
       );
 
-      final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
-
-      if (hasVersions) {
+      if (versions != null) {
         sb.append(getParameterizedInConditionForColumn("version", versions));
       }
 
@@ -400,7 +399,7 @@ public class SqlSegmentsMetadataQuery
           .bind("end", interval.getEnd().toString())
           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
 
-      if (hasVersions) {
+      if (versions != null) {
         bindColumnValuesToQueryWithInCondition("version", versions, stmt);
       }
       return stmt.execute();
@@ -558,6 +557,10 @@ public class SqlSegmentsMetadataQuery
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
+    if (versions != null && versions.isEmpty()) {
+      return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
+    }
+
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
           retrieveSegmentsInIntervalsBatch(dataSource, intervals, versions, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
@@ -733,9 +736,7 @@ public class SqlSegmentsMetadataQuery
       sb.append(getConditionForIntervalsAndMatchMode(intervals, matchMode, connector.getQuoteString()));
     }
 
-    final boolean hasVersions = !CollectionUtils.isNullOrEmpty(versions);
-
-    if (hasVersions) {
+    if (versions != null) {
       sb.append(getParameterizedInConditionForColumn("version", versions));
     }
 
@@ -786,7 +787,7 @@ public class SqlSegmentsMetadataQuery
       bindIntervalsToQuery(sql, intervals);
     }
 
-    if (hasVersions) {
+    if (versions != null) {
       bindColumnValuesToQueryWithInCondition("version", versions, sql);
     }
 
@@ -898,7 +899,7 @@ public class SqlSegmentsMetadataQuery
    */
   private static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
   {
-    if (CollectionUtils.isNullOrEmpty(values)) {
+    if (values == null) {
       return "";
     }
 
@@ -927,7 +928,7 @@ public class SqlSegmentsMetadataQuery
       final SQLStatement<?> query
   )
   {
-    if (CollectionUtils.isNullOrEmpty(values)) {
+    if (values == null) {
       return;
     }
 
