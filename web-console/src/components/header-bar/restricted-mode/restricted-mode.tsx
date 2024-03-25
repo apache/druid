@@ -29,10 +29,11 @@ import { PopoverText } from '../../popover-text/popover-text';
 export interface RestrictedModeProps {
   capabilities: Capabilities;
   onUnrestrict(capabilities: Capabilities): void;
+  onUseAutomaticCapabilityDetection?: () => void;
 }
 
 export const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeProps) {
-  const { capabilities, onUnrestrict } = props;
+  const { capabilities, onUnrestrict, onUseAutomaticCapabilityDetection } = props;
   const mode = capabilities.getModeExtended();
 
   let label: string;
@@ -120,6 +121,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
 
   return (
     <Popover2
+      className="restricted-mode"
       content={
         <PopoverText>
           <p>The console is running in restricted mode.</p>
@@ -131,18 +133,38 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
             </ExternalLink>
             .
           </p>
-          <p>
-            It is possible that the console is experiencing an issue with the capability detection.
-            You can enable the unrestricted console, but certain features might not work if the
-            underlying APIs are not available.
-          </p>
-          <p>
-            <Button
-              icon={IconNames.WARNING_SIGN}
-              text={`Temporarily unrestrict console${capabilities.hasSql() ? '' : ' (with SQL)'}`}
-              onClick={() => onUnrestrict(Capabilities.FULL)}
-            />
-          </p>
+          {onUseAutomaticCapabilityDetection ? (
+            <>
+              <p>
+                The console did no perform its automatic capability detection because it is running
+                in manual capability detection mode.
+              </p>
+              <p>
+                <Button
+                  text="Use to automatic capability detection"
+                  onClick={onUseAutomaticCapabilityDetection}
+                  intent={Intent.PRIMARY}
+                />
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                It is possible that the console is experiencing an issue with the capability
+                detection. You can enable the unrestricted console, but certain features might not
+                work if the underlying APIs are not available.
+              </p>
+              <p>
+                <Button
+                  icon={IconNames.WARNING_SIGN}
+                  text={`Temporarily unrestrict console${
+                    capabilities.hasSql() ? '' : ' (with SQL)'
+                  }`}
+                  onClick={() => onUnrestrict(Capabilities.FULL)}
+                />
+              </p>
+            </>
+          )}
           {!capabilities.hasSql() && (
             <p>
               <Button

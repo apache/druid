@@ -24,9 +24,20 @@ import { shallow } from '../../../utils/shallow-renderer';
 import { RestrictedMode } from './restricted-mode';
 
 describe('RestrictedMode', () => {
-  it('matches snapshot', () => {
+  it('matches snapshot when in auto capability detection mode', () => {
     const headerBar = shallow(
       <RestrictedMode capabilities={Capabilities.COORDINATOR_OVERLORD} onUnrestrict={() => {}} />,
+    );
+    expect(headerBar).toMatchSnapshot();
+  });
+
+  it('matches snapshot when in manual capability detection mode', () => {
+    const headerBar = shallow(
+      <RestrictedMode
+        capabilities={Capabilities.COORDINATOR_OVERLORD}
+        onUnrestrict={() => {}}
+        onUseAutomaticCapabilityDetection={() => {}}
+      />,
     );
     expect(headerBar).toMatchSnapshot();
   });

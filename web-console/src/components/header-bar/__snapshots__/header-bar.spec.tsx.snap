@@ -272,7 +272,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
-            text="Force specific console mode"
+            text="Capabilty detection"
           >
             <Blueprint4.MenuItem
               active={false}
@@ -282,7 +282,7 @@ exports[`HeaderBar matches snapshot 1`] = `
               popoverProps={{}}
               selected={false}
               shouldDismissPopover={true}
-              text="Force Coordinator/Overlord mode"
+              text="Manually set Coordinator/Overlord mode"
             />
             <Blueprint4.MenuItem
               active={false}
@@ -292,7 +292,7 @@ exports[`HeaderBar matches snapshot 1`] = `
               popoverProps={{}}
               selected={false}
               shouldDismissPopover={true}
-              text="Force Coordinator mode"
+              text="Manually set Coordinator mode"
             />
             <Blueprint4.MenuItem
               active={false}
@@ -302,7 +302,7 @@ exports[`HeaderBar matches snapshot 1`] = `
               popoverProps={{}}
               selected={false}
               shouldDismissPopover={true}
-              text="Force Overlord mode"
+              text="Manually set Overlord mode"
             />
             <Blueprint4.MenuItem
               active={false}
@@ -312,7 +312,7 @@ exports[`HeaderBar matches snapshot 1`] = `
               popoverProps={{}}
               selected={false}
               shouldDismissPopover={true}
-              text="Force no management proxy mode"
+              text="Manually set Router with no management proxy mode"
             />
           </Blueprint4.MenuItem>
         </Blueprint4.Menu>

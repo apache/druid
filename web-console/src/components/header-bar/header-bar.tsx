@@ -187,7 +187,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     </Menu>
   );
 
-  function setForcedMode(capabilities: Capabilities | undefined): void {
+  function setCapabilitiesOverride(capabilities: Capabilities | undefined): void {
     if (capabilities) {
       localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, capabilities);
     } else {
@@ -224,35 +224,43 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuDivider />
-      <MenuItem icon={IconNames.HIGH_PRIORITY} text="Force specific console mode">
+      <MenuItem
+        icon={IconNames.HIGH_PRIORITY}
+        text="Capabilty detection"
+        intent={capabilitiesOverride ? Intent.DANGER : undefined}
+      >
         {capabilitiesOverride && (
           <>
-            <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
+            <MenuItem
+              text="Use manual capabilty detection"
+              onClick={() => setCapabilitiesOverride(undefined)}
+              intent={Intent.PRIMARY}
+            />
             <MenuDivider />
           </>
         )}
         {capabilitiesMode !== 'coordinator-overlord' && (
           <MenuItem
-            text="Force Coordinator/Overlord mode"
-            onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
+            text="Manually set Coordinator/Overlord mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.COORDINATOR_OVERLORD)}
           />
         )}
         {capabilitiesMode !== 'coordinator' && (
           <MenuItem
-            text="Force Coordinator mode"
-            onClick={() => setForcedMode(Capabilities.COORDINATOR)}
+            text="Manually set Coordinator mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.COORDINATOR)}
           />
         )}
         {capabilitiesMode !== 'overlord' && (
           <MenuItem
-            text="Force Overlord mode"
-            onClick={() => setForcedMode(Capabilities.OVERLORD)}
+            text="Manually set Overlord mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.OVERLORD)}
           />
         )}
         {capabilitiesMode !== 'no-proxy' && (
           <MenuItem
-            text="Force no management proxy mode"
-            onClick={() => setForcedMode(Capabilities.NO_PROXY)}
+            text="Manually set Router with no management proxy mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.NO_PROXY)}
           />
         )}
       </MenuItem>
@@ -357,23 +365,33 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         </Popover2>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        <RestrictedMode capabilities={capabilities} onUnrestrict={onUnrestrict} />
+        <RestrictedMode
+          capabilities={capabilities}
+          onUnrestrict={onUnrestrict}
+          onUseAutomaticCapabilityDetection={
+            capabilitiesOverride ? () => setCapabilitiesOverride(undefined) : undefined
+          }
+        />
         {capabilitiesOverride && (
           <Popover2
             content={
               <PopoverText>
                 <p>
-                  The console is running in a forced mode that assumes a limited set of capabilities rather
-                   than detecting all capabilities for the cluster.
+                  The console is running in a manual capability setting mode that assumes a limited
+                  set of capabilities rather than detecting all capabilities for the cluster.
                 </p>
                 <p>
-                  Forced mode is an advanced feature used for testing and for working around issues with the
-                  capability detecting logic. If you are unsure why the console is in forced mode, clear it.
+                  Manual capability setting mode is an advanced feature used for testing and for
+                  working around issues with the automatic capability detecting logic.
+                </p>
+                <p>
+                  If you are unsure why the console is in ths mode mode, revert to using automatic
+                  capability detection.
                 </p>
                 <p>
                   <Button
-                    text="Clear forced mode"
-                    onClick={() => setForcedMode(undefined)}
+                    text="Use automatic capability detection"
+                    onClick={() => setCapabilitiesOverride(undefined)}
                     intent={Intent.PRIMARY}
                   />
                 </p>
@@ -383,7 +401,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           >
             <Button
               icon={IconNames.HIGH_PRIORITY}
-              text="Forced mode"
+              text="Manual capabilty detection"
               intent={Intent.DANGER}
               minimal
             />
