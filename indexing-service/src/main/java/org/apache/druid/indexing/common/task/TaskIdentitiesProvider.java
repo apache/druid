@@ -31,6 +31,12 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 @ExtensionPoint
 public interface TaskIdentitiesProvider
 {
+  /**
+   * TASK_IDENTIFIER is a key for a tag that extends the concept of task type.
+   * It offers a standardized way to identify tasks across implementations,
+   * essential for clear and consistent task analysis. This tag should be used
+   * to meaningfully distinguish tasks, supporting detailed reporting and metrics.
+   */
   String TASK_IDENTIFIER = "taskIdentifier";
 
   /**
