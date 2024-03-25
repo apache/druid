@@ -137,9 +137,27 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
+    boolean hasBounds = lowerBound != null || upperBound != null;
+    if (call.getKind() == SqlKind.NTILE && hasBounds) {
+      throw buildCalciteContextException(
+          "Framing of NTILE is not supported.",
+          call
+      );
+    }
+
+    if (call.getKind() == SqlKind.FIRST_VALUE || call.getKind() == SqlKind.LAST_VALUE) {
+      if (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound)) {
+        throw buildCalciteContextException(
+            "Framing of FIRST_VALUE/LAST_VALUE is only allowed with UNBOUNDED or CURRENT ROW.",
+            call
+        );
+      }
+    }
+
+
     if (plannerContext.queryContext().isWindowingStrictValidation()) {
       if (!targetWindow.isRows() &&
-          (!isValidRangeEndpoint(lowerBound) || !isValidRangeEndpoint(upperBound))) {
+          (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound))) {
         // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
         throw buildCalciteContextException(
             StringUtils.format(
@@ -578,7 +596,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
    */
   private boolean isValidEndpoint(@Nullable SqlNode bound)
   {
-    if (isValidRangeEndpoint(bound)) {
+    if (isUnboundedOrCurrent(bound)) {
       return true;
     }
     if (bound.getKind() == SqlKind.FOLLOWING || bound.getKind() == SqlKind.PRECEDING) {
@@ -593,7 +611,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   /**
    * Checks if the given endpoint is valid for a RANGE window frame.
    */
-  private boolean isValidRangeEndpoint(@Nullable SqlNode bound)
+  private boolean isUnboundedOrCurrent(@Nullable SqlNode bound)
   {
     return bound == null
         || SqlWindow.isCurrentRow(bound)
