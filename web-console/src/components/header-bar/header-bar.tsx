@@ -232,7 +232,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         {capabilitiesOverride && (
           <>
             <MenuItem
-              text="Use manual capabilty detection"
+              text="Use automatic capabilty detection"
               onClick={() => setCapabilitiesOverride(undefined)}
               intent={Intent.PRIMARY}
             />
