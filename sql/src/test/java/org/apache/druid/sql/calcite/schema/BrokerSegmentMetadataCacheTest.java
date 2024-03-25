@@ -59,6 +59,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
@@ -145,7 +146,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -180,7 +182,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -242,7 +245,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     schema.start();
@@ -305,7 +309,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     EasyMock.replay(factoryMock, lifecycleMock);
@@ -333,7 +338,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     schema.start();
@@ -598,7 +604,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -913,7 +920,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         internalQueryConfig,
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
@@ -977,7 +985,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
