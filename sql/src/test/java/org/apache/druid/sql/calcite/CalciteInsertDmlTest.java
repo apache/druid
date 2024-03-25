@@ -1645,6 +1645,15 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertWithInvalidColumnName2InIngest()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO t SELECT __time, 1+1 FROM foo PARTITIONED BY ALL")
+        .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
+        .verify();
+  }
+
+  @Test
   public void testInsertWithUnnamedColumnInNestedSelectStatement()
   {
     testIngestionQuery()
