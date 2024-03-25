@@ -935,7 +935,7 @@ public class ControllerImpl implements Controller
     return TaskReport.buildTaskReports(
         new MSQTaskReport(
             id(),
-            null,
+            task.getContextValue(DruidMetrics.TAGS),
             new MSQTaskReportPayload(
                 makeStatusReport(
                     TaskState.RUNNING,
