@@ -158,7 +158,7 @@ For examples of null handling, see the [null handling tutorial](../tutorials/tut
 To ensure Druid always behaves in an ANSI SQL compatible manner, this mode will be removed in a future release.
 :::
 
-You can set `druid.generic.useDefaultValueForNull = true` to revert to Druid's deprecated legacy null handling mode, the default for Druid 27.0.0 and prior releases.
+You can set `druid.generic.useDefaultValueForNull = true` to revert to Druid's deprecated legacy null handling mode, the default for Druid 27.0.0 and prior releases. This mode is not recommended.
 
 When running in the deprecated legacy mode, Druid treats NULL values and empty strings interchangeably.
 In this mode:
