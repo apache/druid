@@ -34,6 +34,8 @@ the [Local quickstart](index.md).
 
 The tutorial assumes you are familiar with using the [Query view](./tutorial-sql-query-view.md) to ingest and query data.
 
+The tutorial also assumes you have not changed any of the default settings for null handling.
+
 ## Load data with null values
 
 The tutorial loads some data with null values for string and numeric columns as follows:
@@ -114,7 +116,7 @@ Druid returns the following data:
 |`another_value`|1|1|
 |`some_value`|1|1|
 
-Also note that GROUP BY expressions yields distinct entries for null and the empty string.
+Also note that GROUP BY expressions yields distinct entries for `null` and the empty string.
 
 ### Filter for emplty strings in addition to null
 
@@ -142,7 +144,7 @@ FROM "null_example"
 
 Druid returns 2. Both the empty string and null values are excluded.
 
-## Numeric query example
+## Numeric query examples
 
 Druid does does not count null values in numeric comparisons.
 
@@ -153,6 +155,24 @@ WHERE "numeric_value" < 2
 ```
 
 Druid returns 1. The `null` values for examples 3 and 4 are excluded.
+
+Additionaly, be aware that null values do not behave as 0. For examples:
+
+```sql
+SELECT numeric_value + 1
+FROM "null_example"
+WHERE "__time" > '2024-01-01 01:04:00.000Z'
+```
+
+Druid returns `null` and not 1. One option is to use the COALESCE function for null handling. For example:
+
+```sql
+SELECT COALESCE(numeric_value, 0) + 1
+FROM "null_example"
+WHERE "__time" > '2024-01-01 01:04:00.000Z'
+```
+
+In this case, Druid returns 1.
 
 ## Ingestion time filtering
 

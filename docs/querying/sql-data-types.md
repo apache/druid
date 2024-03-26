@@ -150,7 +150,7 @@ The [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compa
 runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, maintain the default value of `false`.
 
 There is some performance impact for null handling. see [segment internals](../design/segments.md#handling-null-values) for more information.
-For examples of null handling, see the [null handling tutorial](../tutorials/tutorial-ansi-sql-null.md).
+For examples of null handling, see the [null handling tutorial](../tutorials/tutorial-sql-null.md).
 
 ### Legacy null handling mode
 
