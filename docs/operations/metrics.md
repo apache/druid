@@ -258,8 +258,8 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
-|`ingest/scale/up/skip`|Count of times LagBasedAutoScaler wanted to scale up but skipped due to `minTriggerScaleActionFrequencyMillis`|`dataSource`, `stream`, `tags`|Depends on auto scaler config.|
-|`ingest/scale/up/skip`|Count of times LagBasedAutoScaler wanted to scale down but skipped due to `minTriggerScaleActionFrequencyMillis`|`dataSource`, `stream`, `tags`|Depends on auto scaler config.|
+|`ingest/skipScaleUp/count`|Total number of times `lagBased` auto scaler attempted to scale up but was skipped due to `minTriggerScaleActionFrequencyMillis`.|`dataSource`, `stream`, `tags`|Depends on auto scaler config.|
+|`ingest/skipScaleDown/count`|Total number of times `lagBased` auto scaler attempted to scale down but skipped due to `minTriggerScaleActionFrequencyMillis`.|`dataSource`, `stream`, `tags`|Depends on auto scaler config.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 

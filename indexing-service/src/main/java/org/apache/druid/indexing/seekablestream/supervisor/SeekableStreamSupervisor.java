@@ -466,9 +466,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
             int currentActiveTasks = currentActiveTaskCount();
             if (desriedTaskCount > currentActiveTasks) {
-              emitter.emit(event.setMetric("ingest/scale/up/skip", 1));
+              emitter.emit(event.setMetric("ingest/skipScaleUp/count", 1));
             } else if (desriedTaskCount < currentActiveTasks && desriedTaskCount > 0) {
-              emitter.emit(event.setMetric("ingest/scale/down/skip", 1));
+              emitter.emit(event.setMetric("ingest/skipScaleDown/count", 1));
             }
             return;
           }

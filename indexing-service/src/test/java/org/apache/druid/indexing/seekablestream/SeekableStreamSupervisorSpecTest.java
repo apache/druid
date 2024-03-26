@@ -56,7 +56,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -65,6 +65,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -754,8 +756,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
 
+    Capture<ServiceMetricEvent.Builder> metricCapture = Capture.newInstance(CaptureType.ALL);
     ServiceEmitter dynamicActionEmitter = EasyMock.mock(ServiceEmitter.class);
-    dynamicActionEmitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));
+    dynamicActionEmitter.emit(EasyMock.capture(metricCapture));
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(dynamicActionEmitter);
 
@@ -779,6 +782,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assert.assertTrue(metricCapture.getValues()
+                                   .stream()
+                                   .map(metric -> metric.build(ImmutableMap.of()))
+                                   .map(ServiceMetricEvent::getMetric)
+                                   .anyMatch("ingest/skipScaleUp/count"::equals));
     EasyMock.verify(dynamicActionEmitter);
     autoScaler.reset();
     autoScaler.stop();
