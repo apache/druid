@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
-public class IngestionStatsAndErrorsTaskReportData
+public class IngestionStatsAndErrors
 {
   @JsonProperty
   private IngestionState ingestionState;
@@ -56,7 +56,7 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private Long segmentsPublished;
 
-  public IngestionStatsAndErrorsTaskReportData(
+  public IngestionStatsAndErrors(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
@@ -139,12 +139,12 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentsPublished;
   }
 
-  public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
+  public static IngestionStatsAndErrors getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
   {
-    return (IngestionStatsAndErrorsTaskReportData) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                                              .getPayload();
+    return (IngestionStatsAndErrors) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+                                                .getPayload();
   }
 
   @Override
@@ -156,7 +156,7 @@ public class IngestionStatsAndErrorsTaskReportData
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    IngestionStatsAndErrorsTaskReportData that = (IngestionStatsAndErrorsTaskReportData) o;
+    IngestionStatsAndErrors that = (IngestionStatsAndErrors) o;
     return getIngestionState() == that.getIngestionState() &&
            Objects.equals(getUnparseableEvents(), that.getUnparseableEvents()) &&
            Objects.equals(getRowStats(), that.getRowStats()) &&
