@@ -337,8 +337,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       return;
     }
     final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final Set<DataSegment> publishedSegments = new HashSet<>();
-    publishedSegments.addAll(
+    SegmentAndSchemas segmentAndSchemas =
         runTask(runTestTask(
             new SingleDimensionPartitionsSpec(
                 targetRowsPerSegment,
@@ -349,27 +348,32 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             inputDir,
             false,
             false
-        ), TaskState.SUCCESS).getSegments()
-    );
+        ), TaskState.SUCCESS);
+    verifySchema(segmentAndSchemas);
+
+    final Set<DataSegment> publishedSegments = new HashSet<>(segmentAndSchemas.getSegments());
     // Append
-    publishedSegments.addAll(
+    segmentAndSchemas =
         runTask(runTestTask(
             new DynamicPartitionsSpec(5, null),
             inputDir,
             true,
             false
-        ), TaskState.SUCCESS).getSegments()
-    );
+        ), TaskState.SUCCESS);
+    publishedSegments.addAll(segmentAndSchemas.getSegments());
+    verifySchema(segmentAndSchemas);
+
     // And append again
-    publishedSegments.addAll(
+    segmentAndSchemas =
         runTask(runTestTask(
             new DynamicPartitionsSpec(10, null),
             inputDir,
             true,
             false
-        ), TaskState.SUCCESS).getSegments()
-    );
+        ), TaskState.SUCCESS);
+    verifySchema(segmentAndSchemas);
 
+    publishedSegments.addAll(segmentAndSchemas.getSegments());
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
         segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)

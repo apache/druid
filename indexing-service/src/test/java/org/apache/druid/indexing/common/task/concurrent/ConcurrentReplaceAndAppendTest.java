@@ -973,6 +973,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments)
   {
     try {
+
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               WIKI,

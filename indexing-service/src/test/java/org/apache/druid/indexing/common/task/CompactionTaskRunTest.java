@@ -2151,19 +2151,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     return rowsFromSegment;
   }
 
-  private void verifySchema(SegmentAndSchemas segmentAndSchemas)
-  {
-    int nonTombstoneSegments = 0;
-    for (DataSegment segment : segmentAndSchemas.getSegments()) {
-      if (segment.isTombstone()) {
-        continue;
-      }
-      nonTombstoneSegments++;
-      Assert.assertTrue(segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
-    }
-    Assert.assertEquals(nonTombstoneSegments, segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
-  }
-
   private static String makeCSVFormatRow(
       String ts,
       String dim,

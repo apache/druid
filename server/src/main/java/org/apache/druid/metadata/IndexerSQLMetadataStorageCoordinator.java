@@ -540,7 +540,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask);
 
             return SegmentPublishResult.ok(
-                insertSegments(handle, segmentsToInsert, minimalSegmentSchemas, appendAfterReplaceSegmentMetadata)
+                insertSegments(handle, segmentsToInsert, minimalSegmentSchemas, appendAfterReplaceSegmentMetadata, Collections.emptyMap())
             );
           },
           3,
@@ -1332,16 +1332,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String dataSource = appendSegments.iterator().next().getDataSource();
-    final Set<DataSegment> segmentIdsForNewVersions = connector.retryTransaction(
+    final Map<SegmentId, Set<DataSegment>> segmentIdsForNewVersions = connector.retryTransaction(
         (handle, transactionStatus)
             -> createNewIdsForAppendSegments(handle, dataSource, appendSegments),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
 
+    Map<SegmentId, SegmentId> newVersionSegmentToParent = new HashMap<>();
+
+    for (Map.Entry<SegmentId, Set<DataSegment>> segmentIdToNewVersions : segmentIdsForNewVersions.entrySet()) {
+      for (DataSegment segment : segmentIdToNewVersions.getValue()) {
+        newVersionSegmentToParent.put(segment.getId(), segmentIdToNewVersions.getKey());
+      }
+    }
+
     // Create entries for all required versions of the append segments
     final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
-    allSegmentsToInsert.addAll(segmentIdsForNewVersions);
+    segmentIdsForNewVersions.values().forEach(allSegmentsToInsert::addAll);
 
     final AtomicBoolean metadataNotUpdated = new AtomicBoolean(false);
     try {
@@ -1366,7 +1374,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
 
             insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
-            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert, minimalSegmentSchemas, Collections.emptySet()));
+            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert, minimalSegmentSchemas, Collections.emptySet(), newVersionSegmentToParent));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -1465,14 +1473,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * created IDs belong to the same interval and version as the segments committed
    * by the REPLACE task.
    */
-  private Set<DataSegment> createNewIdsForAppendSegments(
+  private Map<SegmentId, Set<DataSegment>> createNewIdsForAppendSegments(
       Handle handle,
       String dataSource,
       Set<DataSegment> segmentsToAppend
   ) throws IOException
   {
     if (segmentsToAppend.isEmpty()) {
-      return Collections.emptySet();
+      return Collections.emptyMap();
     }
 
     final Set<Interval> appendIntervals = new HashSet<>();
@@ -1499,7 +1507,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                    .add(segment);
     }
 
-    final Set<DataSegment> upgradedSegments = new HashSet<>();
+    final Map<SegmentId, Set<DataSegment>> upgradedSegments = new HashMap<>();
     for (Map.Entry<String, Set<Interval>> entry : overlappingVersionToIntervals.entrySet()) {
       final String upgradeVersion = entry.getKey();
       Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
@@ -1514,7 +1522,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .stream()
                                            .filter(s -> s.getVersion().equals(upgradeVersion))
                                            .collect(Collectors.toSet());
-        Set<DataSegment> segmentsUpgradedToVersion = createNewIdsForAppendSegmentsWithVersion(
+        Map<SegmentId, DataSegment> segmentsUpgradedToVersion = createNewIdsForAppendSegmentsWithVersion(
             handle,
             upgradeVersion,
             upgradeInterval,
@@ -1522,7 +1530,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             segmentsAlreadyOnVersion
         );
         log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);
-        upgradedSegments.addAll(segmentsUpgradedToVersion);
+
+        for (Map.Entry<SegmentId, DataSegment> oldAndNewSegment : segmentsUpgradedToVersion.entrySet()) {
+          upgradedSegments.computeIfAbsent(oldAndNewSegment.getKey(), value -> new HashSet<>()).add(oldAndNewSegment.getValue());
+        }
       }
     }
 
@@ -1572,7 +1583,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * @param committedSegments Segments that already exist in the upgradeInterval
    *                          at upgradeVersion.
    */
-  private Set<DataSegment> createNewIdsForAppendSegmentsWithVersion(
+  private Map<SegmentId, DataSegment> createNewIdsForAppendSegmentsWithVersion(
       Handle handle,
       String upgradeVersion,
       Interval upgradeInterval,
@@ -1596,7 +1607,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Set<SegmentIdWithShardSpec> allAllocatedIds = new HashSet<>(pendingSegmentIds);
 
     // Create new IDs for each append segment
-    final Set<DataSegment> newSegmentIds = new HashSet<>();
+    final Map<SegmentId, DataSegment> newSegmentIds = new HashMap<>();
     for (DataSegment segment : segmentsToUpgrade) {
       SegmentCreateRequest request = new SegmentCreateRequest(
           segment.getId() + "__" + upgradeVersion,
@@ -1618,7 +1629,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Update the set so that subsequent segment IDs use a higher partition number
       allAllocatedIds.add(newId);
-      newSegmentIds.add(
+      newSegmentIds.put(
+          segment.getId(),
           DataSegment.builder(segment)
                      .interval(newId.getInterval())
                      .version(newId.getVersion())
@@ -2218,7 +2230,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Handle handle,
       Set<DataSegment> segments,
       MinimalSegmentSchemas minimalSegmentSchemas,
-      Set<DataSegmentWithSchemaInformation> appendAfterReplaceSegmentMetadata
+      Set<DataSegmentWithSchemaInformation> appendAfterReplaceSegmentMetadata,
+      Map<SegmentId, SegmentId> newVersionForAppendToParent
   ) throws IOException
   {
     Map<String, Long> fingerprintSchemaIdMap = null;
@@ -2267,8 +2280,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         Long schemaId = null;
         Long numRows = null;
 
-        if (schemaPresent && minimalSegmentSchemas.getSegmentStatsMap().containsKey(segmentId)) {
-          MinimalSegmentSchemas.SegmentStats segmentStats = minimalSegmentSchemas.getSegmentStatsMap().get(segmentId);
+        if (schemaPresent &&
+            (minimalSegmentSchemas.getSegmentStatsMap().containsKey(segmentId) ||
+             (newVersionForAppendToParent.containsKey(segment.getId())
+              && minimalSegmentSchemas.getSegmentStatsMap()
+                                      .containsKey(newVersionForAppendToParent.get(segment.getId()).toString())))) {
+          String segmentIdToUse;
+          if (minimalSegmentSchemas.getSegmentStatsMap().containsKey(segmentId)) {
+            segmentIdToUse = segmentId;
+          } else {
+            segmentIdToUse = newVersionForAppendToParent.get(segment.getId()).toString();
+          }
+          MinimalSegmentSchemas.SegmentStats segmentStats = minimalSegmentSchemas.getSegmentStatsMap().get(segmentIdToUse);
           if (segmentStats != null) {
             numRows = segmentStats.getNumRows();
             String fingerprint = segmentStats.getFingerprint();

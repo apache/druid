@@ -168,7 +168,10 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
+
     for (DataSegment segment : compactedSegments) {
       Assert.assertSame(
           lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
@@ -220,7 +223,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .tuningConfig(newTuningConfig(new HashedPartitionsSpec(null, 3, null), 2, true))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Map<String, String> expectedLongSumMetric = new HashMap<>();
@@ -284,7 +289,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .tuningConfig(newTuningConfig(new SingleDimensionPartitionsSpec(7, null, "dim", false), 2, true))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Map<String, String> expectedLongSumMetric = new HashMap<>();
@@ -343,7 +350,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         )
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Map<String, String> expectedLongSumMetric = new HashMap<>();
@@ -397,7 +406,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             true
         )).build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Map<String, String> expectedLongSumMetric = new HashMap<>();
@@ -446,7 +457,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .tuningConfig(newTuningConfig(new SingleDimensionPartitionsSpec(7, null, "dim", false), 1, true))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Map<String, String> expectedLongSumMetric = new HashMap<>();
@@ -498,7 +511,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             true
         )).build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
       Map<String, String> expectedLongSumMetric = new HashMap<>();
@@ -545,7 +560,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .context(ImmutableMap.of(Tasks.STORE_COMPACTION_STATE_KEY, false))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
 
     for (DataSegment segment : compactedSegments) {
       Assert.assertSame(
@@ -574,7 +591,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
 
     Assert.assertEquals(3, compactedSegments.size());
 
@@ -632,7 +651,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         })
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
 
     Assert.assertEquals(3, compactedSegments.size());
 
@@ -689,8 +710,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
+
     final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(
-        runTask(compactionTask).getSegments()
+        compactedSegments
     );
     Assert.assertEquals(3, intervalToSegments.size());
     Assert.assertEquals(
@@ -735,8 +760,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
+
     final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(
-        runTask(compactionTask).getSegments()
+        compactedSegments
     );
     Assert.assertEquals(3, intervalToSegments.size());
     Assert.assertEquals(
@@ -825,7 +854,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null, null))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
 
     usedSegments = getCoordinatorClient().fetchUsedSegments(
         DATA_SOURCE,
@@ -870,7 +901,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null, null))
         .build();
 
-    final Set<DataSegment> compactedSegments = runTask(compactionTask).getSegments();
+    final SegmentAndSchemas segmentAndSchemas = runTask(compactionTask);
+    verifySchema(segmentAndSchemas);
+    final Set<DataSegment> compactedSegments = segmentAndSchemas.getSegments();
 
     usedSegments = getCoordinatorClient().fetchUsedSegments(
         DATA_SOURCE,
@@ -953,7 +986,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         indexTask.getInputSourceResources()
     );
 
-    runTask(indexTask);
+    final SegmentAndSchemas segmentAndSchemas = runTask(indexTask);
+    verifySchema(segmentAndSchemas);
   }
 
   private SegmentAndSchemas runTask(Task task)

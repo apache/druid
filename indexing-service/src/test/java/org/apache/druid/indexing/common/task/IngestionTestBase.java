@@ -71,6 +71,7 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -87,6 +88,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -538,5 +540,18 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+  }
+
+  public void verifySchema(SegmentAndSchemas segmentAndSchemas)
+  {
+    int nonTombstoneSegments = 0;
+    for (DataSegment segment : segmentAndSchemas.getSegments()) {
+      if (segment.isTombstone()) {
+        continue;
+      }
+      nonTombstoneSegments++;
+      Assert.assertTrue(segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+    }
+    Assert.assertEquals(nonTombstoneSegments, segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
   }
 }
