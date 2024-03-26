@@ -46,7 +46,6 @@ import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
@@ -174,10 +173,15 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   public Object mergeAccumulatedResult(Object accumulated, Object otherAccumulated)
   {
     // If a worker does not return a list, fail the query
-    if (!(accumulated instanceof List) || !(otherAccumulated instanceof List)) {
+    if (!(accumulated instanceof List)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build("Expected a list result from worker, received [%s] instead. This might be due to workers having an older version.");
+                          .build("Expected a list result from worker, received [%s] instead. This might be due to workers having an older version.", accumulated.getClass());
+    }
+    if (!(otherAccumulated instanceof List)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Expected a list result from worker, received [%s] instead. This might be due to workers having an older version.", otherAccumulated.getClass());
     }
     ((List<String>) accumulated).addAll((List<String>) otherAccumulated);
     return accumulated;
