@@ -136,8 +136,7 @@ public class MetadataResourceTest
                ArgumentMatchers.any(),
                ArgumentMatchers.any(),
                ArgumentMatchers.any(),
-               ArgumentMatchers.any()
-           );
+               ArgumentMatchers.any());
 
     metadataResource = new MetadataResource(
         segmentsMetadataManager,
@@ -361,7 +360,7 @@ public class MetadataResourceTest
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, "2015/2014", null, null, null);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(
-        "Bad interval[2015/2014]: [The end instant must be greater than the start instant]",
+        "Invalid interval[2015/2014]: [The end instant must be greater than the start instant]",
         getExceptionMessage(response)
     );
   }
