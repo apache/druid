@@ -58,7 +58,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -133,8 +132,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     monitorSchedulerConfig = EasyMock.mock(DruidMonitorSchedulerConfig.class);
     supervisorStateManagerConfig = EasyMock.mock(SupervisorStateManagerConfig.class);
     supervisor4 = EasyMock.mock(SeekableStreamSupervisor.class);
-
-    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(null).anyTimes();
   }
 
   private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
@@ -624,9 +621,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
             .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getStream()).andReturn("stream").anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
+    EasyMock.expect(supervisor4.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.replay(supervisor4);
 
     TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
@@ -697,8 +696,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
                 "1"
             ), AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getStream()).andReturn("stream").anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
+    EasyMock.expect(supervisor4.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
