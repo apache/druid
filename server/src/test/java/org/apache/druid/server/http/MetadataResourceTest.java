@@ -136,7 +136,8 @@ public class MetadataResourceTest
                ArgumentMatchers.any(),
                ArgumentMatchers.any(),
                ArgumentMatchers.any(),
-               ArgumentMatchers.any());
+               ArgumentMatchers.any()
+           );
 
     metadataResource = new MetadataResource(
         segmentsMetadataManager,
@@ -262,7 +263,7 @@ public class MetadataResourceTest
 
 
   @Test
-  public void testGetUnusedSegmentsInDataSourceWithValidDataSource()
+  public void testGetUnusedSegmentsInDataSource()
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null, null);
