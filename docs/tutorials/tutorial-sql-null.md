@@ -87,7 +87,7 @@ Note the difference in the empty string value for example 3 and the null string 
 ## String query example
 
 The queries in this section illustrate null handling with strings.
-The following query filters rows where the string value is not equal to "some_value":
+The following query filters rows where the string value is not equal to `some_value`:
 
 ```sql
 SELECT COUNT(*)
@@ -95,7 +95,7 @@ FROM "null_example"
 WHERE "string_value" != 'some_value'
 ```
 
-Druid returns 2 for "another_value" and the empty string "". The null value is not counted.
+Druid returns 2 for `another_value` and the empty string `""`. The null value is not counted.
 
 Note that the null value is included in COUNT(*) but not as a count of the values in the column as follows:
 
@@ -118,7 +118,7 @@ Druid returns the following data:
 
 Also note that GROUP BY expressions yields distinct entries for `null` and the empty string.
 
-### Filter for emplty strings in addition to null
+### Filter for empty strings in addition to null
 
 If your queries rely on treating empty strings and null values the same, you can use an OR operator in the filter. For example to select all rows with null values or empty strings:
 
@@ -156,7 +156,7 @@ WHERE "numeric_value" < 2
 
 Druid returns 1. The `null` values for examples 3 and 4 are excluded.
 
-Additionaly, be aware that null values do not behave as 0. For examples:
+Additionally, be aware that null values do not behave as 0. For examples:
 
 ```sql
 SELECT numeric_value + 1

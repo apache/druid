@@ -170,7 +170,7 @@ For example, the following expressions are equivalent:
 - col IS NULL
 - col = ''
 Both evaluate to true if col contains an empty string.
-Similarly, the expression COALESCE(col1, col2) returns col2 if col1 is an empty string.
+Similarly, the expression COALESCE(`col1`, `col2`) returns `col2` if `col1` is an empty string.
 The COUNT(*) aggregator counts all rows but the COUNT(expr) aggregator counts the number of rows where expr is neither null nor the empty string.
 
 ## Boolean logic
