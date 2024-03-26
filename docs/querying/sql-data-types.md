@@ -140,7 +140,7 @@ as regular JSON arrays instead of in stringified form.
 
 ## NULL values
 
-By default, Druid treats NULL values closely to the SQL standard.
+By default, Druid treats NULL values similarly to the ANSI SQL standard.
 In the default mode:
 - numeric NULL is permitted
 - NULL values and empty strings are not equal.
