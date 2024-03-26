@@ -304,4 +304,45 @@ public class WorkerTaskManagerTest
   {
     return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
+
+  private NoopTask createNoopTask(String id, String dataSource)
+  {
+    return new NoopTask(id, null, dataSource, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+  }
+
+  @Test
+  public void getWorkerTaskStatsTest() throws Exception
+  {
+    Task task1 = createNoopTask("task1", "wikipedia");
+    Task task2 = createNoopTask("task2", "wikipedia");
+    Task task3 = createNoopTask("task3", "animals");
+
+    workerTaskManager.start();
+    // befor assigning tasks we should get no running tasks
+    Assert.assertEquals(workerTaskManager.getWorkerRunningTasks().size(), 0L);
+
+    workerTaskManager.assignTask(task1);
+    workerTaskManager.assignTask(task2);
+    workerTaskManager.assignTask(task3);
+
+    Thread.sleep(25);
+    //should return all 3 tasks as running
+    Assert.assertEquals(workerTaskManager.getWorkerRunningTasks(), ImmutableMap.of(
+        "wikipedia", 2L,
+        "animals", 1L
+    ));
+
+    Map<String, Long> runningTasks;
+    do {
+      runningTasks = workerTaskManager.getWorkerRunningTasks();
+      Thread.sleep(10);
+    } while (!runningTasks.isEmpty());
+
+    // When running tasks are empty all task should be reported as completed
+    Assert.assertEquals(workerTaskManager.getWorkerCompletedTasks(), ImmutableMap.of(
+        "wikipedia", 2L,
+        "animals", 1L
+    ));
+    Assert.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
+  }
 }

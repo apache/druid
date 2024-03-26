@@ -50,6 +50,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
+import org.apache.druid.utils.CollectionUtils;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
@@ -58,6 +60,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -67,6 +71,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -76,7 +81,7 @@ import java.util.stream.Collectors;
  * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
  * active tasks to see which completed tasks are safe to delete.
  */
-public class WorkerTaskManager
+public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
@@ -600,6 +605,34 @@ public class WorkerTaskManager
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
     return !disabled.get();
+  }
+
+  private <T> Map<String, Long> getNumTasksPerDatasource(Collection<T> taskList, Function<T, String> getDataSourceFunc)
+  {
+    final Map<String, Long> dataSourceToTaskCount = new HashMap<>();
+
+    for (T task : taskList) {
+      dataSourceToTaskCount.merge(getDataSourceFunc.apply(task), 1L, Long::sum);
+    }
+    return dataSourceToTaskCount;
+  }
+
+  @Override
+  public Map<String, Long> getWorkerRunningTasks()
+  {
+    return getNumTasksPerDatasource(CollectionUtils.mapValues(runningTasks, detail -> detail.task).values(), Task::getDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerAssignedTasks()
+  {
+    return getNumTasksPerDatasource(assignedTasks.values(), Task::getDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerCompletedTasks()
+  {
+    return getNumTasksPerDatasource(this.getCompletedTasks().values(), TaskAnnouncement::getTaskDataSource);
   }
 
   private static class TaskDetails
