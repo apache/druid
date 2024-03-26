@@ -138,7 +138,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .build();
     final Map<Interval, List<DataSegment>> compactedSegments = SegmentUtils.groupSegmentsByInterval(
-        runTask(compactionTask, TaskState.SUCCESS)
+        runTask(compactionTask, TaskState.SUCCESS).getSegments()
     );
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
@@ -192,7 +192,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .build();
     final Map<Interval, List<DataSegment>> compactedSegments = SegmentUtils.groupSegmentsByInterval(
-        runTask(compactionTask, TaskState.SUCCESS)
+        runTask(compactionTask, TaskState.SUCCESS).getSegments()
     );
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
@@ -221,7 +221,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         expectedTaskState,
         appendToExisting,
         false
-    );
+    ).getSegments();
   }
 
   private Builder newCompactionTaskBuilder()

@@ -1021,7 +1021,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
 
-
         log.debugSegments(tombStones, "To publish tombstones");
       }
 

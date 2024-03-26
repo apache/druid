@@ -87,6 +87,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -522,13 +523,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public Set<DataSegment> getPublishedSegments(String taskId)
+    public SegmentAndSchemas getPublishedSegments(String taskId)
     {
       final TaskContainer taskContainer = tasks.get(taskId);
       if (taskContainer == null || taskContainer.actionClient == null) {
-        return Collections.emptySet();
+        return new SegmentAndSchemas();
       } else {
-        return taskContainer.actionClient.getPublishedSegments();
+        return new SegmentAndSchemas(taskContainer.actionClient.getPublishedSegments(), taskContainer.actionClient.getSegmentSchemas());
       }
     }
   }
@@ -632,7 +633,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public Set<DataSegment> getPublishedSegments(Task task)
+    public SegmentAndSchemas getSegmentAndSchemas(Task task)
     {
       return taskRunner.getPublishedSegments(task.getId());
     }
@@ -679,6 +680,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     TaskConfig config = new TaskConfigBuilder()
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -716,7 +719,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .taskLogPusher(null)
         .attemptId("1")
         .emitter(new StubServiceEmitter())
-        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 

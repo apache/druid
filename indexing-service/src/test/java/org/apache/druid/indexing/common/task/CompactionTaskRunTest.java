@@ -78,6 +78,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -127,6 +128,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -272,7 +274,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testRunWithDynamicPartitioning() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -284,11 +287,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
-
+    final Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    final List<DataSegment> segments = resultPair.rhs;
+    final SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -328,7 +332,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     if (lockGranularity == LockGranularity.SEGMENT) {
       return;
     }
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -376,11 +381,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         )
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
-
+    final Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    final List<DataSegment> segments = resultPair.rhs;
+    final SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(6, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -426,7 +432,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testRunCompactionTwice() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -438,11 +445,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -476,10 +484,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .build();
 
     resultPair = runTask(compactionTask2);
-
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    segments = resultPair.rhs;
+    segmentAndSchemas = resultPair.rhs;
+    segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -518,7 +527,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testRunIndexAndCompactAtTheSameTimeForDifferentInterval() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -565,17 +575,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null
     );
 
-    final Future<Pair<TaskStatus, List<DataSegment>>> compactionFuture = exec.submit(
+    final Future<Pair<TaskStatus, SegmentAndSchemas>> compactionFuture = exec.submit(
         () -> runTask(compactionTask)
     );
 
-    final Future<Pair<TaskStatus, List<DataSegment>>> indexFuture = exec.submit(
+    final Future<Pair<TaskStatus, SegmentAndSchemas>> indexFuture = exec.submit(
         () -> runTask(indexTask)
     );
 
     Assert.assertTrue(indexFuture.get().lhs.isSuccess());
 
-    List<DataSegment> segments = indexFuture.get().rhs;
+    SegmentAndSchemas segmentAndSchemas = indexFuture.get().rhs;
+    verifySchema(segmentAndSchemas);
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(6, segments.size());
 
     for (int i = 0; i < 6; i++) {
@@ -592,7 +604,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     Assert.assertTrue(compactionFuture.get().lhs.isSuccess());
 
-    segments = compactionFuture.get().rhs;
+    segmentAndSchemas = compactionFuture.get().rhs;
+    verifySchema(segmentAndSchemas);
+    segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -625,7 +639,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithSegmentGranularity() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -639,11 +654,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .segmentGranularity(Granularities.DAY)
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -665,10 +681,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .build();
 
     resultPair = runTask(compactionTask2);
+    verifySchema(resultPair.rhs);
 
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    segments = resultPair.rhs;
+    segmentAndSchemas = resultPair.rhs;
+    segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -691,7 +709,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithSegmentGranularityMisalignedInterval() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -725,7 +744,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithSegmentGranularityMisalignedIntervalAllowed() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -745,11 +765,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .segmentGranularity(Granularities.WEEK)
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -768,7 +789,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testCompactionWithFilterInTransformSpec() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -783,11 +805,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -826,7 +849,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testCompactionWithNewMetricInMetricsSpec() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -844,11 +868,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         })
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -890,7 +915,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithGranularitySpecNonNullSegmentGranularityAndNullQueryGranularity() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -904,11 +930,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -930,10 +957,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .build();
 
     resultPair = runTask(compactionTask2);
-
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    segments = resultPair.rhs;
+    segmentAndSchemas = resultPair.rhs;
+    segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
@@ -956,7 +984,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithGranularitySpecNonNullQueryGranularityAndNullSegmentGranularity() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -970,11 +999,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND, null))
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(3, segments.size());
 
@@ -1008,7 +1038,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithGranularitySpecNonNullQueryGranularityAndNonNullSegmentGranularity() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1022,11 +1053,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY, null))
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -1045,7 +1077,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testWithGranularitySpecNullQueryGranularityAndNullSegmentGranularity() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1058,11 +1091,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, null))
         .build();
 
-    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
-
+    Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask1);
+    verifySchema(resultPair.rhs);
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    List<DataSegment> segments = resultPair.rhs;
+    SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
 
     Assert.assertEquals(3, segments.size());
 
@@ -1096,7 +1130,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testCompactThenAppend() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1108,13 +1143,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> compactionResult = runTask(compactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> compactionResult = runTask(compactionTask);
+    verifySchema(compactionResult.rhs);
     Assert.assertTrue(compactionResult.lhs.isSuccess());
-    final Set<DataSegment> expectedSegments = new HashSet<>(compactionResult.rhs);
+    final SegmentAndSchemas segmentAndSchemas = compactionResult.rhs;
+    final Set<DataSegment> expectedSegments = segmentAndSchemas.getSegments();
 
-    final Pair<TaskStatus, List<DataSegment>> appendResult = runAppendTask();
+    final Pair<TaskStatus, SegmentAndSchemas> appendResult = runAppendTask();
+    verifySchema(appendResult.rhs);
     Assert.assertTrue(appendResult.lhs.isSuccess());
-    expectedSegments.addAll(appendResult.rhs);
+    SegmentAndSchemas segmentAndSchemasAppendResult = appendResult.rhs;
+    expectedSegments.addAll(segmentAndSchemasAppendResult.getSegments());
 
     final Set<DataSegment> usedSegments = new HashSet<>(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
@@ -1153,8 +1192,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // there are 10 rows total in data set
 
     // maxRowsPerSegment is set to 2 inside the runIndexTask methods
-    Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
-    Assert.assertEquals(6, result.rhs.size());
+    Pair<TaskStatus, SegmentAndSchemas> result = runIndexTask();
+    Assert.assertEquals(6, result.rhs.getSegments().size());
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1176,7 +1215,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         // Set dropExisting to true
         .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
         .build();
-    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> partialCompactionResult = runTask(partialCompactionTask);
+    verifySchema(partialCompactionResult.rhs);
     Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
 
     // Segments that did not belong in the compaction interval (hours 00 and 02) are expected unchanged
@@ -1197,7 +1237,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Segments.ONLY_VISIBLE
         )
     );
-    expectedSegments.addAll(partialCompactionResult.rhs);
+    expectedSegments.addAll(partialCompactionResult.rhs.getSegments());
     Assert.assertEquals(64, expectedSegments.size());
 
     // New segments that were compacted are expected. However, old segments of the compacted interval should be
@@ -1239,7 +1279,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .build();
 
     // **** FULL COMPACTION ****
-    final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> fullCompactionResult = runTask(fullCompactionTask);
+    verifySchema(fullCompactionResult.rhs);
     Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
 
 
@@ -1307,8 +1348,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // there are 10 rows total in data set
 
     // maxRowsPerSegment is set to 2 inside the runIndexTask methods
-    Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
-    Assert.assertEquals(6, result.rhs.size());
+    Pair<TaskStatus, SegmentAndSchemas> result = runIndexTask();
+    Assert.assertEquals(6, result.rhs.getSegments().size());
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1332,7 +1373,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         // Set dropExisting to true
         .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
         .build();
-    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> partialCompactionResult = runTask(partialCompactionTask);
+    verifySchema(partialCompactionResult.rhs);
     Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
 
     // Segments that did not belong in the compaction interval (hours 00 and 02) are expected unchanged
@@ -1353,7 +1395,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Segments.ONLY_VISIBLE
         )
     );
-    expectedSegments.addAll(partialCompactionResult.rhs);
+    expectedSegments.addAll(partialCompactionResult.rhs.getSegments());
     Assert.assertEquals(64, expectedSegments.size());
 
     // New segments that were compacted are expected. However, old segments of the compacted interval should be
@@ -1387,13 +1429,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .build();
 
     // **** Compaction over tombstones ****
-    final Pair<TaskStatus, List<DataSegment>> resultOverOnlyTombstones = runTask(compactionTaskOverOnlyTombstones);
+    final Pair<TaskStatus, SegmentAndSchemas> resultOverOnlyTombstones = runTask(compactionTaskOverOnlyTombstones);
+    verifySchema(resultOverOnlyTombstones.rhs);
     Assert.assertTrue(resultOverOnlyTombstones.lhs.isSuccess());
 
     // compaction should not fail but since it is over the same granularity it should leave
     // the tombstones unchanged
-    Assert.assertEquals(59, resultOverOnlyTombstones.rhs.size());
-    resultOverOnlyTombstones.rhs.forEach(t -> Assert.assertTrue(t.isTombstone()));
+    Assert.assertEquals(59, resultOverOnlyTombstones.rhs.getSegments().size());
+    resultOverOnlyTombstones.rhs.getSegments().forEach(t -> Assert.assertTrue(t.isTombstone()));
   }
 
   @Test
@@ -1405,7 +1448,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
       return;
     }
 
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Set<DataSegment> expectedSegments = new HashSet<>(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
@@ -1428,10 +1472,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .inputSpec(new CompactionIntervalSpec(partialInterval, null), false)
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> partialCompactionResult = runTask(partialCompactionTask);
+    verifySchema(partialCompactionResult.rhs);
     Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
     // All segments in the previous expectedSegments should still appear as they have larger segment granularity.
-    expectedSegments.addAll(partialCompactionResult.rhs);
+    expectedSegments.addAll(partialCompactionResult.rhs.getSegments());
 
     final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
@@ -1449,7 +1494,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), false)
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> fullCompactionResult = runTask(fullCompactionTask);
+    verifySchema(fullCompactionResult.rhs);
     Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
 
     final List<DataSegment> segmentsAfterFullCompaction = new ArrayList<>(
@@ -1475,12 +1521,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
   @Test
   public void testRunIndexAndCompactForSameSegmentAtTheSameTime() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     // make sure that indexTask becomes ready first, then compactionTask becomes ready, then indexTask runs
     final CountDownLatch compactionTaskReadyLatch = new CountDownLatch(1);
     final CountDownLatch indexTaskStartLatch = new CountDownLatch(1);
-    final Future<Pair<TaskStatus, List<DataSegment>>> indexFuture = exec.submit(
+    final Future<Pair<TaskStatus, SegmentAndSchemas>> indexFuture = exec.submit(
         () -> runIndexTask(compactionTaskReadyLatch, indexTaskStartLatch, false)
     );
 
@@ -1494,7 +1541,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01T00:00:00/2014-01-02T03:00:00"))
         .build();
 
-    final Future<Pair<TaskStatus, List<DataSegment>>> compactionFuture = exec.submit(
+    final Future<Pair<TaskStatus, SegmentAndSchemas>> compactionFuture = exec.submit(
         () -> {
           compactionTaskReadyLatch.await();
           return runTask(compactionTask, indexTaskStartLatch, null);
@@ -1502,8 +1549,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     Assert.assertTrue(indexFuture.get().lhs.isSuccess());
+    verifySchema(indexFuture.get().rhs);
 
-    List<DataSegment> segments = indexFuture.get().rhs;
+    List<DataSegment> segments = new ArrayList<>(indexFuture.get().rhs.getSegments());
     Assert.assertEquals(6, segments.size());
 
     for (int i = 0; i < 6; i++) {
@@ -1527,14 +1575,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
     }
 
-    final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();
+    final Pair<TaskStatus, SegmentAndSchemas> compactionResult = compactionFuture.get();
+    verifySchema(compactionResult.rhs);
     Assert.assertEquals(TaskState.FAILED, compactionResult.lhs.getStatusCode());
   }
 
   @Test
   public void testRunIndexAndCompactForSameSegmentAtTheSameTime2() throws Exception
   {
-    runIndexTask();
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask();
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1549,9 +1599,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // make sure that compactionTask becomes ready first, then the indexTask becomes ready, then compactionTask runs
     final CountDownLatch indexTaskReadyLatch = new CountDownLatch(1);
     final CountDownLatch compactionTaskStartLatch = new CountDownLatch(1);
-    final Future<Pair<TaskStatus, List<DataSegment>>> compactionFuture = exec.submit(
+    final Future<Pair<TaskStatus, SegmentAndSchemas>> compactionFuture = exec.submit(
         () -> {
-          final Pair<TaskStatus, List<DataSegment>> pair = runTask(
+          final Pair<TaskStatus, SegmentAndSchemas> pair = runTask(
               compactionTask,
               indexTaskReadyLatch,
               compactionTaskStartLatch
@@ -1560,7 +1610,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         }
     );
 
-    final Future<Pair<TaskStatus, List<DataSegment>>> indexFuture = exec.submit(
+    final Future<Pair<TaskStatus, SegmentAndSchemas>> indexFuture = exec.submit(
         () -> {
           indexTaskReadyLatch.await();
           return runIndexTask(compactionTaskStartLatch, null, false);
@@ -1568,8 +1618,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     Assert.assertTrue(indexFuture.get().lhs.isSuccess());
+    verifySchema(indexFuture.get().rhs);
 
-    List<DataSegment> segments = indexFuture.get().rhs;
+    List<DataSegment> segments = new ArrayList<>(indexFuture.get().rhs.getSegments());
     Assert.assertEquals(6, segments.size());
 
     for (int i = 0; i < 6; i++) {
@@ -1593,7 +1644,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
     }
 
-    final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();
+    final Pair<TaskStatus, SegmentAndSchemas> compactionResult = compactionFuture.get();
+    verifySchema(compactionResult.rhs);
     Assert.assertEquals(TaskState.FAILED, compactionResult.lhs.getStatusCode());
   }
 
@@ -1622,7 +1674,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         false,
         0
     );
-    runIndexTask(null, null, spatialSpec, spatialrows, false);
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask(null, null, spatialSpec, spatialrows, false);
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1634,11 +1687,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
 
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    final List<DataSegment> segments = resultPair.rhs;
+    final List<DataSegment> segments = new ArrayList<>(resultPair.rhs.getSegments());
     Assert.assertEquals(2, segments.size());
 
     for (int i = 0; i < 2; i++) {
@@ -1752,7 +1806,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         false,
         0
     );
-    runIndexTask(null, null, spec, rows, false);
+    Pair<TaskStatus, SegmentAndSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
+    verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1764,11 +1819,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+    final Pair<TaskStatus, SegmentAndSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
 
     Assert.assertTrue(resultPair.lhs.isSuccess());
 
-    final List<DataSegment> segments = resultPair.rhs;
+    final SegmentAndSchemas segmentAndSchemas = resultPair.rhs;
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchemas.getSegments());
     Assert.assertEquals(2, segments.size());
 
     for (int i = 0; i < 2; i++) {
@@ -1863,17 +1920,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(rows, rowsFromSegment);
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runIndexTask() throws Exception
+  private Pair<TaskStatus, SegmentAndSchemas> runIndexTask() throws Exception
   {
     return runIndexTask(null, null, false);
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runAppendTask() throws Exception
+  private Pair<TaskStatus, SegmentAndSchemas> runAppendTask() throws Exception
   {
     return runIndexTask(null, null, true);
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runIndexTask(
+  private Pair<TaskStatus, SegmentAndSchemas> runIndexTask(
       @Nullable CountDownLatch readyLatchToCountDown,
       @Nullable CountDownLatch latchToAwaitBeforeRun,
       boolean appendToExisting
@@ -1911,7 +1968,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     return runTask(indexTask, readyLatchToCountDown, latchToAwaitBeforeRun);
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runIndexTask(
+  private Pair<TaskStatus, SegmentAndSchemas> runIndexTask(
       @Nullable CountDownLatch readyLatchToCountDown,
       @Nullable CountDownLatch latchToAwaitBeforeRun,
       ParseSpec parseSpec,
@@ -1951,12 +2008,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     return runTask(indexTask, readyLatchToCountDown, latchToAwaitBeforeRun);
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runTask(Task task) throws Exception
+  private Pair<TaskStatus, SegmentAndSchemas> runTask(Task task) throws Exception
   {
     return runTask(task, null, null);
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runTask(
+  private Pair<TaskStatus, SegmentAndSchemas> runTask(
       Task task,
       @Nullable CountDownLatch readyLatchToCountDown,
       @Nullable CountDownLatch latchToAwaitBeforeRun
@@ -1982,11 +2039,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
       TaskStatus status = task.run(box);
       shutdownTask(task);
-      final List<DataSegment> segments = new ArrayList<>(
-          ((TestLocalTaskActionClient) box.getTaskActionClient()).getPublishedSegments()
+      return Pair.of(
+          status,
+          new SegmentAndSchemas(
+              new TreeSet<>(((TestLocalTaskActionClient) box.getTaskActionClient()).getPublishedSegments()),
+              ((TestLocalTaskActionClient) box.getTaskActionClient()).getSegmentSchemas())
       );
-      Collections.sort(segments);
-      return Pair.of(status, segments);
     } else {
       throw new ISE("task[%s] is not ready", task.getId());
     }
@@ -2009,6 +2067,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final TaskConfig config = new TaskConfigBuilder()
             .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskActionClient(createActionClient(task))
@@ -2029,7 +2089,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .coordinatorClient(coordinatorClient)
         .taskLogPusher(null)
         .attemptId("1")
-        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 
@@ -2089,6 +2149,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
     }
 
     return rowsFromSegment;
+  }
+
+  private void verifySchema(SegmentAndSchemas segmentAndSchemas)
+  {
+    int nonTombstoneSegments = 0;
+    for (DataSegment segment : segmentAndSchemas.getSegments()) {
+      if (segment.isTombstone()) {
+        continue;
+      }
+      nonTombstoneSegments++;
+      Assert.assertTrue(segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+    }
+    Assert.assertEquals(nonTombstoneSegments, segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
   }
 
   private static String makeCSVFormatRow(

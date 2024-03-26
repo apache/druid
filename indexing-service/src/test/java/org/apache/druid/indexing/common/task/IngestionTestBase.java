@@ -337,7 +337,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
-    private MinimalSegmentSchemas segmentSchemas = null;
+    private MinimalSegmentSchemas segmentSchemas = new MinimalSegmentSchemas();
 
     private TestLocalTaskActionClient(Task task)
     {
@@ -350,10 +350,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       final RetType result = super.submit(taskAction);
       if (taskAction instanceof SegmentTransactionalInsertAction) {
         publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
-        segmentSchemas = ((SegmentTransactionalInsertAction) taskAction).getMinimalSegmentSchemas();
+        segmentSchemas.merge(((SegmentTransactionalInsertAction) taskAction).getMinimalSegmentSchemas());
       } else if (taskAction instanceof SegmentInsertAction) {
         publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
-        segmentSchemas = ((SegmentInsertAction) taskAction).getMinimalSegmentSchemas();
+        segmentSchemas.merge(((SegmentInsertAction) taskAction).getMinimalSegmentSchemas());
       }
       return result;
     }
