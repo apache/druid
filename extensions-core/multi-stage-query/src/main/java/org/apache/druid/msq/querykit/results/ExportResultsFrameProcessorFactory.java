@@ -127,10 +127,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
     if (inputSliceReader.numReadableInputs(slice) == 0) {
       return new ProcessorsAndChannels<>(
           ProcessorManagers.of(Sequences.<ExportResultsFrameProcessor>empty())
-                           .withAccumulation(new ArrayList<String>(), (acc, file) -> {
-                             ((ArrayList<String>) acc).add((String) file);
-                             return acc;
-                           }),
+                           .withAccumulation(new ArrayList<String>(), (acc, file) -> acc),
           OutputChannels.none()
       );
     }

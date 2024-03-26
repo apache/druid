@@ -108,7 +108,6 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 ...
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-partition24.csv
 ```
-- `_symlink_format_manifest/druid_export_meta`: Used to store additional information about the export metadata, such as the version of the manifest file format.
 
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
