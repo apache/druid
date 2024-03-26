@@ -196,8 +196,9 @@ task's `IOConfig` as follows:
 |`false`|`false`|`REPLACE_LEGACY`. The default for JSON-based batch ingestion. |
 |`false`|`true`|`REPLACE`|
 
-The `tags` dimension is reported only for metrics emitted from ingestion tasks whose ingest spec specifies the `tags`
-field in the `context` field of the ingestion spec. `tags` is expected to be a map of string to object.
+The `tags` dimension enhances metrics, task reports, and the Peon service/heartbeat metric associated with ingestion tasks. These tags are derived from both the ingestion specification—when the `tags` field is specified within the task's context—and system-generated sources. The tags field within a task's `context` should be a map with string keys and object values, facilitating the inclusion of custom metadata. However, tags can also be automatically generated and added by the system, providing a comprehensive set of metadata for monitoring and analysis purposes.
+
+To further customize and enrich task metadata, developers can extend the `TaskIdentitiesProvider` interface. By implementing custom logic within this interface, additional tags can be introduced. This capability allows for enhanced observability and management of tasks, as these additional tags can offer deeper insights into task execution, performance, and outcomes.
 
 ### Ingestion metrics for Kafka
 
