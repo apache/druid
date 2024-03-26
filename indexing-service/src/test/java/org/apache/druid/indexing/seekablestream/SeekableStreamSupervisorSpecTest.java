@@ -782,11 +782,13 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
-    Assert.assertTrue(metricCapture.getValues()
-                                   .stream()
-                                   .map(metric -> metric.build(ImmutableMap.of()))
-                                   .map(ServiceMetricEvent::getMetric)
-                                   .anyMatch("ingest/skipScaleUp/count"::equals));
+    Assert.assertTrue(
+        metricCapture
+            .getValues()
+            .stream()
+            .map(metric -> metric.build(ImmutableMap.of()))
+            .map(ServiceMetricEvent::getMetric)
+            .anyMatch(LagBasedAutoScaler.REQUIRED_TASKS_METRIC::equals));
     EasyMock.verify(dynamicActionEmitter);
     autoScaler.reset();
     autoScaler.stop();

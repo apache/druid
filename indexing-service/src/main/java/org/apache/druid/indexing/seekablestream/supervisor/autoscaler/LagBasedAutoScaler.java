@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +40,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 {
+  public static final String SKIP_REASON_DIMENSION = "skipReason";
+  public static final String REQUIRED_TASKS_METRIC = "ingest/autoScaler/lagBased/requiredTasks";
   private static final EmittingLogger log = new EmittingLogger(LagBasedAutoScaler.class);
   private final String dataSource;
   private final CircularFifoQueue<Long> lagMetricsQueue;
@@ -47,6 +51,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   private final SeekableStreamSupervisor supervisor;
   private final LagBasedAutoScalerConfig lagBasedAutoScalerConfig;
   private final ServiceEmitter emitter;
+  private final ServiceMetricEvent.Builder metricbuilder;
 
   private static final ReentrantLock LOCK = new ReentrantLock(true);
 
@@ -69,6 +74,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     this.spec = spec;
     this.supervisor = supervisor;
     this.emitter = emitter;
+    metricbuilder = ServiceMetricEvent.builder()
+                                      .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                      .setDimension(DruidMetrics.STREAM, this.supervisor.getIoConfig().getStream());
   }
 
   @Override
@@ -221,6 +229,11 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         log.warn("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
             dataSource
         );
+        emitter.emit(
+            metricbuilder
+                .setDimension(SKIP_REASON_DIMENSION, "AT_MAX")
+                .setMetric(REQUIRED_TASKS_METRIC, taskCount)
+        );
         return -1;
       } else {
         desiredActiveTaskCount = Math.min(taskCount, actualTaskCountMax);
@@ -234,6 +247,11 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       if (currentActiveTaskCount == lagBasedAutoScalerConfig.getTaskCountMin()) {
         log.warn("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource [%s].",
             dataSource
+        );
+        emitter.emit(
+            metricbuilder
+                .setDimension(SKIP_REASON_DIMENSION, "AT_MIN")
+                .setMetric(REQUIRED_TASKS_METRIC, taskCount)
         );
         return -1;
       } else {

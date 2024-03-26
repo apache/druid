@@ -77,6 +77,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScaler;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
@@ -404,17 +405,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Callable<Integer> scaleAction;
     ServiceEmitter emitter;
-    ServiceMetricEvent.Builder event;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
     DynamicAllocationTasksNotice(Callable<Integer> scaleAction, ServiceEmitter emitter)
     {
       this.scaleAction = scaleAction;
       this.emitter = emitter;
-      this.event = new ServiceMetricEvent.Builder()
-          .setDimension(DruidMetrics.DATASOURCE, dataSource)
-          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-          .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS));
     }
 
     /**
@@ -456,22 +452,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
           }
           final Integer desriedTaskCount = scaleAction.call();
+          ServiceMetricEvent.Builder event = ServiceMetricEvent
+              .builder()
+              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
-                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
+                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it! desried task count is [%s], active task count is [%s]",
                 nowTime - dynamicTriggerLastRunTime,
                 autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(),
-                dataSource
+                dataSource,
+                desriedTaskCount,
+                getActiveTaskGroupsCount()
             );
 
-            int currentActiveTasks = currentActiveTaskCount();
-            if (desriedTaskCount > currentActiveTasks) {
-              emitter.emit(event.setMetric("ingest/skipScaleUp/count", 1));
-            } else if (desriedTaskCount < currentActiveTasks && desriedTaskCount > 0) {
-              emitter.emit(event.setMetric("ingest/skipScaleDown/count", 1));
+            if (desriedTaskCount > 0) {
+              emitter.emit(
+                  event
+                      .setDimension(LagBasedAutoScaler.SKIP_REASON_DIMENSION, "MIN_TRIGGER_SCALE_ACTION_FREQUENCY")
+                      .setMetric(LagBasedAutoScaler.REQUIRED_TASKS_METRIC, desriedTaskCount));
             }
             return;
           }
+
+          if (desriedTaskCount > 0) {
+            emitter.emit(event.setMetric(LagBasedAutoScaler.REQUIRED_TASKS_METRIC, desriedTaskCount));
+          }
+
           boolean allocationSuccess = changeTaskCount(desriedTaskCount);
           if (allocationSuccess) {
             dynamicTriggerLastRunTime = nowTime;
@@ -507,7 +514,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
-    int currentActiveTaskCount = currentActiveTaskCount();
+    int currentActiveTaskCount;
+    Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
+    currentActiveTaskCount = activeTaskGroups.size();
 
     if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
@@ -524,11 +533,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }
-  }
-
-  private int currentActiveTaskCount()
-  {
-    return activelyReadingTaskGroups.values().size();
   }
 
   private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
