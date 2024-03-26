@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.error.DruidException;
@@ -43,6 +44,8 @@ import java.util.List;
 public class S3ExportStorageProvider implements ExportStorageProvider
 {
   public static final String TYPE_NAME = S3InputSource.TYPE_KEY;
+  private static final String DELIM = "/";
+  private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   @JsonProperty
   private final String bucket;
   @JsonProperty
@@ -142,5 +145,11 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   public String getBasePath()
   {
     return new CloudObjectLocation(bucket, prefix).toUri(S3StorageDruidModule.SCHEME).toString();
+  }
+
+  @Override
+  public String getFilePathForManifest(String fileName)
+  {
+    return new CloudObjectLocation(bucket, JOINER.join(prefix, fileName)).toUri(S3StorageDruidModule.SCHEME).toString();
   }
 }

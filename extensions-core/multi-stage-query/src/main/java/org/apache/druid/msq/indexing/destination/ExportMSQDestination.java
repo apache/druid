@@ -52,8 +52,6 @@ public class ExportMSQDestination implements MSQDestination
     this.resultFormat = resultFormat;
   }
 
-
-
   @JsonProperty("exportStorageProvider")
   public ExportStorageProvider getExportStorageProvider()
   {

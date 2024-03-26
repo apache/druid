@@ -33,7 +33,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
@@ -130,7 +129,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     }
 
     if (inputChannel.isFinished()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(exportFilePath);
     } else {
       exportFrame(inputChannel.read());
       return ReturnOrAwait.awaitAll(1);

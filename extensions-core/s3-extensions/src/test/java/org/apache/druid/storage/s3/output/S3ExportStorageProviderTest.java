@@ -57,4 +57,13 @@ public class S3ExportStorageProviderTest
         () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath123")
     );
   }
+
+  @Test
+  public void testExportManifestFilePath()
+  {
+    Assert.assertEquals(
+        "s3://export-bucket/export/table/file1",
+        new S3ExportStorageProvider("export-bucket", "export/table").getFilePathForManifest("file1")
+    );
+  }
 }
