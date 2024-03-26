@@ -1251,7 +1251,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   protected Map<String, Object> getTaskCompletionRowStats()
   {
-    return doGetRowStatsAndUnparseableEvents(true, true).lhs;
+    return doGetRowStatsAndUnparseableEvents(true, false).lhs;
   }
 
   @Override
@@ -1607,8 +1607,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         LOG.warn("Got an empty task report from subtask: " + pushedSegmentsReport.getTaskId());
         continue;
       }
-      RowIngestionMetersTotals rowIngestionMetersTotals =
-          getBuildSegmentsStatsFromTaskReport(taskReport, includeUnparseable, unparseableEvents);
+      RowIngestionMetersTotals rowIngestionMetersTotals = getBuildSegmentsStatsFromTaskReport(
+          taskReport,
+          includeUnparseable ? unparseableEvents : null
+      );
 
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     }
@@ -1642,11 +1644,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
         Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
         if (taskReport == null || taskReport.isEmpty()) {
-          LOG.warn("Got an empty task report from subtask: " + generatedPartitionsReport.getTaskId());
+          LOG.warn("Received an empty report from subtask[%s]", generatedPartitionsReport.getTaskId());
           continue;
         }
         RowIngestionMetersTotals rowStatsForCompletedTask =
-            getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
+            getBuildSegmentsStatsFromTaskReport(taskReport, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
 
@@ -1725,20 +1727,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private RowIngestionMetersTotals getBuildSegmentsStatsFromTaskReport(
       Map<String, TaskReport> taskReport,
-      boolean includeUnparseable,
-      List<ParseExceptionReport> unparseableEvents)
+      List<ParseExceptionReport> unparseableEvents
+  )
   {
-    IngestionStatsAndErrorsTaskReport ingestionStatsAndErrorsReport = (IngestionStatsAndErrorsTaskReport) taskReport.get(
-        IngestionStatsAndErrorsTaskReport.REPORT_KEY);
-    IngestionStatsAndErrors reportData =
-        (IngestionStatsAndErrors) ingestionStatsAndErrorsReport.getPayload();
+    IngestionStatsAndErrorsTaskReport ingestionStatsAndErrorsReport = (IngestionStatsAndErrorsTaskReport)
+        taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+    IngestionStatsAndErrors reportData = ingestionStatsAndErrorsReport.getPayload();
     RowIngestionMetersTotals totals = getTotalsFromBuildSegmentsRowStats(
         reportData.getRowStats().get(RowIngestionMeters.BUILD_SEGMENTS)
     );
-    if (includeUnparseable) {
-      List<ParseExceptionReport> taskUnparsebleEvents = (List<ParseExceptionReport>) reportData.getUnparseableEvents()
-                                                                    .get(RowIngestionMeters.BUILD_SEGMENTS);
-      unparseableEvents.addAll(taskUnparsebleEvents);
+    if (unparseableEvents != null) {
+      unparseableEvents.addAll(
+          (List<ParseExceptionReport>)
+              reportData.getUnparseableEvents().get(RowIngestionMeters.BUILD_SEGMENTS)
+      );
     }
     return totals;
   }
