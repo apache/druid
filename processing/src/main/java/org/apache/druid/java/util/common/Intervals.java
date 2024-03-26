@@ -44,7 +44,7 @@ public final class Intervals
       return new Interval(interval, ISOChronology.getInstanceUTC());
     }
     catch (IllegalArgumentException e) {
-      throw InvalidInput.exception(e, "Bad Interval[%s]: [%s]", interval, e.getMessage());
+      throw InvalidInput.exception(e, "Bad interval[%s]: [%s]", interval, e.getMessage());
     }
   }
 
