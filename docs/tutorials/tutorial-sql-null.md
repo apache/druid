@@ -38,7 +38,7 @@ The tutorial also assumes you have not changed any of the default settings for n
 
 ## Load data with null values
 
-The tutorial loads some data with null values for string and numeric columns as follows:
+The sample data for the tutorial contains null values for string and numeric columns as follows:
 
 ```json
 {"date": "1/1/2024 1:02:00","title": "example_1","string_value": "some_value","numeric_value": 1}
@@ -75,8 +75,10 @@ After Druid finishes loading the data, run the following query to see the table:
 SELECT * FROM "null_example"
 ```
 
+Druid returns the following:
+
 |`__time`|`title`|`string_value`|`numeric_value`|
-|---|---|---|---|---|---|
+|---|---|---|---|
 |`2024-01-01T01:02:00.000Z`|`example_1`|`some_value`|1|
 |`2024-01-01T01:03:00.000Z`|`example_2`|`another_value`|2|
 |`2024-01-01T01:04:00.000Z`|`example_3`|`empty`|`null`|
@@ -97,7 +99,7 @@ WHERE "string_value" != 'some_value'
 
 Druid returns 2 for `another_value` and the empty string `""`. The null value is not counted.
 
-Note that the null value is included in COUNT(*) but not as a count of the values in the column as follows:
+Note that the null value is included in `COUNT(*)` but not as a count of the values in the column as follows:
 
 ```sql
 SELECT "string_value",
@@ -107,7 +109,7 @@ FROM "inline_data"
 GROUP BY 1
 ```
 
-Druid returns the following data:
+Druid returns the following:
 
 |`string_value`|`count_all_rows`|`count_values`|
 |---|---|---|
@@ -203,7 +205,7 @@ PARTITIONED BY DAY
 The resulting data set only includes two rows. Druid has filtered out example 1 (`some_value`) and example 4 (`null`):
 
 |`__time`|`title`|`string_value`|`numeric_value`|
-|---|---|---|---|---|---|
+|---|---|---|---|
 |`2024-01-01T01:03:00.000Z`|`example_2`|`another_value`|2|
 |`2024-01-01T01:04:00.000Z`|`example_3`|`empty`|`null`|
 
