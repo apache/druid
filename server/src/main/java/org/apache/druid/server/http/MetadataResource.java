@@ -29,7 +29,6 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
@@ -344,6 +343,7 @@ public class MetadataResource
   @GET
   @Path("/datasources/{dataSourceName}/unusedSegments")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getUnusedSegmentsInDataSource(
       @Context final HttpServletRequest req,
       @PathParam("dataSourceName") final String dataSource,
@@ -377,21 +377,12 @@ public class MetadataResource
           theSortOrder
       );
 
-      final Function<DataSegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
-
-      final Iterable<DataSegmentPlus> authorizedSegments =
-          AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
-
       final List<DataSegmentPlus> retVal = new ArrayList<>();
-      authorizedSegments.iterator().forEachRemaining(retVal::add);
+      unusedSegments.iterator().forEachRemaining(retVal::add);
       return Response.status(Response.Status.OK).entity(retVal).build();
     }
     catch (DruidException e) {
-      return Response
-          .status(e.getStatusCode())
-          .entity(new ErrorResponse(e))
-          .build();
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
       return Response
