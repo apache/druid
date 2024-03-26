@@ -211,3 +211,4 @@ The resulting data set only includes two rows. Druid has filtered out example 1 
 
 See the following for more information:
 - [Null values](../querying/sql-data-types.md#null-values)
+- "Generating and working with NULL values" notebook at [Learn druid](https://github.com/implydata/learn-druid/)
