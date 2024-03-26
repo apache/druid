@@ -372,6 +372,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       IngestionStatsAndErrorsTaskReport report = (IngestionStatsAndErrorsTaskReport) reportRaw;
       IngestionStatsAndErrors reportData = (IngestionStatsAndErrors) report.getPayload();
 
+      Assert.assertTrue(
+          reportData.getTags() != null && !reportData.getTags().isEmpty(),
+          "Report data does not contain any task tags. Ensure that TaskIdentitiesProvider is correctly bound."
+      );
+
       // Confirm that the task waited longer than 0ms for the task to complete.
       Assert.assertTrue(reportData.getSegmentAvailabilityWaitTimeMs() > 0);
 
