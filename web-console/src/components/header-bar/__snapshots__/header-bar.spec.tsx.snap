@@ -267,55 +267,53 @@ exports[`HeaderBar matches snapshot 1`] = `
           <Blueprint4.MenuItem
             active={false}
             disabled={false}
-            icon="cog"
+            icon="high-priority"
             multiline={false}
             popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
-            text="Console options"
+            text="Capabilty detection"
           >
-            <React.Fragment>
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={{}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force Coordinator/Overlord mode"
-              />
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={{}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force Coordinator mode"
-              />
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={{}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force Overlord mode"
-              />
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={{}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force no management proxy mode"
-              />
-            </React.Fragment>
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Coordinator/Overlord mode"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Coordinator mode"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Overlord mode"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Router with no management proxy mode"
+            />
           </Blueprint4.MenuItem>
         </Blueprint4.Menu>
       }
