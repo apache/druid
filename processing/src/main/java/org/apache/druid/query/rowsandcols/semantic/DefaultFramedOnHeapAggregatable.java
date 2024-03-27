@@ -75,7 +75,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         int lowerOffset = frame.getLowerOffset();
         int upperOffset = frame.getUpperOffset();
 
-        if (numRows < lowerOffset + upperOffset + 1) {
+        if (numRows < upperOffset - lowerOffset + 1) {
           // In this case, there are not enough rows to completely build up the full window aperture before it needs to
           // also start contracting the aperture because of the upper offset. So we use a method that specifically
           // handles checks for both expanding and reducing the aperture on every iteration.
@@ -187,7 +187,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
                   groupToRowIndex(relativeGroupId(1))
               ),
               Interval.of(
-                  groupToRowIndex(relativeGroupId(-lowerOffset)),
+                  groupToRowIndex(relativeGroupId(lowerOffset < 0 ? lowerOffset : -lowerOffset)),
                   groupToRowIndex(relativeGroupId(upperOffset))
               )
           );
@@ -606,8 +606,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // 2. Our window is full, as we walk the rows we take a value off and add a new aggregation
     // 3. We are nearing the end of the rows, we need to start shrinking the window aperture
 
+
     int numRows = rac.numRows();
-    int windowSize = lowerOffset + upperOffset + 1;
+    int windowSize = upperOffset + 1 - lowerOffset;
 
     // We store the results in an Object array for convenience.  This is definitely sub-par from a memory management
     // point of view as we should use native arrays when possible.  This will be fine for now, but it probably makes
@@ -622,7 +623,18 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     // This is the number of aggregators to actually aggregate for the current row.
     // Which also doubles as the nextIndex to roll through as we roll things in and out of the window
-    int nextIndex = lowerOffset + 1;
+    int nextIndex;
+    int upperLimit;
+    if (upperOffset > 0 && lowerOffset > 0) {
+      nextIndex = 1;
+      upperLimit = upperOffset - lowerOffset;
+    } else if (lowerOffset < 0 && upperOffset < 0) {
+      nextIndex = upperOffset - lowerOffset + 1;
+      upperLimit = 0;
+    } else {
+      nextIndex = 1 - lowerOffset;
+      upperLimit = upperOffset;
+    }
 
     Aggregator[][] aggregators = new Aggregator[aggFactories.length][windowSize];
     for (int i = 0; i < aggregators.length; i++) {
@@ -636,7 +648,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // The first few rows will slowly build out the window to consume the upper-offset.  The window will not
     // be full until we have walked upperOffset number of rows, so phase 1 runs until we have consumed
     // upperOffset number of rows.
-    for (int upperIndex = 0; upperIndex < upperOffset; ++upperIndex) {
+    for (int upperIndex = 0; upperIndex < upperLimit; ++upperIndex) {
       for (Aggregator[] aggregator : aggregators) {
         for (int j = 0; j < nextIndex; ++j) {
           aggregator[j].aggregate();
@@ -759,7 +771,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     // This is the index to stop at for the current window aperture
     // The first row is used by all of the results for the lowerOffset num results, plus 1 for the "current row"
-    int stopIndex = Math.min(lowerOffset + 1, windowSize);
+    int stopIndex = Math.min(Math.abs(lowerOffset) + 1, windowSize);
 
     int startIndex = 0;
     int rowId = rowIdProvider.get();

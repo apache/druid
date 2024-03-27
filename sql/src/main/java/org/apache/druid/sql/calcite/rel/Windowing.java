@@ -359,6 +359,7 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
+
       return new WindowFrame(
           group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
@@ -374,7 +375,8 @@ public class Windowing
       if (bound.isUnbounded() || bound.isCurrentRow()) {
         return 0;
       }
-      return getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      final int value = getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      return bound.isPreceding() ? -value : value;
     }
 
     private int getConstant(int refIndex)
