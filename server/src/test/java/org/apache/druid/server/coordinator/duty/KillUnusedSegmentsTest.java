@@ -38,9 +38,11 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.metadata.SQLMetadataSegmentPublisher;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
+import org.apache.druid.metadata.SqlSegmentsMetadataManagerTest;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -100,12 +102,13 @@ public class KillUnusedSegmentsTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private SQLMetadataSegmentPublisher publisher;
+  private SQLMetadataConnector connector;
+  private MetadataStorageTablesConfig config;
 
   @Before
   public void setup()
   {
-    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.millis(1));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
@@ -116,11 +119,7 @@ public class KillUnusedSegmentsTest
     );
     sqlSegmentsMetadataManager.start();
 
-    publisher = new SQLMetadataSegmentPublisher(
-        TestHelper.makeJsonMapper(),
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
+    this.config = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createSegmentTable();
 
     overlordClient = new TestOverlordClient();
@@ -768,7 +767,7 @@ public class KillUnusedSegmentsTest
   {
     final DataSegment segment = createSegment(dataSource, interval, version);
     try {
-      publisher.publishSegment(segment);
+      SqlSegmentsMetadataManagerTest.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

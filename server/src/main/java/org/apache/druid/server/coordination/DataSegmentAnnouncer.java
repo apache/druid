@@ -29,11 +29,11 @@ public interface DataSegmentAnnouncer
 {
   void announceSegment(DataSegment segment) throws IOException;
 
-  void unannounceSegment(DataSegment segment) throws IOException;
+  void unannounceSegment(DataSegment segment);
 
   void announceSegments(Iterable<DataSegment> segments) throws IOException;
 
-  void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
+  void unannounceSegments(Iterable<DataSegment> segments);
 
   /**
    * Announces schema associated with all segments for the specified realtime task.

@@ -50,8 +50,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -87,7 +91,8 @@ public class SqlSegmentsMetadataManagerTest
       = new TestDerbyConnector.DerbyConnectorRule();
 
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private SQLMetadataSegmentPublisher publisher;
+  private SQLMetadataConnector connector;
+  private MetadataStorageTablesConfig config;
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   private final DataSegment wikiSegment1 =
@@ -98,7 +103,7 @@ public class SqlSegmentsMetadataManagerTest
   private void publishUnusedSegments(DataSegment... segments) throws IOException
   {
     for (DataSegment segment : segments) {
-      publisher.publishSegment(segment);
+      publishSegment(segment);
       sqlSegmentsMetadataManager.markSegmentAsUnused(segment.getId());
     }
   }
@@ -106,8 +111,8 @@ public class SqlSegmentsMetadataManagerTest
   private void publishWikiSegments()
   {
     try {
-      publisher.publishSegment(wikiSegment1);
-      publisher.publishSegment(wikiSegment2);
+      publishSegment(wikiSegment1);
+      publishSegment(wikiSegment2);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -117,7 +122,7 @@ public class SqlSegmentsMetadataManagerTest
   @Before
   public void setUp()
   {
-    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.millis(1));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
@@ -128,12 +133,7 @@ public class SqlSegmentsMetadataManagerTest
     );
     sqlSegmentsMetadataManager.start();
 
-    publisher = new SQLMetadataSegmentPublisher(
-        JSON_MAPPER,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
-
+    this.config = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createSegmentTable();
   }
 
@@ -255,7 +255,7 @@ public class SqlSegmentsMetadataManagerTest
                            .map(ImmutableDruidDataSource::getName)
                            .collect(Collectors.toList())
     );
-    publisher.publishSegment(createNewSegment1(DS.KOALA));
+    publishSegment(createNewSegment1(DS.KOALA));
 
     // This call will force on demand poll
     sqlSegmentsMetadataManager.forceOrWaitOngoingDatabasePoll();
@@ -272,7 +272,7 @@ public class SqlSegmentsMetadataManagerTest
     );
 
     final String newDataSource3 = "wikipedia3";
-    publisher.publishSegment(createNewSegment1(newDataSource3));
+    publishSegment(createNewSegment1(newDataSource3));
 
     // This time wait for periodic poll (not doing on demand poll so we have to wait a bit...)
     while (sqlSegmentsMetadataManager.getDataSourcesSnapshot().getDataSource(newDataSource3) == null) {
@@ -351,10 +351,11 @@ public class SqlSegmentsMetadataManagerTest
         sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
     );
     final DataSegment koalaSegment = createNewSegment1(DS.KOALA);
-    publisher.publishSegment(koalaSegment);
+    publishSegment(koalaSegment);
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     return koalaSegment;
   }
+
   /**
    * Create a corrupted segment entry in the segments table to test
    * whether the overall loading of segments from the database continues to work
@@ -366,7 +367,7 @@ public class SqlSegmentsMetadataManagerTest
     publishWikiSegments();
 
     final DataSegment corruptSegment = DataSegment.builder(wikiSegment1).dataSource("corrupt-datasource").build();
-    publisher.publishSegment(corruptSegment);
+    publishSegment(corruptSegment);
     updateSegmentPayload(corruptSegment, StringUtils.toUtf8("corrupt-payload"));
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -428,26 +429,56 @@ public class SqlSegmentsMetadataManagerTest
 
     Assert.assertEquals(
         ImmutableList.of(wikiSegment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, null, DateTimes.of("3000"), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(
+            DS.WIKI,
+            null,
+            DateTimes.of("3000"),
+            1,
+            DateTimes.COMPARE_DATE_AS_STRING_MAX
+        )
     );
 
     // Test the DateTime maxEndTime argument of getUnusedSegmentIntervals
     Assert.assertEquals(
         ImmutableList.of(wikiSegment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, null, DateTimes.of(2012, 1, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(
+            DS.WIKI,
+            null,
+            DateTimes.of(2012, 1, 7, 0, 0),
+            1,
+            DateTimes.COMPARE_DATE_AS_STRING_MAX
+        )
     );
     Assert.assertEquals(
         ImmutableList.of(wikiSegment1.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, DateTimes.of(2012, 1, 7, 0, 0), DateTimes.of(2012, 4, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(
+            DS.WIKI,
+            DateTimes.of(2012, 1, 7, 0, 0),
+            DateTimes.of(2012, 4, 7, 0, 0),
+            1,
+            DateTimes.COMPARE_DATE_AS_STRING_MAX
+        )
     );
     Assert.assertEquals(
         ImmutableList.of(),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, DateTimes.of(2012, 1, 7, 0, 0), DateTimes.of(2012, 1, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(
+            DS.WIKI,
+            DateTimes.of(2012, 1, 7, 0, 0),
+            DateTimes.of(2012, 1, 7, 0, 0),
+            1,
+            DateTimes.COMPARE_DATE_AS_STRING_MAX
+        )
     );
 
     Assert.assertEquals(
         ImmutableList.of(wikiSegment2.getInterval(), wikiSegment1.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, null, DateTimes.of("3000"), 5, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(
+            DS.WIKI,
+            null,
+            DateTimes.of("3000"),
+            5,
+            DateTimes.COMPARE_DATE_AS_STRING_MAX
+        )
     );
 
     // Test a buffer period that should exclude some segments
@@ -455,7 +486,13 @@ public class SqlSegmentsMetadataManagerTest
     // The wikipedia datasource has segments generated with last used time equal to roughly the time of test run. None of these segments should be selected with a bufer period of 1 day
     Assert.assertEquals(
         ImmutableList.of(),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(DS.WIKI, DateTimes.COMPARE_DATE_AS_STRING_MIN, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(
+            DS.WIKI,
+            DateTimes.COMPARE_DATE_AS_STRING_MIN,
+            DateTimes.of("3000"),
+            5,
+            DateTimes.nowUtc().minus(Duration.parse("PT86400S"))
+        )
     );
 
     // koalaSegment3 has a null used_status_last_updated which should mean getUnusedSegmentIntervals never returns it
@@ -480,7 +517,7 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.poll();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
 
-    publisher.publishSegment(createNewSegment1(DS.KOALA));
+    publishSegment(createNewSegment1(DS.KOALA));
 
     awaitDataSourceAppeared(DS.KOALA);
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(DS.KOALA);
@@ -520,7 +557,7 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-15T20:19:12.565Z"
     );
 
-    publisher.publishSegment(koalaSegment);
+    publishSegment(koalaSegment);
     awaitDataSourceAppeared(DS.KOALA);
     Assert.assertNotNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(DS.KOALA));
 
@@ -1002,8 +1039,8 @@ public class SqlSegmentsMetadataManagerTest
     final DataSegment koalaSegment1 = createNewSegment1(DS.KOALA);
     final DataSegment koalaSegment2 = createNewSegment1(DS.KOALA);
 
-    publisher.publishSegment(koalaSegment1);
-    publisher.publishSegment(koalaSegment2);
+    publishSegment(koalaSegment1);
+    publishSegment(koalaSegment2);
 
     final ImmutableSet<SegmentId> segmentIds =
         ImmutableSet.of(koalaSegment1.getId(), koalaSegment1.getId());
@@ -1032,9 +1069,9 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-15T20:19:12.565Z"
     );
 
-    publisher.publishSegment(koalaSegment1);
-    publisher.publishSegment(koalaSegment2);
-    publisher.publishSegment(koalaSegment3);
+    publishSegment(koalaSegment1);
+    publishSegment(koalaSegment2);
+    publishSegment(koalaSegment3);
     final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
 
     // 2 out of 3 segments match the interval
@@ -1075,9 +1112,9 @@ public class SqlSegmentsMetadataManagerTest
         v2
     );
 
-    publisher.publishSegment(koalaSegment1);
-    publisher.publishSegment(koalaSegment2);
-    publisher.publishSegment(koalaSegment3);
+    publishSegment(koalaSegment1);
+    publishSegment(koalaSegment2);
+    publishSegment(koalaSegment3);
     final Interval theInterval = Intervals.of("2017-10-15/2017-10-18");
 
     Assert.assertEquals(
@@ -1124,9 +1161,9 @@ public class SqlSegmentsMetadataManagerTest
         v2
     );
 
-    publisher.publishSegment(koalaSegment1);
-    publisher.publishSegment(koalaSegment2);
-    publisher.publishSegment(koalaSegment3);
+    publishSegment(koalaSegment1);
+    publishSegment(koalaSegment2);
+    publishSegment(koalaSegment3);
     final Interval theInterval = Intervals.of("2017-10-15/2017-10-18");
 
     Assert.assertEquals(
@@ -1263,9 +1300,9 @@ public class SqlSegmentsMetadataManagerTest
         "2017-10-15T20:19:12.565Z"
     );
 
-    publisher.publishSegment(koalaSegment1);
-    publisher.publishSegment(koalaSegment2);
-    publisher.publishSegment(koalaSegment3);
+    publishSegment(koalaSegment1);
+    publishSegment(koalaSegment2);
+    publishSegment(koalaSegment3);
     final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
 
     // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be marked unused
@@ -1317,7 +1354,7 @@ public class SqlSegmentsMetadataManagerTest
         "2012-03-16T00:00:00.000/2012-03-17T00:00:00.000",
         "2017-10-15T20:19:12.565Z"
     );
-    publisher.publishSegment(wikiSegment3);
+    publishSegment(wikiSegment3);
 
     // New segment is not returned since we call without force poll
     segments = sqlSegmentsMetadataManager
@@ -1394,5 +1431,93 @@ public class SqlSegmentsMetadataManagerTest
     derbyConnectorRule.segments().update(
         "ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL"
     );
+  }
+
+  private void publishSegment(final DataSegment segment) throws IOException
+  {
+    publishSegment(connector, config, JSON_MAPPER, segment);
+  }
+
+  public static void publishSegment(
+      final SQLMetadataConnector connector,
+      final MetadataStorageTablesConfig config,
+      final ObjectMapper jsonMapper,
+      final DataSegment segment
+  ) throws IOException
+  {
+    String now = DateTimes.nowUtc().toString();
+    publishSegment(
+        connector,
+        config,
+        segment.getId().toString(),
+        segment.getDataSource(),
+        now,
+        segment.getInterval().getStart().toString(),
+        segment.getInterval().getEnd().toString(),
+        (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
+        segment.getVersion(),
+        true,
+        jsonMapper.writeValueAsBytes(segment),
+        now
+    );
+  }
+
+  private static void publishSegment(
+      final SQLMetadataConnector connector,
+      final MetadataStorageTablesConfig config,
+      final String segmentId,
+      final String dataSource,
+      final String createdDate,
+      final String start,
+      final String end,
+      final boolean partitioned,
+      final String version,
+      final boolean used,
+      final byte[] payload,
+      final String usedFlagLastUpdated
+  )
+  {
+    try {
+      final DBI dbi = connector.getDBI();
+      List<Map<String, Object>> exists = dbi.withHandle(
+          handle ->
+              handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable()))
+                    .bind("id", segmentId)
+                    .list()
+      );
+
+      if (!exists.isEmpty()) {
+        return;
+      }
+
+      final String publishStatement = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
+          config.getSegmentsTable(),
+          connector.getQuoteString()
+      );
+
+      dbi.withHandle(
+          (HandleCallback<Void>) handle -> {
+            handle.createStatement(publishStatement)
+                  .bind("id", segmentId)
+                  .bind("dataSource", dataSource)
+                  .bind("created_date", createdDate)
+                  .bind("start", start)
+                  .bind("end", end)
+                  .bind("partitioned", partitioned)
+                  .bind("version", version)
+                  .bind("used", used)
+                  .bind("payload", payload)
+                  .bind("used_status_last_updated", usedFlagLastUpdated)
+                  .execute();
+
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

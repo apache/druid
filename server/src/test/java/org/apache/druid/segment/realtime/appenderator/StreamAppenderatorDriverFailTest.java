@@ -41,7 +41,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
@@ -135,7 +135,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -173,7 +173,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -211,7 +211,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -264,7 +264,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);

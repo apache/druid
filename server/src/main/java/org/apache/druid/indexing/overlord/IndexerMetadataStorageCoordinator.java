@@ -195,7 +195,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments);
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -304,7 +304,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
-  ) throws IOException;
+  );
 
   /**
    * Commits segments created by an APPEND task. This method also handles segment

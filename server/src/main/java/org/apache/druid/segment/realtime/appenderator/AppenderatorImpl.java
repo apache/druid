@@ -67,9 +67,9 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -129,7 +129,7 @@ public class AppenderatorImpl implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final DataSegmentAnnouncer segmentAnnouncer;
@@ -201,7 +201,7 @@ public class AppenderatorImpl implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       DataSegmentAnnouncer segmentAnnouncer,
@@ -501,8 +501,7 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          useMaxMemoryEstimates,
-          null
+          useMaxMemoryEstimates
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
 
@@ -1300,7 +1299,6 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             useMaxMemoryEstimates,
-            null,
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

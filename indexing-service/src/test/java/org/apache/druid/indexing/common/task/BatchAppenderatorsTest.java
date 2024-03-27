@@ -51,7 +51,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
@@ -113,7 +113,7 @@ public class BatchAppenderatorsTest
 
     private final DataSchema schema;
     private final AppenderatorConfig tuningConfig;
-    private final FireDepartmentMetrics metrics;
+    private final SegmentGenerationMetrics metrics;
     private final ObjectMapper objectMapper;
     private final Appenderator appenderator;
     private final ServiceEmitter emitter;
@@ -184,7 +184,7 @@ public class BatchAppenderatorsTest
           basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
           null
       );
-      metrics = new FireDepartmentMetrics();
+      metrics = new SegmentGenerationMetrics();
 
       IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
       IndexMergerV9 indexMerger = new IndexMergerV9(
@@ -328,7 +328,7 @@ public class BatchAppenderatorsTest
       return tuningConfig;
     }
 
-    public FireDepartmentMetrics getMetrics()
+    public SegmentGenerationMetrics getMetrics()
     {
       return metrics;
     }

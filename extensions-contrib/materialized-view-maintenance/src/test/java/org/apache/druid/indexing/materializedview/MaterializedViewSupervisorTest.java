@@ -134,7 +134,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegments() throws IOException
+  public void testCheckSegments()
   {
     List<DataSegment> baseSegments = createBaseSegments();
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -208,7 +208,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegmentsAndSubmitTasks() throws IOException
+  public void testCheckSegmentsAndSubmitTasks()
   {
     Set<DataSegment> baseSegments = Collections.singleton(createBaseSegments().get(0));
     indexerMetadataStorageCoordinator.commitSegments(baseSegments);

@@ -61,9 +61,9 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -107,7 +107,7 @@ public class BatchAppenderator implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
@@ -154,7 +154,7 @@ public class BatchAppenderator implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -468,8 +468,7 @@ public class BatchAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          useMaxMemoryEstimates,
-          null
+          useMaxMemoryEstimates
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -1038,7 +1037,6 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
         useMaxMemoryEstimates,
-        null,
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable
