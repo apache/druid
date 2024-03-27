@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
@@ -36,10 +35,12 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
@@ -53,7 +54,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -63,7 +63,6 @@ import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
@@ -373,16 +372,16 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
-    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        Collections.singletonList(fireDepartmentForMetrics),
-        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
+    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+        this,
+        fireDepartmentForMetrics,
+        rowIngestionMeters
     );
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
-    final boolean explicitIntervals = !granularitySpec.inputIntervals().isEmpty();
     final boolean useLineageBasedSegmentAllocation = getContextValue(
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
         SinglePhaseParallelIndexTaskRunner.LEGACY_DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
@@ -426,16 +425,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             dataSchema,
             inputSource,
             inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
-            inputRow -> {
-              if (inputRow == null) {
-                return false;
-              }
-              if (explicitIntervals) {
-                final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-                return optInterval.isPresent();
-              }
-              return true;
-            },
+            allowNonNullRowsWithinInputIntervalsOf(granularitySpec),
             rowIngestionMeters,
             parseExceptionHandler
         )

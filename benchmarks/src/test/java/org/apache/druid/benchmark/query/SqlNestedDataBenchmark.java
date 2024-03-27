@@ -19,6 +19,9 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +31,8 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
@@ -198,7 +203,17 @@ public class SqlNestedDataBenchmark
       "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000'",
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
       "SELECT SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') = '1000' AND JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'"
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') = '1000' AND JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
+      //48,49 bigger in
+      "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204)",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204)",
+      //50, 51 bigger in group
+      "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204) GROUP BY 1",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204) GROUP BY 1",
+      "SELECT long2 FROM foo WHERE double3 IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0)",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0)",
+      "SELECT long2 FROM foo WHERE double3 IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0) GROUP BY 1",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0) GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -271,7 +286,15 @@ public class SqlNestedDataBenchmark
       "44",
       "45",
       "46",
-      "47"
+      "47",
+      "48",
+      "49",
+      "50",
+      "51",
+      "52",
+      "53",
+      "54",
+      "55"
   })
   private String query;
 
@@ -386,8 +409,41 @@ public class SqlNestedDataBenchmark
           QUERIES.get(Integer.parseInt(query))
       );
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "failed to sanity check");
+    }
+
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] planResult = resultSequence.toList().get(0);
+      log.info("Native query plan:\n" +
+               jsonMapper.writerWithDefaultPrettyPrinter()
+                         .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
+      );
+    }
+    catch (JsonMappingException e) {
+      throw new RuntimeException(e);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Yielder<Object[]> yielder = Yielders.each(resultSequence);
+      int rowCounter = 0;
+      while (!yielder.isDone()) {
+        rowCounter++;
+        yielder.next(yielder.get());
+      }
+      log.info("Total result row count:" + rowCounter);
+    }
+    catch (Throwable ex) {
+      log.warn(ex, "failed to count rows");
     }
   }
 

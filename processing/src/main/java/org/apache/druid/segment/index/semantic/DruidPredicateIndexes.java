@@ -25,7 +25,8 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import javax.annotation.Nullable;
 
 /**
- * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
+ * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex} containing rows for all values which
+ * satisfy the predicate.
  */
 public interface DruidPredicateIndexes
 {

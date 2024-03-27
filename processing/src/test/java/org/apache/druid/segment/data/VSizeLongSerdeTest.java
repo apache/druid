@@ -24,7 +24,6 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -35,7 +34,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-@RunWith(Enclosed.class)
 public class VSizeLongSerdeTest
 {
   @RunWith(Parameterized.class)

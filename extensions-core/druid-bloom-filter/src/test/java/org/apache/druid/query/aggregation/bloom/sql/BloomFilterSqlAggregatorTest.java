@@ -54,9 +54,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 
 public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
@@ -77,11 +76,11 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactoryWrapper joinableFactory,
       final Injector injector
-  ) throws IOException
+  )
   {
     final QueryableIndex index =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
