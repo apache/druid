@@ -40,7 +40,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
@@ -1725,7 +1724,7 @@ public class MSQWindowTest extends MSQTestBase
             newScanQueryBuilder()
                 .dataSource(CalciteTests.WIKIPEDIA)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(new InDimFilter("cityName", ImmutableSet.of("Ahmedabad", "Albuquerque")))
+                .filters(in("cityName", ImmutableList.of("Ahmedabad", "Albuquerque")))
                 .columns("added", "cityName")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)

@@ -66,4 +66,3 @@ properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#
 ## `WINDOW` Function
 
 - The maximum number of elements in a window cannot exceed a value of 100,000. 
-- The user can change this value by setting the context parameter `maxRowsMaterializedInWindow` in the query context.
