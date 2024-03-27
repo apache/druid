@@ -1149,7 +1149,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         Tasks.STORE_COMPACTION_STATE_KEY,
         Tasks.DEFAULT_STORE_COMPACTION_STATE
     );
-    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = prepareCompactionStateAnnotateFunction(
         storeCompactionState,
         toolbox,
         ingestionSchema

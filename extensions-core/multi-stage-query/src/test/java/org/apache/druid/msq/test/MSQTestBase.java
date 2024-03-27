@@ -184,6 +184,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -847,6 +848,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
+    protected CompactionState expectedLastCompactionState = null;
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
@@ -890,6 +892,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
+      return asBuilder();
+    }
+
+    public Builder setExpectedLastCompactionState(CompactionState expectedLastCompactionState)
+    {
+      this.expectedLastCompactionState = expectedLastCompactionState;
       return asBuilder();
     }
 
@@ -1260,6 +1268,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
+          if (expectedLastCompactionState != null) {
+            CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
+                                                                  .getLastCompactionState();
+            Assert.assertEquals(expectedLastCompactionState, compactionState);
+
+          }
           Set<SegmentId> publishedSegmentIds = testTaskActionClient.getPublishedSegments()
                                                                    .stream()
                                                                    .map(DataSegment::getId)
@@ -1477,4 +1491,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
     return retVal;
   }
+
 }
+
