@@ -89,8 +89,6 @@ public @interface NotYetSupported
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
     INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
-    // at least c7 is represented oddly in the parquet file
-    T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
     WINDOW_OPERATOR_QUERY_ON_UNSUPPORTED_DATASOURCE(DruidException.class, "WindowOperatorQuery must run on top of a query or inline data source"),

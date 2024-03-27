@@ -215,6 +215,54 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   }
 
   @Test
+  public void testKillSegmentsWithEmptyVersions() throws Exception
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.minusHours(2).toString();
+    final String v3 = now.minusHours(3).toString();
+
+    final DataSegment segment1V1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
+    final DataSegment segment2V1 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
+    final DataSegment segment3V1 = newSegment(Intervals.of("2019-03-01/2019-04-01"), v1);
+    final DataSegment segment4V2 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v2);
+    final DataSegment segment5V3 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v3);
+
+    final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V1, segment3V1, segment4V2, segment5V3);
+
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(
+        segments.size(),
+        getSegmentsMetadataManager().markSegmentsAsUnused(
+            segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
+        )
+    );
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018/2020"))
+        .versions(ImmutableList.of())
+        .batchSize(3)
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+    Assert.assertEquals(
+        new KillTaskReport.Stats(0, 1, 0),
+        getReportedStats()
+    );
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.of("2018/2020"),
+            null,
+            null
+        );
+
+    Assert.assertEquals(segments, new HashSet<>(observedUnusedSegments));
+  }
+
+  @Test
   public void testKillSegmentsWithVersionsAndLimit() throws Exception
   {
     final DateTime now = DateTimes.nowUtc();
