@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
@@ -587,7 +588,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     updateAndWriteCompletionReports(toolbox, null, null);
   }
 
-  private void updateAndWriteCompletionReports(TaskToolbox toolbox, Integer segmentsRead, Integer segmentsPublished)
+  private void updateAndWriteCompletionReports(TaskToolbox toolbox, Long segmentsRead, Long segmentsPublished)
   {
     completionReports = getTaskCompletionReports(segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
@@ -595,7 +596,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  private Map<String, TaskReport> getTaskCompletionReports(Integer segmentsRead, Integer segmentsPublished)
+  private Map<String, TaskReport> getTaskCompletionReports(Long segmentsRead, Long segmentsPublished)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -608,8 +609,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 segmentAvailabilityConfirmationCompleted,
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
-                Long.valueOf(segmentsRead),
-                Long.valueOf(segmentsPublished)
+                segmentsRead,
+                segmentsPublished
             )
         )
     );
@@ -1078,8 +1079,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         updateAndWriteCompletionReports(
             toolbox,
-            getTaskLockHelper().getLockedExistingSegments().size(),
-            published.getSegments().size()
+            // only applicable to the compaction use cases
+            inputSource instanceof DruidInputSource
+            ? (long) ((DruidInputSource) inputSource).estimateSegmentsCount()
+            : null,
+            (long) published.getSegments().size()
         );
         return TaskStatus.success(getId());
       }
