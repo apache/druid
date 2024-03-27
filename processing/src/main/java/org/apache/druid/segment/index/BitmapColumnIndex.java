@@ -27,7 +27,9 @@ import javax.annotation.Nullable;
 
 /**
  * Common interface for bitmap indexes for use by {@link org.apache.druid.query.filter.Filter} for cursor creation, to
- * allow fast row skipping during query processing.
+ * allow fast row skipping during query processing. Ideally implementaitons of this are 'lazy', and not do any real
+ * work until {@link #computeBitmapResult(BitmapResultFactory, int, int, boolean)} or
+ * {@link #computeBitmapResult(BitmapResultFactory, boolean)} is called.
  */
 public interface BitmapColumnIndex
 {

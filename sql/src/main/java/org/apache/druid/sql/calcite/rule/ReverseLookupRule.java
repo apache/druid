@@ -310,7 +310,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
      * Collect and reverse a set of lookups that appear as children to OR.
      */
     private class CollectReverseLookups
-        extends CollectComparisons<RexNode, RexCall, RexNode, ReverseLookupKey>
+        extends CollectComparisons<RexNode, RexCall, RexNode, ReverseLookupKey, String, InDimFilter.ValuesSet>
     {
       private final RexBuilder rexBuilder;
 
@@ -333,6 +333,12 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
         } else {
           return null;
         }
+      }
+
+      @Override
+      protected InDimFilter.ValuesSet makeCollection()
+      {
+        return new InDimFilter.ValuesSet();
       }
 
       @Nullable

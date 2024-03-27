@@ -136,7 +136,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
@@ -800,23 +799,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
-    final Predicate<InputRow> rowFilter = inputRow -> {
-      if (inputRow == null) {
-        return false;
-      }
-      if (determineIntervals) {
-        return true;
-      }
-      final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-      return optInterval.isPresent();
-    };
-
     try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
         tmpDir,
         ingestionSchema.getDataSchema(),
         inputSource,
         inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
-        rowFilter,
+        allowNonNullRowsWithinInputIntervalsOf(granularitySpec),
         determinePartitionsMeters,
         determinePartitionsParseExceptionHandler
     )) {
