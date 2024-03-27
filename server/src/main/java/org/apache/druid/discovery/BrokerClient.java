@@ -99,6 +99,10 @@ public class BrokerClient
           if (throwable instanceof ExecutionException) {
             return throwable.getCause() instanceof IOException || throwable.getCause() instanceof ChannelException;
           }
+          if (throwable instanceof DruidException) {
+            DruidException druidException = (DruidException) throwable;
+            return DruidException.Category.RUNTIME_FAILURE.equals(druidException.getCategory());
+          }
           return throwable instanceof IOE;
         },
         MAX_RETRIES
