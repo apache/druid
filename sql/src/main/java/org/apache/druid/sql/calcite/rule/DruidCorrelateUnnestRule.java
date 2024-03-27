@@ -28,6 +28,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
@@ -40,6 +41,8 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidCorrelateUnnestRel;
+import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
+import org.apache.druid.sql.calcite.rel.DruidJoinUnnestRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnnestRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -65,10 +68,28 @@ import java.util.List;
  * <pre>
  *        LogicalCorrelate
  *           /       \
- *      DruidRel    DruidUnnestDataSourceRel
+ *      DruidRel    DruidRel
  * </pre>
  * This forms the premise of this rule. The goal is to transform the above-mentioned structure in the tree
  * with a new rel {@link DruidCorrelateUnnestRel} which shall be created here.
+ *
+ * Note that the right can be a special rel {@link DruidJoinUnnestRel} where there is a join with unnest on the left
+ * So the inital tree in such a case was
+ * <pre/
+ *          LogicalCorrelate
+ *            /           \
+ *      DruidRel1        LogicalJoin
+ *                        /       \
+ *             DruidUnnestRel    DruidRel2
+ * </pre>
+ * And this rule helps transpose the Correlate and Join thereby creating the Tree
+ * <pre/
+ *               LogicalJoin
+ *               /        \
+ *   LogicalCorrelate    DruidRel2
+ *       /       \
+ *   DruidRel1    DruidUnnestRel
+ * </pre>
  */
 public class DruidCorrelateUnnestRule extends RelOptRule
 {
@@ -80,7 +101,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         operand(
             Correlate.class,
             operand(DruidRel.class, any()),
-            operand(DruidUnnestRel.class, any())
+            operand(DruidRel.class, any())
         )
     );
 
@@ -99,7 +120,14 @@ public class DruidCorrelateUnnestRule extends RelOptRule
   {
     final Correlate correlate = call.rel(0);
     final DruidRel<?> left = call.rel(1);
-    final DruidUnnestRel right = call.rel(2);
+    final DruidUnnestRel right;
+    final DruidRel<?> rightRel = call.rel(2);
+    // Update right if it follows the special pattern of unnest to the left
+    if (rightRel instanceof DruidJoinUnnestRel) {
+      right = ((DruidJoinUnnestRel) rightRel).getUnnestRel();
+    } else {
+      right = (DruidUnnestRel) rightRel;
+    }
     final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
     final DruidRel<?> newLeft;
     final List<RexNode> pulledUpProjects = new ArrayList<>();
@@ -161,7 +189,51 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         ),
         plannerContext
     );
-
+    // Move the join out if the right follows the special pattern
+    if (rightRel instanceof DruidJoinUnnestRel) {
+      // create a join rel
+      // with left as druidCorrelateUnnest
+      // and right as rightRel.getRight()
+      // Rewrite the join condition as the join pointed to offsets
+      // of the join between unnest and DruidRel
+      // But now should point to the offsets of the
+      // join between Correlate and DruidRel
+      final Join j = ((DruidJoinUnnestRel) rightRel).getJoin();
+      final RexNode condition = j.getCondition();
+      // Last index of left is fieldCount-1
+      // Since unnest is always the 0th index
+      // we need the left to shift the join condition
+      // by adding the index in the shuttle
+      UpdateJoinConditionShuttle jctShuttle = new UpdateJoinConditionShuttle(
+          druidCorrelateUnnest.getRowType().getFieldCount() - 1);
+      final RexNode out = jctShuttle.apply(condition);
+      Join updatedJoin = j.copy(
+          correlate.getTraitSet(),
+          out,
+          druidCorrelateUnnest,
+          ((DruidJoinUnnestRel) rightRel).getRightRel(),
+          j.getJoinType(),
+          j.isSemiJoinDone()
+      );
+      final DruidJoinQueryRel druidJoin = DruidJoinQueryRel.create(
+          updatedJoin,
+          null,
+          left.getPlannerContext()
+      );
+      final RelBuilder relBuilder =
+          call.builder()
+              .push(druidJoin)
+              .project(
+                  RexUtil.fixUp(
+                      rexBuilder,
+                      pulledUpProjects,
+                      RelOptUtil.getFieldTypeList(druidCorrelateUnnest.getRowType())
+                  )
+              );
+      RelNode r = relBuilder.build();
+      call.transformTo(r);
+      return;
+    }
     // Now push the Project back on top of the Correlate.
     final RelBuilder relBuilder =
         call.builder()
@@ -177,6 +249,23 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     relBuilder.convert(correlate.getRowType(), false);
     final RelNode build = relBuilder.build();
     call.transformTo(build);
+  }
+
+  private static class UpdateJoinConditionShuttle extends RexShuttle
+  {
+    private final int leftSize;
+
+
+    private UpdateJoinConditionShuttle(int leftSize)
+    {
+      this.leftSize = leftSize;
+    }
+
+    @Override
+    public RexNode visitInputRef(RexInputRef inputRef)
+    {
+      return new RexInputRef(inputRef.getIndex() + leftSize, inputRef.getType());
+    }
   }
 
   /**

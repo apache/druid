@@ -6613,6 +6613,169 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestWithUnnestedColumnOnInnerValues()
+  {
+    msqIncompatible();
+    testQuery(
+        "select d3 from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select col from (values('a'),('b')) as t(col))",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        InlineDataSource.fromIterable(
+                            ImmutableList.of(
+                                new Object[]{"a"},
+                                new Object[]{"b"}
+                            ),
+                            RowSignature.builder().add("col", ColumnType.STRING).build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.col\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .context(QUERY_CONTEXT_UNNEST)
+                .columns("j0.unnest")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithUnnestedColumnOnInnerQuery()
+  {
+    msqIncompatible();
+    testQuery(
+        "select * from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select dim1 from numfoo)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE3))
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "dim1",
+                                            "_d0",
+                                            ColumnType.STRING
+                                        ))
+                                        .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0._d0\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .context(QUERY_CONTEXT_UNNEST)
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "j0.unnest", "m1", "m2", "unique_dim1")
+                .legacy(false)
+                .build()
+        ),
+        useDefault ? ImmutableList.of() :
+        ImmutableList.of(
+            new Object[]{978307200000L, "1", "a", "", 1L, 4.0f, 4.0D, "\"AQAAAQAAAAFREA==\"", ""}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithUnnestedColumnOnInnerQueryOnLookup()
+  {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "select d3 from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select k from lookup.lookyloo)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new LookupDataSource("lookyloo"))
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "k",
+                                            "d0",
+                                            ColumnType.STRING
+                                        ))
+                                        .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.d0\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .context(QUERY_CONTEXT_UNNEST)
+                .columns("j0.unnest")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"a"})
+    );
+  }
+
+  @Test
+  public void testUnnestWithUnnestedColumnWithNullFilter()
+  {
+    msqIncompatible();
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select count(*) from foo, unnest(mv_to_array(dim3)) as u(c) where c is null",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      UnnestDataSource.create(
+                          new TableDataSource(CalciteTests.DATASOURCE1),
+                          expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                          isNull("j0.unnest")
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{1L} :
+            new Object[]{2L}
+        )
+    );
+  }
+
+  @Test
   public void testUnnestWithTimeFilterOnly()
   {
     testQuery(
