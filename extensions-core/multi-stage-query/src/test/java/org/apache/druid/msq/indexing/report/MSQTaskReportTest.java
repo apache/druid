@@ -108,7 +108,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status, null),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -173,7 +173,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
+            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status, null),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -221,7 +221,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status, null),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),

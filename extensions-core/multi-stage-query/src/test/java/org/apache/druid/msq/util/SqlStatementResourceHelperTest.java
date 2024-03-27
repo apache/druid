@@ -70,6 +70,7 @@ public class SqlStatementResourceHelperTest
         new HashMap<>(),
         1,
         2,
+        null,
         null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
@@ -109,6 +110,7 @@ public class SqlStatementResourceHelperTest
         new HashMap<>(),
         1,
         2,
+        null,
         null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
@@ -149,6 +151,7 @@ public class SqlStatementResourceHelperTest
         new HashMap<>(),
         1,
         2,
+        null,
         null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
@@ -187,6 +190,7 @@ public class SqlStatementResourceHelperTest
         new HashMap<>(),
         1,
         2,
+        null,
         null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
@@ -226,6 +230,7 @@ public class SqlStatementResourceHelperTest
         new HashMap<>(),
         1,
         2,
+        null,
         null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
@@ -265,6 +270,7 @@ public class SqlStatementResourceHelperTest
           new HashMap<>(),
           1,
           2,
+          null,
           null
         ),
         MSQStagesReport.create(
@@ -301,6 +307,7 @@ public class SqlStatementResourceHelperTest
             new HashMap<>(),
             1,
             2,
+            null,
             null
         ),
         MSQStagesReport.create(
@@ -339,6 +346,7 @@ public class SqlStatementResourceHelperTest
             new HashMap<>(),
             1,
             2,
+            null,
             null
         ),
         MSQStagesReport.create(
