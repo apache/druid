@@ -51,10 +51,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -322,10 +324,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegments().stream()
-                                                                                         .map(
-                                                                                       SegmentIdWithShardSpec::fromDataSegment)
-                                                                                         .collect(Collectors.toList());
+      final Set<DataSegment> segmentsToBeHandedOff = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+      if (segmentsAndCommitMetadata.getUpgradedSegments() != null) {
+        segmentsToBeHandedOff.addAll(segmentsAndCommitMetadata.getUpgradedSegments());
+      }
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList =
+          segmentsToBeHandedOff.stream()
+                               .map(SegmentIdWithShardSpec::fromDataSegment)
+                               .collect(Collectors.toList());
       final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
@@ -365,19 +371,25 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
                         List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
+                        Set<DataSegment> upgradedSegments = segmentsAndCommitMetadata.getUpgradedSegments();
                         log.info("Successfully handed off [%d] segments.", segments.size());
+                        if (upgradedSegments != null) {
+                          log.info("Successfully handed off [%d] upgraded segments.", upgradedSegments.size());
+                        }
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
                         if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
                           log.warn("Slow segment handoff! Time taken for [%d] segments is %d ms",
                                    segments.size(), handoffTotalTime);
                         }
-                        resultFuture.set(
-                            new SegmentsAndCommitMetadata(
-                                segments,
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
-                            )
+                        SegmentsAndCommitMetadata retVal = new SegmentsAndCommitMetadata(
+                            segments,
+                            ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
                         );
+                        if (upgradedSegments != null) {
+                          retVal = retVal.withUpgradedSegments(upgradedSegments);
+                        }
+                        resultFuture.set(retVal);
                       }
                     }
 
