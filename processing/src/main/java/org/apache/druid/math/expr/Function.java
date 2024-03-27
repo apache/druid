@@ -241,7 +241,11 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return inspector.areNumeric(args) && inspector.canVectorize(args);
+      final ExpressionType outputType = args.get(0).getOutputType(inspector);
+      if (outputType == null && NullHandling.replaceWithDefault()) {
+        return false;
+      }
+      return (outputType == null || outputType.isNumeric()) && inspector.canVectorize(args);
     }
   }
 

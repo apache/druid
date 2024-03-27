@@ -176,7 +176,13 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "bitwiseConvertDoubleToLongBits",
         "bitwiseConvertLongBitsToDouble"
     };
-    final String[] templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)"};
+    final String[] templates;
+    if (NullHandling.sqlCompatible()) {
+      templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)", "%s(missing)"};
+    } else {
+      // missing columns are not vectorizable in default value mode
+      templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)"};
+    }
     testFunctions(types, templates, functions);
   }
 
