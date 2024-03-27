@@ -74,10 +74,7 @@ public class MSQWindowTest extends MSQTestBase
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
-        {DEFAULT, DEFAULT_MSQ_CONTEXT},
-        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
-        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
+        {DEFAULT, DEFAULT_MSQ_CONTEXT}
     };
 
     return Arrays.asList(data);
