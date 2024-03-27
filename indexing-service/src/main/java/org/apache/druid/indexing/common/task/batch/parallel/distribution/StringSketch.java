@@ -129,7 +129,7 @@ public class StringSketch implements StringDistribution
     if (delegate.isEmpty()) {
       return new PartitionBoundaries(new StringTuple[0]);
     }
-    return new PartitionBoundaries((delegate.getPartitionBoundaries(evenPartitionCount, QuantileSearchCriteria.EXCLUSIVE)).boundaries);
+    return new PartitionBoundaries((delegate.getPartitionBoundaries(evenPartitionCount, QuantileSearchCriteria.EXCLUSIVE)).getBoundaries());
   }
 
   @Override
