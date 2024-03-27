@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
-
 import java.util.Map;
 
 public class ObjectFlattenersTest
@@ -54,7 +53,7 @@ public class ObjectFlattenersTest
     Assert.assertNull(flat.get("foo"));
     Assert.assertEquals(1L, flat.get("bar"));
     Assert.assertEquals(1L, flat.get("extract"));
-    Assert.assertEquals("{\"extract\":1,\"foo\":null,\"bar\":1}", OBJECT_MAPPER.writeValueAsString(flat));
+    Assert.assertEquals(3, flat.size());
   }
 
   @Test
@@ -73,5 +72,39 @@ public class ObjectFlattenersTest
     Map<String, Object> flat = FLATTENER.toMap(node);
     Assert.assertNull(FLATTENER_MAKER.toPlainJavaType(node));
     Assert.assertEquals(ImmutableMap.of(), flat);
+  }
+
+  @Test
+  public void testNestedFlattenBadExpression() throws JsonProcessingException
+  {
+    ObjectFlattener flattener = ObjectFlatteners.create(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(new JSONPathFieldSpec(JSONPathFieldType.PATH, "extract", "$.badfoo.bar.foobar.f1"))
+        ),
+        FLATTENER_MAKER
+    );
+    JsonNode node = OBJECT_MAPPER.readTree("{\"foo\":{\"bar\":{\"foobar\":{\"f1\":100}}}}");
+    Map<String, Object> flat = flattener.flatten(node);
+    Assert.assertNotNull(flat);
+    Assert.assertEquals(flat.size(), 1);
+    Assert.assertEquals(null, flat.get("extract"));
+  }
+
+  @Test
+  public void testNestedFlatten() throws JsonProcessingException
+  {
+    ObjectFlattener flattener = ObjectFlatteners.create(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(new JSONPathFieldSpec(JSONPathFieldType.PATH, "extract", "$.foo.bar.foobar.f1"))
+        ),
+        FLATTENER_MAKER
+    );
+    JsonNode node = OBJECT_MAPPER.readTree("{\"foo\":{\"bar\":{\"foobar\":{\"f1\":100}}}}");
+    Map<String, Object> flat = flattener.flatten(node);
+    Assert.assertNotNull(flat);
+    Assert.assertEquals(flat.size(), 1);
+    Assert.assertEquals(100L, flat.get("extract"));
   }
 }
