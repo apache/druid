@@ -22,6 +22,8 @@ package org.apache.druid.segment.metadata;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
@@ -48,10 +50,11 @@ public class SegmentSchemaBackFillQueue
   private final BlockingDeque<SegmentSchemaMetadataPlus> queue = new LinkedBlockingDeque<>();
   private final long executionPeriod;
 
-  private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaManager segmentSchemaManager;
-  private final FingerprintGenerator fingerprintGenerator;
   private final ScheduledExecutorFactory scheduledExecutorFactory;
+  private final SegmentSchemaCache segmentSchemaCache;
+  private final FingerprintGenerator fingerprintGenerator;
+  private final ServiceEmitter emitter;
   private final CentralizedDatasourceSchemaConfig config;
   private ScheduledExecutorService executor;
 
@@ -61,15 +64,17 @@ public class SegmentSchemaBackFillQueue
       ScheduledExecutorFactory scheduledExecutorFactory,
       SegmentSchemaCache segmentSchemaCache,
       FingerprintGenerator fingerprintGenerator,
+      ServiceEmitter emitter,
       CentralizedDatasourceSchemaConfig config
   )
   {
-    this.config = config;
-    this.scheduledExecutorFactory = scheduledExecutorFactory;
     this.segmentSchemaManager = segmentSchemaManager;
+    this.scheduledExecutorFactory = scheduledExecutorFactory;
     this.segmentSchemaCache = segmentSchemaCache;
-    this.executionPeriod = config.getBackFillPeriod();
     this.fingerprintGenerator = fingerprintGenerator;
+    this.emitter = emitter;
+    this.config = config;
+    this.executionPeriod = config.getBackFillPeriod();
   }
 
   public void start()
@@ -115,13 +120,13 @@ public class SegmentSchemaBackFillQueue
 
   public void processBatchesDue()
   {
-    log.info("Publishing segment schemas. Queue size is [%s]", queue.size());
-
-    int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
-
     if (queue.isEmpty()) {
       return;
     }
+
+    log.info("Backfilling segment schema. Queue size is [%s]", queue.size());
+
+    int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
 
     List<SegmentSchemaMetadataPlus> polled = new ArrayList<>();
 
@@ -138,6 +143,7 @@ public class SegmentSchemaBackFillQueue
       for (SegmentSchemaMetadataPlus plus : polled) {
         segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());
       }
+      emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/backfill/count", polled.size()));
     }
     catch (Exception e) {
       log.error(e, "Exception persisting schema and updating segments table.");

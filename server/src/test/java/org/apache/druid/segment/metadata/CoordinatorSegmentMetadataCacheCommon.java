@@ -100,7 +100,7 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
         derbyConnector
     );
 
-    segmentSchemaCache = new SegmentSchemaCache();
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
@@ -113,6 +113,7 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,
+            new NoopServiceEmitter(),
             config
         );
 

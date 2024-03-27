@@ -119,7 +119,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new HashMap<>()
     );
 
-    segmentSchemaCache = new SegmentSchemaCache();
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
@@ -132,6 +132,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,
+            new NoopServiceEmitter(),
             config
         );
 

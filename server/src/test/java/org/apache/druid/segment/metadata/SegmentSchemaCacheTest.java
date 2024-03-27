@@ -23,6 +23,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +37,7 @@ public class SegmentSchemaCacheTest
   @Test
   public void testCacheRealtimeSegmentSchema()
   {
-    SegmentSchemaCache cache = new SegmentSchemaCache();
+    SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SegmentSchemaMetadata expected = new SegmentSchemaMetadata(new SchemaPayload(rowSignature), 20L);
@@ -56,7 +57,7 @@ public class SegmentSchemaCacheTest
   @Test
   public void testCacheInTransitSMQResult()
   {
-    SegmentSchemaCache cache = new SegmentSchemaCache();
+    SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SegmentSchemaMetadata expected = new SegmentSchemaMetadata(new SchemaPayload(rowSignature), 20L);
@@ -84,7 +85,7 @@ public class SegmentSchemaCacheTest
   @Test
   public void testCacheFinalizedSegmentSchema()
   {
-    SegmentSchemaCache cache = new SegmentSchemaCache();
+    SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SegmentSchemaMetadata expected = new SegmentSchemaMetadata(new SchemaPayload(rowSignature), 20L);

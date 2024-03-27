@@ -124,7 +124,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerCo
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(3));
 
-    segmentSchemaCache = new SegmentSchemaCache();
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,

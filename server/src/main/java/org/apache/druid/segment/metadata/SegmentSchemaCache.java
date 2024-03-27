@@ -19,8 +19,11 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
@@ -79,37 +82,46 @@ public class SegmentSchemaCache
    */
   private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
 
+  private final ServiceEmitter emitter;
+
+  @Inject
+  public SegmentSchemaCache(ServiceEmitter emitter)
+  {
+    this.emitter = emitter;
+  }
+
   /**
    * Once the schema information is backfilled in the DB, it is added here.
    * This map is cleared after each DB poll.
+   * After the DB poll and before clearing this map it is possible that some results were added to this map.
+   * These results would get lost after clearing this map.
+   * But, it should be fine since the schema could be retrieved if needed using SMQ, also the schema would be available in the next poll.
    */
-  private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
   public void setInitialized()
   {
-    log.info("Marking cache as initialized.");
+    log.info("[%s] initializing.", getClass().getSimpleName());
     if (initialized.get().getCount() == 1) {
       initialized.get().countDown();
-      log.info("SegmentSchemaCache is initialized.");
+      log.info("[%s] is initialized.", getClass().getSimpleName());
     }
   }
 
   /**
    * Uninitialize is called when the current node is no longer the leader.
+   * The schema is cleared except for {@code realtimeSegmentSchemaMap}.
+   * Schema map continues to be updated on both the leader and follower nodes.
    */
   public void uninitialize()
   {
+    log.info("[%s] is uninitializing.", getClass().getSimpleName());
     initialized.set(new CountDownLatch(1));
-
-    // note we do not clear the realtime schema map,
-    // since the follower nodes continue receiving relatime schema updates.
 
     finalizedSegmentSchema.clear();
     finalizedSegmentStats.clear();
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
-
-    log.info("SegmentSchemaCache is uninitialized.");
   }
 
   /**
@@ -167,7 +179,7 @@ public class SegmentSchemaCache
    */
   public void resetInTransitSMQResultPublishedOnDBPoll()
   {
-    inTransitSMQPublishedResults = new ConcurrentHashMap<>();
+    inTransitSMQPublishedResults.clear();
   }
 
   public Optional<SegmentSchemaMetadata> getSchemaForSegment(SegmentId segmentId)
@@ -177,11 +189,13 @@ public class SegmentSchemaCache
     // If were to look up the finalized segment map first, during handoff it is possible
     // that segment schema isn't polled yet and thus missing from the map and by the time
     // we look up the schema in the realtime map, it has been removed.
-
-    // realtime segment
     if (realtimeSegmentSchemaMap.containsKey(segmentId)) {
       return Optional.of(realtimeSegmentSchemaMap.get(segmentId));
     }
+
+    // it is important to lookup {@code inTransitSMQResults} before {@code inTransitSMQPublishedResults}
+    // in the other way round, if a segment schema is just published it is possible that the schema is missing
+    // in {@code inTransitSMQPublishedResults} and by the time we check {@code inTransitSMQResults} it is removed.
 
     // segment schema has been fetched via SMQ
     if (inTransitSMQResults.containsKey(segmentId)) {
@@ -265,6 +279,15 @@ public class SegmentSchemaCache
   public boolean realtimeSegmentRemoved(SegmentId segmentId)
   {
     return realtimeSegmentSchemaMap.remove(segmentId) != null;
+  }
+
+  public void emitStats()
+  {
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchemaMap.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedStats/size", realtimeSegmentSchemaMap.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", realtimeSegmentSchemaMap.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", realtimeSegmentSchemaMap.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/size", realtimeSegmentSchemaMap.size()));
   }
 
   /**

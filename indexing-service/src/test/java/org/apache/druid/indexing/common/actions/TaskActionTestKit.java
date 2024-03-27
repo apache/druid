@@ -104,7 +104,7 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache();
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),

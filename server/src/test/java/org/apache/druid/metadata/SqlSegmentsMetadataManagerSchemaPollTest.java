@@ -32,6 +32,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -55,7 +56,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(3));
 
-    segmentSchemaCache = new SegmentSchemaCache();
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,

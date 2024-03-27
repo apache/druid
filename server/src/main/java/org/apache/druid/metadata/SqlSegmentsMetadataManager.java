@@ -1125,7 +1125,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private void doPollSegmentAndSchema()
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    log.info("Starting polling of segment and schema table. latestSchemaId [%s].", latestSchemaId.get());
+    log.info("Starting polling of segment and schema table. latestSchemaId is [%s].", latestSchemaId.get());
 
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
 
@@ -1225,7 +1225,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     });
 
     log.debug("SchemaMap polled from the database is [%s]", schemaMap);
-    log.debug("lastSchemaIdPrePoll is [%s]", lastSchemaIdPrePoll);
 
     if (lastSchemaIdPrePoll == null) {
       // full refresh
@@ -1238,7 +1237,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
 
     if (lastSchemaIdPrePoll == null) {
-      log.debug("Initializing segmentSchemaCache.");
       segmentSchemaCache.setInitialized();
     }
 
@@ -1246,7 +1244,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // In that case, we shouldn't update this value with the latest polled schemaId.
     latestSchemaId.compareAndSet(lastSchemaIdPrePoll, maxPolledId.get());
 
-    log.debug("latestSchemaId is updated [%s]", latestSchemaId.get());
+    segmentSchemaCache.emitStats();
 
     Preconditions.checkNotNull(
         segments,
@@ -1264,7 +1262,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
     if (segments.isEmpty()) {
-      log.info("No segments found in the database!");
+      log.info("No segments found in the database! latestSchemaId is [%s]", latestSchemaId);
     } else {
       log.info(
           "Polled and found total %,d segments and [%d] new schema since schemaId [%s] in the database",

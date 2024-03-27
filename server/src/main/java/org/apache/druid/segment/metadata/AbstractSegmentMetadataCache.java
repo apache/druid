@@ -251,7 +251,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     long lastFailure = 0L;
 
     try {
-      additionalRefreshWaitCondition();
+      refreshWaitCondition();
       while (!Thread.currentThread().isInterrupted()) {
         final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
         final Set<String> dataSourcesToRebuild = new TreeSet<>();
@@ -350,7 +350,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     initialized.countDown();
   }
 
-  public void additionalRefreshWaitCondition() throws InterruptedException
+  public void refreshWaitCondition() throws InterruptedException
   {
     // noop
   }

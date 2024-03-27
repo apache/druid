@@ -159,6 +159,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     callbackExec.shutdownNow();
     cacheExec.shutdownNow();
+    segmentSchemaCache.uninitialize();
+    segmentSchemaBackfillQueue.stop();
   }
 
   public void leaderStart()
@@ -174,27 +176,23 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-    log.info("CoordinatorSegmentMetadataCache start complete.");
   }
 
   public void leaderStop()
   {
-    log.info("Stopping CoordinatorSegmentMetadataCache.");
-    cacheExecFuture.cancel(false);
+    log.info("%s stopping cache.", getClass().getSimpleName());
+    cacheExecFuture.cancel(true);
     segmentSchemaCache.uninitialize();
     segmentSchemaBackfillQueue.stop();
-    log.info("Complete stopping CoordinatorSegmentMetadataCache.");
   }
 
   /**
    * This method ensures that the refresh goes through only when schemaCache is initialized.
    */
   @Override
-  public synchronized void additionalRefreshWaitCondition() throws InterruptedException
+  public synchronized void refreshWaitCondition() throws InterruptedException
   {
-    log.info("Waiting for refresh condition to be met.");
     segmentSchemaCache.awaitInitialization();
-    log.info("Refresh condition met.");
   }
 
   @Override

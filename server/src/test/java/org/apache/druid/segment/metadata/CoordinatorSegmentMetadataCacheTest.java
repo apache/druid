@@ -1470,6 +1470,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,
+            new NoopServiceEmitter(),
             config
         );
 

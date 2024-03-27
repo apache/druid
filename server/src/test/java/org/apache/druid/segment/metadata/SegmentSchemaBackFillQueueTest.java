@@ -33,6 +33,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Rule;
@@ -69,7 +70,7 @@ public class SegmentSchemaBackFillQueueTest
 
     SegmentSchemaTestUtils segmentSchemaTestUtils =
         new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
-    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
+    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
@@ -84,6 +85,7 @@ public class SegmentSchemaBackFillQueueTest
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,
+            new NoopServiceEmitter(),
             config
         ) {
           @Override
