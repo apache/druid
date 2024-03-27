@@ -1,0 +1,16 @@
+type: "operatorValidation"
+
+sql: |
+   select countryName, cityName,
+   count(cityName) over w cnt
+   from wikipedia
+   where countryName in ('Austria', 'Republic of Korea') and (cityName in ('Horsching', 'Vienna', 'Seoul', 'Jeonju'))
+   group by countryName, cityName
+   window w as (partition by cityName order by countryName asc rows between unbounded preceding and 1 following)
+
+
+expectedResults:
+  - ["Austria","Horsching",1]
+  - ["Republic of Korea","Jeonju",1]
+  - ["Republic of Korea","Seoul",1]
+  - ["Austria","Vienna",1]
