@@ -255,7 +255,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testIngestNullOnlyColumns() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,,\n");
       writer.write("2014-01-01T01:00:20Z,,\n");
       writer.write("2014-01-01T02:00:30Z,,\n");
@@ -304,7 +304,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testIngestNullOnlyColumns_storeEmptyColumnsOff_shouldNotStoreEmptyColumns() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,,\n");
       writer.write("2014-01-01T01:00:20Z,,\n");
       writer.write("2014-01-01T02:00:30Z,,\n");
@@ -354,7 +354,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testDeterminePartitions() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -400,7 +400,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testTransformSpec() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,an|array,1|2|3,1\n");
       writer.write("2014-01-01T01:00:20Z,b,another|array,3|4,1\n");
       writer.write("2014-01-01T02:00:30Z,c,and|another,0|1,1\n");
@@ -528,7 +528,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testWithArbitraryGranularity() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -557,7 +557,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testIntervalBucketing() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T07:59:59.977Z,a,1\n");
       writer.write("2014-01-01T08:00:00.000Z,b,1\n");
     }
@@ -584,7 +584,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testNumShardsProvided() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -617,7 +617,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testNumShardsAndHashPartitionFunctionProvided() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -717,7 +717,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testWriteNewSegmentsWithAppendToExistingWithLinearPartitioningSuccessfullyAppend() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -754,7 +754,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testIntervalNotSpecified() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -797,7 +797,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testIntervalNotSpecifiedWithReplace() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -829,7 +829,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testCSVFileWithHeader() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("time,d,val\n");
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
@@ -878,7 +878,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testCSVFileWithHeaderColumnOverride() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("time,d,val\n");
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
@@ -928,7 +928,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testWithSmallMaxTotalRows() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T00:00:10Z,b,2\n");
       writer.write("2014-01-01T00:00:10Z,c,3\n");
@@ -973,7 +973,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testPerfectRollup() throws Exception
   {
-   populateRollupTestData(createTempFile());
+    populateRollupTestData(createTempFile());
 
     IndexTask indexTask = createIndexTask(
         createDefaultIngestionSpec(
@@ -1008,7 +1008,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testBestEffortRollup() throws Exception
   {
-   populateRollupTestData(createTempFile());
+    populateRollupTestData(createTempFile());
 
     IndexTask indexTask = createIndexTask(
         createDefaultIngestionSpec(
@@ -1819,7 +1819,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testCsvWithHeaderOfEmptyColumns() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("ts,,\n");
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
@@ -2077,7 +2077,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void testOldSegmentNotReplacedWhenDropFlagFalse() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -2101,7 +2101,7 @@ public class IndexTaskTest extends IngestionTestBase
     List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
-    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
     Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
       Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
@@ -2125,7 +2125,7 @@ public class IndexTaskTest extends IngestionTestBase
     segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
-    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = getAllUsedSegments();
     Assert.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
     int yearSegmentFound = 0;
     int minuteSegmentFound = 0;
@@ -2145,9 +2145,10 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testOldSegmentNotCoveredByTombstonesWhenDropFlagTrueSinceIngestionIntervalDoesNotContainsOldSegment() throws Exception
+  public void testOldSegmentNotCoveredByTombstonesWhenDropFlagTrueSinceIngestionIntervalDoesNotContainsOldSegment()
+      throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T01:00:10Z,a,1\n");
       writer.write("2014-01-01T01:10:20Z,b,1\n");
       writer.write("2014-01-01T01:20:30Z,c,1\n");
@@ -2171,7 +2172,7 @@ public class IndexTaskTest extends IngestionTestBase
     List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
-    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
     Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
       Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
@@ -2195,7 +2196,7 @@ public class IndexTaskTest extends IngestionTestBase
     segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
-    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = getAllUsedSegments();
     Assert.assertEquals(2, usedSegmentsBeforeAfterOverwrite.size());
     int segmentFound = 0;
     int tombstonesFound = 0;
@@ -2223,9 +2224,10 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testOldSegmentCoveredByTombstonesWhenDropFlagTrueSinceIngestionIntervalContainsOldSegment() throws Exception
+  public void testOldSegmentCoveredByTombstonesWhenDropFlagTrueSinceIngestionIntervalContainsOldSegment()
+      throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
       writer.write("2014-01-01T02:00:30Z,c,1\n");
@@ -2249,7 +2251,7 @@ public class IndexTaskTest extends IngestionTestBase
     List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
-    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
     Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
       Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
@@ -2273,7 +2275,7 @@ public class IndexTaskTest extends IngestionTestBase
     segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(24, segments.size());
-    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = getAllUsedSegments();
     Assert.assertEquals(24, usedSegmentsBeforeAfterOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
       // Used segments after overwrite and drop will contain only the
@@ -2289,7 +2291,7 @@ public class IndexTaskTest extends IngestionTestBase
   @Test
   public void verifyPublishingOnlyTombstones() throws Exception
   {
-   try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
+    try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-03-01T00:00:10Z,a,1\n");
       writer.write("2014-03-01T01:00:20Z,b,1\n");
       writer.write("2014-03-01T02:00:30Z,c,1\n");
@@ -2313,7 +2315,7 @@ public class IndexTaskTest extends IngestionTestBase
     List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
-    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
     Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
       Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
@@ -2349,7 +2351,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertTrue(segments.get(0).isTombstone());
   }
 
- 
+
   @Test
   public void testErrorWhenDropFlagTrueAndOverwriteFalse()
   {
@@ -2531,6 +2533,15 @@ public class IndexTaskTest extends IngestionTestBase
             .andReturn("allow-all");
     EasyMock.replay(request);
     return (T) api.apply(request).getEntity();
+  }
+
+  private Set<DataSegment> getAllUsedSegments()
+  {
+    return Sets.newHashSet(
+        getSegmentsMetadataManager()
+            .iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true)
+            .get()
+    );
   }
 
   private IngestionStatsAndErrors getTaskReportData() throws IOException
