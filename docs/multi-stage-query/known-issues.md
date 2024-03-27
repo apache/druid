@@ -62,3 +62,8 @@ properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#
 - `EXTERN` with input sources that match large numbers of files may exhaust available memory on the controller task.
 
 - `EXTERN` refers to external files. Use `FROM` to access `druid` input sources.
+
+## `WINDOW` Function
+
+- The maximum number of elements in a window cannot exceed a value of 100,000. 
+- The user can change this value by setting the context parameter `maxRowsMaterializedInWindow` in the query context.

@@ -40,7 +40,12 @@ public class TooManyRowsInAWindowFault extends BaseMSQFault
       @JsonProperty("maxRows") final int maxRows
   )
   {
-    super(CODE, "Too many rows in a window (requested = %d, max = %d)", numRows, maxRows);
+    super(
+        CODE,
+        "Too many rows in a window (requested = %d, max = %d). Try creating a window with a higher cardinality column or change the query shape.",
+        numRows,
+        maxRows
+    );
     this.numRows = numRows;
     this.maxRows = maxRows;
   }

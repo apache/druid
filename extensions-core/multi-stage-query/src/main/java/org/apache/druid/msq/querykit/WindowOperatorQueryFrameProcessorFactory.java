@@ -60,19 +60,22 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
   private final boolean isEmptyOver;
+  private final int maxRowsMaterializedInWindow;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
-      @JsonProperty("emptyOver") boolean emptyOver
+      @JsonProperty("emptyOver") boolean emptyOver,
+      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
     this.isEmptyOver = emptyOver;
+    this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
   }
 
   @JsonProperty("query")
@@ -97,6 +100,12 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   public boolean isEmptyOverFound()
   {
     return isEmptyOver;
+  }
+
+  @JsonProperty("maxRowsMaterializedInWindow")
+  public int getMaxRowsMaterializedInWindow()
+  {
+    return maxRowsMaterializedInWindow;
   }
 
   @Override
@@ -148,7 +157,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               frameContext.jsonMapper(),
               operatorList,
               stageRowSignature,
-              isEmptyOver
+              isEmptyOver,
+              maxRowsMaterializedInWindow
           );
         }
     );

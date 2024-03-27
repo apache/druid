@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -100,7 +101,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
+    final int maxRowsMaterialized;
     RowSignature rowSignature = queryToRun.getRowSignature();
+    if (originalQuery.context() != null && originalQuery.context().containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
+      maxRowsMaterialized = (int) originalQuery.context()
+                                                         .get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
+    } else {
+      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW;
+    }
 
 
     if (isEmptyOverFound) {
@@ -116,7 +124,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                              queryToRun,
                              queryToRun.getOperators(),
                              rowSignature,
-                             true
+                             true,
+                             maxRowsMaterialized
                          ))
       );
     } else {
@@ -163,7 +172,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                queryToRun,
                                operatorList.get(i),
                                stageRowSignature,
-                               false
+                               false,
+                               maxRowsMaterialized
                            ))
         );
       }

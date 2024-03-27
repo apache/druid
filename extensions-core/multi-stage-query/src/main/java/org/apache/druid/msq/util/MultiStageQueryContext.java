@@ -89,6 +89,9 @@ import java.util.stream.Collectors;
  * {@link TaskLockType}. If the flag is not set, msq uses {@link TaskLockType#EXCLUSIVE} for replace queries and
  * {@link TaskLockType#SHARED} for insert queries.
  *
+ * <li><b>maxRowsMaterializedInWindow</b>: Query context that specifies the largest window size that can be processed
+ * using window functions in MSQ. This is to ensure guardrails using window function in MSQ.
+ *
  * </ol>
  **/
 public class MultiStageQueryContext
@@ -156,7 +159,7 @@ public class MultiStageQueryContext
 
   public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
 
-  public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "__maxRowsMaterializedInWindow";
+  public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 

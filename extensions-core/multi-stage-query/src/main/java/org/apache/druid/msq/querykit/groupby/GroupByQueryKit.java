@@ -216,6 +216,22 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                          .shuffleSpec(nextShuffleWindowSpec)
                          .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
+      if (doLimitOrOffset) {
+        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+        queryDefBuilder.add(
+            StageDefinition.builder(firstStageNumber + 2)
+                           .inputs(new StageInputSpec(firstStageNumber + 1))
+                           .signature(resultSignature)
+                           .maxWorkerCount(1)
+                           .shuffleSpec(nextShuffleWindowSpec)
+                           .processorFactory(
+                               new OffsetLimitFrameProcessorFactory(
+                                   limitSpec.getOffset(),
+                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
+                               )
+                           )
+        );
+      }
     }
 
     return queryDefBuilder.queryId(queryId).build();

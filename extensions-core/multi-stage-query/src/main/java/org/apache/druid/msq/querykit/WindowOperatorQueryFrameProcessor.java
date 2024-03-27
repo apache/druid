@@ -31,15 +31,12 @@ import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
@@ -55,8 +52,6 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -76,14 +71,12 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   private final List<OperatorFactory> operatorFactoryList;
   private final ObjectMapper jsonMapper;
-  private final RowSignature outputStageSignature;
   private final ArrayList<RowsAndColumns> frameRowsAndCols;
   private final ArrayList<RowsAndColumns> resultRowAndCols;
   private final ReadableFrameChannel inputChannel;
   private final WritableFrameChannel outputChannel;
   private final FrameWriterFactory frameWriterFactory;
   private final FrameReader frameReader;
-  private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final ArrayList<ResultRow> objectsOfASingleRac;
   private final int maxRowsMaterialized;
   List<Integer> partitionColsIndex;
@@ -92,7 +85,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
-  private boolean isOverEmpty;
+  private final boolean isOverEmpty;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -103,15 +96,14 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       ObjectMapper jsonMapper,
       final List<OperatorFactory> operatorFactoryList,
       final RowSignature rowSignature,
-      final boolean isOverEmpty
+      final boolean isOverEmpty,
+      final int maxRowsMaterializedInWindow
   )
   {
     this.inputChannel = inputChannel;
     this.outputChannel = outputChannel;
     this.frameWriterFactory = frameWriterFactory;
-    this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     this.operatorFactoryList = operatorFactoryList;
-    this.outputStageSignature = rowSignature;
     this.jsonMapper = jsonMapper;
     this.frameReader = frameReader;
     this.query = query;
@@ -120,30 +112,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.objectsOfASingleRac = new ArrayList<>();
     this.partitionColsIndex = new ArrayList<>();
     this.isOverEmpty = isOverEmpty;
-    if (query.context() != null && query.context()
-                                        .containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
-      maxRowsMaterialized = (int) query.context().get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
-    } else {
-      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW;
-    }
-  }
-
-  private static VirtualColumns makeVirtualColumnsForFrameWriter(
-      @Nullable final VirtualColumn partitionBoostVirtualColumn,
-      final ObjectMapper jsonMapper,
-      final WindowOperatorQuery query
-  )
-  {
-    List<VirtualColumn> virtualColumns = new ArrayList<>();
-
-    virtualColumns.add(partitionBoostVirtualColumn);
-    final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
-    if (segmentGranularityVirtualColumn != null) {
-      virtualColumns.add(segmentGranularityVirtualColumn);
-    }
-
-    return VirtualColumns.create(virtualColumns);
+    this.maxRowsMaterialized = maxRowsMaterializedInWindow;
   }
 
   @Override
@@ -292,8 +261,16 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           objectsOfASingleRac.add(currentRow);
         } else if (comparePartitionKeys(outputRow, currentRow, partitionColsIndex)) {
           // if they have the same partition key
-          // keep adding them
+          // keep adding them after checking
+          // guardrails
+          if (objectsOfASingleRac.size() > maxRowsMaterialized) {
+            throw new MSQException(new TooManyRowsInAWindowFault(
+                objectsOfASingleRac.size(),
+                maxRowsMaterialized
+            ));
+          }
           objectsOfASingleRac.add(currentRow);
+
         } else {
           // key change noted
           // create rac from the rows seen before
@@ -418,11 +395,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   {
     if (frameWriter == null) {
       final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
-      final ColumnSelectorFactory frameWriterColumnSelectorFactory = makeVirtualColumnsForFrameWriter(
-          partitionBoostVirtualColumn,
-          jsonMapper,
-          query
-      ).wrap(csfm.make(rowId));
+      final ColumnSelectorFactory frameWriterColumnSelectorFactory = csfm.make(rowId);
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
       currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
@@ -440,7 +413,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     while (rowId.get() < numRows) {
       final boolean didAddToFrame = frameWriter.addSelection();
       if (didAddToFrame) {
-        incrementBoostColumn();
         rowId.incrementAndGet();
       } else if (frameWriter.getNumRows() == 0) {
         throw new FrameRowTooLargeException(currentAllocatorCapacity);
@@ -496,6 +468,13 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null,
         null
     );
+    // check if existing + newly added rows exceed guardrails
+    if (frameRowsAndCols.size() + ldrc.numRows() > maxRowsMaterialized) {
+      throw new MSQException(new TooManyRowsInAWindowFault(
+          frameRowsAndCols.size() + ldrc.numRows(),
+          maxRowsMaterialized
+      ));
+    }
     frameRowsAndCols.add(ldrc);
   }
 
@@ -531,14 +510,5 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       }
       return match == partitionIndices.size();
     }
-  }
-
-  /**
-   * Increments the value of the partition boosting column. It should be called once the row value has been written
-   * to the frame
-   */
-  private void incrementBoostColumn()
-  {
-    partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
   }
 }
