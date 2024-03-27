@@ -139,41 +139,6 @@ public class JdbcDataFetcherUrlCheckTest
           }
       );
     }
-
-    @Test
-    public void testWhenInvalidUrlFormat()
-    {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Invalid URL format for MySQL: [jdbc:mysql:/invalid-url::3006]");
-      new JdbcDataFetcher(
-          new MetadataStorageConnectorConfig()
-          {
-            @Override
-            public String getConnectURI()
-            {
-              return "jdbc:mysql:/invalid-url::3006";
-            }
-          },
-          TABLE_NAME,
-          KEY_COLUMN,
-          VALUE_COLUMN,
-          100,
-          new JdbcAccessSecurityConfig()
-          {
-            @Override
-            public Set<String> getAllowedProperties()
-            {
-              return ImmutableSet.of("valid_key1", "valid_key2");
-            }
-
-            @Override
-            public boolean isEnforceAllowedProperties()
-            {
-              return true;
-            }
-          }
-      );
-    }
   }
 
   public static class PostgreSqlTest

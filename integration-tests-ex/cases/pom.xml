@@ -182,8 +182,8 @@
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <version>${mysql.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -340,7 +340,7 @@
                     </ignoredUsedUndeclaredDependencies>
                     <!-- Dynamically loaded. -->
                     <ignoredUnusedDeclaredDependencies>
-                        <ignoredUnusedDeclaredDependency>mysql:mysql-connector-java:jar</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>com.mysql:mysql-connector-j:jar</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
                 </configuration>
             </plugin>
