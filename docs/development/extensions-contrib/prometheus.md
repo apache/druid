@@ -77,18 +77,22 @@ All metric names and labels are reformatted to match Prometheus standards.
 
 ### Metric mapping
 
-Each metric to be collected by Prometheus must specify a type, one of `[timer, counter, guage]`. Prometheus Emitter expects this mapping to
-be provided as a JSON file.  Additionally, this mapping specifies which dimensions should be included for each metric.  Prometheus expects
-histogram timers to use Seconds as the base unit.  Timers which do not use seconds as a base unit can use the `conversionFactor` to set
-the base time unit. If the user does not specify their own JSON file, a default mapping is used.  All
-metrics are expected to be mapped. Metrics which are not mapped will not be tracked.
+Each metric to be collected by Prometheus must specify a type, one of `[timer, count, guage, histogram, summary]`. 
+Prometheus Emitter expects this mapping to be provided as a JSON file.  Additionally, this mapping specifies which dimensions should be included for each metric.
+Prometheus expects histogram timers to use Seconds as the base unit.  Timers which do not use seconds as a base unit can use the `conversionFactor` to set
+the base time unit.
+If the user does not specify their own JSON file, a default mapping is used. All metrics are expected to be mapped. Metrics which are not mapped will not be tracked.
 
-Prometheus metric path is organized using the following schema:
+Prometheus metric path is organized using the following schema depending on the type:
+
+#### Timer
+Prometheus histogram with predefined bucket sizes. Each observation is divided by the `conversionFactor`.
+Predefined buckets: `[.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300]`
 
 ```json
 <druid metric name> : { 
   "dimensions" : <dimension list>, 
-  "type" : <timer|counter|gauge>, 
+  "type" : "timer", 
   "conversionFactor": <conversionFactor>, 
   "help" : <help text>
 }
@@ -101,6 +105,41 @@ For example:
   "type" : "timer",
   "conversionFactor": 1000.0,
   "help": "Seconds taken to complete a query."
+}
+```
+
+#### Histogram
+Prometheus histogram with configurable bucket sizes.
+```json
+<druid metric name> : { 
+  "dimensions" : <dimension list>, 
+  "type" : "histogram",
+  "buckets": <bucket list>
+  "help" : <help text>
+}
+```
+
+#### Count and Gauge
+Prometheus counters and gauges
+```json
+<druid metric name> : { 
+  "dimensions" : <dimension list>, 
+  "type" : <count|gauge>,
+  "help" : <help text>
+}
+```
+
+#### Summary
+Prometheus summary with configurable, quantiles, errors and age buckets.
+```json
+<druid metric name> : { 
+  "dimensions" : <dimension list>, 
+  "type" : "summary",
+  "quantiles": <quantiles list>,
+  "error": <quantile errors list>,
+  "ageSeconds": <double value>,
+  "ageBuckets": <int value>,      
+  "help" : <help text>
 }
 ```
 

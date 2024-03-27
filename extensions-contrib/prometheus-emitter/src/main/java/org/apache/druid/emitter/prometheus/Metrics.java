@@ -19,110 +19,41 @@
 
 package org.apache.druid.emitter.prometheus;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import io.prometheus.client.Counter;
-import io.prometheus.client.Gauge;
-import io.prometheus.client.Histogram;
-import io.prometheus.client.SimpleCollector;
+import org.apache.druid.emitter.prometheus.metrics.Metric;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.regex.Pattern;
 
 public class Metrics
 {
-
   private static final Logger log = new Logger(Metrics.class);
-  private final Map<String, DimensionsAndCollector> registeredMetrics;
+
   private final ObjectMapper mapper = new ObjectMapper();
-  public static final Pattern PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
+  private final Map<String, Metric<?>> registeredMetrics;
 
-  private static final String TAG_HOSTNAME = "host_name";
-  private static final String TAG_SERVICE = "druid_service";
-
-  public DimensionsAndCollector getByName(String name, String service)
+  public Metrics(PrometheusEmitterConfig emitterConfig)
   {
-    if (registeredMetrics.containsKey(name)) {
-      return registeredMetrics.get(name);
-    } else {
-      return registeredMetrics.getOrDefault(service + "_" + name, null);
-    }
+    this.registeredMetrics = Collections.unmodifiableMap(readConfig(
+        emitterConfig.getDimensionMapPath()));
+    registeredMetrics.forEach((name, metric) -> metric.createCollector(name, emitterConfig));
   }
 
-  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel, Map<String, String> extraLabels)
+  public Map<String, Metric<?>> getRegisteredMetrics()
   {
-    Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
-    Map<String, Metric> metrics = readConfig(path);
-
-    if (extraLabels == null) {
-      extraLabels = Collections.emptyMap(); // Avoid null checks later
-    }
-
-    for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
-      String name = entry.getKey();
-      Metric metric = entry.getValue();
-      Metric.Type type = metric.type;
-
-      if (isAddHostAsLabel) {
-        metric.dimensions.add(TAG_HOSTNAME);
-      }
-
-      if (isAddServiceAsLabel) {
-        metric.dimensions.add(TAG_SERVICE);
-      }
-
-      metric.dimensions.addAll(extraLabels.keySet());
-
-      String[] dimensions = metric.dimensions.toArray(new String[0]);
-      String formattedName = PATTERN.matcher(StringUtils.toLowerCase(name)).replaceAll("_");
-      SimpleCollector collector = null;
-      if (Metric.Type.count.equals(type)) {
-        collector = new Counter.Builder()
-            .namespace(namespace)
-            .name(formattedName)
-            .labelNames(dimensions)
-            .help(metric.help)
-            .register();
-      } else if (Metric.Type.gauge.equals(type)) {
-        collector = new Gauge.Builder()
-            .namespace(namespace)
-            .name(formattedName)
-            .labelNames(dimensions)
-            .help(metric.help)
-            .register();
-      } else if (Metric.Type.timer.equals(type)) {
-        collector = new Histogram.Builder()
-            .namespace(namespace)
-            .name(formattedName)
-            .labelNames(dimensions)
-            .buckets(.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300)
-            .help(metric.help)
-            .register();
-      } else {
-        log.error("Unrecognized metric type [%s]", type);
-      }
-
-      if (collector != null) {
-        registeredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
-      }
-    }
-    this.registeredMetrics = Collections.unmodifiableMap(registeredMetrics);
+    return registeredMetrics;
   }
 
-  private Map<String, Metric> readConfig(String path)
+  private Map<String, Metric<?>> readConfig(@Nullable String path)
   {
     try {
       InputStream is;
@@ -131,46 +62,23 @@ public class Metrics
         is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics.json");
       } else {
         log.info("Using metric configuration at [%s]", path);
-        is = new FileInputStream(new File(path));
+        is = Files.newInputStream(new File(path).toPath());
       }
-      return mapper.readerFor(new TypeReference<Map<String, Metric>>()
+      return mapper.readerFor(new TypeReference<Map<String, Metric<?>>>()
       {
       }).readValue(is);
     }
     catch (IOException e) {
-      throw new ISE(e, "Failed to parse metric configuration");
+      throw new ISE(e, "Failed to parse metric configuration.");
     }
   }
 
-  public Map<String, DimensionsAndCollector> getRegisteredMetrics()
+  public Metric<?> getByName(String name, String service)
   {
-    return registeredMetrics;
-  }
-
-  public static class Metric
-  {
-    public final SortedSet<String> dimensions;
-    public final Type type;
-    public final String help;
-    public final double conversionFactor;
-
-    @JsonCreator
-    public Metric(
-        @JsonProperty("dimensions") SortedSet<String> dimensions,
-        @JsonProperty("type") Type type,
-        @JsonProperty("help") String help,
-        @JsonProperty("conversionFactor") double conversionFactor
-    )
-    {
-      this.dimensions = dimensions;
-      this.type = type;
-      this.help = help;
-      this.conversionFactor = conversionFactor;
-    }
-
-    public enum Type
-    {
-      count, gauge, timer
+    if (registeredMetrics.containsKey(name)) {
+      return registeredMetrics.get(name);
+    } else {
+      return registeredMetrics.getOrDefault(service + "_" + name, null);
     }
   }
 }

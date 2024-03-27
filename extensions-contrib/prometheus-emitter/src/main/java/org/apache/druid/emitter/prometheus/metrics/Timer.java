@@ -17,35 +17,39 @@
  * under the License.
  */
 
-package org.apache.druid.emitter.prometheus;
+package org.apache.druid.emitter.prometheus.metrics;
 
-import io.prometheus.client.SimpleCollector;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
-public class DimensionsAndCollector
+import java.util.SortedSet;
+
+@Deprecated
+@JsonTypeName(MetricType.DimensionMapNames.TIMER)
+public class Timer extends Histogram
 {
-  private final String[] dimensions;
-  private final SimpleCollector collector;
+  private static final double[] BUCKETS = {.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300};
   private final double conversionFactor;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor)
+  public Timer(
+      @JsonProperty("dimensions") SortedSet<String> dimensions,
+      @JsonProperty("type") MetricType type,
+      @JsonProperty("help") String help,
+      @JsonProperty("conversionFactor") double conversionFactor
+  )
   {
-    this.dimensions = dimensions;
-    this.collector = collector;
+    super(dimensions, type, help, BUCKETS);
     this.conversionFactor = conversionFactor;
-  }
-
-  public String[] getDimensions()
-  {
-    return dimensions;
-  }
-
-  public SimpleCollector getCollector()
-  {
-    return collector;
   }
 
   public double getConversionFactor()
   {
     return conversionFactor;
+  }
+
+  @Override
+  public void record(String[] labelValues, double value)
+  {
+    this.getCollector().labels(labelValues).observe(value / this.conversionFactor);
   }
 }

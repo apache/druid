@@ -22,11 +22,9 @@ package org.apache.druid.emitter.prometheus;
 
 import com.google.common.collect.ImmutableMap;
 import io.prometheus.client.CollectorRegistry;
-import io.prometheus.client.Counter;
-import io.prometheus.client.Gauge;
-import io.prometheus.client.Histogram;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
+import org.apache.druid.emitter.prometheus.metrics.Metric;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -47,37 +45,38 @@ import java.util.regex.Pattern;
 public class PrometheusEmitter implements Emitter
 {
   private static final Logger log = new Logger(PrometheusEmitter.class);
-  private final Metrics metrics;
-  private final PrometheusEmitterConfig config;
-  private final PrometheusEmitterConfig.Strategy strategy;
   private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
-
   private static final String TAG_HOSTNAME = "host_name";
   private static final String TAG_SERVICE = "druid_service";
-
+  private final PrometheusEmitterConfig config;
+  private final PrometheusEmitterConfig.Strategy strategy;
+  private final Metrics metrics;
   private HTTPServer server;
   private PushGateway pushGateway;
   private volatile String identifier;
   private ScheduledExecutorService exec;
+
+  public PrometheusEmitter(PrometheusEmitterConfig config)
+  {
+    this.config = config;
+    this.strategy = config.getStrategy();
+    this.metrics = new Metrics(config);
+  }
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
     return new PrometheusEmitter(config);
   }
 
-  public PrometheusEmitter(PrometheusEmitterConfig config)
+  private static URL createURLSneakily(final String urlString)
   {
-    this.config = config;
-    this.strategy = config.getStrategy();
-    metrics = new Metrics(
-        config.getNamespace(),
-        config.getDimensionMapPath(),
-        config.isAddHostAsLabel(),
-        config.isAddServiceAsLabel(),
-        config.getExtraLabels()
-    );
+    try {
+      return new URL(urlString);
+    }
+    catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
   }
-
 
   @Override
   public void start()
@@ -111,16 +110,6 @@ public class PrometheusEmitter implements Emitter
     }
   }
 
-  private static URL createURLSneakily(final String urlString)
-  {
-    try {
-      return new URL(urlString);
-    }
-    catch (MalformedURLException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   public void emit(Event event)
   {
@@ -138,7 +127,7 @@ public class PrometheusEmitter implements Emitter
     identifier = (userDims.get("task") == null ? metricEvent.getHost() : (String) userDims.get("task"));
     Number value = metricEvent.getValue();
 
-    DimensionsAndCollector metric = metrics.getByName(name, service);
+    Metric<?> metric = metrics.getByName(name, service);
     if (metric != null) {
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();
@@ -164,17 +153,7 @@ public class PrometheusEmitter implements Emitter
           }
         }
       }
-
-      if (metric.getCollector() instanceof Counter) {
-        ((Counter) metric.getCollector()).labels(labelValues).inc(value.doubleValue());
-      } else if (metric.getCollector() instanceof Gauge) {
-        ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
-      } else if (metric.getCollector() instanceof Histogram) {
-        ((Histogram) metric.getCollector()).labels(labelValues)
-                                           .observe(value.doubleValue() / metric.getConversionFactor());
-      } else {
-        log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
-      }
+      metric.record(labelValues, value.doubleValue());
     } else {
       log.debug("Unmapped metric [%s]", name);
     }
@@ -185,11 +164,11 @@ public class PrometheusEmitter implements Emitter
     if (pushGateway == null || identifier == null) {
       return;
     }
-    Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
+    Map<String, Metric<?>> map = metrics.getRegisteredMetrics();
     CollectorRegistry metrics = new CollectorRegistry();
     try {
-      for (DimensionsAndCollector collector : map.values()) {
-        metrics.register(collector.getCollector());
+      for (Metric<?> metric : map.values()) {
+        metrics.register(metric.getCollector());
       }
       pushGateway.push(metrics, config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
     }
@@ -217,7 +196,10 @@ public class PrometheusEmitter implements Emitter
 
       try {
         if (config.getWaitForShutdownDelay().getMillis() > 0) {
-          log.info("Waiting [%s]ms before deleting metrics from the push gateway.", config.getWaitForShutdownDelay().getMillis());
+          log.info(
+              "Waiting [%s]ms before deleting metrics from the push gateway.",
+              config.getWaitForShutdownDelay().getMillis()
+          );
           Thread.sleep(config.getWaitForShutdownDelay().getMillis());
         }
       }
