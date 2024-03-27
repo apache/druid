@@ -280,10 +280,7 @@ The above EXPLAIN PLAN returns the following result:
             ]
           },
           "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
           },
           "signature": [
             {
@@ -503,10 +500,7 @@ The above EXPLAIN PLAN query returns the following result:
             ]
           },
           "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
           },
           "signature": [
             {
