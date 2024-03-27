@@ -56,16 +56,15 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.easymock.Capture;
-import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -132,6 +131,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     monitorSchedulerConfig = EasyMock.mock(DruidMonitorSchedulerConfig.class);
     supervisorStateManagerConfig = EasyMock.mock(SupervisorStateManagerConfig.class);
     supervisor4 = EasyMock.mock(SeekableStreamSupervisor.class);
+
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(null).anyTimes();
   }
 
   private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
@@ -757,11 +758,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
 
-    Capture<ServiceMetricEvent.Builder> metricCapture = Capture.newInstance(CaptureType.ALL);
-    ServiceEmitter dynamicActionEmitter = EasyMock.mock(ServiceEmitter.class);
-    dynamicActionEmitter.emit(EasyMock.capture(metricCapture));
-    EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.replay(dynamicActionEmitter);
+    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
 
@@ -784,13 +781,13 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
     Assert.assertTrue(
-        metricCapture
-            .getValues()
+        dynamicActionEmitter
+            .getMetricEvents()
+            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
-            .map(metric -> metric.build(ImmutableMap.of()))
-            .map(ServiceMetricEvent::getMetric)
-            .anyMatch(LagBasedAutoScaler.REQUIRED_TASKS_METRIC::equals));
-    EasyMock.verify(dynamicActionEmitter);
+            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
+            .filter(Objects::nonNull)
+            .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
     autoScaler.reset();
     autoScaler.stop();
   }
@@ -1208,7 +1205,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     HashMap<String, Object> autoScalerConfig = new HashMap<>();
     autoScalerConfig.put("enableTaskAutoScaler", true);
-    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 50);
     autoScalerConfig.put("lagCollectionRangeMillis", 500);
     autoScalerConfig.put("scaleOutThreshold", 0);
     autoScalerConfig.put("triggerScaleOutFractionThreshold", 0.0);
