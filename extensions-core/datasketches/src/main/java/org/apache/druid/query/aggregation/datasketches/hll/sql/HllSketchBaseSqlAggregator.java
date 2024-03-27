@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
@@ -53,11 +54,13 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 
   private final boolean finalizeSketch;
   private final StringEncoding stringEncoding;
+  private final SketchConfig serverConfig;
 
-  protected HllSketchBaseSqlAggregator(boolean finalizeSketch, StringEncoding stringEncoding)
+  protected HllSketchBaseSqlAggregator(boolean finalizeSketch, StringEncoding stringEncoding, SketchConfig serverConfig)
   {
     this.finalizeSketch = finalizeSketch;
     this.stringEncoding = stringEncoding;
+    this.serverConfig = serverConfig;
   }
 
   @Nullable
@@ -128,7 +131,8 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
           // the input encoding of the original sketches was, so we set it to the default.
           HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
           finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-          ROUND
+          ROUND,
+          serverConfig
       );
     } else {
       final RelDataType dataType = columnRexNode.getType();
@@ -165,7 +169,8 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             // the input encoding of the original sketches was, so we set it to the default.
             HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
             finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-            ROUND
+            ROUND,
+            serverConfig
         );
       } else {
         aggregatorFactory = new HllSketchBuildAggregatorFactory(
@@ -175,7 +180,8 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             tgtHllType,
             stringEncoding,
             finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-            ROUND
+            ROUND,
+            serverConfig
         );
       }
     }

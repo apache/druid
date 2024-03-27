@@ -23,6 +23,7 @@ import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -66,7 +67,8 @@ public class DataSketchesHllBenchmark
       null,
       null,
       null,
-      false
+      false,
+      new SketchConfig()
   );
 
   private final ByteBuffer buf = ByteBuffer.allocateDirect(aggregatorFactory.getMaxIntermediateSize());

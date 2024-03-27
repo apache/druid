@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
+import com.google.inject.Inject;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.InferTypes;
@@ -26,6 +27,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -47,9 +49,10 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                          .functionCategory(SqlFunctionCategory.NUMERIC)
                          .build();
 
-  public HllSketchApproxCountDistinctSqlAggregator()
+  @Inject
+  public HllSketchApproxCountDistinctSqlAggregator(SketchConfig sketchConfig)
   {
-    super(true, StringEncoding.UTF16LE);
+    super(true, StringEncoding.UTF16LE, sketchConfig);
   }
 
   @Override
