@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -29,6 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorBaseTest;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -56,17 +56,14 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
  */
 @RunWith(Parameterized.class)
-public class LoadRuleTest
+public class LoadRuleTest extends CoordinatorBaseTest
 {
-  private static final String DS_WIKI = "wiki";
-
   private ListeningExecutorService exec;
   private BalancerStrategy balancerStrategy;
 
@@ -104,21 +101,17 @@ public class LoadRuleTest
   public void testLoadRuleAssignsSegments()
   {
     // Cluster has 2 tiers with 1 server each
-    final ServerHolder server1 = createServer(Tier.T1);
-    final ServerHolder server2 = createServer(Tier.T2);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1)
-        .addTier(Tier.T2, server2)
+        .add(createServer(Tier.T1), createServer(Tier.T2))
         .build();
 
-    final DataSegment segment = createDataSegment(DS_WIKI);
-    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 2));
-    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
+    final DataSegment segment = createDataSegment(DS.WIKI);
+    LoadRule rule = Load.on(Tier.T1, 1).andOn(Tier.T2, 2).forever();
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
   }
 
   private CoordinatorRunStats runRuleAndGetStats(LoadRule rule, DataSegment segment, DruidCluster cluster)
@@ -162,13 +155,10 @@ public class LoadRuleTest
   {
     ServerHolder server1 = createServer(Tier.T1);
     ServerHolder server2 = createServer(Tier.T1);
-    DruidCluster druidCluster = DruidCluster
-        .builder()
-        .addTier(Tier.T1, server1, server2)
-        .build();
+    DruidCluster druidCluster = DruidCluster.builder().add(server1, server2).build();
 
-    final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final LoadRule rule = Load.on(Tier.T1, 1).forever();
+    final DataSegment segment = createDataSegment(DS.WIKI);
     CoordinatorRunStats firstRunStats = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertEquals(1L, firstRunStats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, segment.getDataSource()));
     Assert.assertEquals(1, server1.getLoadingSegments().size() + server2.getLoadingSegments().size());
@@ -183,15 +173,13 @@ public class LoadRuleTest
   @Ignore("Enable this test when timeout behaviour is fixed")
   public void testOverAssignForTimedOutSegments()
   {
-    ServerHolder server1 = createServer(Tier.T1);
-    ServerHolder server2 = createServer(Tier.T1);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1, server2)
+        .add(createServer(Tier.T1), createServer(Tier.T1))
         .build();
 
-    final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final LoadRule rule = Load.on(Tier.T1, 1).forever();
+    final DataSegment segment = createDataSegment(DS.WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
@@ -199,21 +187,19 @@ public class LoadRuleTest
 
     // Ensure that the primary segment is assigned again in case the peon timed out on loading the segment
     CoordinatorRunStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, druidCluster);
-    Assert.assertEquals(1L, statsAfterLoadPrimary.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, statsAfterLoadPrimary.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
   }
 
   @Test
   public void testSkipReplicationForTimedOutSegments()
   {
-    ServerHolder server1 = createServer(Tier.T1);
-    ServerHolder server2 = createServer(Tier.T1);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1, server2)
+        .add(createServer(Tier.T1), createServer(Tier.T1))
         .build();
 
-    final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final LoadRule rule = Load.on(Tier.T1, 1).forever();
+    final DataSegment segment = createDataSegment(DS.WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
@@ -230,86 +216,76 @@ public class LoadRuleTest
   public void testLoadUsedSegmentsForAllSegmentGranularityAndCachingCostBalancerStrategy()
   {
     final List<DataSegment> segments =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(DS.WIKI)
                           .forIntervals(1, Granularities.ALL)
                           .withNumPartitions(2)
                           .eachOfSizeInMb(100);
 
-    final ServerHolder server1 = createServer(Tier.T1);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1)
+        .add(createServer(Tier.T1))
         .build();
 
     balancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
-    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    CoordinatorRunStats stats = runRuleAndGetStats(
-        rule,
-        segments.get(1),
-        makeCoordinatorRuntimeParams(druidCluster, segments.toArray(new DataSegment[0]))
-    );
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
+    LoadRule rule = Load.on(Tier.T1, 1).forever();
+    DruidCoordinatorRuntimeParams params
+        = makeCoordinatorRuntimeParams(druidCluster, segments.toArray(new DataSegment[0]));
+    CoordinatorRunStats stats = runRuleAndGetStats(rule, segments.get(1), params);
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
   }
 
   @Test
   public void testSegmentsAreDroppedIfLoadRuleHasZeroReplicas()
   {
-    final DataSegment segment = createDataSegment(DS_WIKI);
-
-    final ServerHolder serverT11 = createServer(Tier.T1, segment);
-    final ServerHolder serverT12 = createServer(Tier.T2, segment);
-    final ServerHolder serverT21 = createServer(Tier.T2, segment);
+    final DataSegment segment = createDataSegment(DS.WIKI);
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, serverT11)
-        .addTier(Tier.T2, serverT12, serverT21)
+        .add(createServer(Tier.T1, segment))
+        .add(createServer(Tier.T2, segment))
+        .add(createServer(Tier.T2, segment))
         .build();
 
-    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 0, Tier.T2, 0));
-    Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
+    LoadRule rule = Load.on(Tier.T1, 0).andOn(Tier.T2, 0).forever();
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS.WIKI));
   }
 
   @Test
   public void testLoadIgnoresInvalidTiers()
   {
-    ServerHolder server = createServer(Tier.T1);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server)
+        .add(createServer(Tier.T1))
         .build();
 
-    final DataSegment segment = createDataSegment(DS_WIKI);
-    LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
-    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
+    final DataSegment segment = createDataSegment(DS.WIKI);
+    LoadRule rule = Load.on("invalidTier", 1).andOn(Tier.T1, 1).forever();
+
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "invalidTier", DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "invalidTier", DS.WIKI));
   }
 
   @Test
   public void testDropIgnoresInvalidTiers()
   {
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(DS.WIKI);
 
     // Cluster has 1 tier with 2 servers
-    ServerHolder server1 = createServer(Tier.T1, segment);
-    ServerHolder server2 = createServer(Tier.T1, segment);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1, server2)
+        .add(createServer(Tier.T1, segment), createServer(Tier.T1, segment))
         .build();
 
-    LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
+    LoadRule rule = Load.on("invalidTier", 1).andOn(Tier.T1, 1).forever();
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, "invalidTier", DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, "invalidTier", DS.WIKI));
   }
 
   @Test
@@ -320,8 +296,7 @@ public class LoadRuleTest
     final int maxSegmentsInQueue = 2;
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            Tier.T1,
+        .add(
             new ServerHolder(
                 createDruidServer(Tier.T1).toImmutableDruidServer(),
                 peon, false, maxSegmentsInQueue, 10
@@ -348,8 +323,7 @@ public class LoadRuleTest
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
-    final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
+    final LoadRule rule = Load.on(Tier.T1, 1).forever();
     CoordinatorRunStats stats1 = runRuleAndGetStats(rule, dataSegment1, params);
     CoordinatorRunStats stats2 = runRuleAndGetStats(rule, dataSegment2, params);
     CoordinatorRunStats stats3 = runRuleAndGetStats(rule, dataSegment3, params);
@@ -367,18 +341,16 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, decommServerT1)
-        .addTier(Tier.T2, serverT2)
+        .add(decommServerT1, serverT2)
         .build();
 
     // Load rule requires 1 replica on each tier
-    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 1));
-    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
-    DataSegment segment = createDataSegment(DS_WIKI);
+    LoadRule rule = Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever();
+    DataSegment segment = createDataSegment(DS.WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Verify that segment is not loaded on decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
     Assert.assertEquals(0, decommServerT1.getLoadingSegments().size());
     Assert.assertTrue(serverT2.getLoadingSegments().contains(segment));
   }
@@ -388,27 +360,23 @@ public class LoadRuleTest
   {
     // 2 tiers with 2 servers each, 1 server is decommissioning
     ServerHolder decommServerT11 = createDecommissioningServer(Tier.T1);
-    ServerHolder serverT12 = createServer(Tier.T1);
-    ServerHolder serverT21 = createServer(Tier.T2);
-    ServerHolder serverT22 = createServer(Tier.T2);
-
-    final DataSegment segment = createDataSegment(DS_WIKI);
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, decommServerT11, serverT12)
-        .addTier(Tier.T2, serverT21, serverT22)
+        .add(decommServerT11, createServer(Tier.T1))
+        .add(createServer(Tier.T2), createServer(Tier.T2))
         .build();
 
     // Load rule requires 2 replicas on each server
-    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 2, Tier.T2, 2));
+    DataSegment segment = createDataSegment(DS.WIKI);
+    LoadRule rule = Load.on(Tier.T1, 2).andOn(Tier.T2, 2).forever();
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Verify that no replica is assigned to decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS.WIKI));
     Assert.assertTrue(decommServerT11.getLoadingSegments().isEmpty());
     Assert.assertEquals(0, decommServerT11.getLoadingSegments().size());
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS.WIKI));
   }
 
   /**
@@ -426,12 +394,12 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1, server2)
+        .add(server1, server2)
         .build();
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, segment1, segment2);
-    final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 0));
-    Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
+    final LoadRule rule = Load.on(Tier.T1, 0).forever();
+
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment1, params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, segment1.getDataSource()));
     Assert.assertTrue(server1.getPeon().getSegmentsToDrop().contains(segment1));
@@ -444,7 +412,7 @@ public class LoadRuleTest
   @Test
   public void testExtraReplicasAreDroppedFromDecommissioningServer()
   {
-    final DataSegment segment1 = createDataSegment(DS_WIKI);
+    final DataSegment segment1 = createDataSegment(DS.WIKI);
 
     // 3 servers, each serving the same segment
     final ServerHolder server1 = createServer(Tier.T1, segment1);
@@ -453,19 +421,16 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(Tier.T1, server1, server2, server3)
+        .add(server1, server2, server3)
         .build();
 
     // Load rule requires 2 replicas
-    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 2));
-    CoordinatorRunStats stats = runRuleAndGetStats(
-        rule,
-        segment1,
-        makeCoordinatorRuntimeParams(druidCluster, segment1)
-    );
+    LoadRule rule = Load.on(Tier.T1, 2).forever();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, segment1);
+    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment1, params);
 
     // Verify that the extra replica is dropped from the decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS.WIKI));
     Assert.assertEquals(0, server1.getPeon().getSegmentsToDrop().size());
     Assert.assertEquals(1, server2.getPeon().getSegmentsToDrop().size());
     Assert.assertEquals(0, server3.getPeon().getSegmentsToDrop().size());
@@ -484,11 +449,6 @@ public class LoadRuleTest
         0,
         0
     );
-  }
-
-  private static LoadRule loadForever(final Map<String, Integer> tieredReplicants)
-  {
-    return new ForeverLoadRule(tieredReplicants, null);
   }
 
   private DruidServer createDruidServer(String tier)
@@ -522,12 +482,6 @@ public class LoadRuleTest
         new TestLoadQueuePeon(),
         true
     );
-  }
-
-  private static class Tier
-  {
-    static final String T1 = "tier1";
-    static final String T2 = "tier2";
   }
 
   @Test
