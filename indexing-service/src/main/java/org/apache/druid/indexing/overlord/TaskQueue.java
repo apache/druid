@@ -1009,4 +1009,19 @@ public class TaskQueue
       giant.unlock();
     }
   }
+
+  public List<Task> getActiveTasksForDatasource(String datasource)
+  {
+    giant.lock();
+    try {
+      return tasks.values()
+                  .stream()
+                  .filter(task -> task.getDataSource().equals(datasource)
+                                  && !recentlyCompletedTasks.contains(task.getId()))
+                  .collect(Collectors.toList());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
 }
