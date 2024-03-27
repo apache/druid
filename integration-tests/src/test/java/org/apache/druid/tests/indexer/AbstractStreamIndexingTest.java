@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -289,12 +288,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME
       );
       // Verify supervisor is healthy before suspension
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status"
       );
       // Suspend the supervisor
       indexer.suspendSupervisor(generatedTestConfig.getSupervisorId());
@@ -308,12 +307,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Resume the supervisor
       indexer.resumeSupervisor(generatedTestConfig.getSupervisorId());
       // Verify supervisor is healthy after suspension
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status"
       );
       // Verify that supervisor can catch up with the stream
       verifyIngestedData(generatedTestConfig, numWritten);
@@ -353,24 +352,24 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
               FIRST_EVENT_TIME
       );
       // Verify supervisor is healthy before suspension
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-              true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
               10000,
               30,
-              "Waiting for supervisor to be healthy"
+              "Supervisor status"
       );
 
       // wait for autoScaling task numbers from 1 to 2.
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> indexer.getRunningTasks()
                        .stream()
                        .filter(taskResponseObject -> taskResponseObject.getId().contains(dataSource))
-                       .count() == 2,
-              true,
+                       .count(),
+              2,
               10000,
               50,
-              "waiting for autoScaling task numbers from 1 to 2"
+              "autoScaling task numbers"
       );
 
       // Start generating remainning half of the data
@@ -419,31 +418,33 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME
       );
       // Verify supervisor is healthy before suspension
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status"
       );
 
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.IDLE.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.IDLE,
           10000,
           30,
-          "Waiting for supervisor to be idle"
+          "Supervisor status"
       );
 
       // wait for no more creation of indexing tasks.
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> indexer.getRunningTasks()
                        .stream()
-                       .noneMatch(taskResponseObject -> taskResponseObject.getId().contains(dataSource)),
-          true,
+                       .filter(taskResponseObject -> taskResponseObject.getId().contains(dataSource))
+                       .count(),
+          0L,
           10000,
           50,
-          "wait for no more creation of indexing tasks"
+          "number of running tasks for datasource[%s]",
+          dataSource
       );
 
       // Start generating remainning half of the data
@@ -501,7 +502,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       indexer.terminateSupervisor(generatedTestConfig2.getSupervisorId());
 
       // Verify that auto cleanup eventually removes supervisor spec after termination
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> {
               try {
                 indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId());
@@ -575,12 +576,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME
       );
       // Verify supervisor is healthy before restart
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status"
       );
       // Restart Druid process
       LOG.info("Restarting Druid process");
@@ -607,12 +608,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound)
       );
       // Verify supervisor is healthy
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status"
       );
       // Verify that supervisor ingested all data
       verifyIngestedData(generatedTestConfig, numWritten);
@@ -652,12 +653,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME
       );
       // Verify supervisor is healthy before resahrding
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status"
       );
       // Reshard the supervisor by split from STREAM_SHARD_COUNT to newShardCount and waits until the resharding starts
       streamAdminClient.updatePartitionCount(generatedTestConfig.getStreamName(), newShardCount, true);
@@ -671,14 +672,14 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound)
       );
       // Wait for stream to finish resharding
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> streamAdminClient.isStreamActive(generatedTestConfig.getStreamName()),
           true,
           10000,
           30,
-          "Waiting for stream to finish resharding"
+          "Stream is active after resharding"
       );
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> streamAdminClient.verfiyPartitionCountUpdated(
               generatedTestConfig.getStreamName(),
               STREAM_SHARD_COUNT,
@@ -687,7 +688,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           true,
           10000,
           30,
-          "Waiting for stream to finish resharding"
+          "Stream partition count updated after resharding"
       );
       // Start generating remaining data (after resharding)
       numWritten += streamGenerator.run(
@@ -697,12 +698,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound)
       );
       // Verify supervisor is healthy after resahrding
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          SupervisorStateManager.BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Supervisor status after resharding"
       );
       // Verify that supervisor can catch up with the stream
       verifyIngestedData(generatedTestConfig, numWritten);
@@ -728,23 +729,15 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     // Wait for supervisor to consume events
     LOG.info("Waiting for stream indexing tasks to consume events");
 
-    ITRetryUtil.retryUntilTrue(
-        () ->
-          numWritten == this.queryHelper.countRows(
-              generatedTestConfig.getFullDatasourceName(),
-              Intervals.ETERNITY,
-              name -> new LongSumAggregatorFactory(name, "count")
-          ),
-        StringUtils.format(
-            "dataSource[%s] consumed [%,d] events, expected [%,d]",
+    ITRetryUtil.retryUntilEquals(
+        () -> queryHelper.countRows(
             generatedTestConfig.getFullDatasourceName(),
-            this.queryHelper.countRows(
-                generatedTestConfig.getFullDatasourceName(),
-                Intervals.ETERNITY,
-                name -> new LongSumAggregatorFactory(name, "count")
-            ),
-            numWritten
-        )
+            Intervals.ETERNITY,
+            name -> new LongSumAggregatorFactory(name, "count")
+        ),
+        numWritten,
+        "Total rows in datasource[%s]",
+        generatedTestConfig.fullDatasourceName
     );
 
     // Query data
@@ -757,8 +750,8 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     // Each task duration is 30 secs. Hence, one task will be able to consume all data from the stream.
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0),
-        "Waiting for Task Completion"
+        () -> indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0,
+        "Task Completion"
     );
 
     // wait for segments to be handed off
@@ -831,12 +824,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           Long.toString(DateTimes.nowUtc().plusMinutes(30).getMillis())
       );
       streamAdminClient.createStream(streamName, STREAM_SHARD_COUNT, tags);
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> streamAdminClient.isStreamActive(streamName),
           true,
           10000,
           30,
-          "Wait for stream active"
+          "Stream is active"
       );
       fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
       streamIngestionPropsTransform = generateStreamIngestionPropsTransform(

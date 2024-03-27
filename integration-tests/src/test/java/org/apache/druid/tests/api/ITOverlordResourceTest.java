@@ -49,7 +49,7 @@ public class ITOverlordResourceTest
     final String taskSpec = AbstractIndexerTest.getResourceAsString(INGESTION_SPEC);
     final String taskId = indexer.submitTask(taskSpec);
 
-    ITRetryUtil.retryUntil(
+    ITRetryUtil.retryUntilEquals(
         () -> {
           final List<TaskResponseObject> tasks = indexer.getAllTasks();
           final TaskResponseObject taskStatus = tasks
@@ -57,15 +57,10 @@ public class ITOverlordResourceTest
               .filter(task -> taskId.equals(task.getId()))
               .findAny()
               .orElseThrow(() -> new ISE("Cannot find task[%s]", taskId));
-          TaskState status = taskStatus.getStatus();
-          if (status == TaskState.FAILED) {
-            throw new ISE("Task[%s] FAILED", taskId);
-          }
-          return status == TaskState.SUCCESS;
+          return taskStatus.getStatus();
         },
-        true,
-        ITRetryUtil.DEFAULT_RETRY_SLEEP,
-        ITRetryUtil.DEFAULT_RETRY_COUNT,
+        TaskState.SUCCESS,
+        "Status of task[%s]",
         taskId
     );
   }

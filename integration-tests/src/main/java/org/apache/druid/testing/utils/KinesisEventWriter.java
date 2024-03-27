@@ -103,12 +103,12 @@ public class KinesisEventWriter implements StreamEventWriter
   public void flush()
   {
     kinesisProducer.flushSync();
-    ITRetryUtil.retryUntil(
-        () -> kinesisProducer.getOutstandingRecordsCount() == 0,
-        true,
+    ITRetryUtil.retryUntilEquals(
+        kinesisProducer::getOutstandingRecordsCount,
+        0,
         10000,
         30,
-        "Waiting for all Kinesis writes to be flushed"
+        "Pending Kinesis writes"
     );
   }
 

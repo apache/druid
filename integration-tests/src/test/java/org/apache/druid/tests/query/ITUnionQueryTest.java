@@ -117,10 +117,10 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       }
 
       // wait until all events are ingested
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> {
             for (int i = 0; i < numTasks; i++) {
-              final int countRows = queryHelper.countRows(
+              final long countRows = queryHelper.countRows(
                   fullDatasourceName + i,
                   Intervals.of("2013-08-31/2013-09-01"),
                   name -> new LongSumAggregatorFactory(name, "count")
@@ -137,7 +137,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           true,
           1000,
           100,
-          "Waiting all events are ingested"
+          "Events are ingested"
       );
 
       // should hit the queries on realtime task
@@ -165,14 +165,15 @@ public class ITUnionQueryTest extends AbstractIndexerTest
         indexer.waitUntilTaskCompletes(taskIDs.get(i));
       }
       // task should complete only after the segments are loaded by historical node
-      for (int i = 0; i < numTasks; i++) {
-        final int taskNum = i;
-        ITRetryUtil.retryUntil(
-            () -> coordinator.areSegmentsLoaded(fullDatasourceName + taskNum),
+      for (int taskNum = 0; taskNum < numTasks; taskNum++) {
+        final String datasource = fullDatasourceName + taskNum;
+        ITRetryUtil.retryUntilEquals(
+            () -> coordinator.areSegmentsLoaded(datasource),
             true,
             10000,
             10,
-            "Real-time generated segments loaded"
+            "Datasource[%s] is loaded",
+            datasource
         );
       }
       // run queries on historical nodes

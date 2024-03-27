@@ -146,7 +146,7 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
   }
 
   @Override
-  int getNumExpectedRowsIngested()
+  long getNumExpectedRowsIngested()
   {
     return EXPECTED_NUM_ROWS;
   }

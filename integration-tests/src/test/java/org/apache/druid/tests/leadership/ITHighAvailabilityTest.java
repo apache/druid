@@ -127,7 +127,7 @@ public class ITHighAvailabilityTest
   @Test
   public void testDiscoveryAndSelfDiscovery()
   {
-    ITRetryUtil.retryUntil(
+    ITRetryUtil.retryUntilEquals(
         () -> {
           try {
             List<DruidNodeDiscovery> disco = ImmutableList.of(
@@ -161,7 +161,7 @@ public class ITHighAvailabilityTest
   @Test
   public void testCustomDiscovery()
   {
-    ITRetryUtil.retryUntil(
+    ITRetryUtil.retryUntilEquals(
         () -> {
           try {
             DruidNodeDiscovery customDisco =

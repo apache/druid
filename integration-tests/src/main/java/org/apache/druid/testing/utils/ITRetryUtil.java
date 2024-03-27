@@ -20,8 +20,10 @@
 package org.apache.druid.testing.utils;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -36,41 +38,81 @@ public class ITRetryUtil
 
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
   }
 
   public static void retryUntilFalse(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
   }
 
-  public static void retryUntil(
-      Callable<Boolean> callable,
-      boolean expectedValue,
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      String taskMessageFormat,
+      Object... args
+  )
+  {
+    retryUntilEquals(
+        callable,
+        expectedValue,
+        DEFAULT_RETRY_SLEEP,
+        DEFAULT_RETRY_COUNT,
+        StringUtils.format(taskMessageFormat, args)
+    );
+  }
+
+  /**
+   * Retries until the given {@code task} returns the {@code expectedValue} or
+   * the {@code retryCount} is exhausted.
+   *
+   * @param msgFormat Name of the value being verified, e.g. "Number of rows",
+   *                  "Number of tasks for datasource '%s'"
+   * @param args      Arguments to use in the {@code msgFormat}
+   * @param <T>       Type of value computed by the task
+   */
+  public static <T> void retryUntilEquals(
+      Callable<T> task,
+      T expectedValue,
       long delayInMillis,
       int retryCount,
-      String taskMessage
+      String msgFormat,
+      Object... args
   )
   {
     int currentTry = 0;
     Exception lastException = null;
+    final String taskMessage = StringUtils.nonStrictFormat(msgFormat, args);
 
     while (true) {
       try {
-        LOG.info("Trying attempt[%d/%d]...", currentTry, retryCount);
-        if (currentTry > retryCount || callable.call() == expectedValue) {
+        if (currentTry > retryCount) {
           break;
+        }
+
+        LOG.info(
+            "Starting attempt[%d/%d]. Verifying that [%s] is [%s].",
+            currentTry, retryCount, taskMessage, expectedValue
+        );
+        final T observedValue = task.call();
+        if (Objects.equals(observedValue, expectedValue)) {
+          break;
+        } else {
+          LOG.info(
+              "Failed attempt[%d/%d]. [%s] has value [%s] but expected [%s]. Next retry in [%d]ms.",
+              currentTry, retryCount, taskMessage, observedValue, expectedValue, delayInMillis
+          );
         }
       }
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
+        LOG.info(
+            "Failed attempt[%d/%d]. Computing [%s] encountered error [%s]. Next retry in [%d]ms.",
+            currentTry, retryCount, taskMessage, e.getMessage(), delayInMillis
+        );
         lastException = e;
       }
 
-      LOG.info(
-          "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
-          currentTry, retryCount, taskMessage, delayInMillis
-      );
       try {
         Thread.sleep(delayInMillis);
       }

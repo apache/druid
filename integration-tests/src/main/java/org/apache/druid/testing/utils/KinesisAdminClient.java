@@ -128,7 +128,7 @@ public class KinesisAdminClient implements StreamAdminClient
     }
     if (blocksUntilStarted) {
       // Wait until the resharding started (or finished)
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> {
             int updatedShardCount = getStreamPartitionCount(streamName);
 

@@ -139,14 +139,11 @@ public class ITMultiStageQueryWorkerFaultTolerance
 
   private void killTaskAbruptly(String taskIdToKill)
   {
+    final String command = "jps -mlv | grep -i peon | grep -i " + taskIdToKill + " |awk  '{print  $1}'";
 
-    String command = "jps -mlv | grep -i peon | grep -i " + taskIdToKill + " |awk  '{print  $1}'";
-
-    ITRetryUtil.retryUntil(() -> {
-
-      Pair<String, String> stdOut = druidClusterAdminClient.runCommandInMiddleManagerContainer("/bin/bash", "-c",
-                                                                                               command
-      );
+    ITRetryUtil.retryUntilEquals(() -> {
+      Pair<String, String> stdOut = druidClusterAdminClient
+          .runCommandInMiddleManagerContainer("/bin/bash", "-c", command);
       LOG.info(StringUtils.format(
           "command %s \nstdout: %s\nstderr: %s",
           command,
@@ -171,8 +168,7 @@ public class ITMultiStageQueryWorkerFaultTolerance
       } else {
         return false;
       }
-    }, true, 6000, 50, StringUtils.format("Figuring out PID for task[%s] to kill abruptly", taskIdToKill));
-
+    }, true, 6000, 50, "Figuring out PID for task[%s] to kill abruptly", taskIdToKill);
 
   }
 }

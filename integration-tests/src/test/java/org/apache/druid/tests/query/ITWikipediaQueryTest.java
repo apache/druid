@@ -114,7 +114,7 @@ public class ITWikipediaQueryTest
   @Test
   public void testQueryLaningLaneIsLimited() throws Exception
   {
-    ITRetryUtil.retryUntil(
+    ITRetryUtil.retryUntilEquals(
         () -> {
           // the broker is configured with a manually defined query lane, 'one' with limit 1
           //  -Ddruid.query.scheduler.laning.type=manual

@@ -105,12 +105,12 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
           FIRST_EVENT_TIME
       );
       // Verify supervisor is healthy before suspension
-      ITRetryUtil.retryUntil(
-          () -> BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId()),
+          BasicState.RUNNING,
           10000,
           30,
-          "Waiting for supervisor to be healthy"
+          "Status of supervisor"
       );
       // 60 events should have been ingested as per EVENTS_PER_SECOND and TOTAL_NUMBER_OF_SECOND.
       // Since maxRowsInMemory is set to 500,000, every row should be in incrementalIndex.
