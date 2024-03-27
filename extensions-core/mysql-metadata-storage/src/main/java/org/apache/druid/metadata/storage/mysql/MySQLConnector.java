@@ -47,7 +47,7 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
   private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME
-      = "com.mysql.jdbc.exceptions.MySQLTransientException";
+      = "java.sql.SQLTransientException";
   private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
       = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
   private static final String MYSQL_PACKET_EXCEPTION_CLASS_NAME
