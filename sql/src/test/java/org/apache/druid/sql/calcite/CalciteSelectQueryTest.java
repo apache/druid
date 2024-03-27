@@ -1960,7 +1960,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns(ImmutableList.of("dim1"))
-                .filters(in("dim1", Arrays.asList("abc", "def"), null))
+                .filters(in("dim1", Arrays.asList("abc", "def")))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()

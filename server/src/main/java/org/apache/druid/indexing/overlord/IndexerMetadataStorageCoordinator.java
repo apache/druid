@@ -159,7 +159,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
    * @param versions    An optional list of segment versions to retrieve in the given {@code interval}. If unspecified, all
-   *                    versions of unused segments in the {@code interval} must be retrieved.
+   *                    versions of unused segments in the {@code interval} must be retrieved. If an empty list is passed,
+   *                    no segments are retrieved.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                     with {@code used_status_last_updated} no later than this time will be included in the

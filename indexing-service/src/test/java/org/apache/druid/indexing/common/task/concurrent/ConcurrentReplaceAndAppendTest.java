@@ -142,7 +142,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         taskRunner,
         taskActionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     runningTasks.clear();
     taskQueue.start();
