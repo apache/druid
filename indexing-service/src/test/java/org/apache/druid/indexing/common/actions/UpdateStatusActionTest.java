@@ -46,9 +46,8 @@ public class UpdateStatusActionTest
   {
     UpdateStatusAction action = new UpdateStatusAction("successful");
     Task task = NoopTask.create();
-    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
     TaskRunner runner = mock(TaskRunner.class);
-    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    TaskActionToolbox toolbox = CreateMockTaskActionToolbox(Optional.of(runner));
     action.perform(task, toolbox);
     verify(runner, times(1)).updateStatus(eq(task), eq(TaskStatus.success(task.getId())));
   }
@@ -58,9 +57,8 @@ public class UpdateStatusActionTest
   {
     UpdateStatusAction action = new UpdateStatusAction("failure");
     Task task = NoopTask.create();
-    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
     TaskRunner runner = mock(TaskRunner.class);
-    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    TaskActionToolbox toolbox = CreateMockTaskActionToolbox(Optional.of(runner));
     action.perform(task, toolbox);
     verify(runner, times(1)).updateStatus(eq(task), eq(TaskStatus.failure(task.getId(), "Error with task")));
   }
@@ -69,9 +67,8 @@ public class UpdateStatusActionTest
   public void testTaskStatusFull()
   {
     Task task = NoopTask.create();
-    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
     TaskRunner runner = mock(TaskRunner.class);
-    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    TaskActionToolbox toolbox = CreateMockTaskActionToolbox(Optional.of(runner));
     TaskStatus taskStatus = TaskStatus.failure(task.getId(), "custom error message");
     UpdateStatusAction action = new UpdateStatusAction("failure", taskStatus);
     action.perform(task, toolbox);
@@ -83,9 +80,8 @@ public class UpdateStatusActionTest
   {
     UpdateStatusAction action = new UpdateStatusAction("", TaskStatus.success(ID));
     Task task = NoopTask.create();
-    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
     TaskRunner runner = mock(TaskRunner.class);
-    when(toolbox.getTaskRunner()).thenReturn(Optional.absent());
+    TaskActionToolbox toolbox = CreateMockTaskActionToolbox(Optional.absent());
     action.perform(task, toolbox);
     verify(runner, never()).updateStatus(any(), any());
   }
@@ -96,5 +92,10 @@ public class UpdateStatusActionTest
     UpdateStatusAction one = new UpdateStatusAction("", TaskStatus.failure(ID, "error"));
     UpdateStatusAction two = new UpdateStatusAction("", TaskStatus.failure(ID, "error"));
     Assert.assertEquals(one, two);
+  }
+  TaskActionToolbox CreateMockTaskActionToolbox(Optional<TaskRunner> taskRunner){
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    when(toolbox.getTaskRunner()).thenReturn(taskRunner);
+    return toolbox;
   }
 }
