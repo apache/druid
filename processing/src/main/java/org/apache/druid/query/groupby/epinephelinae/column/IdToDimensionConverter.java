@@ -28,7 +28,7 @@ package org.apache.druid.query.groupby.epinephelinae.column;
  *
  * Encoding
  * 1. {@link DimensionToIdConverter} extracts the multi-value holder for the given row, which get's stored somewhere
- * 2. For each entry in the multi-value object, the value gets encoded into a dictionaryId, using {@link DimensionToIdConverter#getIndividualValueDictId}
+ * 2. For each entry in the multi-value object, the value gets encoded into a dictionaryId, using {@link DimensionToIdConverter#lookupId}
  * 3. The callers can use this integer dictionaryID to materialize the results somewhere
  *
  * Decoding

@@ -25,7 +25,7 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FixedWidthGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.PrebuiltDictionaryStringGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.KeyMappingMultiValueGroupByColumnSelectorStrategy;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -33,6 +33,8 @@ import org.apache.druid.segment.column.ColumnType;
 
 /**
  * Creates {@link org.apache.druid.query.dimension.ColumnSelectorStrategy}s for grouping dimensions
+ *
+ * TODO(laksh): Describe the steps and mv-handling
  */
 public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
 {
@@ -47,33 +49,27 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
     }
     switch (capabilities.getType()) {
       case STRING:
-        DimensionSelector dimSelector = (DimensionSelector) selector;
-        if (dimSelector.getValueCardinality() >= 0 && dimSelector.nameLookupPossibleInAdvance()) {
-          return PrebuiltDictionaryStringGroupByColumnSelectorStrategy.forType(
-              ColumnType.STRING,
-              selector,
-              capabilities
-          );
-        } else {
-          return DictionaryBuildingGroupByColumnSelectorStrategy.forType(ColumnType.STRING);
-        }
+        return KeyMappingMultiValueGroupByColumnSelectorStrategy.create(capabilities, (DimensionSelector) selector);
       case LONG:
-        return new FixedWidthGroupByColumnSelectorStrategy<Long>(
+        return new FixedWidthGroupByColumnSelectorStrategy<>(
             Byte.BYTES + Long.BYTES,
-            true,
-            ColumnType.LONG
+            ColumnType.LONG,
+            ColumnValueSelector::getLong,
+            ColumnValueSelector::isNull
         );
       case FLOAT:
-        return new FixedWidthGroupByColumnSelectorStrategy<Float>(
+        return new FixedWidthGroupByColumnSelectorStrategy<>(
             Byte.BYTES + Float.BYTES,
-            true,
-            ColumnType.FLOAT
+            ColumnType.FLOAT,
+            ColumnValueSelector::getFloat,
+            ColumnValueSelector::isNull
         );
       case DOUBLE:
-        return new FixedWidthGroupByColumnSelectorStrategy<Double>(
+        return new FixedWidthGroupByColumnSelectorStrategy<>(
             Byte.BYTES + Double.BYTES,
-            true,
-            ColumnType.DOUBLE
+            ColumnType.DOUBLE,
+            ColumnValueSelector::getDouble,
+            ColumnValueSelector::isNull
         );
       case ARRAY:
         switch (capabilities.getElementType().getType()) {

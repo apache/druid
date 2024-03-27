@@ -26,6 +26,7 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 
@@ -40,10 +41,9 @@ import java.nio.ByteBuffer;
  * strings, and complex types.
  * <p>
  * The visibility of the class is limited, and the callers must use one of the two variants of the mapping strategy:
- * 1. {@link PrebuiltDictionaryStringGroupByColumnSelectorStrategy}
+ * 1. {@link PrebuiltDictionaryGroupByColumnSelectorStrategy}
  * 2. {@link DictionaryBuildingGroupByColumnSelectorStrategy}
  * <p>
- * TODO(laksh): Vet this change
  * {@code null} can be represented by either -1 or the position of null in the dictionary it was stored when it was
  * encountered. This is fine, because most of the time, the dictionary id has no value of its own, and is converted back to
  * the value it represents, before doing further operations. The only place where it would matter would be when
@@ -52,6 +52,12 @@ import java.nio.ByteBuffer;
  * it is guaranteed that the dictionaryId of null represented by the pre-built dictionary would be the lowest (most likely 0)
  * and therefore nulls (-1) would be adjacent to nulls (represented by the lowest non-negative dictionary id), and would get
  * grouped in the later merge stages.
+ * <p>
+ * It only handles single value dimensions, i.e. all types except for strings. Strings are handled by the implementations
+ * of {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
+ * <p>
+ * It only handles non-primitive types, because numeric primitives are handled by the {@link FixedWidthGroupByColumnSelectorStrategy}
+ * and the string primitives are handled by the {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
  *
  * @param <DimensionType>>      Class of the dimension
  * @param <DimensionHolderType> Class of the "dimension holder". For single-value dimensions, the holder's type and the
@@ -63,13 +69,13 @@ import java.nio.ByteBuffer;
  * @see IdToDimensionConverter decoding logic for converting back dictionary to value
  */
 @NotThreadSafe
-class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType>
+class KeyMappingGroupByColumnSelectorStrategy<DimensionType>
     implements GroupByColumnSelectorStrategy
 {
   /**
    * Converts the dimension to equivalent dictionaryId.
    */
-  final DimensionToIdConverter<DimensionHolderType> dimensionToIdConverter;
+  final DimensionToIdConverter<DimensionType> dimensionToIdConverter;
 
   /**
    * Type of the dimension on which the grouping strategy is used
@@ -85,10 +91,11 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType
    * Default value of the dimension
    */
   final DimensionType defaultValue;
+
   final IdToDimensionConverter<DimensionType> idToDimensionConverter;
 
   KeyMappingGroupByColumnSelectorStrategy(
-      final DimensionToIdConverter<DimensionHolderType> dimensionToIdConverter,
+      final DimensionToIdConverter<DimensionType> dimensionToIdConverter,
       final ColumnType columnType,
       final NullableTypeStrategy<DimensionType> nullableTypeStrategy,
       final DimensionType defaultValue,
@@ -130,9 +137,19 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType
   @Override
   public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    MemoryEstimate<DimensionHolderType> multiValueHolder = dimensionToIdConverter.getMultiValueHolder(selector, null);
-    valuess[columnIndex] = multiValueHolder.value();
-    return multiValueHolder.memoryIncrease();
+    //noinspection unchecked
+    final DimensionType value = (DimensionType) DimensionHandlerUtils.convertObjectToType(
+        selector.getObject(),
+        columnType
+    );
+    if (value == null) {
+      valuess[columnIndex] = GROUP_BY_MISSING_VALUE;
+      return 0;
+    } else {
+      MemoryEstimate<Integer> idAndMemoryEstimate = dimensionToIdConverter.lookupId(value);
+      valuess[columnIndex] = idAndMemoryEstimate.value();
+      return idAndMemoryEstimate.memoryIncrease();
+    }
   }
 
   @Override
@@ -144,24 +161,19 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType
       int[] stack
   )
   {
-    // It is always called with the DimensionHolderType, created
+    // It is always called with the dictionaryId that we'd have initialized
     //noinspection unchecked
-    DimensionHolderType rowObjCasted = (DimensionHolderType) rowObj;
-    int rowSize = dimensionToIdConverter.multiValueSize(rowObjCasted);
-    if (rowSize == 0) {
-      keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
+    int dictId = (int) rowObj;
+    keyBuffer.putInt(keyBufferPosition, dictId);
+    if (dictId == GROUP_BY_MISSING_VALUE) {
       stack[dimensionIndex] = 0;
     } else {
-      MemoryEstimate<Integer> dictionaryIdAndMemoryIncrease =
-          dimensionToIdConverter.getIndividualValueDictId(rowObjCasted, 0);
-      // We should have already accounted for the memory increase when we call initColumnValues(). Dictionary building for
-      // all the values in the dimension (potentially multi-valued) should have happened there
-      assert dictionaryIdAndMemoryIncrease.memoryIncrease() == 0;
-      keyBuffer.putInt(keyBufferPosition, dictionaryIdAndMemoryIncrease.value());
       stack[dimensionIndex] = 1;
     }
   }
 
+  // The method is only used for single value dimensions, therefore doesn't have any actual implementation of this
+  // method, which is only called for multi-value dimensions
   @Override
   public boolean checkRowIndexAndAddValueToGroupingKey(
       int keyBufferPosition,
@@ -170,42 +182,27 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType
       ByteBuffer keyBuffer
   )
   {
-    // Casting is fine, because while extracting the multiValueHolder, the implementations must ensure that the returned "multi-value"
-    // type is what the callers here expect
-    //noinspection unchecked
-    DimensionHolderType rowObjCasted = (DimensionHolderType) rowObj;
-    int rowSize = dimensionToIdConverter.multiValueSize(rowObjCasted);
-    if (rowValIdx < rowSize) {
-      MemoryEstimate<Integer> dictionaryIdAndMemoryIncrease =
-          dimensionToIdConverter.getIndividualValueDictId(rowObjCasted, rowValIdx);
-      // We should have already accounted for the memory increase when we call initColumnValues(). Dictionary building for
-      // all the values in the dimension (potentially multi-valued) should have happened there
-      assert dictionaryIdAndMemoryIncrease.memoryIncrease() == 0;
-      keyBuffer.putInt(
-          keyBufferPosition,
-          dictionaryIdAndMemoryIncrease.value()
-      );
-      return true;
-    } else {
-      return false;
-    }
+    return false;
   }
 
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    MemoryEstimate<DimensionHolderType> multiValueHolder = dimensionToIdConverter.getMultiValueHolder(selector, null);
-    int multiValueSize = dimensionToIdConverter.multiValueSize(multiValueHolder.value());
-    Preconditions.checkState(multiValueSize < 2, "Not supported for multi-value dimensions");
-    MemoryEstimate<Integer> dictIdAndSizeIncrease = dimensionToIdConverter.getIndividualValueDictId(
-        multiValueHolder.value(),
-        0
+    //noinspection unchecked
+    final DimensionType value = (DimensionType) DimensionHandlerUtils.convertObjectToType(
+        selector.getObject(),
+        columnType
     );
-    final int dictId = multiValueSize == 1 ? dictIdAndSizeIncrease.value() : GROUP_BY_MISSING_VALUE;
-    keyBuffer.putInt(keyBufferPosition, dictId);
-
-    // The implementations must return a non-nullable and non-negative size increase
-    return multiValueHolder.memoryIncrease() + dictIdAndSizeIncrease.memoryIncrease();
+    final int memoryIncrease;
+    if (value == null) {
+      keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
+      return 0;
+    } else {
+      MemoryEstimate<Integer> idAndMemoryIncrease = dimensionToIdConverter.lookupId(value);
+      keyBuffer.putInt(keyBufferPosition, idAndMemoryIncrease.value());
+      memoryIncrease = idAndMemoryIncrease.memoryIncrease();
+    }
+    return memoryIncrease;
   }
 
   @Override

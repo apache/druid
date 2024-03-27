@@ -38,7 +38,7 @@ import java.util.List;
 /**
  * Utilities for parts of the groupBy engine that need to build dictionaries.
  */
-public class DictionaryBuilding
+public class DictionaryBuildingUtils
 {
   // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
   private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Long.BYTES * 5 + Integer.BYTES;
@@ -66,12 +66,12 @@ public class DictionaryBuilding
     return m;
   }
 
-//  private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
-//  {
-//    final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
-//    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
-//    return m;
-//  }
+  private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
+  {
+    final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
+    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
+    return m;
+  }
 
   /**
    * Creates a reverse dictionary which stores the keys in a sorted map. The sorting is decided based on the given

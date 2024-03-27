@@ -25,13 +25,13 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.nio.ByteBuffer;
+import java.util.function.Function;
 
 /**
  * Strategy for grouping dimensions which have fixed-width objects. It is only used for numeric primitive types,
@@ -49,11 +49,6 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
   final int keySizeBytes;
 
   /**
-   * Indicates whether the type is primitive or not
-   */
-  final boolean isPrimitive;
-
-  /**
    * Type of the dimension on which the grouping strategy is being used
    */
   final ColumnType columnType;
@@ -63,16 +58,21 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
    */
   final NullableTypeStrategy<T> nullableTypeStrategy;
 
+  final Function<ColumnValueSelector<?>, T> valueGetter;
+  final Function<ColumnValueSelector<?>, Boolean> nullityGetter;
+
   public FixedWidthGroupByColumnSelectorStrategy(
       int keySizeBytes,
-      boolean isPrimitive,
-      ColumnType columnType
+      ColumnType columnType,
+      Function<ColumnValueSelector<?>, T> valueGetter,
+      Function<ColumnValueSelector<?>, Boolean> nullityGetter
   )
   {
     this.keySizeBytes = keySizeBytes;
-    this.isPrimitive = isPrimitive;
     this.columnType = columnType;
     this.nullableTypeStrategy = columnType.getNullableStrategy();
+    this.valueGetter = valueGetter;
+    this.nullityGetter = nullityGetter;
   }
 
   @Override
@@ -184,18 +184,6 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
   }
 
   /**
-   * Returns true if the value at the selector is null. It unifies the null handling of primitive numeric types and the
-   * other types
-   */
-  private boolean selectorIsNull(ColumnValueSelector columnValueSelector)
-  {
-    if (isPrimitive && columnValueSelector.isNull()) {
-      return true;
-    }
-    return !isPrimitive && (columnValueSelector.getObject() == null);
-  }
-
-  /**
    * Returns the value of the selector. It handles nullity of the value and casts it to the proper type so that the
    * upstream callers donot need to worry about handling incorrect types (for example, if a double column value selector
    * returns a long)
@@ -203,12 +191,10 @@ public class FixedWidthGroupByColumnSelectorStrategy<T> implements GroupByColumn
   @Nullable
   private T getValue(ColumnValueSelector columnValueSelector)
   {
-    if (selectorIsNull(columnValueSelector)) {
+    if (nullityGetter.apply(columnValueSelector)) {
       return null;
     }
-    // TODO(laksh): Check if calling .getObject() on primitive selectors be problematic??
     // Convert the object to the desired type
-    //noinspection unchecked
-    return (T) DimensionHandlerUtils.convertObjectToType(columnValueSelector.getObject(), columnType);
+    return valueGetter.apply(columnValueSelector);
   }
 }

@@ -20,16 +20,10 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.query.groupby.epinephelinae.DictionaryBuildingUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
-import org.apache.druid.segment.data.ArrayBasedIndexedInts;
-import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.List;
@@ -41,13 +35,12 @@ import java.util.List;
  * <p>
  * This strategy can handle any dimension that can be addressed on a reverse-dictionary. Reverse dictionary uses
  * a sorted map, rather than a hashmap.
- * TODO(laksh): Benchmark results
  * <p>
  * This is the most expensive of all the strategies, and hence must be used only when other strategies aren't valid.
  */
 @NotThreadSafe
-public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType>
-    extends KeyMappingGroupByColumnSelectorStrategy<DimensionType, DimensionHolderType>
+public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
+    extends KeyMappingGroupByColumnSelectorStrategy<DimensionType>
 {
 
   /**
@@ -68,7 +61,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
   private final Object2IntMap<DimensionType> reverseDictionary;
 
   private DictionaryBuildingGroupByColumnSelectorStrategy(
-      DimensionToIdConverter<DimensionHolderType> dimensionToIdConverter,
+      DimensionToIdConverter<DimensionType> dimensionToIdConverter,
       ColumnType columnType,
       NullableTypeStrategy<DimensionType> nullableTypeStrategy,
       DimensionType defaultValue,
@@ -89,7 +82,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
   {
     if (columnType.equals(ColumnType.STRING)) {
       // String types are handled specially because they can have multi-value dimensions
-      return forString();
+      throw DruidException.defensive("Should use special variant which handles multi-value dimensions");
     } else if (
       // Defensive check, primitives should be using a faster fixed-width strategy
         columnType.equals(ColumnType.DOUBLE)
@@ -100,25 +93,6 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
 
     // Catch-all for all other types, that can only have single-valued dimensions
     return forArrayAndComplexTypes(columnType);
-  }
-
-  /**
-   * Implementation of the dictionary building strategy for string types.
-   */
-  private static GroupByColumnSelectorStrategy forString()
-  {
-    final List<String> dictionary = DictionaryBuilding.createDictionary();
-    final Object2IntMap<String> reverseDictionary =
-        DictionaryBuilding.createReverseDictionary();
-    return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
-        new StringDimensionToIdConverter(dictionary, reverseDictionary),
-        ColumnType.STRING,
-        ColumnType.STRING.getNullableStrategy(),
-        NullHandling.defaultStringValue(),
-        new DictionaryIdToDimensionConverter<>(dictionary),
-        dictionary,
-        reverseDictionary
-    );
   }
 
   /**
@@ -133,11 +107,11 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
    */
   private static GroupByColumnSelectorStrategy forArrayAndComplexTypes(final ColumnType columnType)
   {
-    final List<Object> dictionary = DictionaryBuilding.createDictionary();
+    final List<Object> dictionary = DictionaryBuildingUtils.createDictionary();
     final Object2IntMap<Object> reverseDictionary =
-        DictionaryBuilding.createTreeSortedReverseDictionary(columnType.getNullableStrategy());
+        DictionaryBuildingUtils.createTreeSortedReverseDictionary(columnType.getNullableStrategy());
     return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
-        new UniValueDimensionToIdConverter(dictionary, reverseDictionary, columnType, columnType.getNullableStrategy()),
+        new UniValueDimensionToIdConverter(dictionary, reverseDictionary, columnType.getNullableStrategy()),
         columnType,
         columnType.getNullableStrategy(),
         null,
@@ -147,136 +121,27 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
     );
   }
 
-  /**
-   * Encodes the multi-valued string dimension to the ids. It replaces the original IndexedInts, with the one containing
-   * the global dictionary ids, This removes an extra redirection involved while looking up the value.
-   *
-   * Therefore, if the input dimension column has two rows, with dimensions like:
-   *
-   * (Input)
-   * Column1 - [1, 2] - lookupName(1) = foo, lookupName(2) = bar
-   * Column2 - [1, 2, 2] - lookupName(1) = baz, lookupName(2) = foo
-   *
-   * The multi-value holders for the column, after conversion would look like:
-   * Column1 - [1, 2]
-   * Column2 - [3, 1]
-   *
-   * And the dictionary-reverse dictionary would look like:
-   * Dictionary: [foo, bar, baz]
-   * Reverse dictionary: (foo, 1), (bar, 2), (baz, 3)
-   *
-   * Converting a value from the returned row to the dictId is as simple as fetching the int present at the given location.
-   */
-  private static class StringDimensionToIdConverter implements DimensionToIdConverter<IndexedInts>
-  {
-    private final List<String> dictionary;
-    private final Object2IntMap<String> reverseDictionary;
-
-    public StringDimensionToIdConverter(
-        List<String> dictionary,
-        Object2IntMap<String> reverseDictionary
-    )
-    {
-      this.dictionary = dictionary;
-      this.reverseDictionary = reverseDictionary;
-    }
-
-    @Override
-    public MemoryEstimate<IndexedInts> getMultiValueHolder(
-        final ColumnValueSelector selector,
-        final IndexedInts reusableValue
-    )
-    {
-      final DimensionSelector dimensionSelector = (DimensionSelector) selector;
-      final IndexedInts row = dimensionSelector.getRow();
-      int footprintIncrease = 0;
-      ArrayBasedIndexedInts newRow = (ArrayBasedIndexedInts) reusableValue;
-      if (newRow == null) {
-        newRow = new ArrayBasedIndexedInts();
-      }
-      int rowSize = row.size();
-      newRow.ensureSize(rowSize);
-      for (int i = 0; i < rowSize; ++i) {
-        final String value = dimensionSelector.lookupName(row.get(i));
-        final int dictId = reverseDictionary.getInt(value);
-        if (dictId < 0) {
-          final int nextId = dictionary.size();
-          dictionary.add(value);
-          reverseDictionary.put(value, nextId);
-          newRow.setValue(i, nextId);
-          footprintIncrease += DictionaryBuilding.estimateEntryFootprint(
-              (value == null ? 0 : value.length()) * Character.BYTES
-          );
-        } else {
-          newRow.setValue(i, dictId);
-        }
-      }
-      newRow.setSize(rowSize);
-      return new MemoryEstimate<>(newRow, footprintIncrease);
-    }
-
-    @Override
-    public int multiValueSize(IndexedInts multiValueHolder)
-    {
-      return multiValueHolder.size();
-    }
-
-    @Override
-    public MemoryEstimate<Integer> getIndividualValueDictId(IndexedInts multiValueHolder, int index)
-    {
-      // Already converted it to the dictionary id
-      return new MemoryEstimate<>(multiValueHolder.get(index), 0);
-    }
-  }
-
   private static class UniValueDimensionToIdConverter implements DimensionToIdConverter<Object>
   {
     private final List<Object> dictionary;
     private final Object2IntMap<Object> reverseDictionary;
-    private final ColumnType columnType;
     @SuppressWarnings("rawtypes")
     private final NullableTypeStrategy nullableTypeStrategy;
 
     public UniValueDimensionToIdConverter(
         final List<Object> dictionary,
         final Object2IntMap<Object> reverseDictionary,
-        final ColumnType columnType,
         final NullableTypeStrategy nullableTypeStrategy
     )
     {
       this.dictionary = dictionary;
       this.reverseDictionary = reverseDictionary;
-      this.columnType = columnType;
       this.nullableTypeStrategy = nullableTypeStrategy;
     }
 
     @Override
-    public MemoryEstimate<Object> getMultiValueHolder(ColumnValueSelector selector, Object reusableValue)
+    public MemoryEstimate<Integer> lookupId(Object multiValueHolder)
     {
-      final Object value = DimensionHandlerUtils.convertObjectToType(selector.getObject(), columnType);
-      final int dictId = reverseDictionary.getInt(value);
-      int footprintIncrease = 0;
-      if (dictId < 0) {
-        final int size = dictionary.size();
-        dictionary.add(value);
-        reverseDictionary.put(value, size);
-        footprintIncrease = DictionaryBuilding.estimateEntryFootprint(nullableTypeStrategy.estimateSizeBytes(value));
-
-      }
-      return new MemoryEstimate<>(value, footprintIncrease);
-    }
-
-    @Override
-    public int multiValueSize(Object multiValueHolder)
-    {
-      //noinspection VariableNotUsedInsideIf
-      return multiValueHolder == null ? 0 : 1;
-    }
-
-    @Override
-    public MemoryEstimate<Integer> getIndividualValueDictId(Object multiValueHolder, int index)
-    {
-      assert index == 0;
       int dictId = reverseDictionary.getInt(multiValueHolder);
       int footprintIncrease = 0;
       // Even if called again, then this is no-op
@@ -288,7 +153,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType, Dime
         // TODO(laksh): confirm if this is the same for sorted dictionaries as well
         // MultiValueHOlder is always expected to handle the type, once the coercion is complete
         //noinspection unchecked
-        footprintIncrease = DictionaryBuilding.estimateEntryFootprint(
+        footprintIncrease = DictionaryBuildingUtils.estimateEntryFootprint(
             nullableTypeStrategy.estimateSizeBytes(multiValueHolder)
         );
       }
