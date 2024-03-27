@@ -105,7 +105,8 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           ioConfig.getStream(),
           recordSupplier,
           ioConfig.isUseEarliestSequenceNumber(),
-          samplerConfig.getTimeoutMs() <= 0 ? null : samplerConfig.getTimeoutMs()
+          samplerConfig.getTimeoutMs() <= 0 ? null : samplerConfig.getTimeoutMs(),
+          samplerConfig.getReadTimeoutMs()
       );
       inputFormat = Preconditions.checkNotNull(
           ioConfig.getInputFormat(),
@@ -181,12 +182,16 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         ((StringInputRowParser) parser).startFileFromBeginning();
       }
 
-      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, RecordType> inputSource = new RecordSupplierInputSource<>(
-          ioConfig.getStream(),
-          createRecordSupplier(),
-          ioConfig.isUseEarliestSequenceNumber(),
-          samplerConfig.getTimeoutMs() <= 0 ? null : samplerConfig.getTimeoutMs()
-      );
+      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, RecordType> inputSource =
+          new RecordSupplierInputSource<>(
+              ioConfig.getStream(),
+              createRecordSupplier(),
+              ioConfig.isUseEarliestSequenceNumber(),
+              samplerConfig.getTimeoutMs() <= 0
+                  ? null
+                  : samplerConfig.getTimeoutMs(),
+              samplerConfig.getReadTimeoutMs()
+          );
       this.entityIterator = inputSource.createEntityIterator();
     }
 

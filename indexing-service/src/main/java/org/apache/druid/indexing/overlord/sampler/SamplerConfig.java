@@ -34,6 +34,7 @@ public class SamplerConfig
 
   private final int numRows;
   private final int timeoutMs;
+  private final Integer readTimeoutMs;
   private final long maxBytesInMemory;
   private final long maxClientResponseBytes;
 
@@ -41,16 +42,22 @@ public class SamplerConfig
   public SamplerConfig(
       @JsonProperty("numRows") @Nullable Integer numRows,
       @JsonProperty("timeoutMs") @Nullable Integer timeoutMs,
+      @JsonProperty("readTimeoutMs") @Nullable Integer readTimeoutMs,
       @JsonProperty("maxBytesInMemory") @Nullable HumanReadableBytes maxBytesInMemory,
       @JsonProperty("maxClientResponseBytes") @Nullable HumanReadableBytes maxClientResponseBytes
   )
   {
     this.numRows = numRows != null ? numRows : DEFAULT_NUM_ROWS;
     this.timeoutMs = timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS;
+    this.readTimeoutMs = readTimeoutMs;
     this.maxBytesInMemory = maxBytesInMemory != null ? maxBytesInMemory.getBytes() : Long.MAX_VALUE;
     this.maxClientResponseBytes = maxClientResponseBytes != null ? maxClientResponseBytes.getBytes() : 0;
 
     Preconditions.checkArgument(this.numRows <= MAX_NUM_ROWS, "numRows must be <= %s", MAX_NUM_ROWS);
+    Preconditions.checkArgument(
+        this.readTimeoutMs == null || this.readTimeoutMs <= this.timeoutMs,
+        "readTimeoutMs must be <= timeoutMs"
+    );
   }
 
   /**
@@ -84,6 +91,18 @@ public class SamplerConfig
   }
 
   /**
+   * Time to wait in milliseconds for the next record before closing the sampler and returning the data which has
+   * already been read. This timeout is only used once we have read at least one record from the input source.
+   *
+   * @return timeout in milliseconds
+   */
+  @Nullable
+  public Integer getReadTimeoutMs()
+  {
+    return readTimeoutMs;
+  }
+
+  /**
    * Maximum number of bytes in memory that the {@link org.apache.druid.segment.incremental.IncrementalIndex} used by
    * {@link InputSourceSampler#sample(org.apache.druid.data.input.InputSource, org.apache.druid.data.input.InputFormat, org.apache.druid.segment.indexing.DataSchema, SamplerConfig)}
    * will be allowed to accumulate before aborting sampling. Particularly useful for limiting footprint of sample
@@ -111,6 +130,6 @@ public class SamplerConfig
 
   public static SamplerConfig empty()
   {
-    return new SamplerConfig(null, null, null, null);
+    return new SamplerConfig(null, null, null, null, null);
   }
 }

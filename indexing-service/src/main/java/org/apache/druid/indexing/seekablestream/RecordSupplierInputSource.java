@@ -59,17 +59,25 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
    */
   private final Integer iteratorTimeoutMs;
 
+  /**
+   * Maximum amount of time in which the entity iterator will wait for more records when polling. If null, no timeout
+   * is applied.
+   */
+  private final Integer readTimeoutMs;
+
   public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
       boolean useEarliestOffset,
-      Integer iteratorTimeoutMs
+      @Nullable Integer iteratorTimeoutMs,
+      @Nullable Integer readTimeoutMs
   )
   {
     this.topic = topic;
     this.recordSupplier = recordSupplier;
     this.useEarliestOffset = useEarliestOffset;
     this.iteratorTimeoutMs = iteratorTimeoutMs;
+    this.readTimeoutMs = readTimeoutMs;
 
     assignAndSeek(recordSupplier);
   }
@@ -145,14 +153,25 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       private final long createTime = System.currentTimeMillis();
       private final Long terminationTime = iteratorTimeoutMs != null ? createTime + iteratorTimeoutMs : null;
 
+      private volatile Long readTerminationTime = null;
+
       private void waitNextIteratorIfNecessary()
       {
         while (!closed && (bytesIterator == null || !bytesIterator.hasNext())) {
           while (!closed && (recordIterator == null || !recordIterator.hasNext())) {
-            if (terminationTime != null && System.currentTimeMillis() > terminationTime) {
+            long currentTime = System.currentTimeMillis();
+            if (terminationTime != null && currentTime > terminationTime) {
               LOG.info(
                   "Configured sampler timeout [%s] has been exceeded, returning without a bytesIterator.",
                   iteratorTimeoutMs
+              );
+              bytesIterator = null;
+              return;
+            }
+            if (readTerminationTime != null && currentTime > readTerminationTime) {
+              LOG.info(
+                  "Configured sampler next record timeout [%s] has been exceeded, returning without a bytesIterator.",
+                  readTimeoutMs
               );
               bytesIterator = null;
               return;
@@ -162,6 +181,9 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
 
           if (!closed) {
             bytesIterator = recordIterator.next().getData().iterator();
+            if (readTimeoutMs != null && bytesIterator.hasNext()) {
+              readTerminationTime = System.currentTimeMillis() + readTimeoutMs;
+            }
           }
         }
       }
