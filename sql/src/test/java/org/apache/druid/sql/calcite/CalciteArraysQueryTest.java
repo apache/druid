@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
@@ -934,6 +936,94 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayOverlapFilterNumeric()
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(l1, ARRAY[1, 7]) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(new InDimFilter("l1", ImmutableList.of("1", "7"), null))
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayOverlapFilterWithDynamicParameter()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+        .dataSource(CalciteTests.DATASOURCE3)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .filters(new InDimFilter("d1", Arrays.asList("1.0", "1.7", null), null))
+        .columns("dim3")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .limit(5)
+        .context(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new SqlParameter(SqlType.ARRAY, Arrays.asList(1.0, 1.7, null))
+        ),
+        "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, d1) LIMIT 5",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(builder.build()),
+        NullHandling.sqlCompatible() ? ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null}
+        ) : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayOverlapFilterWithDynamicParameterLong()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+        .dataSource(CalciteTests.DATASOURCE3)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .filters(new InDimFilter("l1", Arrays.asList("1", "7", null), null))
+        .columns("dim3")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .limit(5)
+        .context(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new SqlParameter(SqlType.ARRAY, Arrays.asList(1, 7, null))
+        ),
+        "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, l1) LIMIT 5",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(builder.build()),
+        NullHandling.sqlCompatible() ? ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null}
+        ) : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"}
+        )
+    );
+  }
+
+  @Test
   public void testArrayContainsFilter()
   {
     testQuery(
@@ -1228,6 +1318,48 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testArrayContainsFilterWithDynamicParameter()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+        .dataSource(CalciteTests.DATASOURCE3)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("dim3")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .limit(5)
+        .context(QUERY_CONTEXT_DEFAULT);
+
+    if (NullHandling.sqlCompatible()) {
+      builder = builder.filters(
+          and(
+              equality("dim3", "a", ColumnType.STRING),
+              equality("dim3", "b", ColumnType.STRING)
+          )
+      );
+    } else {
+      builder = builder.filters(
+          and(
+              selector("dim3", "a"),
+              selector("dim3", "b")
+          )
+      );
+    }
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new SqlParameter(SqlType.ARRAY, Arrays.asList("a", "b"))
+        ),
+        "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ?) LIMIT 5",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(builder.build()),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"}
+        )
     );
   }
 
