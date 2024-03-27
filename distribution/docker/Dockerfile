@@ -66,6 +66,9 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     echo "Downloading bash-static from ${BASH_URL}" \
     && wget ${BASH_URL} -O /bin/bash
 
+
+FROM curlimages/curl as curl_downloader
+
 FROM busybox:1.35.0-glibc as busybox
 
 FROM gcr.io/distroless/java$JDK_VERSION-debian12
@@ -73,6 +76,8 @@ LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
+
+COPY --from=curl_downloader /usr/bin/curl /usr/bin/curl
 
 
 RUN addgroup -S -g 1000 druid \
@@ -85,6 +90,7 @@ RUN chmod 755 /bin/bash
 COPY distribution/docker/druid.sh /druid.sh
 COPY distribution/docker/peon.sh /peon.sh
 COPY distribution/docker/deduplicate_jars.sh /deduplicate_jars.sh
+
 
 # create necessary directories which could be mounted as volume
 # copy and de-duplicate jars from builder in same layer to reduce image size
