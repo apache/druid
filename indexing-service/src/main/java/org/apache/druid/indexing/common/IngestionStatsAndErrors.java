@@ -29,32 +29,15 @@ import java.util.Objects;
 
 public class IngestionStatsAndErrors
 {
-  @JsonProperty
-  private IngestionState ingestionState;
-
-  @JsonProperty
-  private Map<String, Object> unparseableEvents;
-
-  @JsonProperty
-  private Map<String, Object> rowStats;
-
-  @JsonProperty
-  @Nullable
-  private String errorMsg;
-
-  @JsonProperty
-  private boolean segmentAvailabilityConfirmed;
-
-  @JsonProperty
-  private long segmentAvailabilityWaitTimeMs;
-
-  @JsonProperty
-  private Map<String, Long> recordsProcessed;
-
-  @JsonProperty
-  private Long segmentsRead;
-  @JsonProperty
-  private Long segmentsPublished;
+  private final IngestionState ingestionState;
+  private final Map<String, Object> unparseableEvents;
+  private final Map<String, Object> rowStats;
+  private final String errorMsg;
+  private final boolean segmentAvailabilityConfirmed;
+  private final long segmentAvailabilityWaitTimeMs;
+  private final Map<String, Long> recordsProcessed;
+  private final Long segmentsRead;
+  private final Long segmentsPublished;
 
   public IngestionStatsAndErrors(
       @JsonProperty("ingestionState") IngestionState ingestionState,
