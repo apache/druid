@@ -62,7 +62,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the segme
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/segments/:segmentId</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/{datasource}/segments/{segmentId}</code>
 
 #### Header
 
@@ -134,7 +134,7 @@ Marks the state of a segment as used, using the segment ID.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/segments/:segmentId</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/segments/{segmentId}</code>
 
 #### Header
 
@@ -211,7 +211,7 @@ within the specified interval that match the optional list of versions; partiall
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource/markUnused</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/{datasource}/markUnused</code>
 
 #### Request body
 
@@ -313,7 +313,7 @@ within the specified interval that match the optional list of versions; partiall
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource/markUsed</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources{datasource}/markUsed</code>
 
 #### Request body
 
@@ -413,7 +413,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the datas
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/{datasource}</code>
 
 #### Responses
 
@@ -473,7 +473,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the datas
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/{datasource}</code>
 
 #### Header
 
@@ -547,11 +547,11 @@ The DELETE endpoint sends a [kill task](../ingestion/tasks.md) for a given inter
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
 
-This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:datasource?kill=true&interval=:interval`
+This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/{datasource}?kill=true&interval={interval}`
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/intervals/:interval</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/{datasource}/intervals/{interval}</code>
 
 #### Responses
 

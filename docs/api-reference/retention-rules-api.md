@@ -48,7 +48,7 @@ Note that this endpoint returns an HTTP `200 OK` even if the datasource does not
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/:dataSource</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/{dataSource}</code>
 
 ### Header parameters
 
@@ -317,7 +317,7 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 
 ### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/:dataSource</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/{dataSource}</code>
 
 ### Query parameters
 

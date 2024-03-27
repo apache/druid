@@ -132,7 +132,7 @@ Removes the automatic compaction configuration for a datasource. This updates th
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/config/compaction/:dataSource</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/config/compaction/{dataSource}</code>
 
 #### Responses
 
@@ -411,7 +411,7 @@ Retrieves the automatic compaction configuration for a datasource.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/:dataSource</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/{dataSource}</code>
 
 #### Responses
 
@@ -523,7 +523,7 @@ The response contains a list of objects with the following keys:
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/:dataSource/history</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/{dataSource}/history</code>
 
 #### Query parameters
 * `interval` (optional)
