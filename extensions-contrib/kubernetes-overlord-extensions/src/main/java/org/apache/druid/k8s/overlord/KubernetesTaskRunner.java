@@ -42,6 +42,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -330,6 +331,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
+
+    waitForInitialization();
     log.info("Loaded %,d tasks from previous run", tasks.size());
 
     cleanupExecutor.scheduleAtFixedRate(
@@ -343,6 +346,31 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         TimeUnit.MILLISECONDS
     );
     log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
+  }
+
+  /* Best effort wait to sync state from Kubernetes. */
+  private void waitForInitialization()
+  {
+    try {
+      RetryUtils.retry(
+          () -> {
+            Collection<KubernetesWorkItem> pendingWorkItems = tasks.values().stream()
+                .filter(kubernetesWorkItem -> !kubernetesWorkItem.getResult().isDone() && kubernetesWorkItem.isPending())
+                .collect(Collectors.toSet());
+            if (!pendingWorkItems.isEmpty()) {
+              throw new ISE("Kubernetes state has not initialized yet");
+            }
+            return pendingWorkItems;
+          },
+          e -> e instanceof ISE,
+          5,
+          5
+
+      );
+    }
+    catch (Exception e) {
+      log.info("Kubernetes took too long to initialize, continuing startup. %s", e);
+    }
   }
 
   @Override
