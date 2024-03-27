@@ -1895,10 +1895,7 @@ public class MSQWindowTest extends MSQTestBase
     final Query groupByQuery = GroupByQuery.builder()
                                            .setDataSource(CalciteTests.WIKIPEDIA)
                                            .setInterval(querySegmentSpec(Filtration.eternity()))
-                                           .setDimFilter(new InDimFilter(
-                                               "cityName",
-                                               ImmutableSet.of("Ahmedabad", "Albuquerque")
-                                           ))
+                                           .setDimFilter(in("cityName", ImmutableList.of("Ahmedabad", "Albuquerque")))
                                            .setGranularity(Granularities.ALL)
                                            .setDimensions(dimensions(
                                                new DefaultDimensionSpec(
