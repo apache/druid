@@ -27,11 +27,16 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.kafka.common.TopicPartition;
 
 import java.util.Comparator;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata>
 {
+  private static final Logger LOGGER = new Logger(KafkaDataSourceMetadata.class);
 
   @JsonCreator
   public KafkaDataSourceMetadata(
@@ -75,5 +80,51 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
       );
     }
     return getSeekableStreamSequenceNumbers().compareTo(other.getSeekableStreamSequenceNumbers(), Comparator.naturalOrder());
+  }
+
+  @Override
+  public boolean matches(DataSourceMetadata other)
+  {
+    if (!getClass().equals(other.getClass())) {
+      return false;
+    }
+    if (plus(other).equals(other.plus(this))) {
+      return true;
+    }
+    // assume other is older or make a new version of this function
+    KafkaDataSourceMetadata oldMetadata = (KafkaDataSourceMetadata) other;
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> oldSequenceNumbers = oldMetadata.getSeekableStreamSequenceNumbers();
+
+    final Map<TopicPartition, Long> topicAndPartitionToSequenceNumber = sequenceNumbers.getPartitionSequenceNumberMap()
+        .entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            e -> {
+              KafkaTopicPartition kafkaTopicPartition = e.getKey();
+              return kafkaTopicPartition.asTopicPartition(sequenceNumbers.getStream());
+            },
+            e -> e.getValue()
+        ));
+
+    return oldSequenceNumbers.getPartitionSequenceNumberMap().entrySet().stream().noneMatch(
+        e -> {
+          KafkaTopicPartition kafkaTopicPartition = e.getKey();
+          TopicPartition topicPartition = kafkaTopicPartition.asTopicPartition(oldSequenceNumbers.getStream());
+          Long sequenceOffset = topicAndPartitionToSequenceNumber.get(topicPartition);
+          long oldSequenceOffset = e.getValue();
+          if (sequenceOffset == null || !sequenceOffset.equals(oldSequenceOffset)) {
+            LOGGER.info(
+                "sequenceOffset found for currently computed and stored metadata does not match for "
+                + "topicPartition: [%s].  currentSequenceOffset: [%s], oldSequenceOffset: [%s]",
+                topicPartition,
+                sequenceOffset,
+                oldSequenceOffset
+            );
+            return true;
+          }
+          return false;
+        }
+    );
   }
 }
