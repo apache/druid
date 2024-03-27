@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
@@ -91,8 +92,9 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
+    ObjectMapper mapper = new ObjectMapper();
+    Assert.assertEquals(mapper.readTree(expectedJson), mapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues())));
+    Assert.assertEquals(mapper.readTree(expectedJson), mapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues())));
   }
 
   @Test
