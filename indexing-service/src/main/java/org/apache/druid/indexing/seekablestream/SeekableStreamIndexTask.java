@@ -269,6 +269,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
+  @Override
+  public String getPendingSegmentGroup()
+  {
+    return getTaskResource().getAvailabilityGroup();
+  }
+
   protected abstract SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType> createTaskRunner();
 
   /**

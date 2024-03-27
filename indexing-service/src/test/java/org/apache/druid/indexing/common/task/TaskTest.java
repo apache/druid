@@ -48,6 +48,12 @@ public class TaskTest
     }
 
     @Override
+    public String getPendingSegmentGroup()
+    {
+      return null;
+    }
+
+    @Override
     public TaskResource getTaskResource()
     {
       return null;

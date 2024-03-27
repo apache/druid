@@ -103,6 +103,11 @@ public class TaskLockbox
   // this set should be accessed under the giant lock.
   private final Set<String> activeTasks = new HashSet<>();
 
+  // Stores map of pending task group of tasks to the set of their ids.
+  // Useful for task replicas. Clean up pending segments only when the set is empty.
+  // this map should be accessed under the giant lock.
+  private final HashMap<String, Set<String>> activePendingTaskGroupToTaskIds = new HashMap<>();
+
   @Inject
   public TaskLockbox(
       TaskStorage taskStorage,
@@ -211,6 +216,13 @@ public class TaskLockbox
         if (failedToReacquireLockTaskGroups.contains(task.getGroupId())) {
           tasksToFail.add(task);
           activeTasks.remove(task.getId());
+        }
+      }
+      activePendingTaskGroupToTaskIds.clear();
+      for (Task task : storedActiveTasks) {
+        if (activeTasks.contains(task.getId()) && task.getPendingSegmentGroup() != null) {
+          activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroup(), s -> new HashSet<>())
+                                         .add(task.getId());
         }
       }
 
@@ -387,7 +399,7 @@ public class TaskLockbox
       if (request instanceof LockRequestForNewSegment) {
         final LockRequestForNewSegment lockRequestForNewSegment = (LockRequestForNewSegment) request;
         if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
-          newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
+          newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion(), null);
           if (newSegmentId == null) {
             return LockResult.fail();
           }
@@ -411,7 +423,7 @@ public class TaskLockbox
                   newSegmentId
               );
             }
-            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion());
+            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion(), task.getPendingSegmentGroup());
           }
         }
         return LockResult.ok(posseToUse.getTaskLock(), newSegmentId);
@@ -710,7 +722,7 @@ public class TaskLockbox
     }
   }
 
-  private SegmentIdWithShardSpec allocateSegmentId(LockRequestForNewSegment request, String version)
+  private SegmentIdWithShardSpec allocateSegmentId(LockRequestForNewSegment request, String version, String taskGroup)
   {
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
@@ -719,7 +731,8 @@ public class TaskLockbox
         request.getInterval(),
         request.getPartialShardSpec(),
         version,
-        request.isSkipSegmentLineageCheck()
+        request.isSkipSegmentLineageCheck(),
+        taskGroup
     );
   }
 
@@ -1159,6 +1172,10 @@ public class TaskLockbox
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
       activeTasks.add(task.getId());
+      if (task.getPendingSegmentGroup() != null) {
+        activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroup(), s -> new HashSet<>())
+                                       .add(task.getId());
+      }
     }
     finally {
       giant.unlock();
@@ -1183,6 +1200,23 @@ public class TaskLockbox
               upgradeSegmentsDeleted,
               task.getId()
           );
+        }
+        final String pendingSegmentGroup = task.getPendingSegmentGroup();
+        if (pendingSegmentGroup != null && activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
+          final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
+          idsInSameGroup.remove(task.getId());
+          if (idsInSameGroup.isEmpty()) {
+            if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.APPEND)) {
+              final int pendingSegmentsDeleted
+                  = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(task.getPendingSegmentGroup());
+              log.info(
+                  "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
+                  pendingSegmentsDeleted,
+                  task.getPendingSegmentGroup()
+              );
+            }
+            activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
+          }
         }
         unlockAll(task);
       }
@@ -1771,7 +1805,9 @@ public class TaskLockbox
             action.getSequenceName(),
             action.getPreviousSegmentId(),
             acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
-            action.getPartialShardSpec()
+            action.getPartialShardSpec(),
+            null,
+            task.getPendingSegmentGroup()
         );
       }
 

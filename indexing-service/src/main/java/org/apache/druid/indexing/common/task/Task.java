@@ -102,6 +102,12 @@ public interface Task
   String getGroupId();
 
   /**
+   * The group used to associate a pending segment with a task
+   * @return task group for pending segment allocations
+   */
+  String getPendingSegmentGroup();
+
+  /**
    * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
    * be used for task scheduling, cluster resource management, etc.
    *

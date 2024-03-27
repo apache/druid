@@ -38,18 +38,24 @@ public class SegmentCreateRequest
   private final String sequenceName;
   private final String previousSegmentId;
   private final PartialShardSpec partialShardSpec;
+  private final String parentId;
+  private final String taskGroup;
 
   public SegmentCreateRequest(
       String sequenceName,
       String previousSegmentId,
       String version,
-      PartialShardSpec partialShardSpec
+      PartialShardSpec partialShardSpec,
+      String parentId,
+      String taskGroup
   )
   {
     this.sequenceName = sequenceName;
     this.previousSegmentId = previousSegmentId == null ? "" : previousSegmentId;
     this.version = version;
     this.partialShardSpec = partialShardSpec;
+    this.parentId = parentId;
+    this.taskGroup = taskGroup;
   }
 
   public String getSequenceName()
@@ -74,5 +80,15 @@ public class SegmentCreateRequest
   public PartialShardSpec getPartialShardSpec()
   {
     return partialShardSpec;
+  }
+
+  public String getParentId()
+  {
+    return parentId;
+  }
+
+  public String getTaskGroup()
+  {
+    return taskGroup;
   }
 }

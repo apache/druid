@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.concurrent;
 
 import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -36,10 +37,13 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -49,6 +53,9 @@ public class ActionsTestTask extends CommandQueueTask
 {
   private final TaskActionClient client;
   private final AtomicInteger sequenceId = new AtomicInteger(0);
+  private final Object lock = new Object();
+  @GuardedBy("lock")
+  private final Map<SegmentId, SegmentId> announcedSegmentsToParentSegments = new HashMap<>();
 
   public ActionsTestTask(String datasource, String groupId, TaskActionClientFactory factory)
   {
@@ -78,16 +85,29 @@ public class ActionsTestTask extends CommandQueueTask
     );
   }
 
+  public Map<SegmentId, SegmentId> getAnnouncedSegmentsToParentSegments()
+  {
+    synchronized (lock) {
+      return announcedSegmentsToParentSegments;
+    }
+  }
+
   public SegmentPublishResult commitAppendSegments(DataSegment... segments)
   {
-    return runAction(
+    SegmentPublishResult publishResult = runAction(
         SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments))
     );
+    synchronized (lock) {
+      for (DataSegment segment : publishResult.getSegments()) {
+        announcedSegmentsToParentSegments.remove(segment.getId());
+      }
+    }
+    return publishResult;
   }
 
   public SegmentIdWithShardSpec allocateSegmentForTimestamp(DateTime timestamp, Granularity preferredSegmentGranularity)
   {
-    return runAction(
+    SegmentIdWithShardSpec pendingSegment = runAction(
         new SegmentAllocateAction(
             getDataSource(),
             timestamp,
@@ -101,28 +121,10 @@ public class ActionsTestTask extends CommandQueueTask
             TaskLockType.APPEND
         )
     );
-  }
-
-  public SegmentIdWithShardSpec allocateSegmentForTimestamp(
-      DateTime timestamp,
-      Granularity preferredSegmentGranularity,
-      String sequenceName
-  )
-  {
-    return runAction(
-        new SegmentAllocateAction(
-            getDataSource(),
-            timestamp,
-            Granularities.SECOND,
-            preferredSegmentGranularity,
-            getId() + "__" + sequenceName,
-            null,
-            false,
-            NumberedPartialShardSpec.instance(),
-            LockGranularity.TIME_CHUNK,
-            TaskLockType.APPEND
-        )
-    );
+    synchronized (lock) {
+      announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId());
+    }
+    return pendingSegment;
   }
 
   private <T> T runAction(TaskAction<T> action)
