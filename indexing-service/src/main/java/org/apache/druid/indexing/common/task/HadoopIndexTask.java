@@ -43,8 +43,6 @@ import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.TaskMetricsGetter;
 import org.apache.druid.indexer.TaskMetricsUtils;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
@@ -684,25 +682,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private Map<String, TaskReport> getTaskCompletionReports()
   {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                ingestionState,
-                null,
-                getTaskCompletionRowStats(),
-                errorMsg,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                null,
-                null
-            )
-        )
-    );
+    return buildIngestionStatsReport(ingestionState, errorMsg, null, null);
   }
 
-  private Map<String, Object> getTaskCompletionRowStats()
+  @Override
+  protected Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = new HashMap<>();
     if (determineConfigStatus != null) {

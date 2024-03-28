@@ -32,12 +32,12 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   private final String taskId;
 
   @JsonProperty
-  private final IngestionStatsAndErrorsTaskReportData payload;
+  private final IngestionStatsAndErrors payload;
 
   @JsonCreator
   public IngestionStatsAndErrorsTaskReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("payload") IngestionStatsAndErrorsTaskReportData payload
+      @JsonProperty("payload") IngestionStatsAndErrors payload
   )
   {
     this.taskId = taskId;
@@ -57,7 +57,7 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   }
 
   @Override
-  public IngestionStatsAndErrorsTaskReportData getPayload()
+  public IngestionStatsAndErrors getPayload()
   {
     return payload;
   }

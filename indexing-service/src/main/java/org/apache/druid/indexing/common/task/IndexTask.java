@@ -48,8 +48,6 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -335,34 +333,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetUnparseableEvents(full)).build();
+    return Response.ok(doGetUnparseableEvents(full != null)).build();
   }
 
-  public Map<String, Object> doGetUnparseableEvents(String full)
+  public Map<String, Object> doGetUnparseableEvents(boolean isFullReport)
   {
-    Map<String, Object> events = new HashMap<>();
+    final Map<String, Object> events = new HashMap<>();
 
-    boolean needsDeterminePartitions = false;
-    boolean needsBuildSegments = false;
-
-    if (full != null) {
-      needsDeterminePartitions = true;
-      needsBuildSegments = true;
-    } else {
-      switch (ingestionState) {
-        case DETERMINE_PARTITIONS:
-          needsDeterminePartitions = true;
-          break;
-        case BUILD_SEGMENTS:
-        case COMPLETED:
-          needsBuildSegments = true;
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (needsDeterminePartitions) {
+    if (addDeterminePartitionStatsToReport(isFullReport, ingestionState)) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
           IndexTaskUtils.getReportListFromSavedParseExceptions(
@@ -371,7 +349,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
     }
 
-    if (needsBuildSegments) {
+    if (addBuildSegmentStatsToReport(isFullReport, ingestionState)) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
           IndexTaskUtils.getReportListFromSavedParseExceptions(
@@ -382,33 +360,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return events;
   }
 
-  public Map<String, Object> doGetRowStats(String full)
+  public Map<String, Object> doGetRowStats(boolean isFullReport)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
 
-    boolean needsDeterminePartitions = false;
-    boolean needsBuildSegments = false;
-
-    if (full != null) {
-      needsDeterminePartitions = true;
-      needsBuildSegments = true;
-    } else {
-      switch (ingestionState) {
-        case DETERMINE_PARTITIONS:
-          needsDeterminePartitions = true;
-          break;
-        case BUILD_SEGMENTS:
-        case COMPLETED:
-          needsBuildSegments = true;
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (needsDeterminePartitions) {
+    if (addDeterminePartitionStatsToReport(isFullReport, ingestionState)) {
       totalsMap.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
           determinePartitionsMeters.getTotals()
@@ -419,7 +377,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
     }
 
-    if (needsBuildSegments) {
+    if (addBuildSegmentStatsToReport(isFullReport, ingestionState)) {
       totalsMap.put(
           RowIngestionMeters.BUILD_SEGMENTS,
           buildSegmentsMeters.getTotals()
@@ -444,7 +402,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetRowStats(full)).build();
+    return Response.ok(doGetRowStats(full != null)).build();
   }
 
   @GET
@@ -463,7 +421,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     payload.put("ingestionState", ingestionState);
     payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(full));
+    payload.put("rowStats", doGetRowStats(full != null));
 
     ingestionStatsAndErrors.put("taskId", getId());
     ingestionStatsAndErrors.put("payload", payload);
@@ -580,36 +538,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-
   private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
-    completionReports = getTaskCompletionReports();
+    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, null, null);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
 
-  private Map<String, TaskReport> getTaskCompletionReports()
-  {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMsg,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                null,
-                null
-            )
-        )
-    );
-  }
-
-  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  @Override
+  protected Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     CircularBuffer<ParseExceptionReport> determinePartitionsParseExceptionReports =
@@ -631,7 +569,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return unparseableEventsMap;
   }
 
-  private Map<String, Object> getTaskCompletionRowStats()
+  @Override
+  protected Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = new HashMap<>();
     metrics.put(
@@ -707,6 +646,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           determineIntervals
       );
     }
+  }
+
+  private static boolean addDeterminePartitionStatsToReport(boolean isFullReport, IngestionState ingestionState)
+  {
+    return isFullReport
+           || ingestionState == IngestionState.DETERMINE_PARTITIONS;
   }
 
   private static LinearPartitionAnalysis createLinearPartitionAnalysis(
