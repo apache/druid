@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
@@ -36,14 +37,20 @@ import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class KafkaDataSourceMetadataTest
 {
-  private static final KafkaDataSourceMetadata START0 = startMetadata(ImmutableMap.of());
-  private static final KafkaDataSourceMetadata START1 = startMetadata(ImmutableMap.of(0, 2L, 1, 3L));
-  private static final KafkaDataSourceMetadata START2 = startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
-  private static final KafkaDataSourceMetadata START3 = startMetadata(ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata START0 = startMetadata("foo", ImmutableMap.of());
+  private static final KafkaDataSourceMetadata START1 = startMetadata("foo", ImmutableMap.of(0, 2L, 1, 3L));
+  private static final KafkaDataSourceMetadata START2 = startMetadata("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
+  private static final KafkaDataSourceMetadata START3 = startMetadata("foo", ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata START4 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of());
+  private static final KafkaDataSourceMetadata START5 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 3L));
+  private static final KafkaDataSourceMetadata START6 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 1, 3L));
   private static final KafkaDataSourceMetadata END0 = endMetadata(ImmutableMap.of());
   private static final KafkaDataSourceMetadata END1 = endMetadata(ImmutableMap.of(0, 2L, 2, 5L));
   private static final KafkaDataSourceMetadata END2 = endMetadata(ImmutableMap.of(0, 2L, 1, 4L));
@@ -55,21 +62,57 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START0.matches(START1));
     Assert.assertTrue(START0.matches(START2));
     Assert.assertTrue(START0.matches(START3));
+    Assert.assertTrue(START0.matches(START4));
+    Assert.assertTrue(START0.matches(START5));
+    Assert.assertTrue(START0.matches(START6));
 
     Assert.assertTrue(START1.matches(START0));
     Assert.assertTrue(START1.matches(START1));
     Assert.assertFalse(START1.matches(START2));
     Assert.assertTrue(START1.matches(START3));
+    Assert.assertTrue(START1.matches(START4));
+    Assert.assertTrue(START1.matches(START5));
+    Assert.assertTrue(START1.matches(START6));
 
     Assert.assertTrue(START2.matches(START0));
     Assert.assertFalse(START2.matches(START1));
     Assert.assertTrue(START2.matches(START2));
     Assert.assertTrue(START2.matches(START3));
+    Assert.assertTrue(START2.matches(START4));
+    Assert.assertFalse(START2.matches(START5));
+    Assert.assertFalse(START2.matches(START6));
 
     Assert.assertTrue(START3.matches(START0));
     Assert.assertTrue(START3.matches(START1));
     Assert.assertTrue(START3.matches(START2));
     Assert.assertTrue(START3.matches(START3));
+    Assert.assertTrue(START3.matches(START4));
+    Assert.assertTrue(START3.matches(START5));
+    Assert.assertTrue(START3.matches(START6));
+
+    Assert.assertTrue(START4.matches(START0));
+    Assert.assertTrue(START4.matches(START1));
+    Assert.assertTrue(START4.matches(START2));
+    Assert.assertTrue(START4.matches(START3));
+    Assert.assertTrue(START4.matches(START4));
+    Assert.assertTrue(START4.matches(START5));
+    Assert.assertTrue(START4.matches(START6));
+
+    Assert.assertTrue(START5.matches(START0));
+    Assert.assertTrue(START5.matches(START1));
+    Assert.assertFalse(START5.matches(START2));
+    Assert.assertTrue(START5.matches(START3));
+    Assert.assertTrue(START5.matches(START4));
+    Assert.assertTrue(START5.matches(START5));
+    Assert.assertTrue(START5.matches(START6));
+
+    Assert.assertTrue(START6.matches(START0));
+    Assert.assertTrue(START6.matches(START1));
+    Assert.assertFalse(START6.matches(START2));
+    Assert.assertTrue(START6.matches(START3));
+    Assert.assertTrue(START6.matches(START4));
+    Assert.assertTrue(START6.matches(START5));
+    Assert.assertTrue(START6.matches(START6));
 
     Assert.assertTrue(END0.matches(END0));
     Assert.assertTrue(END0.matches(END1));
@@ -204,16 +247,52 @@ public class KafkaDataSourceMetadataTest
 
   private static KafkaDataSourceMetadata startMetadata(Map<Integer, Long> offsets)
   {
+    return startMetadata("foo", offsets);
+  }
+
+  private static KafkaDataSourceMetadata startMetadata(
+      String topic,
+      Map<Integer, Long> offsets
+  )
+  {
     Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
         offsets,
         k -> new KafkaTopicPartition(
             false,
-            "foo",
+            topic,
             k
         )
     );
-    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>("foo", newOffsets, ImmutableSet.of()));
+    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, newOffsets, ImmutableSet.of()));
   }
+
+  private static KafkaDataSourceMetadata startMetadataMultiTopic(
+      String topicPattern,
+      List<String> topics,
+      Map<Integer, Long> offsets
+  )
+  {
+    Assert.assertFalse(topics.isEmpty());
+    Pattern pattern = Pattern.compile(topicPattern);
+    Assert.assertTrue(topics.stream().allMatch(t -> pattern.matcher(t).matches()));
+    int i = 0;
+    Map<KafkaTopicPartition, Long> newOffsets = new HashMap<>();
+    for (Map.Entry<Integer, Long> e : offsets.entrySet()) {
+      for (String topic : topics) {
+        newOffsets.put(
+            new KafkaTopicPartition(
+                true,
+                topic,
+                e.getKey()
+
+            ),
+            e.getValue()
+        );
+      }
+    }
+    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topicPattern, newOffsets, ImmutableSet.of()));
+  }
+
 
   private static KafkaDataSourceMetadata endMetadata(Map<Integer, Long> offsets)
   {

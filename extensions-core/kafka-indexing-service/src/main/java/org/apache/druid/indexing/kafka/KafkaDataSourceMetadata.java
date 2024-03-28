@@ -91,8 +91,21 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
     if (plus(other).equals(other.plus(this))) {
       return true;
     }
+    return plusTopicPartition((KafkaDataSourceMetadata) other)
+        .equals(((KafkaDataSourceMetadata) other).plusTopicPartition(this));
+  }
+
+  @Override
+  public boolean matchesOld(DataSourceMetadata old)
+  {
+    if (!getClass().equals(old.getClass())) {
+      return false;
+    }
+    if (plus(old).equals(old.plus(this))) {
+      return true;
+    }
     // assume other is older or make a new version of this function
-    KafkaDataSourceMetadata oldMetadata = (KafkaDataSourceMetadata) other;
+    KafkaDataSourceMetadata oldMetadata = (KafkaDataSourceMetadata) old;
     final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
     final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> oldSequenceNumbers = oldMetadata.getSeekableStreamSequenceNumbers();
 
@@ -126,5 +139,34 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
           return false;
         }
     );
+  }
+
+  private Map<TopicPartition, Long> plusTopicPartition(KafkaDataSourceMetadata other)
+  {
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> offsets = getSeekableStreamSequenceNumbers();
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> otherOffsets = other.getSeekableStreamSequenceNumbers();
+    final Map<TopicPartition, Long> topicPartitionToOffset = buildTopicPartitionToOffset(offsets);
+    final Map<TopicPartition, Long> topicPartitionToOtherOffset = buildTopicPartitionToOffset(
+        otherOffsets);
+
+    topicPartitionToOffset.putAll(topicPartitionToOtherOffset);
+
+    return topicPartitionToOffset;
+
+  }
+
+  private Map<TopicPartition, Long> buildTopicPartitionToOffset(
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> sequenceNumbers)
+  {
+    return sequenceNumbers.getPartitionSequenceNumberMap()
+        .entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            e -> {
+              KafkaTopicPartition kafkaTopicPartition = e.getKey();
+              return kafkaTopicPartition.asTopicPartition(sequenceNumbers.getStream());
+            },
+            e -> e.getValue()
+        ));
   }
 }
