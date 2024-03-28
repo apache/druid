@@ -550,8 +550,10 @@ public class IndexTaskTest extends IngestionTestBase
     final List<DataSegment> segments = runSuccessfulTask(indexTask);
     Assert.assertEquals(1, segments.size());
 
-    final Map<String, Object> liveReport = invokeApi(req -> indexTask.getLiveReports(req, null));
-    System.out.println(liveReport);
+    invokeApi(req -> indexTask.getLiveReports(req, null));
+    invokeApi(req -> indexTask.getLiveReports(req, "full"));
+    invokeApi(req -> indexTask.getRowStats(req, null));
+    invokeApi(req -> indexTask.getRowStats(req, "full"));
   }
 
   @Test
