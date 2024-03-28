@@ -109,7 +109,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
   {
     final List<Object> dictionary = DictionaryBuildingUtils.createDictionary();
     final Object2IntMap<Object> reverseDictionary =
-        DictionaryBuildingUtils.createTreeSortedReverseDictionary(columnType.getNullableStrategy());
+        DictionaryBuildingUtils.createReverseDictionary(columnType.getNullableStrategy());
     return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
         new UniValueDimensionToIdConverter(dictionary, reverseDictionary, columnType.getNullableStrategy()),
         columnType,

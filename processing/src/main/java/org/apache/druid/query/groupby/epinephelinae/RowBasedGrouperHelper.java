@@ -1224,24 +1224,19 @@ public class RowBasedGrouperHelper
       this.enableRuntimeDictionaryGeneration = dictionary == null;
 
       this.dictionary = enableRuntimeDictionaryGeneration ? DictionaryBuildingUtils.createDictionary() : dictionary;
-      // this.reverseDictionary = DictionaryBuildingUtils.createReverseDictionary();
-      this.reverseDictionary = DictionaryBuildingUtils.createTreeSortedReverseDictionary(ColumnType.STRING.getNullableStrategy());
+      this.reverseDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.STRING.getNullableStrategy());
 
       this.stringArrayDictionary = DictionaryBuildingUtils.createDictionary();
-      // this.reverseStringArrayDictionary = DictionaryBuildingUtils.createReverseDictionaryForPrimitiveArray(ColumnType.STRING_ARRAY);
-      this.reverseStringArrayDictionary = DictionaryBuildingUtils.createTreeSortedReverseDictionary(ColumnType.STRING_ARRAY.getNullableStrategy());
+      this.reverseStringArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.STRING_ARRAY.getNullableStrategy());
 
       this.longArrayDictionary = DictionaryBuildingUtils.createDictionary();
-      // this.reverseLongArrayDictionary = DictionaryBuildingUtils.createReverseDictionaryForPrimitiveArray(ColumnType.LONG_ARRAY);
-      this.reverseLongArrayDictionary = DictionaryBuildingUtils.createTreeSortedReverseDictionary(ColumnType.LONG_ARRAY.getNullableStrategy());
+      this.reverseLongArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.LONG_ARRAY.getNullableStrategy());
 
       this.floatArrayDictionary = DictionaryBuildingUtils.createDictionary();
-      // this.reverseFloatArrayDictionary = DictionaryBuildingUtils.createReverseDictionaryForPrimitiveArray(ColumnType.FLOAT_ARRAY);
-      this.reverseFloatArrayDictionary = DictionaryBuildingUtils.createTreeSortedReverseDictionary(ColumnType.FLOAT_ARRAY.getNullableStrategy());
+      this.reverseFloatArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.FLOAT_ARRAY.getNullableStrategy());
 
       this.doubleArrayDictionary = DictionaryBuildingUtils.createDictionary();
-      // this.reverseDoubleArrayDictionary = DictionaryBuildingUtils.createReverseDictionaryForPrimitiveArray(ColumnType.DOUBLE_ARRAY);
-      this.reverseDoubleArrayDictionary = DictionaryBuildingUtils.createTreeSortedReverseDictionary(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
+      this.reverseDoubleArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
 
       this.maxDictionarySize = maxDictionarySize;
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
@@ -1622,7 +1617,7 @@ public class RowBasedGrouperHelper
         );
         this.reverseDictionary = genericReverseDictionaries.computeIfAbsent(
             columnTypeName,
-            ignored -> DictionaryBuildingUtils.createTreeSortedReverseDictionary(columnType.getNullableStrategy())
+            ignored -> DictionaryBuildingUtils.createReverseDictionary(columnType.getNullableStrategy())
         );
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
             columnType.getNullableStrategy().compare(

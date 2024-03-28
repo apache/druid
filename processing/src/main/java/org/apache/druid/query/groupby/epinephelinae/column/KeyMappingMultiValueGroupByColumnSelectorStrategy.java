@@ -31,6 +31,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -200,7 +201,7 @@ public abstract class KeyMappingMultiValueGroupByColumnSelectorStrategy implemen
   {
 
     private final List<String> dictionary = DictionaryBuildingUtils.createDictionary();
-    private final Object2IntMap<String> reverseDictionary = DictionaryBuildingUtils.createReverseDictionary();
+    private final Object2IntMap<String> reverseDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.STRING.getNullableStrategy());
 
     @Override
     public void processValueFromGroupingKey(

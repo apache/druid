@@ -249,11 +249,6 @@ public final class DimensionHandlerUtils
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
-//    // Complex dimension type is not supported
-//    if (capabilities.is(ValueType.COMPLEX)) {
-//      capabilities = DEFAULT_STRING_CAPABILITIES;
-//    }
-
     // Currently, all extractionFns output Strings, so the column will return String values via a
     // DimensionSelector if an extractionFn is present.
     if (dimSpec.getExtractionFn() != null) {

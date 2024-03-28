@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.CheckReturnValue;
@@ -38,7 +39,7 @@ import java.util.Comparator;
  *
  * @see TypeStrategy
  */
-public final class NullableTypeStrategy<T> implements Comparator<T>
+public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strategy<T>
 {
   private final TypeStrategy<T> delegate;
   private final Comparator<T> delegateComparator;
@@ -131,5 +132,25 @@ public final class NullableTypeStrategy<T> implements Comparator<T>
   public int compare(T o1, T o2)
   {
     return delegateComparator.compare(o1, o2);
+  }
+
+  public boolean groupable()
+  {
+    return delegate.groupable();
+  }
+
+  @Override
+  public int hashCode(@Nullable T o)
+  {
+    return o == null ? 0 : delegate.hashCode(o);
+  }
+
+  @Override
+  public boolean equals(@Nullable T a, @Nullable T b)
+  {
+    if (a == null) {
+      return b == null;
+    }
+    return b != null && delegate.equals(a, b);
   }
 }
