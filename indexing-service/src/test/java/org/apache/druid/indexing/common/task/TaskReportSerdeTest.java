@@ -26,8 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.IngestionState;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TestUtils;
@@ -59,7 +59,7 @@ public class TaskReportSerdeTest
   {
     IngestionStatsAndErrorsTaskReport report1 = new IngestionStatsAndErrorsTaskReport(
         "testID",
-        new IngestionStatsAndErrorsTaskReportData(
+        new IngestionStatsAndErrors(
             IngestionState.BUILD_SEGMENTS,
             ImmutableMap.of(
                 "hello", "world"
@@ -118,7 +118,7 @@ public class TaskReportSerdeTest
 
     IngestionStatsAndErrorsTaskReport expected = new IngestionStatsAndErrorsTaskReport(
         IngestionStatsAndErrorsTaskReport.REPORT_KEY,
-        new IngestionStatsAndErrorsTaskReportData(
+        new IngestionStatsAndErrors(
             IngestionState.COMPLETED,
             ImmutableMap.of(
                 "hello", "world"
