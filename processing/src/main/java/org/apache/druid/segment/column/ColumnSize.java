@@ -29,7 +29,7 @@ import java.util.Map;
 
 public class ColumnSize
 {
-  public static ColumnSize NO_DATA = new ColumnSize(-1L, new LinkedHashMap<>(), "No size information available");
+  public static final ColumnSize NO_DATA = new ColumnSize(-1L, new LinkedHashMap<>(), "No size information available");
 
   public static final String DATA_SECTION = "data";
   public static final String LONG_COLUMN_PART = "longValuesColumn";

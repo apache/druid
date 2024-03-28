@@ -432,18 +432,21 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     EasyMock.expect(mockIndex.getAvailableDimensions())
             .andReturn(new ListIndexed<>(Collections.singletonList("x")))
             .atLeastOnce();
+    EasyMock.expect(mockIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME))
+            .andReturn(EasyMock.createMock(ColumnHolder.class))
+            .anyTimes();
     EasyMock.expect(mockIndex.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
-            .atLeastOnce();
+            .anyTimes();
     EasyMock.expect(mockIndex.getColumnCapabilities("x"))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX))
             .atLeastOnce();
 
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
-    EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).atLeastOnce();
+    EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).anyTimes();
 
     StringUtf8DictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringUtf8DictionaryEncodedColumn.class);
-    EasyMock.expect(holder.getColumn()).andReturn(dictionaryEncodedColumn).atLeastOnce();
+    EasyMock.expect(holder.getColumn()).andReturn(dictionaryEncodedColumn).anyTimes();
 
     dictionaryEncodedColumn.close();
     EasyMock.expectLastCall();
