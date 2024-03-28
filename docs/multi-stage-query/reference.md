@@ -180,7 +180,7 @@ The following runtime parameters must be configured to export into a GCS destina
 | `druid.export.storage.google.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                     | n/a     |
 | `druid.export.storage.google.allowedExportPaths` | Yes      | An array of GS prefixes that are allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
 | `druid.export.storage.google.maxRetry`           | No       | Defines the max number times to attempt GS API calls to avoid failures due to transient errors.                                                                                                                                   | 10      |
-| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. A large chunk size reduces the API calls to GS, however it requires more disk space to store the temporary chunks.                                              | 4MiB    |
+| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.                                              | 4MiB    |
 
 ##### LOCAL
 
