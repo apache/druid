@@ -54,6 +54,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -636,7 +637,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
                 null,
-                null
+                null,
+                getContextValue(DruidMetrics.TAGS)
             )
         )
     );

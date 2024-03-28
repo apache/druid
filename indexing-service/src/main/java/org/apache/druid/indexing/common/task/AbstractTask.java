@@ -161,6 +161,10 @@ public abstract class AbstractTask implements Task
           hostName.getHostAddress(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort()
       )));
     }
+    TaskIdentitiesProvider taskIdentitiesProvider = toolbox.getTaskIdentitiesProvider();
+    if (taskIdentitiesProvider != null) {
+      taskIdentitiesProvider.enrichTaskTags(this);
+    }
     log.debug("Task setup complete");
     return null;
   }

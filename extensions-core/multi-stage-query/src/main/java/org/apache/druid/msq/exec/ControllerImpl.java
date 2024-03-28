@@ -181,6 +181,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -571,7 +572,11 @@ public class ControllerImpl implements Controller
       );
       context.writeReports(
           id(),
-          TaskReport.buildTaskReports(new MSQTaskReport(id(), taskReportPayload))
+          TaskReport.buildTaskReports(new MSQTaskReport(
+              id(),
+              task.getContextValue(DruidMetrics.TAGS),
+              taskReportPayload
+          ))
       );
     }
     catch (Throwable e) {
@@ -694,6 +699,9 @@ public class ControllerImpl implements Controller
         MultiStageQueryContext.CTX_IS_REINDEX,
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
+
+    // propagate the controller's tags to the worker task
+    taskContextOverridesBuilder.put(DruidMetrics.TAGS, task.getContextValue(DruidMetrics.TAGS, new HashMap()));
 
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
@@ -925,6 +933,7 @@ public class ControllerImpl implements Controller
     return TaskReport.buildTaskReports(
         new MSQTaskReport(
             id(),
+            task.getContextValue(DruidMetrics.TAGS),
             new MSQTaskReportPayload(
                 makeStatusReport(
                     TaskState.RUNNING,

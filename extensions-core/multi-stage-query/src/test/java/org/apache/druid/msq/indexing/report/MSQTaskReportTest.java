@@ -63,6 +63,7 @@ public class MSQTaskReportTest
 {
   private static final String TASK_ID = "mytask";
   private static final String HOST = "example.com:1234";
+  private static final Map<String, Object> TAGS = ImmutableMap.of("tag1", "value1", "tag2", "value2");
   public static final QueryDefinition QUERY_DEFINITION =
       QueryDefinition
           .builder()
@@ -107,6 +108,7 @@ public class MSQTaskReportTest
 
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
+        null,
         new MSQTaskReportPayload(
             new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
             MSQStagesReport.create(
@@ -135,6 +137,7 @@ public class MSQTaskReportTest
     );
 
     Assert.assertEquals(TASK_ID, report2.getTaskId());
+    Assert.assertNull(report2.getTags());
     Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
     Assert.assertNull(report2.getPayload().getStatus().getErrorReport());
     Assert.assertEquals(report.getPayload().getStatus().getRunningTasks(), report2.getPayload().getStatus().getRunningTasks());
@@ -172,6 +175,7 @@ public class MSQTaskReportTest
     final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, HOST, 0, new TooManyColumnsFault(10, 5));
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
+        null,
         new MSQTaskReportPayload(
             new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
             MSQStagesReport.create(
@@ -220,6 +224,7 @@ public class MSQTaskReportTest
 
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
+        TAGS,
         new MSQTaskReportPayload(
             new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status),
             MSQStagesReport.create(
@@ -252,6 +257,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report2 = (MSQTaskReport) reportMap.get(MSQTaskReport.REPORT_KEY);
 
     Assert.assertEquals(TASK_ID, report2.getTaskId());
+    Assert.assertEquals(TAGS, report2.getTags());
     Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
     Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
   }

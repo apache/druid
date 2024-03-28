@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskIn
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -265,7 +266,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
                 segmentsRead,
-                null
+                null,
+                getContextValue(DruidMetrics.TAGS)
             )
         )
     );

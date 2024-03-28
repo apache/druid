@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -603,7 +604,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
                 null,
-                null
+                null,
+                getContextValue(DruidMetrics.TAGS)
             )
         )
     );

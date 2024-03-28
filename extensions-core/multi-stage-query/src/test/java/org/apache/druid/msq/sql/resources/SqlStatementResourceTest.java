@@ -237,6 +237,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private final MSQTaskReport selectTaskReport = new MSQTaskReport(
       FINISHED_SELECT_MSQ_QUERY,
+      null,
       new MSQTaskReportPayload(
           new MSQStatusReport(
               TaskState.SUCCESS,
@@ -304,6 +305,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private static final MSQTaskReport MSQ_INSERT_TASK_REPORT = new MSQTaskReport(
       FINISHED_INSERT_MSQ_QUERY,
+      null,
       new MSQTaskReportPayload(
           new MSQStatusReport(
               TaskState.SUCCESS,

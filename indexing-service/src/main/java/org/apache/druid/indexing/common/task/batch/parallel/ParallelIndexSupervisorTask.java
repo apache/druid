@@ -63,6 +63,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -1259,7 +1260,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
                 segmentsRead,
-                segmentsPublished
+                segmentsPublished,
+                getContextValue(DruidMetrics.TAGS)
             )
         )
     );
