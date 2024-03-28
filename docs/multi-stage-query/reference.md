@@ -173,7 +173,7 @@ Supported arguments for the function:
 | `bucket`    | Yes      | The GS bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.google.allowedExportPaths`.                                                                                                                     | n/a     |
 | `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.google.allowedExportPaths`. | n/a     |
 
-The following runtime parameters must be configured to export into an S3 destination:
+The following runtime parameters must be configured to export into a GCS destination:
 
 | Runtime Parameter                                | Required | Description                                                                                                                                                                                                                       | Default |
 |--------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
