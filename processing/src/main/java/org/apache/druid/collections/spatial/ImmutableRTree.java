@@ -36,7 +36,7 @@ import java.nio.ByteBuffer;
 /**
  * An immutable representation of an {@link RTree} for spatial indexing.
  */
-public final class ImmutableRTree implements Comparable<ImmutableRTree>
+public final class ImmutableRTree implements Comparable<ImmutableRTree>, BaseImmutableRTee
 {
   private static final byte VERSION = 0x0;
 
@@ -65,7 +65,7 @@ public final class ImmutableRTree implements Comparable<ImmutableRTree>
     Preconditions.checkArgument(data.get(initPosition) == VERSION, "Mismatching versions");
     this.numDims = data.getInt(1 + initPosition) & 0x7FFF;
     this.data = data;
-    this.root = new ImmutableNode(numDims, initPosition, 1 + Integer.BYTES, data, bitmapFactory);
+    this.root = new ImmutableFloatNode(numDims, initPosition, 1 + Integer.BYTES, data, bitmapFactory);
   }
 
   public static ImmutableRTree newImmutableFromMutable(RTree rTree)
@@ -116,6 +116,7 @@ public final class ImmutableRTree implements Comparable<ImmutableRTree>
     return data.remaining();
   }
 
+  @Override
   public Iterable<ImmutableBitmap> search(Bound bound)
   {
     return search(defaultSearchStrategy, bound);

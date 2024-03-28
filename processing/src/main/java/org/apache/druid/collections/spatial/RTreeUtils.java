@@ -71,4 +71,36 @@ public class RTreeUtils
     }
   }
 
+  /**
+   * Returns distance between two geo coordinates in meters according to https://en.wikipedia.org/wiki/Haversine_formula
+   */
+  public static double calculateHaversineDistance(
+      final double lat1,
+      final double lon1,
+      final double lat2,
+      final double lon2
+  )
+  {
+    // Convert degrees to radians
+    double radLat1 = Math.toRadians(lat1);
+    double radLon1 = Math.toRadians(lon1);
+    double radLat2 = Math.toRadians(lat2);
+    double radLon2 = Math.toRadians(lon2);
+
+    // Haversine formula
+    double dLat = radLat2 - radLat1;
+    double dLon = radLon2 - radLon1;
+
+    double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+               Math.cos(radLat1) * Math.cos(radLat2) *
+               Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // Radius of Earth in meters (use 6371e3 for kilometers)
+    double radius = 6371000.0;
+
+    return radius * c;
+  }
+
 }

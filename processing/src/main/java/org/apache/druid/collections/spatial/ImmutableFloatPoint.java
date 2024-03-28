@@ -23,9 +23,9 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 
 import java.nio.ByteBuffer;
 
-public class ImmutablePoint extends ImmutableNode
+public class ImmutableFloatPoint extends ImmutableFloatNode
 {
-  public ImmutablePoint(
+  public ImmutableFloatPoint(
       int numDims,
       int initialOffset,
       int offsetFromInitial,
@@ -36,7 +36,7 @@ public class ImmutablePoint extends ImmutableNode
     super(numDims, initialOffset, offsetFromInitial, (short) 0, true, data, bitmapFactory);
   }
 
-  public ImmutablePoint(ImmutableNode node)
+  public ImmutableFloatPoint(ImmutableNode node)
   {
     super(
         node.getNumDims(),
@@ -55,7 +55,7 @@ public class ImmutablePoint extends ImmutableNode
   }
 
   @Override
-  public Iterable<ImmutableNode> getChildren()
+  public Iterable<ImmutableNode<float[]>> getChildren()
   {
     // should never get here
     throw new UnsupportedOperationException();
