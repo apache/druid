@@ -150,7 +150,6 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
         dictionary.add(multiValueHolder);
         reverseDictionary.put(multiValueHolder, size);
         dictId = size;
-        // TODO(laksh): confirm if this is the same for sorted dictionaries as well
         // MultiValueHOlder is always expected to handle the type, once the coercion is complete
         //noinspection unchecked
         footprintIncrease = DictionaryBuildingUtils.estimateEntryFootprint(

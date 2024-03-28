@@ -19,15 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.IndexedInts;
-
-import javax.annotation.Nullable;
 
 /**
  * Implementation of {@link KeyMappingGroupByColumnSelectorStrategy} that relies on a prebuilt dictionary to map the

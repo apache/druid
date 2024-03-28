@@ -1191,8 +1191,8 @@ public class RowBasedGrouperHelper
     private final List<Object[]> doubleArrayDictionary;
     private final Object2IntMap<Object[]> reverseDoubleArrayDictionary;
 
-    private final Map<String, List<Object>> complexTypeDictionaries = new HashMap<>();
-    private final Map<String, Object2IntMap<Object>> complexTypeReverseDictionaries = new HashMap<>();
+    private final Map<String, List<Object>> genericDictionaries = new HashMap<>();
+    private final Map<String, Object2IntMap<Object>> genericReverseDictionaries = new HashMap<>();
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -1397,8 +1397,8 @@ public class RowBasedGrouperHelper
         reverseFloatArrayDictionary.clear();
         longArrayDictionary.clear();
         reverseLongArrayDictionary.clear();
-        complexTypeDictionaries.clear();
-        complexTypeReverseDictionaries.clear();
+        genericDictionaries.clear();
+        genericReverseDictionaries.clear();
         rankOfDictionaryIds = null;
         currentEstimatedSize = 0;
       }
@@ -1459,7 +1459,7 @@ public class RowBasedGrouperHelper
               && !DimensionComparisonUtils.isNaturalComparator(valueType.getType(), stringComparator)) {
             throw DruidException.defensive("Unexpected string comparator supplied");
           }
-          return new ComplexRowBasedKeySerdeHelper(keyBufferPosition, valueType);
+          return new GenericRowBasedKeySerdeHelper(keyBufferPosition, valueType);
         case ARRAY:
           switch (valueType.getElementType().getType()) {
             case STRING:
@@ -1596,38 +1596,52 @@ public class RowBasedGrouperHelper
       public abstract Object2IntMap getReverseDictionary();
     }
 
-    private class ComplexRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
+    private class GenericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
       final BufferComparator bufferComparator;
-      final ColumnType complexType;
-      final String complexTypeName;
+      final ColumnType columnType;
+      final String columnTypeName;
 
-      final List<Object> complexTypeDictionary;
-      final Object2IntMap<Object> complexTypeReverseDictionary;
+      final List<Object> dictionary;
+      final Object2IntMap<Object> reverseDictionary;
 
-      public ComplexRowBasedKeySerdeHelper(
+      public GenericRowBasedKeySerdeHelper(
           int keyBufferPosition,
-          ColumnType complexType
+          ColumnType columnType
       )
       {
         super(keyBufferPosition);
         this.keyBufferPosition = keyBufferPosition;
-        this.complexType = complexType;
-        this.complexTypeName = Preconditions.checkNotNull(complexType.getComplexTypeName(), "complex type name expected");
-        this.complexTypeDictionary = complexTypeDictionaries.computeIfAbsent(
-            complexTypeName,
+        validateColumnType(columnType);
+        this.columnType = columnType;
+        this.columnTypeName = columnType.asTypeString();
+        this.dictionary = genericDictionaries.computeIfAbsent(
+            columnTypeName,
             ignored -> DictionaryBuildingUtils.createDictionary()
         );
-        this.complexTypeReverseDictionary = complexTypeReverseDictionaries.computeIfAbsent(
-            complexTypeName,
-            ignored -> DictionaryBuildingUtils.createTreeSortedReverseDictionary(complexType.getNullableStrategy())
+        this.reverseDictionary = genericReverseDictionaries.computeIfAbsent(
+            columnTypeName,
+            ignored -> DictionaryBuildingUtils.createTreeSortedReverseDictionary(columnType.getNullableStrategy())
         );
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            complexType.getNullableStrategy().compare(
-                complexTypeDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                complexTypeDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+            columnType.getNullableStrategy().compare(
+                dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
+      }
+
+      // Asserts that we don't entertain any complex types without a typename, to prevent intermixing dictionaries of
+      // different types.
+      private void validateColumnType(TypeSignature<ValueType> columnType)
+      {
+        if (columnType.isArray()) {
+          validateColumnType(columnType.getElementType());
+        } else if (columnType.is(ValueType.COMPLEX)) {
+          if (columnType.getComplexTypeName() == null) {
+            throw DruidException.defensive("complex type name expected");
+          }
+        }
       }
 
       @Override
@@ -1639,13 +1653,13 @@ public class RowBasedGrouperHelper
       @Override
       public List<Object> getDictionary()
       {
-        return complexTypeDictionary;
+        return dictionary;
       }
 
       @Override
       public Object2IntMap<Object> getReverseDictionary()
       {
-        return complexTypeReverseDictionary;
+        return reverseDictionary;
       }
     }
 

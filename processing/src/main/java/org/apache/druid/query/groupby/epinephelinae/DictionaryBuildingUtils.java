@@ -66,6 +66,9 @@ public class DictionaryBuildingUtils
     return m;
   }
 
+  /**
+   * Create reverse dictionary that relies on the given HashStrategy for hashing and comparing equality
+   */
   private static <T> Object2IntMap<T> createReverseDictionary(final Hash.Strategy<T> hashStrategy)
   {
     final Object2IntOpenCustomHashMap<T> m = new Object2IntOpenCustomHashMap<>(hashStrategy);
@@ -85,32 +88,6 @@ public class DictionaryBuildingUtils
     m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
     return m;
   }
-
-  /**
-   * Creates a reverse dictionary for arrays of primitive types.
-   */
-//  public static Object2IntMap<Object[]> createReverseDictionaryForPrimitiveArray(TypeSignature<ValueType> arrayType)
-//  {
-//    if (!arrayType.isPrimitiveArray()) {
-//      throw DruidException.defensive("Dictionary building function expected an array of a primitive type");
-//    }
-//    return createReverseDictionary(new Hash.Strategy<Object[]>()
-//    {
-//      @Override
-//      public int hashCode(Object[] o)
-//      {
-//        // We don't do a deep comparison, because the array type is primitive, therefore we don't need to incur the extra
-//        // overhead of checking the nestings
-//        return Arrays.hashCode(o);
-//      }
-//
-//      @Override
-//      public boolean equals(Object[] a, Object[] b)
-//      {
-//        return arrayType.getNullableStrategy().compare(a, b) == 0;
-//      }
-//    });
-//  }
 
   /**
    * Estimated footprint of a new entry.

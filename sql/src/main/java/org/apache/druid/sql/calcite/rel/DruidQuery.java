@@ -1249,8 +1249,8 @@ public class DruidQuery
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
-    // grouping col cannot be type array
-    if (dimensionSpec.getOutputType().isArray()) {
+    // grouping col cannot be arrays or complex types
+    if (!dimensionSpec.getOutputType().isPrimitive()) {
       return null;
     }
     final OrderByColumnSpec limitColumn;

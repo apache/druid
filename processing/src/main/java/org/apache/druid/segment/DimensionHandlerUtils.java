@@ -404,16 +404,10 @@ public final class DimensionHandlerUtils
       case STRING:
         return convertObjectToString(obj);
       case ARRAY:
-        switch (type.getElementType().getType()) {
-          case STRING:
-            return coerceToStringArray(obj);
-          case LONG:
-            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
-          case FLOAT:
-            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
-          case DOUBLE:
-            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
-        }
+        return coerceToObjectArrayWithElementCoercionFunction(
+            obj,
+            x -> DimensionHandlerUtils.convertObjectToType(x, type.getElementType())
+        );
       case COMPLEX:
         // Can't coerce complex objects, and we shouldn't need to. If in future selectors behave weirdly, or we need to
         // cast them (for some unknown reason), we can have that casting knowledge in the type strategy
@@ -430,8 +424,9 @@ public final class DimensionHandlerUtils
   }
 
 
+  @Nullable
   public static Object[] coerceToObjectArrayWithElementCoercionFunction(
-      Object obj,
+      @Nullable Object obj,
       Function<Object, Object> coercionFunction
   )
   {
