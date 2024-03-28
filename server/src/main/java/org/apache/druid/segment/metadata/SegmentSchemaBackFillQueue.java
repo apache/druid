@@ -20,7 +20,9 @@
 package org.apache.druid.segment.metadata;
 
 import com.google.inject.Inject;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -31,18 +33,21 @@ import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.SegmentSchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * This class publishes the segment schema for segments obtained via segment metadata query.
  * It maintains a queue which is populated by {@link CoordinatorSegmentMetadataCache}.
  */
+@ManageLifecycle
 public class SegmentSchemaBackFillQueue
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaBackFillQueue.class);
@@ -51,12 +56,12 @@ public class SegmentSchemaBackFillQueue
   private final long executionPeriod;
 
   private final SegmentSchemaManager segmentSchemaManager;
-  private final ScheduledExecutorFactory scheduledExecutorFactory;
   private final SegmentSchemaCache segmentSchemaCache;
   private final FingerprintGenerator fingerprintGenerator;
   private final ServiceEmitter emitter;
   private final CentralizedDatasourceSchemaConfig config;
   private ScheduledExecutorService executor;
+  private @Nullable ScheduledFuture<?> scheduledFuture = null;
 
   @Inject
   public SegmentSchemaBackFillQueue(
@@ -69,26 +74,34 @@ public class SegmentSchemaBackFillQueue
   )
   {
     this.segmentSchemaManager = segmentSchemaManager;
-    this.scheduledExecutorFactory = scheduledExecutorFactory;
     this.segmentSchemaCache = segmentSchemaCache;
     this.fingerprintGenerator = fingerprintGenerator;
     this.emitter = emitter;
     this.config = config;
     this.executionPeriod = config.getBackFillPeriod();
-  }
-
-  public void start()
-  {
     if (isEnabled()) {
       this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s");
-      scheduleQueuePoll(executionPeriod);
     }
   }
 
+  @LifecycleStop
   public void stop()
   {
+    this.executor.shutdownNow();
+    scheduledFuture = null;
+  }
+
+  public void leaderStart()
+  {
     if (isEnabled()) {
-      executor.shutdownNow();
+      scheduledFuture = executor.scheduleAtFixedRate(this::processBatchesDue, executionPeriod, executionPeriod, TimeUnit.MILLISECONDS);
+    }
+  }
+
+  public void leaderStop()
+  {
+    if (isEnabled()) {
+      scheduledFuture.cancel(true);
     }
   }
 
@@ -111,11 +124,6 @@ public class SegmentSchemaBackFillQueue
   public boolean isEnabled()
   {
     return config.isEnabled() && config.isBackFillEnabled();
-  }
-
-  private void scheduleQueuePoll(long delay)
-  {
-    executor.scheduleAtFixedRate(this::processBatchesDue, delay, delay, TimeUnit.MILLISECONDS);
   }
 
   public void processBatchesDue()

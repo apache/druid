@@ -160,14 +160,15 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     callbackExec.shutdownNow();
     cacheExec.shutdownNow();
     segmentSchemaCache.uninitialize();
-    segmentSchemaBackfillQueue.stop();
+    segmentSchemaBackfillQueue.leaderStop();
+    cacheExecFuture = null;
   }
 
   public void leaderStart()
   {
     log.info("%s starting cache initialization.", getClass().getSimpleName());
     try {
-      segmentSchemaBackfillQueue.start();
+      segmentSchemaBackfillQueue.leaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
       if (config.isAwaitInitializationOnStart()) {
         awaitInitialization();
@@ -183,7 +184,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     log.info("%s stopping cache.", getClass().getSimpleName());
     cacheExecFuture.cancel(true);
     segmentSchemaCache.uninitialize();
-    segmentSchemaBackfillQueue.stop();
+    segmentSchemaBackfillQueue.leaderStop();
   }
 
   /**
@@ -274,14 +275,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
       for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
         Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
-        log.debug("SchemaMetadata for segmentId [%s] is present [%s].", entry.getKey(), metadata.isPresent());
         AvailableSegmentMetadata copied = entry.getValue();
         if (metadata.isPresent()) {
-          log.debug("SchemaMetadata for segmentId [%s] is [%s].", entry.getKey(), metadata.get());
           copied = AvailableSegmentMetadata.from(entry.getValue())
                                            .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
                                            .withNumRows(metadata.get().getNumRows())
                                            .build();
+        } else {
+          log.debug("SchemaMetadata for segmentId [%s] is absent.", entry.getKey());
         }
         segmentMetadata.put(entry.getKey(), copied);
       }
@@ -298,13 +299,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
     AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataInfo.get(datasource).get(segmentId);
     Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
-    log.debug("SchemaMetadata for segmentId [%s] is present [%s].", segmentId, metadata.isPresent());
     if (metadata.isPresent()) {
-      log.debug("SchemaMetadata for segmentId [%s] is [%s].", segmentId, metadata.get());
       availableSegmentMetadata = AvailableSegmentMetadata.from(availableSegmentMetadata)
                                        .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
                                        .withNumRows(metadata.get().getNumRows())
                                        .build();
+    } else {
+      log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
     }
     return availableSegmentMetadata;
   }
@@ -394,7 +395,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public RowSignature buildDataSourceRowSignature(final String dataSource)
   {
-    log.debug("Building dataSource RowSignature.");
+    log.debug("Method Start: buildDataSourceRowSignature");
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
     // Preserve order.
@@ -403,9 +404,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (SegmentId segmentId : segmentsMap.keySet()) {
         Optional<SegmentSchemaMetadata> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
-        log.debug("SchemaMetadata for segmentId [%s] is present [%s].", segmentId, optionalSchema.isPresent());
         if (optionalSchema.isPresent()) {
-          log.debug("SchemaMetadata for segmentId [%s] is [%s].", segmentId, optionalSchema.get());
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
           for (String column : rowSignature.getColumnNames()) {
             final ColumnType columnType =
@@ -414,6 +413,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
             columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
           }
+        } else {
+          log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
         }
       }
     } else {
@@ -423,6 +424,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
     final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
+
+    log.debug("Method Stop: buildDataSourceRowSignature");
 
     return builder.build();
   }

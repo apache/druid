@@ -135,7 +135,6 @@ public class SegmentSchemaCache
 
   public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
   {
-    log.debug("SegmentStatsMap is [%s].", segmentStatsMap);
     this.finalizedSegmentStats = segmentStatsMap;
   }
 
@@ -211,12 +210,11 @@ public class SegmentSchemaCache
     if (finalizedSegmentStats.containsKey(segmentId)) {
       SegmentStats segmentStats = finalizedSegmentStats.get(segmentId);
       Long schemaId = segmentStats.getSchemaId();
-      if (schemaId == null) {
-        log.error("SchemaId for segment [%s] is null.", segmentId);
-      }
-
-      if (segmentStats.getNumRows() == null) {
-        log.error("NumRows for segment [%s] is null.", segmentId);
+      if (schemaId == null || segmentStats.getNumRows() == null) {
+        log.error(
+            "Missing schemaId or numRows for segmentId [%s]. SchemaId present [%s], numRows present [%s]",
+            segmentId, schemaId != null, segmentStats.getNumRows() != null
+        );
       }
 
       if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {

@@ -271,7 +271,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               final boolean wasRecentFailure = DateTimes.utc(lastFailure)
                                                         .plus(config.getMetadataRefreshPeriod())
                                                         .isAfterNow();
-              log.debug("Evaluating condition to break wait for refresh.");
               if (isServerViewInitialized &&
                   !wasRecentFailure &&
                   (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&

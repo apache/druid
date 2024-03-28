@@ -116,7 +116,7 @@ public class SegmentSchemaBackFillQueueTest
 
     segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20));
     segmentSchemaBackFillQueue.add(segment.getId(), rowSignature, 20, aggregatorFactoryMap);
-    segmentSchemaBackFillQueue.start();
+    segmentSchemaBackFillQueue.leaderStart();
     latch.await();
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }
