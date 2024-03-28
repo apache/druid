@@ -157,6 +157,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   private final TaskToolbox toolbox;
+  @Nullable
+  private Integer segmentsCount;
 
   @JsonCreator
   public DruidInputSource(
@@ -364,11 +366,21 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   private List<TimelineObjectHolder<String, DataSegment>> createTimeline()
   {
+    List<TimelineObjectHolder<String, DataSegment>> timeline;
     if (interval == null) {
-      return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
+      timeline = getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
+      timeline = getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
     }
+
+    Set<SegmentId> ids = new HashSet<>();
+    for (TimelineObjectHolder<String, DataSegment> holder : timeline) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        ids.add(chunk.getObject().getId());
+      }
+    }
+    segmentsCount = ids.size();
+    return timeline;
   }
 
   @Override
@@ -623,19 +635,22 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return new ArrayList<>(timeline.values());
   }
 
-  public int estimateSegmentsCount()
+  /**
+   * Should ideally be called after creating the reader with {@link #reader(InputRowSchema, InputFormat, File)}
+   * call to not be a costly  operation.
+   *
+   * @return count of segments handled by this input source
+   */
+  public int segmentsCount()
   {
     if (segmentIds != null) {
       return segmentIds.size();
     }
 
-    Set<SegmentId> ids = new HashSet<>();
-    for (TimelineObjectHolder<String, DataSegment> holder : createTimeline()) {
-      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-        ids.add(chunk.getObject().getId());
-      }
+    if (segmentsCount == null) {
+      createTimeline();
     }
 
-    return ids.size();
+    return segmentsCount;
   }
 }

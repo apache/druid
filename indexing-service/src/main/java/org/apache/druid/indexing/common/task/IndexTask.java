@@ -1081,7 +1081,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             toolbox,
             // only applicable to the compaction use cases
             inputSource instanceof DruidInputSource
-            ? (long) ((DruidInputSource) inputSource).estimateSegmentsCount()
+            ? (long) ((DruidInputSource) inputSource).segmentsCount()
             : null,
             (long) published.getSegments().size()
         );
