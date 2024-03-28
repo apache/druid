@@ -33,6 +33,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.UUID;
+
 public class QueryDefinitionTest
 {
   @Test
@@ -40,7 +42,7 @@ public class QueryDefinitionTest
   {
     final QueryDefinition queryDef =
         QueryDefinition
-            .builder()
+            .builder(UUID.randomUUID().toString())
             .add(
                 StageDefinition
                     .builder(0)

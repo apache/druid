@@ -17,24 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.msq.exec;
 
-import com.google.inject.BindingAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.apache.druid.msq.indexing.MSQWorkerTask;
+import org.apache.druid.msq.indexing.error.MSQFault;
 
 /**
- * Binding annotation for implements of interfaces that are MSQ (MultiStageQuery) focused.  This is generally
- * contrasted with the NativeQ annotation.
- *
- * @see Parent
+ * Notifies users of {@link WorkerManager} when a worker fails.
  */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@BindingAnnotation
-public @interface MSQ
+public interface WorkerFailureListener
 {
+  /**
+   * Fires when a worker launched or monitoring by {@link WorkerManager} fails.
+   */
+  void onFailure(MSQWorkerTask workerTask, MSQFault msqFault);
 }

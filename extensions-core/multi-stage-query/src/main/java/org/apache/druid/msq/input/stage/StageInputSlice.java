@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -38,14 +40,19 @@ public class StageInputSlice implements InputSlice
   private final int stage;
   private final ReadablePartitions partitions;
 
+  @Nullable // May be null when created by older controllers
+  private final OutputChannelMode outputChannelMode;
+
   @JsonCreator
   public StageInputSlice(
       @JsonProperty("stage") int stageNumber,
-      @JsonProperty("partitions") ReadablePartitions partitions
+      @JsonProperty("partitions") ReadablePartitions partitions,
+      @JsonProperty("output") OutputChannelMode outputChannelMode
   )
   {
     this.stage = stageNumber;
     this.partitions = Preconditions.checkNotNull(partitions, "partitions");
+    this.outputChannelMode = outputChannelMode;
   }
 
   @JsonProperty("stage")
@@ -58,6 +65,13 @@ public class StageInputSlice implements InputSlice
   public ReadablePartitions getPartitions()
   {
     return partitions;
+  }
+
+  @JsonProperty("output")
+  @Nullable // May be null when created by older controllers
+  public OutputChannelMode getOutputChannelMode()
+  {
+    return outputChannelMode;
   }
 
   @Override
@@ -76,21 +90,24 @@ public class StageInputSlice implements InputSlice
       return false;
     }
     StageInputSlice that = (StageInputSlice) o;
-    return stage == that.stage && Objects.equals(partitions, that.partitions);
+    return stage == that.stage
+           && Objects.equals(partitions, that.partitions)
+           && outputChannelMode == that.outputChannelMode;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stage, partitions);
+    return Objects.hash(stage, partitions, outputChannelMode);
   }
 
   @Override
   public String toString()
   {
-    return "StageInputSpec{" +
+    return "StageInputSlice{" +
            "stage=" + stage +
            ", partitions=" + partitions +
+           ", outputChannelMode=" + outputChannelMode +
            '}';
   }
 }

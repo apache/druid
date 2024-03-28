@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -41,11 +42,11 @@ import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1431,7 +1432,12 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(
+               ArgumentMatchers.argThat(
+                   (ArgumentMatcher<TaskAction<?>>) argument ->
+                       argument instanceof RetrieveUsedSegmentsAction
+                       && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())
+               ));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
@@ -1464,7 +1470,10 @@ public class MSQReplaceTest extends MSQTestBase
                                                  .build();
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
@@ -1497,7 +1506,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
@@ -1581,7 +1593,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing!
     testIngestQuery().setSql(

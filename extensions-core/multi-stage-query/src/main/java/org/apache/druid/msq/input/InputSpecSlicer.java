@@ -22,7 +22,8 @@ package org.apache.druid.msq.input;
 import java.util.List;
 
 /**
- * Slices {@link InputSpec} into {@link InputSlice} on the controller.
+ * Slices {@link InputSpec} into {@link InputSlice} on the controller. Each slice is assigned to a single worker, and
+ * the slice number equals the worker number.
  */
 public interface InputSpecSlicer
 {

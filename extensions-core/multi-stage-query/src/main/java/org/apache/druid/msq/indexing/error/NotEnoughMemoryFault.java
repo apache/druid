@@ -47,8 +47,9 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Not enough memory. Required at least %,d bytes. (total = %,d bytes; usable = %,d bytes; server workers = %,d; server threads = %,d). Increase JVM memory with the -xmx option"
-        + (serverWorkers > 1 ? " or reduce number of server workers" : ""),
+        "Not enough memory. Required at least %,d bytes. (total = %,d bytes; usable = %,d bytes; "
+        + "worker capacity = %,d; processing threads = %,d). Increase JVM memory with the -Xmx option"
+        + (serverWorkers > 1 ? " or reduce worker capacity on this server" : ""),
         suggestedServerMemory,
         serverMemory,
         usableMemory,

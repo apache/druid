@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
 
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.util.Map;
 
 public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
@@ -30,6 +32,13 @@ public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
   @Override
   public void write(String id, Map<String, TaskReport> reports)
   {
+  }
+
+  @Override
+  public OutputStream openReportOutputStream(String taskId)
+  {
+    // Stream to nowhere.
+    return new ByteArrayOutputStream();
   }
 
   @Override

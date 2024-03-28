@@ -33,12 +33,12 @@ import java.util.List;
 import java.util.OptionalInt;
 
 /**
- * Strategy for assigning input slices to tasks. Influences how {@link InputSpecSlicer} is used.
+ * Strategy for assigning input slices to workers. Influences how {@link InputSpecSlicer} is used.
  */
 public enum WorkerAssignmentStrategy
 {
   /**
-   * Use the highest possible number of tasks, while staying within {@link StageDefinition#getMaxWorkerCount()}.
+   * Use the highest possible number of workers, while staying within {@link StageDefinition#getMaxWorkerCount()}.
    *
    * Implemented using {@link InputSpecSlicer#sliceStatic}.
    */
@@ -57,7 +57,7 @@ public enum WorkerAssignmentStrategy
   },
 
   /**
-   * Use the lowest possible number of tasks, while keeping each task's workload under
+   * Use the lowest possible number of workers, while keeping each worker's workload under
    * {@link Limits#MAX_INPUT_FILES_PER_WORKER} files and {@code maxInputBytesPerWorker} bytes.
    *
    * Implemented using {@link InputSpecSlicer#sliceDynamic} whenever possible.
