@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
@@ -33,8 +32,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -499,22 +496,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, List<ParseExceptionReport>> events = new HashMap<>();
 
-    boolean needsBuildSegments = false;
-
-    if (full != null) {
-      needsBuildSegments = true;
-    } else {
-      switch (ingestionState) {
-        case BUILD_SEGMENTS:
-        case COMPLETED:
-          needsBuildSegments = true;
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (needsBuildSegments) {
+    if (addBuildSegmentStatsToReport(full != null, ingestionState)) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
           IndexTaskUtils.getReportListFromSavedParseExceptions(
@@ -526,28 +508,13 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return Response.ok(events).build();
   }
 
-  private Map<String, Object> doGetRowStats(String full)
+  private Map<String, Object> doGetRowStats(boolean isFullReport)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
 
-    boolean needsBuildSegments = false;
-
-    if (full != null) {
-      needsBuildSegments = true;
-    } else {
-      switch (ingestionState) {
-        case BUILD_SEGMENTS:
-        case COMPLETED:
-          needsBuildSegments = true;
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (needsBuildSegments) {
+    if (addBuildSegmentStatsToReport(isFullReport, ingestionState)) {
       totalsMap.put(
           RowIngestionMeters.BUILD_SEGMENTS,
           rowIngestionMeters.getTotals()
@@ -572,11 +539,10 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetRowStats(full)).build();
+    return Response.ok(doGetRowStats(full != null)).build();
   }
 
-  @VisibleForTesting
-  public Map<String, Object> doGetLiveReports(String full)
+  private Map<String, Object> doGetLiveReports(boolean isFullReport)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
@@ -585,7 +551,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
     payload.put("ingestionState", ingestionState);
     payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(full));
+    payload.put("rowStats", doGetRowStats(isFullReport));
 
     ingestionStatsAndErrors.put("taskId", getId());
     ingestionStatsAndErrors.put("payload", payload);
@@ -604,45 +570,28 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetLiveReports(full)).build();
+    return Response.ok(doGetLiveReports(full != null)).build();
   }
 
-  private Map<String, Object> getTaskCompletionRowStats()
+  @Override
+  protected Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = new HashMap<>();
-    metrics.put(
+    return Collections.singletonMap(
         RowIngestionMeters.BUILD_SEGMENTS,
         rowIngestionMeters.getTotals()
     );
-    return metrics;
   }
 
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
-   **
-   * @return
    */
   private Map<String, TaskReport> getTaskCompletionReports()
   {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                IngestionState.COMPLETED,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMsg,
-                false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                null,
-                null
-            )
-        )
-    );
+    return buildIngestionStatsReport(IngestionState.COMPLETED, errorMsg, null, null);
   }
 
-  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  @Override
+  protected Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
