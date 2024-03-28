@@ -1,6 +1,7 @@
 package org.apache.druid.segment.column;
 
-import java.util.Collections;
+import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -8,7 +9,7 @@ public interface ColumnSupplier<TColumn extends BaseColumn> extends Supplier<TCo
 {
   default Map<String, ColumnPartSize> getComponents()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of("unavailable", ColumnPartSize.NO_DATA);
   }
 
   class LegacyColumnSupplier<T extends BaseColumn> implements ColumnSupplier<T>

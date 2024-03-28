@@ -61,7 +61,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -172,14 +171,14 @@ public class SegmentAnalyzer
   }
 
   @Nullable
-  public Map<String, Integer> analyzeSmoosh(Segment segment)
+  public LinkedHashMap<String, Integer> analyzeSmoosh(Segment segment)
   {
     final QueryableIndex index = segment.asQueryableIndex();
     if (index == null || !(index instanceof SimpleQueryableIndex)) {
       return null;
     }
     SimpleQueryableIndex simpleQueryableIndex = (SimpleQueryableIndex) index;
-    final Map<String, Integer> smoosh = new HashMap<>();
+    final LinkedHashMap<String, Integer> smoosh = new LinkedHashMap<>();
     SmooshedFileMapper fileMapper = simpleQueryableIndex.getFileMapper();
     for (String file : fileMapper.getInternalFilenames()) {
       smoosh.put(file, fileMapper.getFileSize(file));
@@ -195,6 +194,11 @@ public class SegmentAnalyzer
   public boolean analyzingColumnSize()
   {
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.COLUMN_SIZE);
+  }
+
+  public boolean analyzingSmoosh()
+  {
+    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.SMOOSH_SIZE);
   }
 
   public boolean analyzingCardinality()

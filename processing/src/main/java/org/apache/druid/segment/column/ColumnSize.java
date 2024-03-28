@@ -10,8 +10,7 @@ import java.util.Map;
 
 public class ColumnSize
 {
-  public static ColumnSize NO_DATA = new ColumnSize(0, new LinkedHashMap<>());
-
+  public static ColumnSize NO_DATA = new ColumnSize(-1L, new LinkedHashMap<>(), "No size information available");
 
   public static final String DATA_SECTION = "data";
   public static final String LONG_COLUMN_PART = "longValuesColumn";
@@ -27,14 +26,19 @@ public class ColumnSize
 
   private final long size;
   private final LinkedHashMap<String, ColumnPartSize> components;
+  @Nullable
+  private final String errorMessage;
 
   @JsonCreator
   public ColumnSize(
       @JsonProperty("size") long size,
-      @JsonProperty("components") LinkedHashMap<String, ColumnPartSize> components)
+      @JsonProperty("components") LinkedHashMap<String, ColumnPartSize> components,
+      @JsonProperty("errorMessage") @Nullable String errorMessage
+  )
   {
     this.size = size;
     this.components = components;
+    this.errorMessage = errorMessage;
   }
 
   @JsonProperty
@@ -51,6 +55,14 @@ public class ColumnSize
     return components;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getErrorMessage()
+  {
+    return errorMessage;
+  }
+
   public ColumnSize merge(@Nullable ColumnSize other) {
     if (other == null) {
       return this;
@@ -65,7 +77,13 @@ public class ColumnSize
         return componentSize.merge(sizes.getValue());
       });
     }
-    return new ColumnSize(newSize, combined);
+    String newErrorMessage;
+    if (other.errorMessage != null) {
+      newErrorMessage = errorMessage == null ? other.errorMessage : errorMessage + ", " + other.errorMessage;
+    } else {
+      newErrorMessage = errorMessage;
+    }
+    return new ColumnSize(newErrorMessage == null ? newSize : -1L, combined, newErrorMessage);
   }
 
   @Override
@@ -74,6 +92,7 @@ public class ColumnSize
     return "ColumnSize{" +
            "size=" + size +
            ", components=" + components +
+           ", errorMessage=" + errorMessage +
            '}';
   }
 }

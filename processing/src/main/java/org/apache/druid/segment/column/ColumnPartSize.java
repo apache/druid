@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class ColumnPartSize
 {
-  public static final ColumnPartSize NO_DATA = new ColumnPartSize("unavailable", 0L, Collections.emptyMap());
+  public static final ColumnPartSize NO_DATA = new ColumnPartSize("unavailable", -1L, Collections.emptyMap());
 
   public static ColumnPartSize simple(String name, long size)
   {
@@ -92,7 +92,12 @@ public class ColumnPartSize
 
   public ColumnPartSize merge(ColumnPartSize other)
   {
-    long newSize = size + other.size;
+    long newSize;
+    if (size < 0 || other.size < 0) {
+      newSize = -1;
+    } else {
+      newSize = size + other.size;
+    }
     LinkedHashMap<String, ColumnPartSize> combined = new LinkedHashMap<>(components);
     for (Map.Entry<String, ColumnPartSize> sizes : other.getComponents().entrySet()) {
       combined.compute(sizes.getKey(), (k, componentSize) -> {

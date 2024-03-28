@@ -26,6 +26,7 @@ import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelec
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  *
@@ -114,10 +115,28 @@ class SimpleColumnHolder implements ColumnHolder
       if (indexSupplier != null) {
         allParts.putAll(indexSupplier.getIndexComponents());
       }
-      return new ColumnSize(
-        allParts.values().stream().mapToLong(ColumnPartSize::getTotalSize).sum(),
-        allParts
-      );
+      long totalSize = 0L;
+      StringBuilder errorMessage = new StringBuilder();
+      boolean hasError = false;
+      for (Map.Entry<String, ColumnPartSize> part : allParts.entrySet()) {
+        long partSize = part.getValue().getTotalSize();
+        if (partSize < 0) {
+          String partialError = "part " + part.getKey() + " is missing size info";
+          if (!hasError) {
+            errorMessage.append(partialError);
+          } else {
+            errorMessage.append(", ").append(partialError);
+          }
+          hasError = true;
+        } else {
+          totalSize += part.getValue().getTotalSize();
+        }
+      }
+      if (hasError) {
+        return new ColumnSize(-1L, allParts, errorMessage.toString());
+      } else {
+        return new ColumnSize(totalSize, allParts, null);
+      }
     }
     return ColumnSize.NO_DATA;
   }

@@ -162,6 +162,13 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           }
         }
 
+        final LinkedHashMap<String, Integer> smoosh;
+        if (analyzer.analyzingSmoosh()) {
+          smoosh = analyzer.analyzeSmoosh(segment);
+        } else {
+          smoosh = null;
+        }
+
         return Sequences.simple(
             Collections.singletonList(
                 new SegmentAnalysis(
@@ -173,7 +180,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     aggregators,
                     timestampSpec,
                     queryGranularity,
-                    rollup
+                    rollup,
+                    smoosh
                 )
             )
         );

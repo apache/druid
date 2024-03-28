@@ -19,8 +19,9 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.collect.ImmutableMap;
+
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -49,6 +50,6 @@ public interface ColumnIndexSupplier
 
   default Map<String, ColumnPartSize> getIndexComponents()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of("unavailable", ColumnPartSize.NO_DATA);
   }
 }
