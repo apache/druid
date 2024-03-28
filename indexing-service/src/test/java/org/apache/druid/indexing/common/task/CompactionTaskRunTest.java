@@ -327,7 +327,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         reports.stream().mapToLong(IngestionStatsAndErrors::getSegmentsPublished).sum()
     );
     Assert.assertEquals(
-        3L,
+        6L,
         reports.stream().mapToLong(IngestionStatsAndErrors::getSegmentsRead).sum()
     );
   }
