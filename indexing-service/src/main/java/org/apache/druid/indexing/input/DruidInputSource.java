@@ -62,6 +62,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -78,6 +79,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -619,5 +621,21 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     return new ArrayList<>(timeline.values());
+  }
+
+  public int estimateSegmentsCount()
+  {
+    if (segmentIds != null) {
+      return segmentIds.size();
+    }
+
+    Set<SegmentId> ids = new HashSet<>();
+    for (TimelineObjectHolder<String, DataSegment> holder : createTimeline()) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        ids.add(chunk.getObject().getId());
+      }
+    }
+
+    return ids.size();
   }
 }
