@@ -363,14 +363,19 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public void completed()
       {
         try {
+          // resultRowsAndCols has reference to frameRowsAndCols
+          // due to the chain of calls across the ops
+          // so we can clear after writing to output
           flushAllRowsAndCols(resultRowAndCols);
+          frameRowsAndCols.clear();
+
         }
         catch (IOException e) {
           throw new RuntimeException(e);
         }
         finally {
-          resultRowAndCols.clear();
           frameRowsAndCols.clear();
+          resultRowAndCols.clear();
         }
       }
     });

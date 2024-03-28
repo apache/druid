@@ -208,12 +208,18 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
           nextShuffleWindowSpec.clusterBy().getColumns()
       );
 
+
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 1)
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(stageSignature)
                          .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(nextShuffleWindowSpec)
+                         .shuffleSpec(doLimitOrOffset ? (shuffleSpecFactoryPostAggregation != null
+                                                         ? shuffleSpecFactoryPostAggregation.build(
+                             resultClusterBy,
+                             false
+                         )
+                                                         : null) : nextShuffleWindowSpec)
                          .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
       if (doLimitOrOffset) {
@@ -223,7 +229,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                            .inputs(new StageInputSpec(firstStageNumber + 1))
                            .signature(resultSignature)
                            .maxWorkerCount(1)
-                           .shuffleSpec(nextShuffleWindowSpec)
+                           .shuffleSpec(null)
                            .processorFactory(
                                new OffsetLimitFrameProcessorFactory(
                                    limitSpec.getOffset(),
