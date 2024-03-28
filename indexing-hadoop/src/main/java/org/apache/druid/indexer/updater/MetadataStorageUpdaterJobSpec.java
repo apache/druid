@@ -98,6 +98,7 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
         null,
         null,
         null,
+        null,
         null
     );
   }

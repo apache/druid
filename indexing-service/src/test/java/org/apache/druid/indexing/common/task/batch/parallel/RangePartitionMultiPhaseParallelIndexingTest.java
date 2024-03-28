@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -264,7 +265,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
 
     // verify dropExisting false
-    final Set<DataSegment> publishedSegments = runTask(runTestTask(
+    final SegmentAndSchemas publishedSegmentAndSchemas = runTask(runTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
@@ -276,8 +277,14 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         false
     ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
 
+    final Set<DataSegment> publishedSegments = publishedSegmentAndSchemas.getSegments();
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
+      Assert.assertEquals(1, publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+      Assert.assertEquals(publishedSegments.size(), publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+      for (DataSegment segment : publishedSegments) {
+        Assert.assertTrue(publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+      }
     }
 
     // verify dropExisting true
@@ -289,7 +296,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     File inputDirectory = temporaryFolder.newFolder("dataReplace");
     createInputFilesForReplace(inputDirectory, useMultivalueDim);
 
-    final Set<DataSegment> publishedSegmentsAfterReplace = runTask(runTestTask(
+    final SegmentAndSchemas publishedSegmentAndSchemasAfterReplace = runTask(runTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
@@ -301,6 +308,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         true
     ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
 
+    final Set<DataSegment> publishedSegmentsAfterReplace = publishedSegmentAndSchemasAfterReplace.getSegments();
+
     int tombstones = 0;
     for (DataSegment ds : publishedSegmentsAfterReplace) {
       if (ds.isTombstone()) {
@@ -311,6 +320,13 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     if (!useMultivalueDim) {
       Assert.assertEquals(11, tombstones);
       Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
+      for (DataSegment segment : publishedSegmentsAfterReplace) {
+        if (!segment.isTombstone()) {
+          Assert.assertTrue(publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+        }
+      }
+      Assert.assertEquals(10, publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+      Assert.assertEquals(1, publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
     }
   }
 
@@ -321,8 +337,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       return;
     }
     final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final Set<DataSegment> publishedSegments = new HashSet<>();
-    publishedSegments.addAll(
+    SegmentAndSchemas segmentAndSchemas =
         runTask(runTestTask(
             new SingleDimensionPartitionsSpec(
                 targetRowsPerSegment,
@@ -333,27 +348,32 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             inputDir,
             false,
             false
-        ), TaskState.SUCCESS)
-    );
+        ), TaskState.SUCCESS);
+    verifySchema(segmentAndSchemas);
+
+    final Set<DataSegment> publishedSegments = new HashSet<>(segmentAndSchemas.getSegments());
     // Append
-    publishedSegments.addAll(
+    segmentAndSchemas =
         runTask(runTestTask(
             new DynamicPartitionsSpec(5, null),
             inputDir,
             true,
             false
-        ), TaskState.SUCCESS)
-    );
+        ), TaskState.SUCCESS);
+    publishedSegments.addAll(segmentAndSchemas.getSegments());
+    verifySchema(segmentAndSchemas);
+
     // And append again
-    publishedSegments.addAll(
+    segmentAndSchemas =
         runTask(runTestTask(
             new DynamicPartitionsSpec(10, null),
             inputDir,
             true,
             false
-        ), TaskState.SUCCESS)
-    );
+        ), TaskState.SUCCESS);
+    verifySchema(segmentAndSchemas);
 
+    publishedSegments.addAll(segmentAndSchemas.getSegments());
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
         segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)

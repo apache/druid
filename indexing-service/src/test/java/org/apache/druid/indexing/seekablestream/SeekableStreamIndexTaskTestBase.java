@@ -117,6 +117,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -206,6 +207,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected TaskLockbox taskLockbox;
   protected IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   protected final Set<Integer> checkpointRequestsHash = new HashSet<>();
+  protected SegmentSchemaManager segmentSchemaManager;
 
   static {
     OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
@@ -579,6 +581,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
     derbyConnector.createRulesTable();
     derbyConnector.createConfigTable();
@@ -593,10 +596,13 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
             objectMapper
         )
     );
+    segmentSchemaManager = new SegmentSchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(

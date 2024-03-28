@@ -28,11 +28,14 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -72,6 +75,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   private final CoordinatorClient coordinatorClient;
 
   private final BrokerSegmentMetadataCacheConfig config;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
   public BrokerSegmentMetadataCache(
@@ -82,7 +86,8 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter,
       final PhysicalDatasourceMetadataFactory dataSourceMetadataFactory,
-      final CoordinatorClient coordinatorClient
+      final CoordinatorClient coordinatorClient,
+      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
@@ -95,6 +100,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     this.dataSourceMetadataFactory = dataSourceMetadataFactory;
     this.coordinatorClient = coordinatorClient;
     this.config = config;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     initServerViewTimelineCallback(serverView);
   }
 
@@ -148,6 +154,23 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     );
   }
 
+  @LifecycleStart
+  public void start() throws InterruptedException
+  {
+    log.info("%s starting cache initialization.", getClass().getSimpleName());
+    cacheExec.submit(this::cacheExecLoop);
+    if (config.isAwaitInitializationOnStart()) {
+      awaitInitialization();
+    }
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    cacheExec.shutdownNow();
+    callbackExec.shutdownNow();
+  }
+
   /**
    * Refreshes the set of segments in two steps:
    * <ul>
@@ -199,7 +222,13 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
       // Remove those datasource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
-      dataSourcesNeedingRebuild.clear();
+
+      if (centralizedDatasourceSchemaConfig.isEnabled()) {
+        dataSourcesNeedingRebuild.addAll(dataSourcesToQuery);
+      } else {
+        dataSourcesNeedingRebuild.clear();
+      }
+      log.debug("DatasourcesNeedingRebuild is [%s]", dataSourcesNeedingRebuild);
     }
 
     // Rebuild the datasources.
@@ -214,6 +243,12 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
+  }
+
+  @Override
+  protected void removeSegmentAction(SegmentId segmentId)
+  {
+    // noop
   }
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)

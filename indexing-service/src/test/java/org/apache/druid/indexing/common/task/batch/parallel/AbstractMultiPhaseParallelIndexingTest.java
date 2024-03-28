@@ -50,6 +50,7 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -67,7 +68,6 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @SuppressWarnings("SameParameterValue")
 abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
@@ -109,7 +109,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return useInputFormatApi;
   }
 
-  Set<DataSegment> runTestTask(
+  SegmentAndSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -138,7 +138,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     );
   }
 
-  Set<DataSegment> runTestTask(
+  SegmentAndSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -177,10 +177,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
-  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
+  SegmentAndSchemas runTask(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return getIndexingServiceClient().getPublishedSegments(task);
+    return getIndexingServiceClient().getSegmentAndSchemas(task);
   }
 
   Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)

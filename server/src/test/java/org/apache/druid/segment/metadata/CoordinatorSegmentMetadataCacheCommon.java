@@ -19,15 +19,20 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.junit.Rule;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,9 +41,18 @@ import java.util.Map;
 
 public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheCommon
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
+
+  public final ObjectMapper mapper = TestHelper.makeJsonMapper();
+
   public TestSegmentMetadataQueryWalker walker;
   public TestCoordinatorServerView serverView;
   public List<DruidServer> druidServers;
+  public SegmentSchemaManager segmentSchemaManager;
+  public FingerprintGenerator fingerprintGenerator;
+  public SegmentSchemaCache segmentSchemaCache;
+  public SegmentSchemaBackFillQueue backFillQueue;
 
   public void setUp() throws Exception
   {
@@ -75,5 +89,41 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
     );
 
     druidServers = serverView.getInventory();
+
+    TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
+    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentTable();
+
+    segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        mapper,
+        derbyConnector
+    );
+
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    fingerprintGenerator = new FingerprintGenerator(mapper);
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
+    config.setEnabled(true);
+    config.setBackFillEnabled(false);
+    config.setBackFillPeriod(1);
+
+    backFillQueue =
+        new SegmentSchemaBackFillQueue(
+            segmentSchemaManager,
+            ScheduledExecutors::fixed,
+            segmentSchemaCache,
+            fingerprintGenerator,
+            new NoopServiceEmitter(),
+            config
+        );
+
+    segmentSchemaCache.setInitialized();
+  }
+
+  private CentralizedDatasourceSchemaConfig getEnabledConfig()
+  {
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
+    config.setEnabled(true);
+    return config;
   }
 }

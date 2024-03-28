@@ -79,6 +79,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
@@ -257,7 +258,8 @@ public class SystemSchemaTest extends CalciteTestBase
             new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
             new SegmentManager(EasyMock.createMock(SegmentLoader.class))
         ),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     );
     cache.start();
     cache.awaitInitialization();

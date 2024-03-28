@@ -32,9 +32,11 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,25 +54,38 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
    */
   private final Set<DataSegment> segments;
 
+  @Nullable
+  private final MinimalSegmentSchemas minimalSegmentSchemas;
+
   public static SegmentTransactionalReplaceAction create(
-      Set<DataSegment> segmentsToPublish
+      Set<DataSegment> segmentsToPublish,
+      MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToPublish);
+    return new SegmentTransactionalReplaceAction(segmentsToPublish, minimalSegmentSchemas);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
+    this.minimalSegmentSchemas = minimalSegmentSchemas;
   }
 
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  @Nullable
+  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  {
+    return minimalSegmentSchemas;
   }
 
   @Override
@@ -101,7 +116,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask)
+                               .commitReplaceSegments(segments, replaceLocksForTask, minimalSegmentSchemas)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(

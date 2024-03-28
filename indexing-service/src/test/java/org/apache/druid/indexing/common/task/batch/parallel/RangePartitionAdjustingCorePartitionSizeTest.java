@@ -118,7 +118,7 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
             partitionsSpec,
             maxNumConcurrentSubTasks,
             TaskState.SUCCESS
-        )
+        ).getSegments()
     );
     Assert.assertEquals(1, segments.size());
     final DataSegment segment = segments.get(0);
@@ -158,7 +158,7 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
         partitionsSpec,
         maxNumConcurrentSubTasks,
         TaskState.SUCCESS
-    );
+    ).getSegments();
     Assert.assertEquals(5, segments.size());
     segments.forEach(segment -> {
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());

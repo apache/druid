@@ -39,6 +39,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
@@ -227,7 +228,8 @@ public class QueryFrameworkUtils
               }
             }
         ),
-        null
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     try {

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -53,8 +54,10 @@ import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -69,15 +72,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
   private final Predicate<Throwable> shouldRetry;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   public SQLMetadataConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.config = config;
     this.tablesConfigSupplier = tablesConfigSupplier;
     this.shouldRetry = this::isTransientException;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   /**
@@ -340,6 +346,40 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
+  public void createSegmentsTableSchemaPersistenceEnabled(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  start VARCHAR(255) NOT NULL,\n"
+                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
+                + "  partitioned BOOLEAN NOT NULL,\n"
+                + "  version VARCHAR(255) NOT NULL,\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  schema_id BIGINT,\n"
+                + "  num_rows BIGINT,\n"
+                + "  PRIMARY KEY (id),\n"
+                + "  FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
+                + ")",
+                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemaTable()
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
+                tableName,
+                getQuoteString()
+            )
+        )
+    );
+  }
+
   private void createUpgradeSegmentsTable(final String tableName)
   {
     createTable(
@@ -521,7 +561,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Adds the used_status_last_updated column to the "segments" table.
    */
-  protected void alterSegmentTableAddUsedFlagLastUpdated()
+  protected void alterSegmentTable()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
     if (tableHasColumn(tableName, "used_status_last_updated")) {
@@ -538,6 +578,58 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           )
       );
     }
+  }
+
+  /**
+   * Adds new columns (used_status_last_updated, schema_id, segment_stats) to the "segments" table.
+   */
+  protected void alterSegmentTableSchemaPersistenceEnabled()
+  {
+    final String tableName = tablesConfigSupplier.get().getSegmentsTable();
+    final String schemaTableName = tablesConfigSupplier.get().getSegmentSchemaTable();
+
+    Map<String, String> columnNameTypes = new HashMap<>();
+    columnNameTypes.put("used_status_last_updated", "varchar(255)");
+    columnNameTypes.put("schema_id", "BIGINT");
+    columnNameTypes.put("num_rows", "BIGINT");
+
+    Set<String> columnsToAdd = new HashSet<>();
+
+    for (String columnName : columnNameTypes.keySet()) {
+      if (tableHasColumn(tableName, columnName)) {
+        log.info("Table[%s] already has column[%s].", tableName, columnName);
+      } else {
+        columnsToAdd.add(columnName);
+      }
+    }
+
+    List<String> alterCommands = new ArrayList<>();
+    if (!columnsToAdd.isEmpty()) {
+      for (String columnName : columnsToAdd) {
+        alterCommands.add(
+            StringUtils.format(
+                "ALTER TABLE %1$s ADD %2$s %3$s",
+                tableName,
+                columnName,
+                columnNameTypes.get(columnName)
+            )
+        );
+      }
+
+      log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
+    }
+
+    alterCommands.add(
+        StringUtils.format(
+            "ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)",
+            tableName,
+            schemaTableName
+        ));
+
+    alterTable(
+        tableName,
+        alterCommands
+    );
   }
 
   @Override
@@ -684,13 +776,19 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createSegmentTable()
   {
     if (config.get().isCreateTables()) {
-      createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
-      alterSegmentTableAddUsedFlagLastUpdated();
+      if (centralizedDatasourceSchemaConfig.isEnabled()) {
+        createSegmentsTableSchemaPersistenceEnabled(tablesConfigSupplier.get().getSegmentsTable());
+        alterSegmentTableSchemaPersistenceEnabled();
+      } else {
+        createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+        alterSegmentTable();
+      }
     }
     // Called outside of the above conditional because we want to validate the table
     // regardless of cluster configuration for creating tables.
     validateSegmentsTable();
   }
+
 
   @Override
   public void createUpgradeSegmentsTable()
@@ -815,7 +913,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return makeDatasource(getConfig(), getValidationQuery());
   }
 
-  protected final <T> T inReadOnlyTransaction(
+  public final <T> T inReadOnlyTransaction(
       final TransactionCallback<T> callback
   )
   {
@@ -903,6 +1001,35 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
     catch (Exception e) {
       log.warn(e, "Exception while deleting records from table");
+    }
+  }
+
+  public void createSegmentSchemaTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  fingerprint VARCHAR(255) NOT NULL,\n"
+                + "  payload %3$s NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getSerialType(), getPayloadType()
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_created_date ON %1$s(created_date)", tableName)
+        )
+    );
+  }
+
+  @Override
+  public void createSegmentSchemaTable()
+  {
+    if (config.get().isCreateTables() && centralizedDatasourceSchemaConfig.isEnabled()) {
+      createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemaTable());
     }
   }
 
@@ -1035,7 +1162,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   private void validateSegmentsTable()
   {
-    if (tableHasColumn(tablesConfigSupplier.get().getSegmentsTable(), "used_status_last_updated")) {
+    String segmentsTables = tablesConfigSupplier.get().getSegmentsTable();
+
+    boolean schemaPersistenceRequirementMet =
+        !centralizedDatasourceSchemaConfig.isEnabled() ||
+        (tableHasColumn(segmentsTables, "schema_id")
+         && tableHasColumn(segmentsTables, "num_rows"));
+
+    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet) {
       // do nothing
     } else {
       throw new ISE(

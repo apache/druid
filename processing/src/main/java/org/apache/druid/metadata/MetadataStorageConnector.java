@@ -90,4 +90,6 @@ public interface MetadataStorageConnector
   void createSupervisorsTable();
 
   void deleteAllRecords(String tableName);
+
+  void createSegmentSchemaTable();
 }

@@ -94,6 +94,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DirectQueryProcessingPool;
@@ -113,6 +114,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -121,6 +123,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -170,6 +173,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       "host",
       new NoopEmitter()
   );
+
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
   private static final String FAIL_DIM = "__fail__";
@@ -254,6 +258,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   private DateTime now;
   private ListeningExecutorService taskExec;
@@ -266,6 +271,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
   private File reportsFile;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp() throws IOException
@@ -278,12 +284,14 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
+    derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
     derbyConnector.createPendingSegmentsTable();
 
     baseDir = tempFolder.newFolder();
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory(baseDir);
+    segmentSchemaManager = new SegmentSchemaManager(MetadataStorageTablesConfig.fromBase(null), mapper, derbyConnector);
   }
 
   @After
@@ -1505,13 +1513,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
-      public Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments, MinimalSegmentSchemas minimalSegmentSchemas) throws IOException
       {
-        Set<DataSegment> result = super.commitSegments(segments);
+        Set<DataSegment> result = super.commitSegments(segments, minimalSegmentSchemas);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1528,10 +1538,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       public SegmentPublishResult commitSegmentsAndMetadata(
           Set<DataSegment> segments,
           DataSourceMetadata startMetadata,
-          DataSourceMetadata endMetadata
+          DataSourceMetadata endMetadata,
+          MinimalSegmentSchemas minimalSegmentSchemas
       ) throws IOException
       {
-        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata);
+        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, minimalSegmentSchemas);
 
         Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1561,11 +1572,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         EasyMock.createMock(SupervisorManager.class),
         OBJECT_MAPPER
     );
+
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
         taskActionToolbox,
         new TaskAuditLogConfig(false)
     );
+
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
@@ -1578,6 +1591,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
             )
         )
     );
+
     handOffCallbacks = new ConcurrentHashMap<>();
     final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
     {

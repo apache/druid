@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -63,7 +64,8 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new PhysicalDatasourceMetadataFactory(
               new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
               new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
-          null
+          null,
+          CentralizedDatasourceSchemaConfig.create()
       );
 
       cache.start();

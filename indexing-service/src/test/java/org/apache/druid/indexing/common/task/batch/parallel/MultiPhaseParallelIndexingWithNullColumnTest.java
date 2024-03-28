@@ -157,7 +157,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     for (DataSegment segment : segments) {
       Assert.assertEquals(dimensionSchemas.size(), segment.getDimensions().size());
@@ -214,7 +214,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     final List<String> expectedExplicitDimensions = ImmutableList.of("ts", "unknownDim", "dim1");
     final Set<String> expectedImplicitDimensions = ImmutableSet.of("dim2", "dim3");
@@ -281,7 +281,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     final List<String> expectedExplicitDimensions = ImmutableList.of("dim1", "k");
     final Set<String> expectedImplicitDimensions = ImmutableSet.of("dim2", "dim3");
@@ -339,7 +339,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
     task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     final List<DimensionSchema> expectedDimensions = DimensionsSpec.getDefaultSchemas(
         Collections.singletonList("ts")

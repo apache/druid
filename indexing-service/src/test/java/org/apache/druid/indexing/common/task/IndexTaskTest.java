@@ -73,6 +73,10 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -129,6 +133,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 @RunWith(Parameterized.class)
 public class IndexTaskTest extends IngestionTestBase
@@ -309,10 +314,40 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
+
     Assert.assertEquals(1, segments.size());
     Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("ts", ColumnType.STRING)
+                    .add("dim", ColumnType.STRING)
+                    .add("valDim", ColumnType.LONG)
+                    .add("valMet", ColumnType.LONG)
+                    .build(),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getRowSignature()
+    );
+    Assert.assertEquals(
+        Collections.singletonMap("valMet", new LongSumAggregatorFactory("valMet", "valMet")),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getAggregatorFactories()
+    );
   }
 
   @Test
@@ -364,11 +399,40 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
     Assert.assertEquals(1, segments.size());
     // only empty string dimensions are ignored currently
     Assert.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
+
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("ts", ColumnType.STRING)
+                    .add("valDim", ColumnType.LONG)
+                    .add("valMet", ColumnType.LONG)
+                    .build(),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getRowSignature()
+    );
+    Assert.assertEquals(
+        Collections.singletonMap("valMet", new LongSumAggregatorFactory("valMet", "valMet")),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getAggregatorFactories()
+    );
   }
 
   @Test
@@ -401,8 +465,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
-
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
     Assert.assertEquals(2, segments.size());
 
     Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
@@ -423,6 +487,34 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
         ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
+    );
+
+    Assert.assertEquals(2, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("ts", ColumnType.STRING)
+                    .add("dim", ColumnType.STRING)
+                    .add("val", ColumnType.LONG)
+                    .build(),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getRowSignature()
+    );
+    Assert.assertEquals(
+        Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val")),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getAggregatorFactories()
     );
   }
 
@@ -505,7 +597,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
@@ -563,6 +656,40 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("ts", ColumnType.STRING)
+                    .add("dim", ColumnType.STRING)
+                    .add("dim_array", ColumnType.STRING)
+                    .add("dim_num_array", ColumnType.STRING)
+                    .add("dimt", ColumnType.STRING)
+                    .add("dimtarray1", ColumnType.STRING)
+                    .add("dimtarray2", ColumnType.STRING)
+                    .add("dimtnum_array", ColumnType.STRING)
+                    .add("val", ColumnType.LONG)
+                    .build(),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getRowSignature()
+    );
+    Assert.assertEquals(
+        Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val")),
+        segmentAndSchema.getMinimalSegmentSchemas()
+                        .getSchemaPayloadMap()
+                        .values()
+                        .stream()
+                        .findAny()
+                        .get()
+                        .getAggregatorFactories()
+    );
   }
 
   @Test
@@ -596,7 +723,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
   }
@@ -632,7 +760,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
   }
@@ -664,7 +793,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -707,7 +837,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -748,7 +879,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(2, segments.size());
 
@@ -823,7 +955,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
     Assert.assertEquals(2, segments.size());
@@ -870,7 +1003,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(3, segments.size());
 
@@ -976,7 +1110,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -1034,7 +1169,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
 
@@ -1080,7 +1216,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(6, segments.size());
 
@@ -1124,7 +1261,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(3, segments.size());
 
@@ -1167,7 +1305,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(5, segments.size());
 
@@ -1492,7 +1631,8 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
@@ -2095,7 +2235,9 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runSuccessfulTask(indexTask);
+    final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
+
     // the order of result segments can be changed because hash shardSpec is used.
     // the below loop is to make this test deterministic.
     Assert.assertEquals(2, segments.size());
@@ -2222,7 +2364,8 @@ public class IndexTaskTest extends IngestionTestBase
           null
       );
 
-      final List<DataSegment> segments = runSuccessfulTask(indexTask);
+      final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+      final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
       Assert.assertEquals(5, segments.size());
 
@@ -2287,7 +2430,8 @@ public class IndexTaskTest extends IngestionTestBase
           null
       );
 
-      final List<DataSegment> segments = runSuccessfulTask(indexTask);
+      final SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+      final List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
       Assert.assertEquals(5, segments.size());
 
@@ -2362,7 +2506,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with YEAR segment granularity
-    List<DataSegment> segments = runSuccessfulTask(indexTask);
+    SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2391,7 +2536,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and MINUTE segment granularity
-    segments = runSuccessfulTask(indexTask);
+    segmentAndSchema = runSuccessfulTask(indexTask);
+    segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(3, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2446,7 +2592,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runSuccessfulTask(indexTask);
+    SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2475,7 +2622,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and HOUR segment granularity
-    segments = runSuccessfulTask(indexTask);
+    segmentAndSchema = runSuccessfulTask(indexTask);
+    segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2538,7 +2686,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runSuccessfulTask(indexTask);
+    SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2567,7 +2716,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and HOUR segment granularity
-    segments = runSuccessfulTask(indexTask);
+    segmentAndSchema = runSuccessfulTask(indexTask);
+    segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(24, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2616,7 +2766,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runSuccessfulTask(indexTask);
+    SegmentAndSchemas segmentAndSchema = runSuccessfulTask(indexTask);
+    List<DataSegment> segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2655,7 +2806,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and same segment granularity
-    segments = runSuccessfulTask(indexTask);
+    segmentAndSchema = runSuccessfulTask(indexTask);
+    segments = new ArrayList<>(segmentAndSchema.getSegments());
 
     Assert.assertEquals(1, segments.size()); // one tombstone
     Assert.assertTrue(segments.get(0).isTombstone());
@@ -2764,19 +2916,21 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private List<DataSegment> runSuccessfulTask(IndexTask task) throws Exception
+  private SegmentAndSchemas runSuccessfulTask(IndexTask task) throws Exception
   {
-    Pair<TaskStatus, List<DataSegment>> pair = runTask(task);
+    Pair<TaskStatus, SegmentAndSchemas> pair = runTask(task);
     Assert.assertEquals(pair.lhs.toString(), TaskState.SUCCESS, pair.lhs.getStatusCode());
     return pair.rhs;
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask task) throws Exception
+  private Pair<TaskStatus, SegmentAndSchemas> runTask(IndexTask task) throws Exception
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     final TaskStatus status = taskRunner.run(task).get();
-    final List<DataSegment> segments = taskRunner.getPublishedSegments();
-    return Pair.of(status, segments);
+
+    final Set<DataSegment> segments = new TreeSet<>(taskRunner.getPublishedSegments());
+    final MinimalSegmentSchemas minimalSegmentSchemas = taskRunner.getSegmentSchemas();
+    return Pair.of(status, new SegmentAndSchemas(segments, minimalSegmentSchemas));
   }
 
   private static IndexTuningConfig createTuningConfigWithMaxRowsPerSegment(

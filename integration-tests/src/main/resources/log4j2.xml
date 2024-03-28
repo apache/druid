@@ -28,5 +28,14 @@
     <Root level="info">
       <AppenderRef ref="Console"/>
     </Root>
+    <Logger name="org.apache.druid.segment.metadata" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.apache.druid.server.coordination" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.apache.druid.metadata.SqlSegmentsMetadataManager" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
   </Loggers>
 </Configuration>

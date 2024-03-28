@@ -97,6 +97,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -372,7 +373,9 @@ public class CliCoordinator extends ServerRunnable
     );
 
     if (beOverlord) {
-      modules.addAll(new CliOverlord().getModules(false));
+      CliOverlord cliOverlord = new CliOverlord();
+      cliOverlord.configure(properties);
+      modules.addAll(cliOverlord.getModules(false));
     } else {
       // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
       // the injector to get confused due to having multiple bindings for the same classes.
@@ -513,8 +516,9 @@ public class CliCoordinator extends ServerRunnable
             .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
             .in(LazySingleton.class);
       binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-
+      binder.bind(SegmentSchemaCache.class).in(LazySingleton.class);
       binder.bind(QuerySegmentWalker.class).to(SegmentMetadataQuerySegmentWalker.class).in(LazySingleton.class);
+
       LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
     }
 

@@ -226,4 +226,3 @@ public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullH
   }
 
 }
-

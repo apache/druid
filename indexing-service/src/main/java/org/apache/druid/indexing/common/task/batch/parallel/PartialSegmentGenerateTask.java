@@ -42,6 +42,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskIn
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -219,7 +221,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
+      final Pair<SegmentsAndCommitMetadata, MinimalSegmentSchemas> pushed = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -232,7 +234,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           parseExceptionHandler,
           pushTimeout
       );
-      return pushed.getSegments();
+      return pushed.lhs.getSegments();
     }
     catch (Exception e) {
       exceptionOccurred = true;

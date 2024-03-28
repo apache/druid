@@ -54,6 +54,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -269,7 +271,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
       ingestionState = IngestionState.BUILD_SEGMENTS;
-      final Set<DataSegment> pushedSegments = generateAndPushSegments(
+      final SegmentAndSchemas segmentAndSchemas = generateAndPushSegments(
           toolbox,
           taskClient,
           inputSource,
@@ -278,7 +280,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
-      allSegments.addAll(pushedSegments);
+      allSegments.addAll(segmentAndSchemas.getSegments());
       final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
       final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
                                                          .transformAndConcat(TimelineObjectHolder::getObject)
@@ -286,7 +288,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .toSet();
 
       Map<String, TaskReport> taskReport = getTaskCompletionReports();
-      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
+      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, segmentAndSchemas.getSegments(), taskReport, segmentAndSchemas.getMinimalSegmentSchemas()));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
 
@@ -359,7 +361,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
    *
    * @return true if generated segments are successfully published, otherwise false
    */
-  private Set<DataSegment> generateAndPushSegments(
+  private SegmentAndSchemas generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexSupervisorTaskClient taskClient,
       final InputSource inputSource,
@@ -433,6 +435,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
+      final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
       while (inputRowIterator.hasNext()) {
         final InputRow inputRow = inputRowIterator.next();
@@ -452,8 +455,10 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             // which makes the size of segments smaller.
             final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
             pushedSegments.addAll(pushed.getSegments());
-            LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+            minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
+            LOG.info("Pushed [%s] segments and [%s] schemas", pushed.getSegments().size(), minimalSegmentSchemas.size());
             LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+            LOG.info("SegmentSchema is [%s]", minimalSegmentSchemas);
           }
         } else {
           throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -464,11 +469,13 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+      minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
+      LOG.info("Pushed [%s] segments and [%s] schemas", pushed.getSegments().size(), minimalSegmentSchemas.size());
       LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+      LOG.info("SegmentSchema is [%s]", minimalSegmentSchemas);
       appenderator.close();
 
-      return pushedSegments;
+      return new SegmentAndSchemas(pushedSegments, minimalSegmentSchemas);
     }
     catch (TimeoutException | ExecutionException e) {
       exceptionOccurred = true;

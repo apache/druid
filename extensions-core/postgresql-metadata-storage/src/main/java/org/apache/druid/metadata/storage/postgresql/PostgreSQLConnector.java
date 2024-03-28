@@ -29,6 +29,7 @@ import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
@@ -64,10 +65,11 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       PostgreSQLConnectorConfig connectorConfig,
-      PostgreSQLTablesConfig tablesConfig
+      PostgreSQLTablesConfig tablesConfig,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    super(config, dbTables);
+    super(config, dbTables, centralizedDatasourceSchemaConfig);
 
     final BasicDataSource datasource = getDatasource();
     // PostgreSQL driver is classloader isolated as part of the extension

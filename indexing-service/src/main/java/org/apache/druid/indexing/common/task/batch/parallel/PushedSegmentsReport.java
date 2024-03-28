@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -42,19 +43,22 @@ public class PushedSegmentsReport implements SubTaskReport
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
   private final Map<String, TaskReport> taskReport;
+  private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   @JsonCreator
   public PushedSegmentsReport(
       @JsonProperty("taskId") String taskId,
       @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
       @JsonProperty("segments") Set<DataSegment> newSegments,
-      @JsonProperty("taskReport") Map<String, TaskReport> taskReport
+      @JsonProperty("taskReport") Map<String, TaskReport> taskReport,
+      @JsonProperty("minimalSegmentSchemas") MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
     this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
     this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
     this.taskReport = taskReport;
+    this.minimalSegmentSchemas = minimalSegmentSchemas;
   }
 
   @Override
@@ -82,6 +86,12 @@ public class PushedSegmentsReport implements SubTaskReport
     return taskReport;
   }
 
+  @JsonProperty("minimalSegmentSchemas")
+  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  {
+    return minimalSegmentSchemas;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -95,12 +105,13 @@ public class PushedSegmentsReport implements SubTaskReport
     return Objects.equals(taskId, that.taskId)
            && Objects.equals(oldSegments, that.oldSegments)
            && Objects.equals(newSegments, that.newSegments)
-           && Objects.equals(taskReport, that.taskReport);
+           && Objects.equals(taskReport, that.taskReport)
+           && Objects.equals(minimalSegmentSchemas, that.minimalSegmentSchemas);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, oldSegments, newSegments, taskReport);
+    return Objects.hash(taskId, oldSegments, newSegments, taskReport, minimalSegmentSchemas);
   }
 }

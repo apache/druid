@@ -61,12 +61,18 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentAndSchema;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -187,7 +193,11 @@ public class AppenderatorImpl implements Appenderator
    */
   private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
-  
+
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+
+  private final FingerprintGenerator fingerprintGenerator;
+
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -212,7 +222,8 @@ public class AppenderatorImpl implements Appenderator
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       boolean isOpenSegments,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.myId = id;
@@ -247,6 +258,8 @@ public class AppenderatorImpl implements Appenderator
     } else {
       log.debug("Running closed segments appenderator");
     }
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
   }
 
   @Override
@@ -766,6 +779,7 @@ public class AppenderatorImpl implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
+          final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -782,13 +796,25 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(
+            final SegmentAndSchema segmentAndSchema = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
             );
-            if (dataSegment != null) {
-              dataSegments.add(dataSegment);
+
+            if (segmentAndSchema != null) {
+              DataSegment segment = segmentAndSchema.getDataSegment();
+              dataSegments.add(segment);
+              SegmentSchemaMetadata segmentSchemaMetadata = segmentAndSchema.getSegmentSchemaMetadata();
+              if (segmentSchemaMetadata != null) {
+                SchemaPayload schemaPayload = segmentSchemaMetadata.getSchemaPayload();
+                minimalSegmentSchemas.addSchema(
+                    segment.getId().toString(),
+                    fingerprintGenerator.generateFingerprint(schemaPayload),
+                    segmentSchemaMetadata.getNumRows(),
+                    schemaPayload
+                );
+              }
             } else {
               log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
             }
@@ -796,7 +822,7 @@ public class AppenderatorImpl implements Appenderator
 
           log.info("Push complete...");
 
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, minimalSegmentSchemas);
         },
         pushExecutor
     );
@@ -825,7 +851,7 @@ public class AppenderatorImpl implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private DataSegment mergeAndPush(
+  private SegmentAndSchema mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean useUniquePath
@@ -869,7 +895,13 @@ public class AppenderatorImpl implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return objectMapper.readValue(descriptorFile, DataSegment.class);
+          return new SegmentAndSchema(
+              objectMapper.readValue(descriptorFile, DataSegment.class),
+              centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
+                  mergedTarget,
+                  indexIO
+              ) : null
+          );
         }
       }
 
@@ -982,7 +1014,12 @@ public class AppenderatorImpl implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return segment;
+      return new SegmentAndSchema(
+          segment,
+          centralizedDatasourceSchemaConfig.isEnabled()
+          ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
+          : null
+      );
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();

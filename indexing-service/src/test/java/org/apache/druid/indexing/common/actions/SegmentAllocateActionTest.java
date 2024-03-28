@@ -427,7 +427,7 @@ public class SegmentAllocateActionTest
                      .size(100)
                      .build();
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
-        Collections.singleton(segmentV1)
+        Collections.singleton(segmentV1), null
     );
 
     // Verify that new allocations use version V1
@@ -451,7 +451,7 @@ public class SegmentAllocateActionTest
                      .size(100)
                      .build();
     taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
-        Collections.singleton(segmentV2)
+        Collections.singleton(segmentV2), null
     );
     Assert.assertTrue(segmentV2.getVersion().compareTo(segmentV1.getVersion()) > 0);
 
@@ -654,7 +654,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new LinearShardSpec(1))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -719,7 +720,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -782,7 +784,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -821,7 +824,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -860,7 +864,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -909,7 +914,8 @@ public class SegmentAllocateActionTest
                        )
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     final SegmentAllocateAction action = new SegmentAllocateAction(

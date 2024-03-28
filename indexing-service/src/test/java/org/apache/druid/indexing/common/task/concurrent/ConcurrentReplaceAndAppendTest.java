@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -973,6 +974,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments)
   {
     try {
+
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               WIKI,
@@ -1010,10 +1012,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       TaskActionClientFactory taskActionClientFactory
   )
   {
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
     TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
         .setConfig(taskConfig)
         .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
-        .setTaskActionClientFactory(taskActionClientFactory);
+        .setTaskActionClientFactory(taskActionClientFactory)
+        .setCentralizedTableSchemaConfig(centralizedDatasourceSchemaConfig);
     return new TestTaskToolboxFactory(builder)
     {
       @Override

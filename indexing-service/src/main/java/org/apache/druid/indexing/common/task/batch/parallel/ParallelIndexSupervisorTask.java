@@ -65,6 +65,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -206,7 +207,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private Long segmentsRead;
   private Long segmentsPublished;
   private final boolean isCompactionTask;
-
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -356,7 +356,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getGroupId(),
         baseSubtaskSpecName,
         ingestionSchema,
-        getContext()
+        getContext(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -437,7 +438,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getDataSchema(),
         ioConfigs,
         ingestionSchema.getTuningConfig(),
-        getContext()
+        getContext(),
+        toolbox.getJsonMapper(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -1139,11 +1142,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
+          if (report.getMinimalSegmentSchemas() != null) {
+            minimalSegmentSchemas.merge(report.getMinimalSegmentSchemas());
+          }
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,
@@ -1154,7 +1162,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         toolbox,
         ingestionSchema
     );
-
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
@@ -1181,16 +1188,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, minimalSegmentSchemas).isSuccess();
 
     if (published) {
-      LOG.info("Published [%d] segments", newSegments.size());
+      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), minimalSegmentSchemas.size());
 
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());

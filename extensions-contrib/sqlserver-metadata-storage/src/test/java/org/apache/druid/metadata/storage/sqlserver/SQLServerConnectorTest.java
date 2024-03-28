@@ -22,6 +22,7 @@ package org.apache.druid.metadata.storage.sqlserver;
 import com.google.common.base.Suppliers;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +39,8 @@ public class SQLServerConnectorTest
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(
             MetadataStorageTablesConfig.fromBase(null)
-        )
+        ),
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     Assert.assertTrue(connector.isTransientException(new SQLException("Resource Failure!", "08DIE")));
@@ -59,7 +61,8 @@ public class SQLServerConnectorTest
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(
             MetadataStorageTablesConfig.fromBase(null)
-        )
+        ),
+        CentralizedDatasourceSchemaConfig.create()
     );
     Assert.assertEquals("FETCH NEXT 100 ROWS ONLY", connector.limitClause(100));
   }

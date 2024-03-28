@@ -50,18 +50,25 @@ public class DataSegmentPlus
   private final DateTime usedStatusLastUpdatedDate;
   private final Boolean used;
 
+  private final Long schemaId;
+  private final Long numRows;
+
   @JsonCreator
   public DataSegmentPlus(
       @JsonProperty("dataSegment") final DataSegment dataSegment,
       @JsonProperty("createdDate") @Nullable final DateTime createdDate,
       @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate,
-      @JsonProperty("used") @Nullable final Boolean used
+      @JsonProperty("used") @Nullable final Boolean used,
+      @JsonProperty("schemaId") @Nullable final Long schemaId,
+      @JsonProperty("numRows") @Nullable final Long numRows
   )
   {
     this.dataSegment = dataSegment;
     this.createdDate = createdDate;
     this.usedStatusLastUpdatedDate = usedStatusLastUpdatedDate;
     this.used = used;
+    this.schemaId = schemaId;
+    this.numRows = numRows;
   }
 
   @Nullable
@@ -91,6 +98,20 @@ public class DataSegmentPlus
     return used;
   }
 
+  @Nullable
+  @JsonProperty
+  public Long getSchemaId()
+  {
+    return schemaId;
+  }
+
+  @Nullable
+  @JsonProperty
+  public Long getNumRows()
+  {
+    return numRows;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -104,7 +125,9 @@ public class DataSegmentPlus
     return Objects.equals(dataSegment, that.getDataSegment())
            && Objects.equals(createdDate, that.getCreatedDate())
            && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate())
-           && Objects.equals(used, that.getUsed());
+           && Objects.equals(used, that.getUsed())
+           && Objects.equals(schemaId, that.getSchemaId())
+           && Objects.equals(numRows, that.getNumRows());
   }
 
   @Override
@@ -114,7 +137,9 @@ public class DataSegmentPlus
         dataSegment,
         createdDate,
         usedStatusLastUpdatedDate,
-        used
+        used,
+        schemaId,
+        numRows
     );
   }
 
@@ -126,6 +151,8 @@ public class DataSegmentPlus
            ", usedStatusLastUpdatedDate=" + getUsedStatusLastUpdatedDate() +
            ", dataSegment=" + getDataSegment() +
            ", used=" + getUsed() +
+           ", schemaId=" + getSchemaId() +
+           ", numRows=" + getNumRows() +
            '}';
   }
 }

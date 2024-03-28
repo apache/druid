@@ -51,6 +51,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
@@ -66,6 +69,7 @@ import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
+import org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemas;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkEternityTombstonesAsUnused;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
@@ -148,6 +152,10 @@ public class DruidCoordinator
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
+  private final SegmentSchemaManager segmentSchemaManager;
+  @Nullable
+  private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   private volatile boolean started = false;
 
@@ -185,7 +193,10 @@ public class DruidCoordinator
       BalancerStrategyFactory balancerStrategyFactory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
+      SegmentSchemaManager segmentSchemaManager,
+      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.config = config;
@@ -205,6 +216,9 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
     this.loadQueueManager = loadQueueManager;
+    this.segmentSchemaManager = segmentSchemaManager;
+    this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   public boolean isLeader()
@@ -419,6 +433,9 @@ public class DruidCoordinator
       taskMaster.onLeaderStart();
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.leaderStart();
+      }
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
       final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
@@ -498,6 +515,9 @@ public class DruidCoordinator
 
       log.info("I am no longer the leader...");
 
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.leaderStop();
+      }
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
@@ -565,13 +585,18 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
   {
-    return Arrays.asList(
-        new KillSupervisors(config, metadataManager.supervisors()),
-        new KillAuditLog(config, metadataManager.audit()),
-        new KillRules(config, metadataManager.rules()),
-        new KillDatasourceMetadata(config, metadataManager.indexer(), metadataManager.supervisors()),
-        new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs())
-    );
+    List<CoordinatorDuty> duties = new ArrayList<>();
+
+    duties.add(new KillSupervisors(config, metadataManager.supervisors()));
+    duties.add(new KillAuditLog(config, metadataManager.audit()));
+    duties.add(new KillRules(config, metadataManager.rules()));
+    duties.add(new KillDatasourceMetadata(config, metadataManager.indexer(), metadataManager.supervisors()));
+    duties.add(new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()));
+
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      duties.add(new KillUnreferencedSegmentSchemas(segmentSchemaManager, metadataManager.segments()));
+    }
+    return duties;
   }
 
   @VisibleForTesting
@@ -794,4 +819,3 @@ public class DruidCoordinator
 
   }
 }
-

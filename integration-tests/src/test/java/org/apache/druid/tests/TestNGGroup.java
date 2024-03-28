@@ -163,4 +163,8 @@ public class TestNGGroup
   public static final String HTTP_ENDPOINT = "http-endpoint";
 
   public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
+
+  public static final String CDS_TASK_SCHEMA_PUBLISH_DISABLED = "cds-task-schema-publish-disabled";
+
+  public static final String CDS_COORDINATOR_SMQ_DISABLED = "cds-coordinator-smq-disabled";
 }

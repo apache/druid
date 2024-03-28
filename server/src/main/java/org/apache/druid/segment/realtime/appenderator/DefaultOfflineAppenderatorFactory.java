@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -30,8 +31,8 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-
 
 public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
 {
@@ -39,19 +40,29 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @JsonCreator
   public DefaultOfflineAppenderatorFactory(
       @JacksonInject DataSegmentPusher dataSegmentPusher,
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject IndexIO indexIO,
-      @JacksonInject IndexMerger indexMerger
+      @JacksonInject IndexMerger indexMerger,
+      @JsonProperty("centralizedDatasourceSchemaConfig") CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.dataSegmentPusher = dataSegmentPusher;
     this.objectMapper = objectMapper;
     this.indexIO = indexIO;
     this.indexMerger = indexMerger;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+
+  }
+
+  @JsonProperty
+  public CentralizedDatasourceSchemaConfig getCentralizedDatasourceSchemaConfig()
+  {
+    return centralizedDatasourceSchemaConfig;
   }
 
   @Override
@@ -74,7 +85,8 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
             0
         ),
-        true
+        true,
+        centralizedDatasourceSchemaConfig
     );
   }
 }
