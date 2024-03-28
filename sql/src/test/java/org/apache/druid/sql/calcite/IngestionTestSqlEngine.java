@@ -86,6 +86,8 @@ public class IngestionTestSqlEngine implements SqlEngine
       case SCAN_NEEDS_SIGNATURE:
       case UNNEST:
       case GROUPBY_IMPLICITLY_SORTS:
+      case WINDOW_FUNCTIONS:
+      case WINDOW_LEAF_OPERATOR:
         return false;
       case CAN_INSERT:
       case CAN_REPLACE:

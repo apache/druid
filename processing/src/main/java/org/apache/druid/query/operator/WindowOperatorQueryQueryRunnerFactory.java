@@ -31,7 +31,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.RowSignature;
@@ -112,7 +112,7 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
                             sigBob.add(column, input.findColumn(column).toAccessor().getType());
                           }
 
-                          return new FrameRowsAndColumns(Frame.wrap(frameBytes), sigBob.build());
+                          return new ColumnBasedFrameRowsAndColumns(Frame.wrap(frameBytes), sigBob.build());
                         }
                         return input;
                       }

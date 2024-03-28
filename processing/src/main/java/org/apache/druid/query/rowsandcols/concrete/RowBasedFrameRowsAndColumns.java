@@ -37,15 +37,15 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
-public class FrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
+public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
 {
   private final Frame frame;
   private final RowSignature signature;
   private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
 
-  public FrameRowsAndColumns(Frame frame, RowSignature signature)
+  public RowBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
+    this.frame = FrameType.ROW_BASED.ensureType(frame);
     this.signature = signature;
   }
 
@@ -65,7 +65,6 @@ public class FrameRowsAndColumns implements RowsAndColumns, AutoCloseable, Close
   @Override
   public Column findColumn(String name)
   {
-    // Use contains so that we can negative cache.
     if (!colCache.containsKey(name)) {
       final int columnIndex = signature.indexOf(name);
       if (columnIndex < 0) {
@@ -79,7 +78,6 @@ public class FrameRowsAndColumns implements RowsAndColumns, AutoCloseable, Close
       }
     }
     return colCache.get(name);
-
   }
 
   @SuppressWarnings("unchecked")

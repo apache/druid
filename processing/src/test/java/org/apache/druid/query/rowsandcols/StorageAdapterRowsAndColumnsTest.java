@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.rowsandcols;
 
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumnsTest;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
 import org.apache.druid.segment.StorageAdapter;
 
 import java.util.function.Function;
@@ -38,7 +38,7 @@ public class StorageAdapterRowsAndColumnsTest extends RowsAndColumnsTestBase
 
   private static StorageAdapterRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    FrameRowsAndColumns fRAC = FrameRowsAndColumnsTest.buildFrame(input);
+    ColumnBasedFrameRowsAndColumns fRAC = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
     return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
   }
 }

@@ -35,7 +35,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -198,7 +197,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(
-              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
               QueryContexts.ENABLE_DEBUG, true,
               QueryContexts.WINDOWING_STRICT_VALIDATION, false
               ))
@@ -220,8 +218,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                                        QueryContexts.ENABLE_DEBUG, true,
+          .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true,
                                         QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
                                         QueryContexts.WINDOWING_STRICT_VALIDATION, false
                         )

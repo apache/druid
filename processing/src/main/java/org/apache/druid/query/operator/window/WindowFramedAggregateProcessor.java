@@ -122,6 +122,4 @@ public class WindowFramedAggregateProcessor implements Processor
     WindowFramedAggregateProcessor other = (WindowFramedAggregateProcessor) obj;
     return Arrays.equals(aggregations, other.aggregations) && Objects.equals(frame, other.frame);
   }
-
-
 }

@@ -36,6 +36,7 @@ import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -137,9 +138,27 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         );
       }
 
-      // Add partition boosting column.
-      clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
-      signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
+      // Update partition by of next window
+      final RowSignature signatureSoFar = signatureBuilder.build();
+      boolean addShuffle = true;
+      if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                   .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+        for (KeyColumn c : windowClusterBy.getColumns()) {
+          if (!signatureSoFar.contains(c.columnName())) {
+            addShuffle = false;
+            break;
+          }
+        }
+        if (addShuffle) {
+          clusterByColumns.addAll(windowClusterBy.getColumns());
+        }
+      } else {
+        // Add partition boosting column.
+        clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+        signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
+      }
+
 
       final ClusterBy clusterBy =
           QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
