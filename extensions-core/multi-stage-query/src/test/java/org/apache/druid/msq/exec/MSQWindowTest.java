@@ -789,6 +789,81 @@ public class MSQWindowTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testWindowOnFooWithGroupByAndInnerLimit(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "d1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(
+                            new DefaultDimensionSpec(
+                                "m1",
+                                "d0",
+                                ColumnType.FLOAT
+                            ),
+                            new DefaultDimensionSpec(
+                                "m2",
+                                "d1",
+                                ColumnType.DOUBLE
+                            )
+                        ))
+                        .setLimit(5)
+                        .setContext(context)
+                        .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql("with t AS (\n"
+                + "select m1, m2 from foo GROUP BY 1,2 \n"
+                + "LIMIT 5\n"
+                + ")\n"
+                + "select m1,SUM(m2) OVER() cc from t\n"
+                + "GROUP BY m1,m2")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "m1"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 15.0},
+            new Object[]{2.0f, 15.0},
+            new Object[]{3.0f, 15.0},
+            new Object[]{4.0f, 15.0},
+            new Object[]{5.0f, 15.0}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testWindowOnFooWithNoGroupByAndPartitionAndVirtualColumns(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> contextWithRowSignature =

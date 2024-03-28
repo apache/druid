@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import java.util.Objects;
 
@@ -42,9 +43,13 @@ public class TooManyRowsInAWindowFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Too many rows in a window (requested = %d, max = %d). Try creating a window with a higher cardinality column or change the query shape.",
+        "Too many rows in a window (requested = %d, max = %d). "
+        + " Try creating a window with a higher cardinality column or change the query shape."
+        + " Or you can change the max using query context param %s ."
+        + " Use it carefully as a higher value can lead to OutOfMemory errors. ",
         numRows,
-        maxRows
+        maxRows,
+        MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW
     );
     this.numRows = numRows;
     this.maxRows = maxRows;

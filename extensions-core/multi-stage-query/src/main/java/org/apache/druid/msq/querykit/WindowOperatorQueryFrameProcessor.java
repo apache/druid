@@ -370,6 +370,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         }
         finally {
           resultRowAndCols.clear();
+          frameRowsAndCols.clear();
         }
       }
     });
