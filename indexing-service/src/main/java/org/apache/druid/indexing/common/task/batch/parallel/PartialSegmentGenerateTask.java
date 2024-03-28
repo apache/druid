@@ -25,8 +25,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -253,25 +251,16 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
    */
   private Map<String, TaskReport> getTaskCompletionReports(Long segmentsRead)
   {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                IngestionState.COMPLETED,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                "",
-                false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                null
-            )
-        )
+    return buildIngestionStatsReport(
+        IngestionState.COMPLETED,
+        "",
+        segmentsRead,
+        null
     );
   }
 
-  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  @Override
+  protected Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
@@ -287,13 +276,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     return unparseableEventsMap;
   }
 
-  private Map<String, Object> getTaskCompletionRowStats()
+  @Override
+  protected Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = new HashMap<>();
-    metrics.put(
+    return Collections.singletonMap(
         RowIngestionMeters.BUILD_SEGMENTS,
         buildSegmentsMeters.getTotals()
     );
-    return metrics;
   }
 }

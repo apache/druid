@@ -50,7 +50,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 as dim from foo", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
@@ -81,7 +81,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select dim1 as table_dim, count(*) as table_count from foo where dim1 = 'abc' group by 1", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)

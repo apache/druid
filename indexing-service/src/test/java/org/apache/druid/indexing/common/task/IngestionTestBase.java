@@ -37,8 +37,8 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
@@ -517,12 +517,12 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     });
   }
 
-  public List<IngestionStatsAndErrorsTaskReportData> getIngestionReports() throws IOException
+  public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
   {
     return getReports().entrySet()
                        .stream()
                        .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
-                       .map(entry -> (IngestionStatsAndErrorsTaskReportData) entry.getValue().getPayload())
+                       .map(entry -> (IngestionStatsAndErrors) entry.getValue().getPayload())
                        .collect(Collectors.toList());
   }
 }

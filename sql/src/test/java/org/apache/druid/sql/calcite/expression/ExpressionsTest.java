@@ -581,7 +581,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("(.)")
         ),
         makeExpression("regexp_like(null,'(.)')"),
-        0L
+        NullHandling.sqlCompatible() ? null : 0L
     );
 
     testHelper.testExpressionString(
@@ -593,7 +593,7 @@ public class ExpressionsTest extends CalciteTestBase
         makeExpression("regexp_like(null,'')"),
 
         // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
-        NullHandling.sqlCompatible() ? 0L : 1L
+        NullHandling.sqlCompatible() ? null : 1L
     );
 
     testHelper.testExpressionString(
@@ -603,7 +603,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("null")
         ),
         makeExpression("regexp_like(null,'null')"),
-        0L
+        NullHandling.sqlCompatible() ? null : 0L
     );
   }
 

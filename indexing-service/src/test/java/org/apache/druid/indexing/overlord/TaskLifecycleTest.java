@@ -696,7 +696,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         TaskQueueConfig.class
     );
 
-    return new TaskQueue(lockConfig, tqc, new DefaultTaskConfig(), ts, tr, tac, taskLockbox, emitter);
+    return new TaskQueue(lockConfig, tqc, new DefaultTaskConfig(), ts, tr, tac, taskLockbox, emitter, mapper);
   }
 
   @After

@@ -20,12 +20,15 @@
 package org.apache.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
@@ -340,6 +343,7 @@ public class MetadataResource
   @GET
   @Path("/datasources/{dataSourceName}/unusedSegments")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getUnusedSegmentsInDataSource(
       @Context final HttpServletRequest req,
       @PathParam("dataSourceName") final String dataSource,
@@ -349,37 +353,43 @@ public class MetadataResource
       @QueryParam("sortOrder") @Nullable final String sortOrder
   )
   {
-    if (dataSource == null || dataSource.isEmpty()) {
-      throw InvalidInput.exception("dataSourceName must be non-empty");
+    try {
+      if (dataSource == null || dataSource.isEmpty()) {
+        throw InvalidInput.exception("dataSourceName must be non-empty.");
+      }
+
+      if (limit != null && limit < 0) {
+        throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0.", limit);
+      }
+
+      if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
+        throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+      }
+
+      final SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
+
+      final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+      final Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+          dataSource,
+          theInterval,
+          limit,
+          lastSegmentId,
+          theSortOrder
+      );
+
+      final List<DataSegmentPlus> retVal = new ArrayList<>();
+      unusedSegments.iterator().forEachRemaining(retVal::add);
+      return Response.status(Response.Status.OK).entity(retVal).build();
     }
-    if (limit != null && limit < 0) {
-      throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0", limit);
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
-
-    if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
-      throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+    catch (Exception e) {
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .build();
     }
-
-    SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
-
-    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
-    Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
-        dataSource,
-        theInterval,
-        limit,
-        lastSegmentId,
-        theSortOrder
-    );
-
-    final Function<DataSegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
-
-    final Iterable<DataSegmentPlus> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
-
-    final List<DataSegmentPlus> retVal = new ArrayList<>();
-    authorizedSegments.iterator().forEachRemaining(retVal::add);
-    return Response.status(Response.Status.OK).entity(retVal).build();
   }
 
   @GET

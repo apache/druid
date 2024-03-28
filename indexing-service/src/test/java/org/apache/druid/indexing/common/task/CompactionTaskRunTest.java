@@ -42,7 +42,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -321,14 +321,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
     List<String> rowsFromSegment = getCSVFormatRowsFromSegments(segments);
     Assert.assertEquals(TEST_ROWS, rowsFromSegment);
 
-    List<IngestionStatsAndErrorsTaskReportData> reports = getIngestionReports();
+    List<IngestionStatsAndErrors> reports = getIngestionReports();
     Assert.assertEquals(
         3L,
-        reports.stream().mapToLong(IngestionStatsAndErrorsTaskReportData::getSegmentsPublished).sum()
+        reports.stream().mapToLong(IngestionStatsAndErrors::getSegmentsPublished).sum()
     );
     Assert.assertEquals(
         3L,
-        reports.stream().mapToLong(IngestionStatsAndErrorsTaskReportData::getSegmentsRead).sum()
+        reports.stream().mapToLong(IngestionStatsAndErrors::getSegmentsRead).sum()
     );
   }
 
@@ -569,7 +569,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             false,
             false
         ),
@@ -1912,7 +1912,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             appendToExisting,
             false
         ),
@@ -1952,7 +1952,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             appendToExisting,
             false
         ),

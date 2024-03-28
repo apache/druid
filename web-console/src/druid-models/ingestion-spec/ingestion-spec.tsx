@@ -208,7 +208,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1].toLowerCase();
+  if (parts.length === 2) return parts[1];
   return ingestionType;
 }
 
@@ -2071,6 +2071,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
+    defaultValue: 0,
     hideInMore: true,
     info: (
       <>

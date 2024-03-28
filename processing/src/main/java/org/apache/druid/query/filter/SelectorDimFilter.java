@@ -39,7 +39,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- *
+ * Recommended to use {@link EqualityFilter} or {@link NullFilter} instead
  */
 public class SelectorDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
