@@ -31,6 +31,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigInteger;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -198,5 +200,18 @@ public class JSONFlattenerMakerTest
         ImmutableSet.of("bool", "int", "long", "float", "double", "binary", "list", "anotherList", "nested"),
         ImmutableSet.copyOf(FLATTENER_MAKER_NESTED.discoverRootFields(node))
     );
+  }
+
+  @Test
+  public void testCharsetFix()
+  {
+    final CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder();
+    Assert.assertEquals("hello", JSONFlattenerMaker.charsetFix("hello", encoder));
+    Assert.assertEquals("Apache® Druid", JSONFlattenerMaker.charsetFix("Apache® Druid", encoder));
+    Assert.assertEquals("hello?", JSONFlattenerMaker.charsetFix("hello\uD900", encoder));
+    Assert.assertEquals("hello?", JSONFlattenerMaker.charsetFix("hello\uD83D", encoder));
+    Assert.assertEquals("hello?", JSONFlattenerMaker.charsetFix("hello\uDCAF", encoder));
+    Assert.assertEquals("hello💯", JSONFlattenerMaker.charsetFix("hello\uD83D\uDCAF", encoder));
+    Assert.assertEquals("héllö", JSONFlattenerMaker.charsetFix("héllö", encoder));
   }
 }
