@@ -2429,8 +2429,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
       return new DataStoreMetadataUpdateResult(true, false, StringUtils.format(
-          "Inconsistent metadata state. This can happen when the input topic in the supervisor spec is updated"
-          + " without resetting the supervisor. Stored state: [%s], Target state: [%s].",
+          "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor.",
           oldCommitMetadataFromDb,
           startMetadata
       ));
