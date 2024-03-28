@@ -49,7 +49,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -274,10 +273,13 @@ public class NestedDataColumnSupplier implements ColumnSupplier<NestedCommonForm
     }
     if (nullValueBitmapSize > 0) {
       return ImmutableMap.of(
-          ColumnSize.NULL_VALUE_INDEX_COLUMN_PART, ColumnPartSize.simple("nullBitmap", nullValueBitmapSize)
+          ColumnSize.NULL_VALUE_INDEX_COLUMN_PART, ColumnPartSize.simple("nullBitmap", nullValueBitmapSize),
+          "nestedColumns", new ColumnPartSize("nestedColumns", 0, fieldsIndexes)
       );
     }
-    return Collections.emptyMap();
+    return ImmutableMap.of(
+        "nestedColumns", new ColumnPartSize("nestedColumns", 0, fieldsIndexes)
+    );
   }
 
   @Override

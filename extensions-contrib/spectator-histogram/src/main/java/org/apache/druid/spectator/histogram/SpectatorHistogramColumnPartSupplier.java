@@ -19,7 +19,6 @@
 
 package org.apache.druid.spectator.histogram;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 
