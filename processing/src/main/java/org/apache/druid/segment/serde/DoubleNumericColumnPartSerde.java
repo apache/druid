@@ -21,7 +21,6 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.column.ValueType;

@@ -82,7 +82,8 @@ public class ColumnSize
     return errorMessage;
   }
 
-  public ColumnSize merge(@Nullable ColumnSize other) {
+  public ColumnSize merge(@Nullable ColumnSize other)
+  {
     if (other == null) {
       return this;
     }

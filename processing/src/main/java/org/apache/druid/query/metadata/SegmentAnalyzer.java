@@ -108,7 +108,7 @@ public class SegmentAnalyzer
     final RowSignature rowSignature = storageAdapter.getRowSignature();
     for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
-      final ColumnHolder columnHolder = index == null ?  null : index.getColumnHolder(columnName);
+      final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
 
       if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
         // See javadocs for getSnapshotColumnCapabilities for a discussion of why we need to do this.
