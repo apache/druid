@@ -41,7 +41,11 @@ public class StripedReadablePartitions implements ReadablePartitions
   private final int numWorkers;
   private final IntSortedSet partitionNumbers;
 
-  StripedReadablePartitions(final int stageNumber, final int numWorkers, final IntSortedSet partitionNumbers)
+  /**
+   * Constructor. Most callers should use {@link ReadablePartitions#striped(int, int, int)} instead, which takes
+   * a partition count rather than a set of partition numbers.
+   */
+  public StripedReadablePartitions(final int stageNumber, final int numWorkers, final IntSortedSet partitionNumbers)
   {
     this.stageNumber = stageNumber;
     this.numWorkers = numWorkers;
