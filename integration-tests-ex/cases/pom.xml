@@ -454,14 +454,14 @@
                 <plugins>
                      <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.0.0-M7</version>
+                        <version>3.2.5</version>
                         <dependencies>
                           <!-- Required to force Failsafe to use JUnit instead of TestNG.
                                junit47 is required to use test categories. -->
                           <dependency>
                             <groupId>org.apache.maven.surefire</groupId>
                             <artifactId>surefire-junit47</artifactId>
-                            <version>3.0.0-M7</version>
+                            <version>3.2.5</version>
                           </dependency>
                         </dependencies>
                         <executions>
