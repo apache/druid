@@ -17,26 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.config;
 
-import org.apache.druid.audit.AuditManager;
-import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.Stats;
-import org.joda.time.DateTime;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
+import org.joda.time.Duration;
 
-public class KillAuditLog extends MetadataCleanupDuty
+public class CoordinatorRunConfig
 {
-  private final AuditManager auditManager;
+  @JsonProperty
+  private final Duration startDelay;
 
-  public KillAuditLog(MetadataCleanupConfig config, AuditManager auditManager)
+  @JsonProperty
+  private final Duration period;
+
+  @JsonCreator
+  public CoordinatorRunConfig(
+      @JsonProperty("startDelay") Duration startDelay,
+      @JsonProperty("period") Duration period
+  )
   {
-    super("audit logs", config, Stats.Kill.AUDIT_LOGS);
-    this.auditManager = auditManager;
+    this.startDelay = Configs.valueOrDefault(startDelay, Duration.standardMinutes(5));
+    this.period = Configs.valueOrDefault(period, Duration.standardMinutes(1));
   }
 
-  @Override
-  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
+  public Duration getPeriod()
   {
-    return auditManager.removeAuditLogsOlderThan(minCreatedTime.getMillis());
+    return period;
+  }
+
+  public Duration getStartDelay()
+  {
+    return startDelay;
   }
 }

@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -38,9 +38,6 @@ import org.joda.time.Duration;
  * <p>
  * This duty is only an example to demostrate the usage of coordinator custom
  * duties. All production clusters should continue using {@link KillSupervisors}.
- * <p>
- * In the future, we might migrate all metadata management coordinator duties to
- * {@link CoordinatorCustomDuty} but until then this class will remain undocumented.
  */
 @UnstableApi
 public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements CoordinatorCustomDuty
@@ -52,20 +49,14 @@ public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements Co
   @JsonCreator
   public KillSupervisorsCustomDuty(
       @JsonProperty("durationToRetain") Duration retainDuration,
-      @JacksonInject MetadataSupervisorManager metadataSupervisorManager,
-      @JacksonInject DruidCoordinatorConfig coordinatorConfig
+      @JacksonInject MetadataSupervisorManager metadataSupervisorManager
   )
   {
     super(
         "supervisors",
-        "KillSupervisorsCustomDuty",
-        true,
-        // Use the same period as metadata store management so that validation passes
-        // Actual period of custom duties is configured by the user
-        coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod(),
-        retainDuration,
-        Stats.Kill.SUPERVISOR_SPECS,
-        coordinatorConfig
+        // Pass null here, actual period of custom duties is configured separately
+        new MetadataCleanupConfig(true, null, retainDuration),
+        Stats.Kill.SUPERVISOR_SPECS
     );
     this.metadataSupervisorManager = metadataSupervisorManager;
     log.warn("This is only an example implementation of a custom duty and"

@@ -33,7 +33,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.DataSegment;
@@ -89,9 +89,7 @@ public class HttpLoadQueuePeonTest
         "http://dummy:4000",
         ServerTestHelper.MAPPER,
         httpClient,
-        new TestDruidCoordinatorConfig.Builder()
-            .withHttpLoadQueuePeonBatchSize(10)
-            .build(),
+        new HttpLoadQueuePeonConfig(null, null, 10),
         new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", processingExecutor, true),
         callbackExecutor
     );
