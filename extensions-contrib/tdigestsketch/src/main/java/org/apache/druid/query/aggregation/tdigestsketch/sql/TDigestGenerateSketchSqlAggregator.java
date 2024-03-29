@@ -37,7 +37,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -139,7 +139,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          OperatorConversions.complexReturnTypeWithNullability(TDigestSketchAggregatorFactory.TYPE, false),
+          Calcites.complexReturnTypeWithNullability(TDigestSketchAggregatorFactory.TYPE, false),
           null,
           // Validation for signatures like 'TDIGEST_GENERATE_SKETCH(column)' and
           // 'TDIGEST_GENERATE_SKETCH(column, compression)'

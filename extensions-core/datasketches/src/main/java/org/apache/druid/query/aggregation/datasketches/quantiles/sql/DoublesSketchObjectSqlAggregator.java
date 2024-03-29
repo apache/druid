@@ -30,14 +30,15 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
-import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -53,7 +54,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
                          .operandNames("column", "k")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
                          .returnTypeInference(
-                             OperatorConversions.complexReturnTypeWithNullability(HllSketchModule.TYPE, false))
+                             Calcites.complexReturnTypeWithNullability(DoublesSketchModule.TYPE, false)
+                         )
                          .requiredOperandCount(1)
                          .literalOperands(1)
                          .functionCategory(SqlFunctionCategory.NUMERIC)

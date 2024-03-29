@@ -100,6 +100,15 @@ public class Calcites
   public static final SqlReturnTypeInference
       ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
 
+  public static SqlReturnTypeInference complexReturnTypeWithNullability(ColumnType columnType, boolean nullable)
+  {
+    return opBinding -> RowSignatures.makeComplexType(
+        opBinding.getTypeFactory(),
+        columnType,
+        nullable
+    );
+  }
+
   private Calcites()
   {
     // No instantiation.

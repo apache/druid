@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -47,7 +48,8 @@ public class ThetaSketchEstimateWithErrorBoundsOperatorConversion implements Sql
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
       .returnTypeInference(
-          OperatorConversions.complexReturnTypeWithNullability(SketchModule.BUILD_TYPE, false))
+          Calcites.complexReturnTypeWithNullability(SketchModule.THETA_SKETCH_TYPE, false)
+      )
       .build();
 
   @Override

@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
-import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -174,7 +173,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          OperatorConversions.complexReturnTypeWithNullability(BloomFilterAggregatorFactory.TYPE, false),
+          Calcites.complexReturnTypeWithNullability(BloomFilterAggregatorFactory.TYPE, false),
           null,
           // Allow signatures like 'BLOOM_FILTER(column, maxNumEntries)'
           DefaultOperandTypeChecker

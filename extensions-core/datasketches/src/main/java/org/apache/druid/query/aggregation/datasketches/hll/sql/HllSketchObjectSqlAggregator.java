@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 
 import java.util.Collections;
 
@@ -43,7 +44,8 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
                          .requiredOperandCount(1)
                          .literalOperands(1, 2)
                          .returnTypeInference(
-                             OperatorConversions.complexReturnTypeWithNullability(HllSketchModule.TYPE, false))
+                             Calcites.complexReturnTypeWithNullability(HllSketchModule.TYPE, false)
+                         )
                          .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
                          .build();
 
