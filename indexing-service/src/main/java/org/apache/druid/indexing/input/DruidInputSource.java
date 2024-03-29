@@ -158,7 +158,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Nullable
   private final TaskToolbox toolbox;
   @Nullable
-  private Integer segmentsCount;
+  private Integer numSegmentsInTimeline;
 
   @JsonCreator
   public DruidInputSource(
@@ -379,7 +379,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         ids.add(chunk.getObject().getId());
       }
     }
-    segmentsCount = ids.size();
+    numSegmentsInTimeline = ids.size();
     return timeline;
   }
 
@@ -636,21 +636,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   /**
-   * Should ideally be called after creating the reader with {@link #reader(InputRowSchema, InputFormat, File)}
-   * call to not be a costly  operation.
-   *
-   * @return count of segments handled by this input source
+   * @return Number of segments read by this input source. This value is null until
+   *         the method {@link #fixedFormatReader} has been invoked on this input source.
    */
-  public int segmentsCount()
+  public int getNumberOfSegmentsRead()
   {
-    if (segmentIds != null) {
-      return segmentIds.size();
-    }
-
-    if (segmentsCount == null) {
-      createTimeline();
-    }
-
-    return segmentsCount;
+    return numSegmentsInTimeline;
   }
 }
