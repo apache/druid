@@ -35,6 +35,7 @@ public class ColumnSize
   public static final String DATA_SECTION = "data";
   public static final String LONG_COLUMN_PART = "longValuesColumn";
   public static final String DOUBLE_COLUMN_PART = "doubleValuesColumn";
+  public static final String FLOAT_COLUMN_PART = "floatValuesColumn";
   public static final String ENCODED_VALUE_COLUMN_PART = "encodedValueColumn";
   public static final String STRING_VALUE_DICTIONARY_COLUMN_PART = "stringValueDictionary";
   public static final String LONG_VALUE_DICTIONARY_COLUMN_PART = "longValueDictionary";

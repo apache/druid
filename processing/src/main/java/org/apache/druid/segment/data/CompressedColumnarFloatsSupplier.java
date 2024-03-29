@@ -70,7 +70,7 @@ public class CompressedColumnarFloatsSupplier implements ColumnPartSupplier<Colu
   {
     return ColumnPartSize.simple(
         StringUtils.format(
-            "compressed float column compression:[%s] values per block:[%s]",
+            "compressed floats column compression:[%s] values per block:[%s]",
             compression.toString(),
             sizePer
         ),
