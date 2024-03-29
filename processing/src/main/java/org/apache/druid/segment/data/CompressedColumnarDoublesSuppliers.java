@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnPartSize;
@@ -42,7 +41,6 @@ public class CompressedColumnarDoublesSuppliers
       ByteOrder order
   )
   {
-    final int startPos = buffer.position();
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
@@ -55,14 +53,13 @@ public class CompressedColumnarDoublesSuppliers
       } else {
         compression = CompressionStrategy.LZF;
       }
-      final Supplier<ColumnarDoubles> doubles = CompressionFactory.getDoubleSupplier(
+      final ColumnPartSupplier<ColumnarDoubles> doubles = CompressionFactory.getDoubleSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
           compression
       );
-      final int endPosition = buffer.position();
       return new ColumnPartSupplier<ColumnarDoubles>()
       {
         @Override
@@ -76,11 +73,11 @@ public class CompressedColumnarDoublesSuppliers
         {
           return ColumnPartSize.simple(
               StringUtils.format(
-                  "compressed longs column compression:[%s] values per block:[%s]",
+                  "compressed doubles column compression:[%s] values per block:[%s]",
                   compression.toString(),
                   sizePer
               ),
-              endPosition - startPos
+              doubles.getColumnPartSize().getSize()
           );
         }
       };

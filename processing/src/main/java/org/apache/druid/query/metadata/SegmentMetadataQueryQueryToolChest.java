@@ -431,17 +431,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     final LinkedHashMap<String, Integer> smoosh;
     if (arg1.getSmoosh() != null) {
       smoosh = new LinkedHashMap<>(arg1.getSmoosh());
-      final LinkedHashMap<String, Integer> otherSmoosh = arg2.getSmoosh();
-      for (Map.Entry<String, Integer> entry : otherSmoosh.entrySet()) {
-        smoosh.compute(entry.getKey(), (k, v) -> {
-          if (v != null) {
-            return v + entry.getValue();
-          }
-          return entry.getValue();
-        });
+      if (arg2.getSmoosh() != null) {
+        final LinkedHashMap<String, Integer> otherSmoosh = arg2.getSmoosh();
+        for (Map.Entry<String, Integer> entry : otherSmoosh.entrySet()) {
+          smoosh.compute(entry.getKey(), (k, v) -> {
+            if (v != null) {
+              return v + entry.getValue();
+            }
+            return entry.getValue();
+          });
+        }
       }
     } else {
-      smoosh = null;
+      smoosh = arg2.getSmoosh();
     }
 
     return new SegmentAnalysis(

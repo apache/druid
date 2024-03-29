@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.druid.segment.column.ColumnPartSize;
 import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.nio.ByteBuffer;
@@ -34,6 +35,12 @@ public class EntireLayoutColumnarDoublesSupplier implements ColumnPartSupplier<C
   {
     this.totalSize = totalSize;
     this.buffer = fromBuffer.asReadOnlyBuffer().order(byteOrder).asDoubleBuffer();
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple("unencoded doubles", buffer.remaining());
   }
 
   @Override

@@ -45,7 +45,7 @@ public class EntireLayoutColumnarLongsSupplier implements ColumnPartSupplier<Col
   @Override
   public ColumnPartSize getColumnPartSize()
   {
-    return ColumnPartSize.simple("encoded longs", sizeBytes);
+    return ColumnPartSize.simple("unencoded longs", sizeBytes);
   }
 
   private class EntireLayoutColumnarLongs implements ColumnarLongs

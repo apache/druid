@@ -62,6 +62,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -1825,5 +1827,167 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                  "Both lenientAggregatorMerge [false] and aggregatorMergeStrategy [latest] parameters cannot be set."
                                  + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.")
     );
+  }
+
+  @Test
+  public void testColumnSizeAndSmooshAnalysis()
+  {
+    SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
+                                       .dataSource(DATASOURCE)
+                                       .intervals("2013/2014")
+                                       .toInclude(new ListColumnIncluderator(Arrays.asList("__time", "index", "placement")))
+                                       .analysisTypes(
+                                           SegmentMetadataQuery.AnalysisType.COLUMN_SIZE,
+                                           SegmentMetadataQuery.AnalysisType.SMOOSH_SIZE
+                                       )
+                                       .merge(true)
+                                       .build();
+    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(query)).toList();
+
+    LinkedHashMap<String,Integer> smooshAnalysis;
+    ColumnSize timeSize;
+    ColumnSize indexSize;
+    ColumnSize placementSize;
+    if (mmap1) {
+      timeSize = new ColumnSize(
+          694L,
+          new LinkedHashMap<>(
+              ImmutableMap.of(
+                  ColumnSize.LONG_COLUMN_PART,
+                  ColumnPartSize.simple("compressed longs column compression:[lz4] values per block:[8192]", 694L)
+              )
+          ),
+          null
+      );
+
+      if (bitmaps) {
+        placementSize = new ColumnSize(
+            104L,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    ColumnSize.ENCODED_VALUE_COLUMN_PART,
+                    ColumnPartSize.simple("dictionary encoded compressed[lz4] vsize[1]", 44L),
+                    ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART,
+                    ColumnPartSize.simple("[generic v1] with [1] values", 27L),
+                    ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART,
+                    ColumnPartSize.simple("[generic v1] with [1] values", 33L)
+                )
+            ),
+            null
+        );
+      } else {
+        placementSize = new ColumnSize(
+            71L,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    ColumnSize.ENCODED_VALUE_COLUMN_PART,
+                    ColumnPartSize.simple("dictionary encoded compressed[lz4] vsize[1]", 44L),
+                    ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART,
+                    ColumnPartSize.simple("[generic v1] with [1] values", 27L)
+                )
+            ),
+            null
+        );
+      }
+
+      indexSize = new ColumnSize(
+          9545L,
+          new LinkedHashMap<>(
+              ImmutableMap.of(
+                  ColumnSize.DOUBLE_COLUMN_PART, ColumnPartSize.simple("compressed doubles column compression:[lz4] values per block:[8192]", 9545L)
+              )
+          ),
+          null
+      );
+
+      smooshAnalysis = new LinkedHashMap<>(
+          ImmutableMap.<String, Integer>builder()
+                      .put("__time", 844)
+                      .put("doubleNumericNull", 847)
+                      .put("floatNumericNull", 823)
+                      .put("index", 9709)
+                      .put("index.drd", 1005)
+                      .put("indexFloat", 5001)
+                      .put("indexMaxFloat", 5001)
+                      .put("indexMaxPlusTen", 9723)
+                      .put("indexMin", 9709)
+                      .put("indexMinFloat", 5001)
+                      .put("longNumericNull", 836)
+                      .put("market", bitmaps ? 1464 : 271)
+                      .put("metadata.drd", bitmaps ? 669 : 670)
+                      .put("null_column", 133)
+                      .put("partial_null_column", bitmaps ? 1040 : 243)
+                      .put("placement", bitmaps ? 267 : 234)
+                      .put("placementish", bitmaps ? 7850 : 5207)
+                      .put("quality", bitmaps ? 3018 : 374)
+                      .put("qualityDouble", 284)
+                      .put("qualityFloat", 252)
+                      .put("qualityLong", 273)
+                      .put("qualityNumericString", bitmaps ? 2999 : 355)
+                      .put("quality_uniques", 21879)
+                      .build()
+      );
+    } else {
+      timeSize = null;
+      indexSize = null;
+      placementSize = null;
+      smooshAnalysis = null;
+    }
+    final SegmentId id1 = SegmentId.dummy(differentIds ? "testSegment1" : DATASOURCE);
+    SegmentAnalysis expected = new SegmentAnalysis(
+        id1.toString(),
+        null,
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "__time",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ValueType.LONG.toString(),
+                    false,
+                    false,
+                    0,
+                    null,
+                    null,
+                    null,
+                    timeSize,
+                    null
+                ),
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    null,
+                    null,
+                    placementSize,
+                    null
+                ),
+                "index",
+                new ColumnAnalysis(
+                    ColumnType.DOUBLE,
+                    ValueType.DOUBLE.toString(),
+                    false,
+                    false,
+                    0,
+                    null,
+                    null,
+                    null,
+                    indexSize,
+                    null
+                )
+            )
+        ),
+        0,
+        1209,
+        null,
+        null,
+        null,
+        null,
+        smooshAnalysis
+    );
+    Assert.assertEquals(Collections.singletonList(expected), results);
   }
 }

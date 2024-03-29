@@ -20,8 +20,11 @@
 package org.apache.druid.segment.serde;
 
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Default implementation of {@link ColumnIndexSupplier} for columns which do not
@@ -41,5 +44,11 @@ public class NoIndexesColumnIndexSupplier implements ColumnIndexSupplier
   public <T> T as(Class<T> clazz)
   {
     return null;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    return Collections.emptyMap();
   }
 }

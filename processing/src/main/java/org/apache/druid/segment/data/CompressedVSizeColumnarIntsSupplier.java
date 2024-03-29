@@ -142,7 +142,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   {
     return ColumnPartSize.simple(
         StringUtils.format("dictionary encoded compressed[%s] vsize[%s]", compression.toString(), numBytes),
-        getSerializedSize()
+        META_SERDE_HELPER.size(this) + baseBuffers.getColumnPartSize().getSize()
     );
   }
 

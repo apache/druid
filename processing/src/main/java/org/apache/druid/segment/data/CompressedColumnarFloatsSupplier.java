@@ -19,10 +19,12 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 
@@ -31,7 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats>, Serializer
+public class CompressedColumnarFloatsSupplier implements ColumnPartSupplier<ColumnarFloats>, Serializer
 {
   public static final byte LZF_VERSION = 0x1;
   public static final byte VERSION = 0x2;
@@ -45,14 +47,14 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
   private final int totalSize;
   private final int sizePer;
   private final ByteBuffer buffer;
-  private final Supplier<ColumnarFloats> supplier;
+  private final ColumnPartSupplier<ColumnarFloats> supplier;
   private final CompressionStrategy compression;
 
   CompressedColumnarFloatsSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer buffer,
-      Supplier<ColumnarFloats> supplier,
+      ColumnPartSupplier<ColumnarFloats> supplier,
       CompressionStrategy compression
   )
   {
@@ -61,6 +63,19 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
     this.buffer = buffer;
     this.supplier = supplier;
     this.compression = compression;
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple(
+        StringUtils.format(
+            "compressed float column compression:[%s] values per block:[%s]",
+            compression.toString(),
+            sizePer
+        ),
+        META_SERDE_HELPER.size(this) + supplier.getColumnPartSize().getSize()
+    );
   }
 
   @Override
@@ -94,7 +109,7 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
         byte compressionId = buffer.get();
         compression = CompressionStrategy.forId(compressionId);
       }
-      Supplier<ColumnarFloats> supplier = CompressionFactory.getFloatSupplier(
+      ColumnPartSupplier<ColumnarFloats> supplier = CompressionFactory.getFloatSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
