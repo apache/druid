@@ -1067,9 +1067,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  public Map<String, TaskReport> getReports() throws IOException
+  public TaskReport.ReportMap getReports() throws IOException
   {
-    return objectMapper.readValue(reportsFile, new TypeReference<Map<String, TaskReport>>()
+    return objectMapper.readValue(reportsFile, new TypeReference<TaskReport.ReportMap>()
     {
     });
   }

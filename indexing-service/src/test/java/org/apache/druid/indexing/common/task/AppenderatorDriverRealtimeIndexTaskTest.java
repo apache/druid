@@ -1678,9 +1678,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
   private IngestionStatsAndErrors getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
+    TaskReport.ReportMap taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
-        new TypeReference<Map<String, TaskReport>>()
+        new TypeReference<TaskReport.ReportMap>()
         {
         }
     );

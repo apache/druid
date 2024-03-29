@@ -1134,7 +1134,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     try {
       Object payload = getObjectMapper().readValue(
           taskRunner.getTaskReportsFile(),
-          new TypeReference<Map<String, TaskReport>>()
+          new TypeReference<TaskReport.ReportMap>()
           {
           }
       ).get(KillTaskReport.REPORT_KEY).getPayload();

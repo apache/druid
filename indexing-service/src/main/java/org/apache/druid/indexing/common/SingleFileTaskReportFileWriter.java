@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
 {
@@ -41,7 +40,7 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   }
 
   @Override
-  public void write(String taskId, Map<String, TaskReport> reports)
+  public void write(String taskId, TaskReport.ReportMap reports)
   {
     try {
       final File reportsFileParent = reportsFile.getParentFile();
@@ -67,7 +66,7 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   public static void writeReportToStream(
       final ObjectMapper objectMapper,
       final OutputStream outputStream,
-      final Map<String, TaskReport> reports
+      final TaskReport.ReportMap reports
   ) throws Exception
   {
     objectMapper.writeValue(outputStream, reports);

@@ -929,7 +929,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * Builds a singleton map with {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY}
    * as key and an {@link IngestionStatsAndErrorsTaskReport} for this task as value.
    */
-  protected Map<String, TaskReport> buildIngestionStatsReport(
+  protected TaskReport.ReportMap buildIngestionStatsReport(
       IngestionState ingestionState,
       String errorMessage,
       Long segmentsRead,

@@ -1118,7 +1118,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @param handoffWaitMs Milliseconds waited for segments to be handed off.
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
+  private TaskReport.ReportMap getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(

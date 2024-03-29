@@ -202,7 +202,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
-  private Map<String, TaskReport> completionReports;
+  private TaskReport.ReportMap completionReports;
   private Long segmentsRead;
   private Long segmentsPublished;
   private final boolean isCompactionTask;
@@ -300,7 +300,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   @Nullable
   @JsonIgnore
-  public Map<String, TaskReport> getCompletionReports()
+  public TaskReport.ReportMap getCompletionReports()
   {
     return completionReports;
   }
@@ -1238,7 +1238,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus)
+  private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
     return buildIngestionStatsReport(
         IngestionState.COMPLETED,
@@ -1602,7 +1602,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // Get stats from completed tasks
     Map<String, PushedSegmentsReport> completedSubtaskReports = parallelSinglePhaseRunner.getReports();
     for (PushedSegmentsReport pushedSegmentsReport : completedSubtaskReports.values()) {
-      Map<String, TaskReport> taskReport = pushedSegmentsReport.getTaskReport();
+      TaskReport.ReportMap taskReport = pushedSegmentsReport.getTaskReport();
       if (taskReport == null || taskReport.isEmpty()) {
         LOG.warn("Received an empty report from subtask[%s]" + pushedSegmentsReport.getTaskId());
         continue;
@@ -1642,7 +1642,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
       long totalSegmentsRead = 0L;
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
-        Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
+        TaskReport.ReportMap taskReport = generatedPartitionsReport.getTaskReport();
         if (taskReport == null || taskReport.isEmpty()) {
           LOG.warn("Received an empty report from subtask[%s]", generatedPartitionsReport.getTaskId());
           continue;
@@ -1726,7 +1726,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private RowIngestionMetersTotals getBuildSegmentsStatsFromTaskReport(
-      Map<String, TaskReport> taskReport,
+      TaskReport.ReportMap taskReport,
       List<ParseExceptionReport> unparseableEvents
   )
   {

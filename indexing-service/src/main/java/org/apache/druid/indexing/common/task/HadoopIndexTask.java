@@ -680,7 +680,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return Response.ok(returnMap).build();
   }
 
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private TaskReport.ReportMap getTaskCompletionReports()
   {
     return buildIngestionStatsReport(ingestionState, errorMsg, null, null);
   }

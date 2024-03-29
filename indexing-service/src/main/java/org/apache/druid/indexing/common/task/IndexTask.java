@@ -186,7 +186,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Nullable
   private String errorMsg;
 
-  private Map<String, TaskReport> completionReports;
+  private TaskReport.ReportMap completionReports;
 
   @JsonCreator
   public IndexTask(
@@ -319,7 +319,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @Nullable
   @JsonIgnore
-  public Map<String, TaskReport> getCompletionReports()
+  public TaskReport.ReportMap getCompletionReports()
   {
     return completionReports;
   }
