@@ -236,7 +236,8 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         @Override
         public InputRowListPlusRawValues next()
         {
-          final ByteBuffer bb = ((ByteEntity) entityIterator.next()).getBuffer();
+          // We need to modify the position of the buffer, so duplicate it.
+          final ByteBuffer bb = ((ByteEntity) entityIterator.next()).getBuffer().duplicate();
 
           final Map<String, Object> rawColumns;
           try {
