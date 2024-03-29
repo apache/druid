@@ -1806,10 +1806,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   public Map<String, Object> doGetLiveReports(boolean isFullReport)
   {
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparsebleEvents =
         doGetRowStatsAndUnparseableEvents(isFullReport, true);
 
@@ -1824,16 +1820,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                 : currentSequentialTask.getIngestionState();
     }
 
-    payload.put("ingestionState", ingestionStateForReport);
-    payload.put("unparseableEvents", rowStatsAndUnparsebleEvents.rhs);
-    payload.put("rowStats", rowStatsAndUnparsebleEvents.lhs);
-
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return returnMap;
+    return buildLiveIngestionStatsReport(
+        ingestionStateForReport,
+        rowStatsAndUnparsebleEvents.rhs,
+        rowStatsAndUnparsebleEvents.lhs
+    );
   }
 
   @GET

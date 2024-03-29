@@ -544,21 +544,11 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
   private Map<String, Object> doGetLiveReports(boolean isFullReport)
   {
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-    Map<String, Object> events = getTaskCompletionUnparseableEvents();
-
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(isFullReport));
-
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return returnMap;
+    return buildLiveIngestionStatsReport(
+        ingestionState,
+        getTaskCompletionUnparseableEvents(),
+        doGetRowStats(isFullReport)
+    );
   }
 
   @GET
