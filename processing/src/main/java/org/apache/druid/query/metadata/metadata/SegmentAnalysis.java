@@ -20,6 +20,7 @@
 package org.apache.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -155,6 +156,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public LinkedHashMap<String, Integer> getSmoosh()
   {
     return smoosh;

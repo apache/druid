@@ -20,6 +20,7 @@
 package org.apache.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.common.config.NullHandling;
@@ -134,6 +135,7 @@ public class ColumnAnalysis
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public ColumnSize getColumnSize()
   {
     return columnSize;
