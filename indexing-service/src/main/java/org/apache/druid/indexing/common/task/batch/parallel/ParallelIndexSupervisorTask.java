@@ -1804,7 +1804,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  public Map<String, Object> doGetLiveReports(boolean isFullReport)
+  public TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparsebleEvents =
         doGetRowStatsAndUnparseableEvents(isFullReport, true);

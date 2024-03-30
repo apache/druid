@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Optional;
 
 import java.util.LinkedHashMap;
 
@@ -69,6 +70,10 @@ public interface TaskReport
    */
   class ReportMap extends LinkedHashMap<String, TaskReport>
   {
-
+    @SuppressWarnings("unchecked")
+    public <T extends TaskReport> Optional<T> findReport(String reportKey)
+    {
+      return Optional.fromNullable((T) get(reportKey));
+    }
   }
 }

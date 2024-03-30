@@ -542,7 +542,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
-  private Map<String, Object> doGetLiveReports(boolean isFullReport)
+  private TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     return buildLiveIngestionStatsReport(
         ingestionState,

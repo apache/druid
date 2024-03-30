@@ -416,7 +416,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
-    final Map<String, Object> liveReports = buildLiveIngestionStatsReport(
+    final TaskReport.ReportMap liveReports = buildLiveIngestionStatsReport(
         ingestionState,
         getTaskCompletionUnparseableEvents(),
         doGetRowStats(full != null)

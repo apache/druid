@@ -903,25 +903,27 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return null;
   }
 
-  protected Map<String, Object> buildLiveIngestionStatsReport(
+  protected TaskReport.ReportMap buildLiveIngestionStatsReport(
       IngestionState ingestionState,
       Map<String, Object> unparseableEvents,
       Map<String, Object> rowStats
   )
   {
-    final Map<String, Object> payload = new HashMap<>();
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", unparseableEvents);
-    payload.put("rowStats", rowStats);
-
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", IngestionStatsAndErrorsTaskReport.REPORT_KEY);
-
-    return Collections.singletonMap(
-        IngestionStatsAndErrorsTaskReport.REPORT_KEY,
-        ingestionStatsAndErrors
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrors(
+                ingestionState,
+                unparseableEvents,
+                rowStats,
+                null,
+                false,
+                0L,
+                null,
+                null,
+                null
+            )
+        )
     );
   }
 
