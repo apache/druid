@@ -61,6 +61,7 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
@@ -532,11 +533,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
-    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, null, null);
+    updateAndWriteCompletionReports(toolbox, null, null);
+  }
+
+  private void updateAndWriteCompletionReports(TaskToolbox toolbox, Long segmentsRead, Long segmentsPublished)
+  {
+    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
+
 
   @Override
   protected Map<String, Object> getTaskCompletionUnparseableEvents()
@@ -996,7 +1003,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
-        updateAndWriteCompletionReports(toolbox);
+        updateAndWriteCompletionReports(
+            toolbox,
+            // only applicable to the compaction use cases
+            inputSource instanceof DruidInputSource
+            ? (long) ((DruidInputSource) inputSource).getNumberOfSegmentsRead()
+            : null,
+            (long) published.getSegments().size()
+        );
         return TaskStatus.success(getId());
       }
     }
