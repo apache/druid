@@ -484,16 +484,16 @@ public class DruidQuery
 
       final RelDataType dataType = rexNode.getType();
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
-      // TODO(laksh): This might change if we disallow certain complex types from grouping
       if (outputType == null) {
-        // Can't group on unknown or COMPLEX types.
-        plannerContext.setPlanningError(
-            "SQL requires a group-by on a column with unknown type that is unsupported.",
-            outputType
-        );
+        // Can't group on unknown types.
+        plannerContext.setPlanningError("SQL requires a group-by on a column with unknown type that is unsupported.");
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
-
+      if (!outputType.getNullableStrategy().groupable()) {
+        // Can't group on 'ungroupable' types.
+        plannerContext.setPlanningError("SQL requires a group-by column with ungroupable type [%s].", outputType);
+        throw new CannotBuildQueryException(aggregate, rexNode);
+      }
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(

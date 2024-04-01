@@ -593,7 +593,7 @@ public class TypeStrategies
     @Override
     public boolean groupable()
     {
-      return true;
+      return elementStrategy.groupable();
     }
 
     @Override

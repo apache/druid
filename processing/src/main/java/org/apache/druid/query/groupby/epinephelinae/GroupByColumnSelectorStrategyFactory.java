@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy;
@@ -33,8 +34,11 @@ import org.apache.druid.segment.column.ColumnType;
 
 /**
  * Creates {@link org.apache.druid.query.dimension.ColumnSelectorStrategy}s for grouping dimensions
- *
- * TODO(laksh): Describe the steps and mv-handling
+ * If the type is STRING, then it delegates the group by handling to {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
+ * which is specialized for {@link DimensionSelector}s and multi-value dimensions.
+ * If the type is numeric, then it delegates the handling to the {@link FixedWidthGroupByColumnSelectorStrategy}
+ * Else, it delegates the handling to {@link DictionaryBuildingGroupByColumnSelectorStrategy} which is a generic strategy
+ * and builds dictionaries on the fly.
  */
 public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
 {
@@ -46,6 +50,11 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
   {
     if (capabilities == null || capabilities.getType() == null) {
       throw DruidException.defensive("Unable to deduce type for the grouping dimension");
+    }
+    if (!capabilities.toColumnType().getNullableStrategy().groupable()) {
+      // InvalidInput because the SQL planner would have already flagged these dimensions, therefore this will only happen
+      // if native queries have been submitted.
+      throw InvalidInput.exception("Unable to group on the type [%s]", capabilities.toColumnType());
     }
     switch (capabilities.getType()) {
       case STRING:
