@@ -1328,6 +1328,7 @@ valueFormat
 IOConfig
 compactionTask
 compactionTasks
+storeCompactionState
 ingestSegmentFirehose
 numShards
 IngestSegment
