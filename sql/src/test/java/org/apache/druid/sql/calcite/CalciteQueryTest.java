@@ -6265,7 +6265,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01T00:00:00'\n"
         + "OR __time >= '2001-02-01' AND __time < '2001-02-02'\n"
-        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'",
+        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'\n"
+        + "OR __time = '2001-04-01'\n"
+        + "OR __time = '2001-05-01 00:00:00'\n"
+        + "OR __time = '2001-06-01T00:00:00'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -6273,7 +6276,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       querySegmentSpec(
                           Intervals.of("2000-01-01/2001-01-01"),
                           Intervals.of("2001-02-01/2001-02-02"),
-                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001")
+                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001"),
+                          Intervals.of("2001-04-01/2001-04-01T00:00:00.001"),
+                          Intervals.of("2001-05-01/2001-05-01T00:00:00.001"),
+                          Intervals.of("2001-06-01/2001-06-01T00:00:00.001")
                       )
                   )
                   .granularity(Granularities.ALL)
