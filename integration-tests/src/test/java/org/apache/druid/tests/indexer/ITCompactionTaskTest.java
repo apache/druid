@@ -21,8 +21,8 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -176,13 +176,13 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       Assert.assertEquals(2,
                           reports.values()
                                  .stream()
-                                 .mapToLong(r -> ((IngestionStatsAndErrorsTaskReportData) r.getPayload()).getSegmentsPublished())
+                                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsPublished())
                                  .sum()
       );
       Assert.assertEquals(4,
                           reports.values()
                                  .stream()
-                                 .mapToLong(r -> ((IngestionStatsAndErrorsTaskReportData) r.getPayload()).getSegmentsRead())
+                                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsRead())
                                  .sum()
       );
     }

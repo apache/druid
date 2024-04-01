@@ -185,11 +185,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                               .allMatch(Intervals::canCompareEndpointsAsStrings);
     final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
-    SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
-        queryBuilder,
-        compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
-        intervalMode,
-        connector
+    queryBuilder.append(
+        SqlSegmentsMetadataQuery.getConditionForIntervalsAndMatchMode(
+            compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
+            intervalMode,
+            connector.getQuoteString()
+        )
     );
 
     final String queryString = StringUtils.format(queryBuilder.toString(), dbTables.getSegmentsTable());
@@ -200,7 +201,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("dataSource", dataSource);
 
           if (compareIntervalEndpointsAsString) {
-            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+            SqlSegmentsMetadataQuery.bindIntervalsToQuery(query, intervals);
           }
 
           final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query
@@ -397,20 +398,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final DataSourceMetadata endMetadata
   ) throws IOException
   {
-    if (segments.isEmpty()) {
-      throw new IllegalArgumentException("segment set must not be empty");
-    }
-
-    final String dataSource = segments.iterator().next().getDataSource();
-    for (DataSegment segment : segments) {
-      if (!dataSource.equals(segment.getDataSource())) {
-        throw new IllegalArgumentException("segments must all be from the same dataSource");
-      }
-    }
+    verifySegmentsToCommit(segments);
 
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
     }
+
+    final String dataSource = segments.iterator().next().getDataSource();
 
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = new HashSet<>();

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -36,12 +35,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.net.URL;
@@ -53,27 +49,21 @@ import java.util.Objects;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
  */
-@RunWith(Parameterized.class)
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 {
 
   public static final boolean DUMP_ACTUAL_RESULTS = Boolean.parseBoolean(
       System.getProperty("druid.tests.sql.dumpActualResults")
-  );
-
-  static {
-    NullHandling.initializeForTests();
-  }
+  ) || developerIDEdetected();
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
-  @Parameterized.Parameters(name = "{0}")
-  public static Object parametersForWindowQueryTest() throws Exception
+  public static Object[] parametersForWindowQueryTest() throws Exception
   {
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
     File windowFolder = new File(windowFolderUrl.toURI());
@@ -84,13 +74,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         .stream(Objects.requireNonNull(listedFiles))
         .map(File::getName)
         .toArray();
-  }
-
-  private final String filename;
-
-  public CalciteWindowQueryTest(String filename)
-  {
-    this.filename = filename;
   }
 
   class TestCase implements QueryResultsVerifier
@@ -200,20 +183,20 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Test
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void windowQueryTest() throws Exception
+  public void windowQueryTest(String filename) throws Exception
   {
     TestCase testCase = new TestCase(filename);
 
-    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
+    assumeTrue(testCase.getType() != TestType.failingTest);
 
     if (testCase.getType() == TestType.operatorValidation) {
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(
-              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
               QueryContexts.ENABLE_DEBUG, true,
               QueryContexts.WINDOWING_STRICT_VALIDATION, false
               ))
@@ -222,20 +205,20 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Test
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void windowQueryTestWithCustomContextMaxSubqueryBytes() throws Exception
+  public void windowQueryTestWithCustomContextMaxSubqueryBytes(String filename) throws Exception
   {
     TestCase testCase = new TestCase(filename);
 
-    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
+    assumeTrue(testCase.getType() != TestType.failingTest);
 
     if (testCase.getType() == TestType.operatorValidation) {
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                                        QueryContexts.ENABLE_DEBUG, true,
+          .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true,
                                         QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
                                         QueryContexts.WINDOWING_STRICT_VALIDATION, false
                         )

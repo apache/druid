@@ -71,7 +71,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -702,7 +702,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(new InDimFilter("dim3", ImmutableList.of("a", "b"), null))
+                .filters(in("dim3", ImmutableList.of("a", "b")))
                 .columns("dim3")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -4333,7 +4333,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                   "string_to_array(\"dim1\",'\\u005C.')",
                                   ColumnType.STRING_ARRAY
                               ),
-                              in("j0.unnest", ImmutableList.of("1", "2"), null)
+                              in("j0.unnest", ImmutableList.of("1", "2"))
                           ),
                           expressionVirtualColumn(
                               "_j0.unnest",
@@ -5249,7 +5249,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
-                          new InDimFilter("dim2", ImmutableList.of("a", "b"), null)
+                          in("dim2", ImmutableList.of("a", "b"))
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       null
@@ -5385,7 +5385,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       or(
-                          in("j0.unnest", ImmutableList.of("a", "c"), null),
+                          in("j0.unnest", ImmutableList.of("a", "c")),
                           new LikeDimFilter("j0.unnest", "_", null, null)
                       )
                   ))
@@ -5427,7 +5427,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       or(
-                          in("j0.unnest", ImmutableList.of("a", "c"), null),
+                          in("j0.unnest", ImmutableList.of("a", "c")),
                           new LikeDimFilter("j0.unnest", "_", null, null)
                       )
                   ))
@@ -5462,7 +5462,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
-                          new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null)
+                          in("dim2", ImmutableList.of("a", "b", "ab", "abc"))
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       null
@@ -5604,7 +5604,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                   .intervals(querySegmentSpec(Filtration.eternity()))
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .legacy(false)
-                                  .filters(new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null))
+                                  .filters(in("dim2", ImmutableList.of("a", "b", "ab", "abc")))
                                   .columns("dim2")
                                   .context(QUERY_CONTEXT_UNNEST)
                                   .build()
@@ -5767,7 +5767,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           range("m1", ColumnType.LONG, null, 10L, false, true)
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                      new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null)
+                      in("j0.unnest", ImmutableSet.of("a", "b"))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5797,7 +5797,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       expressionVirtualColumn("j0.unnest", "array(\"dim4\",\"dim5\")", ColumnType.STRING_ARRAY),
-                      new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null)
+                      in("j0.unnest", ImmutableSet.of("a", "b"))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5830,7 +5830,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                      new InDimFilter("j0.unnest", ImmutableSet.of("foo", "bar"), null)
+                      in("j0.unnest", ImmutableSet.of("foo", "bar"))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5958,7 +5958,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       expressionVirtualColumn("j0.unnest", "array(\"dim4\",\"dim5\")", ColumnType.STRING_ARRAY),
-                      new InDimFilter("j0.unnest", ImmutableSet.of("a", "ab"), null)
+                      in("j0.unnest", ImmutableSet.of("a", "ab"))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -6061,7 +6061,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                      new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null)
+                      in("j0.unnest", ImmutableSet.of("a", "b"))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -6091,7 +6091,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                      new InDimFilter("j0.unnest", ImmutableSet.of("b", "d"), null)
+                      in("j0.unnest", ImmutableSet.of("b", "d"))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -6211,7 +6211,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_UNNEST)
                   .filters(
                       or(
-                          new InDimFilter("j0.unnest", ImmutableSet.of("a", "aa"), null),
+                          in("j0.unnest", ImmutableSet.of("a", "aa")),
                           range("m1", ColumnType.LONG, null, 2L, false, true)
                       )
                   )
@@ -6453,7 +6453,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.DATASOURCE3),
                             expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "c"), null)
+                            in("j0.unnest", ImmutableSet.of("a", "c"))
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
@@ -6484,7 +6484,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.DATASOURCE3),
                             expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "c"), null)
+                            in("j0.unnest", ImmutableSet.of("a", "c"))
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
@@ -6514,13 +6514,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                             expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
-                            NullHandling.sqlCompatible()
-                            ? or(
-                                equality("j0.unnest", 1L, ColumnType.LONG),
-                                equality("j0.unnest", 2L, ColumnType.LONG),
-                                equality("j0.unnest", 3L, ColumnType.LONG)
-                            )
-                            : in("j0.unnest", ImmutableList.of("1", "2", "3"), null)
+                            in("j0.unnest", ColumnType.LONG, ImmutableList.of(1L, 2L, 3L))
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
@@ -6551,13 +6545,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(UnnestDataSource.create(
                             new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
                             expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
-                            NullHandling.sqlCompatible()
-                            ? or(
-                                equality("j0.unnest", 1L, ColumnType.LONG),
-                                equality("j0.unnest", 2L, ColumnType.LONG),
-                                equality("j0.unnest", 3L, ColumnType.LONG)
-                            )
-                            : in("j0.unnest", ImmutableList.of("1", "2", "3"), null)
+                            in("j0.unnest", ColumnType.LONG, ImmutableList.of(1L, 2L, 3L))
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
@@ -6890,12 +6878,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(
-                      NullHandling.sqlCompatible() ?
-                      or(
-                          equality("m1", 1.0f, ColumnType.FLOAT),
-                          equality("m1", 2.0f, ColumnType.FLOAT)
-                      ) :
-                      new InDimFilter("m1", ImmutableList.of("1", "2"), null)
+                      NullHandling.sqlCompatible()
+                      ? in("m1", ColumnType.FLOAT, ImmutableList.of(1.0f, 2.0f))
+                      : in("m1", ImmutableList.of("1", "2"))
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
@@ -7324,6 +7309,166 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[1,0,null]"}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByNestedArrayInline()
+  {
+    cannotVectorize();
+    // msq does not support nested arrays currently
+    msqIncompatible();
+    testQuery(
+        "SELECT c1, ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) c5 \n"
+        + "FROM (VALUES (1,1),(2,2),(3,3)) t(c1,c2)\n"
+        + "GROUP BY 1 \n"
+        + "HAVING ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) <> ARRAY_PREPEND('0', ARRAY_AGG(ARRAY[1,c2], 100000))",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            InlineDataSource.fromIterable(
+                                ImmutableList.of(
+                                    new Object[]{1L, 1L},
+                                    new Object[]{2L, 2L},
+                                    new Object[]{3L, 3L}
+                                ),
+                                RowSignature.builder()
+                                            .add("c1", ColumnType.LONG)
+                                            .add("c2", ColumnType.LONG)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                            "v0",
+                            "array(1,\"c2\")",
+                            ColumnType.LONG_ARRAY
+                            )
+                        )
+                        .setDimensions(new DefaultDimensionSpec("c1", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(
+                            new ExpressionLambdaAggregatorFactory(
+                                "a0",
+                                ImmutableSet.of("v0"),
+                                "__acc",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                true,
+                                true,
+                                false,
+                                "array_append(\"__acc\", \"v0\")",
+                                "array_concat(\"__acc\", \"a0\")",
+                                null,
+                                null,
+                                HumanReadableBytes.valueOf(100000),
+                                TestExprMacroTable.INSTANCE
+                            )
+                        )
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg(
+                                "p0",
+                                "array_prepend('1',\"a0\")",
+                                ColumnType.ofArray(ColumnType.LONG_ARRAY)
+                            )
+                        )
+                        .setHavingSpec(
+                            new DimFilterHavingSpec(
+                                expressionFilter("(array_prepend('1',\"a0\") != array_prepend('0',\"a0\"))"),
+                                true
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1, ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 1L))},
+            new Object[]{2, ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 2L))},
+            new Object[]{3, ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 3L))}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByNestedArrayInlineCount()
+  {
+    cannotVectorize();
+    // msq does not support nested arrays currently
+    msqIncompatible();
+    testQuery(
+        "SELECT COUNT(*) c FROM (\n"
+        + "SELECT c1, ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) c5 \n"
+        + "FROM (VALUES (1,1),(2,2),(3,3)) t(c1,c2)\n"
+        + "GROUP BY 1 \n"
+        + "HAVING ARRAY_PREPEND('1', ARRAY_AGG(ARRAY[1,c2], 100000)) <> ARRAY_PREPEND('0', ARRAY_AGG(ARRAY[1,c2], 100000))\n"
+        + ")",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(
+                                            InlineDataSource.fromIterable(
+                                                ImmutableList.of(
+                                                    new Object[]{1L, 1L},
+                                                    new Object[]{2L, 2L},
+                                                    new Object[]{3L, 3L}
+                                                ),
+                                                RowSignature.builder()
+                                                            .add("c1", ColumnType.LONG)
+                                                            .add("c2", ColumnType.LONG)
+                                                            .build()
+                                            )
+                                        )
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setVirtualColumns(
+                                            expressionVirtualColumn(
+                                                "v0",
+                                                "array(1,\"c2\")",
+                                                ColumnType.LONG_ARRAY
+                                            )
+                                        )
+                                        .setDimensions(new DefaultDimensionSpec("c1", "d0", ColumnType.LONG))
+                                        .setAggregatorSpecs(
+                                            new ExpressionLambdaAggregatorFactory(
+                                                "a0",
+                                                ImmutableSet.of("v0"),
+                                                "__acc",
+                                                "ARRAY<ARRAY<LONG>>[]",
+                                                "ARRAY<ARRAY<LONG>>[]",
+                                                true,
+                                                true,
+                                                false,
+                                                "array_append(\"__acc\", \"v0\")",
+                                                "array_concat(\"__acc\", \"a0\")",
+                                                null,
+                                                null,
+                                                HumanReadableBytes.valueOf(100000),
+                                                TestExprMacroTable.INSTANCE
+                                            )
+                                        )
+                                        .setHavingSpec(
+                                            new DimFilterHavingSpec(
+                                                expressionFilter(
+                                                    "(array_prepend('1',\"a0\") != array_prepend('0',\"a0\"))"),
+                                                true
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
         )
     );
   }

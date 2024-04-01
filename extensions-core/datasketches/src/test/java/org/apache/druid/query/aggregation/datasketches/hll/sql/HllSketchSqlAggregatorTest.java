@@ -76,7 +76,6 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -86,9 +85,8 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -257,12 +255,12 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactoryWrapper joinableFactory,
       final Injector injector
-  ) throws IOException
+  )
   {
     HllSketchModule.registerSerde();
     final QueryableIndex index = IndexBuilder
         .create()
-        .tmpDir(temporaryFolder.newFolder())
+        .tmpDir(newTempFolder())
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(
             new IncrementalIndexSchema.Builder()
@@ -1165,7 +1163,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testHllWithOrderedWindowing()
   {
     testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql(
             "SELECT dim1,coalesce(cast(l1 as integer),-999),"
                 + " HLL_SKETCH_ESTIMATE( DS_HLL(dim1) OVER ( ORDER BY l1 ), true)"
@@ -1192,7 +1189,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     skipVectorize();
     for (int i = 0; i < 2; i++) {
       testBuilder()
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
           .sql(
               "SELECT "
                   + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"

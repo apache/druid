@@ -122,7 +122,8 @@ public class TaskQueueScaleTest
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
         new TaskLockbox(taskStorage, storageCoordinator),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        jsonMapper
     );
 
     taskQueue.start();

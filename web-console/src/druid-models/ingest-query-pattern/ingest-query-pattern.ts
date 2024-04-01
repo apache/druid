@@ -23,6 +23,7 @@ import {
   SqlPartitionedByClause,
   SqlQuery,
   SqlReplaceClause,
+  SqlTable,
   SqlWithPart,
   T,
 } from '@druid-toolkit/query';
@@ -150,11 +151,15 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
   let mode: IngestMode;
   let overwriteWhere: SqlExpression | undefined;
   if (query.insertClause) {
+    const { table } = query.insertClause;
+    if (!(table instanceof SqlTable)) throw new Error('Have to insert into a table');
     mode = 'insert';
-    destinationTableName = query.insertClause.table.getName();
+    destinationTableName = table.getName();
   } else if (query.replaceClause) {
+    const { table } = query.replaceClause;
+    if (!(table instanceof SqlTable)) throw new Error('Have to replace into a table');
     mode = 'replace';
-    destinationTableName = query.replaceClause.table.getName();
+    destinationTableName = table.getName();
     overwriteWhere = query.replaceClause.whereClause?.expression;
   } else {
     throw new Error(`Must have an INSERT or REPLACE clause`);
