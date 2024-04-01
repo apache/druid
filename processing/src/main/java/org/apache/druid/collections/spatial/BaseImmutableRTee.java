@@ -17,15 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.collections.spatial.search;
+package org.apache.druid.collections.spatial;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.collections.spatial.ImmutableNode;
+import org.apache.druid.collections.spatial.search.Bound;
 
-
-/**
- */
-public interface SearchStrategy<TCoordinateArray, TPoint extends ImmutableNode<TCoordinateArray>>
+public interface BaseImmutableRTee
 {
-  Iterable<ImmutableBitmap> search(ImmutableNode<TCoordinateArray> node, Bound<TCoordinateArray, TPoint> bound);
+  Iterable<ImmutableBitmap> search(Bound bound);
 }
