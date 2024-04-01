@@ -51,7 +51,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: apache/druid:30.0.0
+    image: apache/druid:v1
     container_name: coordinator
     volumes:
       - druid_shared:/opt/shared
@@ -66,69 +66,4 @@ services:
     env_file:
       - environment
 
-  broker:
-    image: apache/druid:30.0.0
-    container_name: broker
-    volumes:
-      - broker_var:/opt/druid/var
-    depends_on:
-      - zookeeper
-      - postgres
-      - coordinator
-    ports:
-      - "8082:8082"
-    command:
-      - broker
-    env_file:
-      - environment
 
-  historical:
-    image: apache/druid:30.0.0
-    container_name: historical
-    volumes:
-      - druid_shared:/opt/shared
-      - historical_var:/opt/druid/var
-    depends_on: 
-      - zookeeper
-      - postgres
-      - coordinator
-    ports:
-      - "8083:8083"
-    command:
-      - historical
-    env_file:
-      - environment
-
-  middlemanager:
-    image: apache/druid:30.0.0
-    container_name: middlemanager
-    volumes:
-      - druid_shared:/opt/shared
-      - middle_var:/opt/druid/var
-    depends_on: 
-      - zookeeper
-      - postgres
-      - coordinator
-    ports:
-      - "8091:8091"
-      - "8100-8105:8100-8105"
-    command:
-      - middleManager
-    env_file:
-      - environment
-
-  router:
-    image: apache/druid:30.0.0
-    container_name: router
-    volumes:
-      - router_var:/opt/druid/var
-    depends_on:
-      - zookeeper
-      - postgres
-      - coordinator
-    ports:
-      - "8888:8888"
-    command:
-      - router
-    env_file:
-      - environment
