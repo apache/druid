@@ -92,14 +92,6 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
 
       createTableMetadata(tableBuilder.build());
     });
-    DatasourceFacade catalogMetadata =
-        ((DatasourceTable) resolvedTables.get("foo")).effectiveMetadata().catalogMetadata();
-    TableBuilder tableBuilder = TableBuilder.datasource("foo", catalogMetadata.segmentGranularityString());
-    catalogMetadata.columnFacades().forEach(
-        columnFacade -> {
-          tableBuilder.column(columnFacade.spec().name(), columnFacade.spec().dataType());
-        }
-    );
   }
 
   private void createTableMetadata(TableMetadata table)

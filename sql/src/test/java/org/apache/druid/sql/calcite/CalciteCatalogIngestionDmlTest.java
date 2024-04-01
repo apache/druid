@@ -31,6 +31,7 @@ import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
@@ -152,7 +153,8 @@ public class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
                           new ColumnSpec("dim3", Columns.STRING, null),
                           new ColumnSpec("cnt", Columns.LONG, null),
                           new ColumnSpec("m1", Columns.FLOAT, null),
-                          new ColumnSpec("m2", Columns.DOUBLE, null)
+                          new ColumnSpec("m2", Columns.DOUBLE, null),
+                          new ColumnSpec("unique_dim1", HyperUniquesAggregatorFactory.TYPE.asTypeString(), null)
                       )
                   ),
                   MAPPER

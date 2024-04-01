@@ -24,6 +24,9 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
@@ -198,6 +201,96 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
   }
 
   /**
+   * Adding a new column during group by ingestion that is not defined in a non-sealed table should succeed.
+   */
+  @Test
+  public void testGroupByInsertAddNonDefinedColumnIntoNonSealedCatalogTable()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .add("m2", ColumnType.DOUBLE)
+        .add("extra2", ColumnType.LONG)
+        .add("extra3", ColumnType.STRING)
+        .add("extra4_complex", ColumnType.LONG)
+        .build();
+    testIngestionQuery()
+        .sql("INSERT INTO foo\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  1 AS cnt,\n" +
+             "  c AS m2,\n" +
+             "  CAST(d AS BIGINT) AS extra2,\n" +
+             "  e AS extra3,\n" +
+             "  APPROX_COUNT_DISTINCT_BUILTIN(c) as extra4_complex\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "GROUP BY 1,2,3,4,5,6\n" +
+             "PARTITIONED BY ALL TIME"
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("foo", signature)
+        .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            GroupByQuery.builder()
+                .setDataSource(externalDataSource)
+                .setGranularity(Granularities.ALL)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setVirtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG)
+                )
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+                        new DefaultDimensionSpec("b", "d1", ColumnType.STRING),
+                        new DefaultDimensionSpec("c", "d3", ColumnType.LONG),
+                        new DefaultDimensionSpec("d", "d4", ColumnType.LONG),
+                        new DefaultDimensionSpec("e", "d5", ColumnType.STRING)
+                    )
+                )
+                .setAggregatorSpecs(
+                    new CardinalityAggregatorFactory(
+                        "a0",
+                        null,
+                        ImmutableList.of(
+                            new DefaultDimensionSpec(
+                                "c",
+                                "c",
+                                ColumnType.LONG
+                            )
+                        ),
+                        false,
+                        true
+                    )
+                )
+                .setPostAggregatorSpecs(
+                    expressionPostAgg("p0", "1", ColumnType.LONG),
+                    expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
    * Adding a new column during ingestion that is not defined in a sealed table should fail with
    * proper validation error.
    */
@@ -291,6 +384,100 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
         .verify();
   }
 
+  /**
+   * Adding a new column during group by ingestion that is not defined in a non-sealed table should succeed.
+   */
+  @Test
+  public void testGroupByInsertWithSourceIntoCatalogTable()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .add("m2", ColumnType.DOUBLE)
+        .add("extra2", ColumnType.LONG)
+        .add("extra3", ColumnType.STRING)
+        .add("extra4_complex", ColumnType.LONG)
+        .build();
+    testIngestionQuery()
+        .sql("INSERT INTO foo\n" +
+             "WITH \"ext\" AS (\n" +
+             "  SELECT *\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             ")\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  1 AS cnt,\n" +
+             "  c AS m2,\n" +
+             "  CAST(d AS BIGINT) AS extra2,\n" +
+             "  e AS extra3,\n" +
+             "  APPROX_COUNT_DISTINCT_BUILTIN(c) as extra4_complex\n" +
+             "FROM \"ext\"\n" +
+             "GROUP BY 1,2,3,4,5,6\n" +
+             "PARTITIONED BY ALL TIME"
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("foo", signature)
+        .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            GroupByQuery.builder()
+                .setDataSource(externalDataSource)
+                .setGranularity(Granularities.ALL)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setVirtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG)
+                )
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+                        new DefaultDimensionSpec("b", "d1", ColumnType.STRING),
+                        new DefaultDimensionSpec("c", "d3", ColumnType.LONG),
+                        new DefaultDimensionSpec("d", "d4", ColumnType.LONG),
+                        new DefaultDimensionSpec("e", "d5", ColumnType.STRING)
+                    )
+                )
+                .setAggregatorSpecs(
+                    new CardinalityAggregatorFactory(
+                        "a0",
+                        null,
+                        ImmutableList.of(
+                            new DefaultDimensionSpec(
+                                "c",
+                                "c",
+                                ColumnType.LONG
+                            )
+                        ),
+                        false,
+                        true
+                    )
+                )
+                .setPostAggregatorSpecs(
+                    expressionPostAgg("p0", "1", ColumnType.LONG),
+                    expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
   @Test
   public void testInsertIntoExistingStrictNoDefinedSchema()
   {
@@ -315,6 +502,22 @@ public class CalciteCatalogInsertTest extends CalciteCatalogIngestionDmlTest
         .expectValidationError(
             DruidException.class,
             "Cannot assign to target field 'dim1' of type VARCHAR from source field 'dim1' of type VARCHAR ARRAY (line [4], column [3])")
+        .verify();
+  }
+
+  @Test
+  public void testGroupByInsertIntoExistingWithIncompatibleTypeAssignment()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO foo\n"
+             + "SELECT\n"
+             + "  __time AS __time,\n"
+             + "  ARRAY[dim1] AS unique_dim1\n"
+             + "FROM foo\n"
+             + "PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            DruidException.class,
+            "Cannot assign to target field 'unique_dim1' of type COMPLEX<hyperUnique> from source field 'unique_dim1' of type VARCHAR ARRAY (line [4], column [3])")
         .verify();
   }
 }

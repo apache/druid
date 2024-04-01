@@ -41,7 +41,6 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
@@ -54,18 +53,19 @@ import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -474,18 +474,21 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         continue;
       }
       SqlTypeName sqlTypeName = SqlTypeName.get(definedCol.sqlStorageType());
-      RelDataType relType = typeFactory.createSqlType(sqlTypeName);
-      if (NullHandling.replaceWithDefault() && !SqlTypeFamily.STRING.contains(relType)) {
-        fields.add(Pair.of(
-            colName,
-            relType
-        ));
+      RelDataType relType;
+      if (sqlTypeName != null) {
+        relType = typeFactory.createSqlType(sqlTypeName);
       } else {
-        fields.add(Pair.of(
-            colName,
-            typeFactory.createTypeWithNullability(relType, true)
-        ));
+        relType = RowSignatures.columnTypeToRelDataType(
+            typeFactory,
+            ColumnType.fromString(definedCol.sqlStorageType()),
+            sourceField.getType().isNullable()
+        );
       }
+
+      fields.add(Pair.of(
+          colName,
+          typeFactory.createTypeWithNullability(relType, sourceField.getType().isNullable())
+      ));
     }
 
     // Perform the SQL-standard check: that the SELECT column can be
@@ -516,7 +519,17 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       ColumnType sourceFieldColumnType = Calcites.getColumnTypeForRelDataType(sourceFielRelDataType);
       ColumnType targetFieldColumnType = Calcites.getColumnTypeForRelDataType(targetFieldRelDataType);
 
-      if (targetFieldColumnType != ColumnType.leastRestrictiveType(targetFieldColumnType, sourceFieldColumnType)) {
+      boolean incompatible;
+      try {
+        incompatible = !Objects.equals(
+            targetFieldColumnType,
+            ColumnType.leastRestrictiveType(targetFieldColumnType, sourceFieldColumnType)
+        );
+      }
+      catch (Types.IncompatibleTypeException e) {
+        incompatible = true;
+      }
+      if (incompatible) {
         SqlNode node = getNthExpr(query, i, sourceCount);
         String targetTypeString;
         String sourceTypeString;
