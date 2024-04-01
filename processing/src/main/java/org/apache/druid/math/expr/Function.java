@@ -241,6 +241,9 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
+      // can not vectorize in default mode for 'missing' columns
+      // it creates inconsistencies as we default the output type to STRING, making the value null
+      // but the numeric columns expect a non null value
       final ExpressionType outputType = args.get(0).getOutputType(inspector);
       if (outputType == null && NullHandling.replaceWithDefault()) {
         return false;
