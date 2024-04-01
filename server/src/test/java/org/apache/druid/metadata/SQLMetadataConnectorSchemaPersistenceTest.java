@@ -163,6 +163,8 @@ public class SQLMetadataConnectorSchemaPersistenceTest
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
     ));
+
+    Assert.assertTrue(connector.constraintExists(SQLMetadataConnector.SCHEMA_ID_CONSTRAINT_NAME, derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()));
   }
 
   private CentralizedDatasourceSchemaConfig getEnabledConfig()

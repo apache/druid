@@ -219,6 +219,19 @@ public class SQLServerConnector extends SQLMetadataConnector
   }
 
   @Override
+  public boolean constraintExists(String constraintName, String tableName)
+  {
+    return getDBI().withHandle(
+        handle -> handle.createQuery(
+                            "select CONSTRAINT_NAME from INFORMATION_SCHEMA.KEY_COLUMN_USAGE where "
+                            + "CONSTRAINT_NAME = :constraintName AND TABLE_NAME = :tableName")
+                        .bind("constraintName", constraintName)
+                        .bind("tableName", tableName)
+                        .list()
+                        .isEmpty());
+  }
+
+  @Override
   public String limitClause(int limit)
   {
     return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);

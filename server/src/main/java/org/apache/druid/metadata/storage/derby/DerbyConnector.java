@@ -92,6 +92,19 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
+  public boolean constraintExists(String constraintName, String tableName)
+  {
+    return getDBI().withHandle(
+        handle -> !handle.createQuery(
+            "select c.CONSTRAINTNAME FROM SYS.SYSCONSTRAINTS c JOIN SYS.SYSTABLES t on c.TABLEID = t.TABLEID WHERE t.TABLENAME = :tableName and c.CONSTRAINTNAME = :constraintName")
+                         .bind("tableName", StringUtils.toUpperCase(tableName))
+                         .bind("constraintName", StringUtils.toUpperCase(constraintName))
+                         .list()
+                         .isEmpty()
+    );
+  }
+
+  @Override
   public String getSerialType()
   {
     return SERIAL_TYPE;
