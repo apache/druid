@@ -2548,9 +2548,9 @@ public class IndexTaskTest extends IngestionTestBase
 
   private IngestionStatsAndErrors getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = jsonMapper.readValue(
+    TaskReport.ReportMap taskReports = jsonMapper.readValue(
         taskRunner.getTaskReportsFile(),
-        new TypeReference<Map<String, TaskReport>>()
+        new TypeReference<TaskReport.ReportMap>()
         {
         }
     );

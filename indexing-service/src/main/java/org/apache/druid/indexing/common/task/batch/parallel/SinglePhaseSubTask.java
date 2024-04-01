@@ -282,7 +282,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .transform(PartitionChunk::getObject)
                                                          .toSet();
 
-      Map<String, TaskReport> taskReport = getTaskCompletionReports();
+      TaskReport.ReportMap taskReport = getTaskCompletionReports();
       taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
@@ -542,23 +542,13 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
-  private Map<String, Object> doGetLiveReports(boolean isFullReport)
+  private TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-    Map<String, Object> events = getTaskCompletionUnparseableEvents();
-
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(isFullReport));
-
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return returnMap;
+    return buildLiveIngestionStatsReport(
+        ingestionState,
+        getTaskCompletionUnparseableEvents(),
+        doGetRowStats(isFullReport)
+    );
   }
 
   @GET
@@ -585,7 +575,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private TaskReport.ReportMap getTaskCompletionReports()
   {
     return buildIngestionStatsReport(IngestionState.COMPLETED, errorMsg, null, null);
   }

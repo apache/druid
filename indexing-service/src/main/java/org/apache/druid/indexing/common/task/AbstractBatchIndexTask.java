@@ -903,11 +903,35 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return null;
   }
 
+  protected TaskReport.ReportMap buildLiveIngestionStatsReport(
+      IngestionState ingestionState,
+      Map<String, Object> unparseableEvents,
+      Map<String, Object> rowStats
+  )
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrors(
+                ingestionState,
+                unparseableEvents,
+                rowStats,
+                null,
+                false,
+                0L,
+                null,
+                null,
+                null
+            )
+        )
+    );
+  }
+
   /**
    * Builds a singleton map with {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY}
    * as key and an {@link IngestionStatsAndErrorsTaskReport} for this task as value.
    */
-  protected Map<String, TaskReport> buildIngestionStatsReport(
+  protected TaskReport.ReportMap buildIngestionStatsReport(
       IngestionState ingestionState,
       String errorMessage,
       Long segmentsRead,

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
@@ -270,9 +269,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   /**
    * Converts ParseSpec to InputFormat for indexing tests. To be used until {@link FirehoseFactory}
    * & {@link InputRowParser} is deprecated and removed.
-   *
-   * @param parseSpec
-   * @return
    */
   public static InputFormat createInputFormatFromParseSpec(ParseSpec parseSpec)
   {
@@ -510,11 +506,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
   }
 
-  public Map<String, TaskReport> getReports() throws IOException
+  public TaskReport.ReportMap getReports() throws IOException
   {
-    return objectMapper.readValue(reportsFile, new TypeReference<Map<String, TaskReport>>()
-    {
-    });
+    return objectMapper.readValue(reportsFile, TaskReport.ReportMap.class);
   }
 
   public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
