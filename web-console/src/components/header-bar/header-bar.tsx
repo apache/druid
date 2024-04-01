@@ -385,7 +385,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
                   working around issues with the automatic capability detecting logic.
                 </p>
                 <p>
-                  If you are unsure why the console is in ths mode mode, revert to using automatic
+                  If you are unsure why the console is in this mode, revert to using automatic
                   capability detection.
                 </p>
                 <p>
