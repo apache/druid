@@ -300,13 +300,13 @@ public class RowBasedFrameWriter implements FrameWriter
                                       .column(signature.getColumnName(i))
                                       .build();
       }
-      catch (ParseException pe){
+      catch (ParseException pe) {
         throw Throwables.propagate(pe);
       }
       catch (Exception e) {
         throw FrameFieldWriterException.builder().column(signature.getColumnName(i))
-                                                     .errorMsg(e.getMessage())
-                                                     .build();
+                                       .errorMsg(e.getMessage())
+                                       .build();
       }
 
       if (writeResult < 0) {
