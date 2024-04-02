@@ -43,8 +43,8 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Runs {@link CalciteUnionQueryTest} but with MSQ engine
@@ -56,7 +56,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
   {
     super.configureGuice(builder);
     builder.addModules(
-        CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+        CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
     );
   }
 
@@ -93,8 +93,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
     return new QueryTestBuilder(new BaseCalciteQueryTest.CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
-        .msqCompatible(msqCompatible);
+        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
   /**
@@ -114,7 +113,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 
   }
 
-  @Ignore("Ignored till MSQ can plan UNION ALL with any operand")
+  @Disabled("Ignored till MSQ can plan UNION ALL with any operand")
   @Test
   public void testUnionOnSubqueries()
   {

@@ -32,7 +32,6 @@ import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
@@ -68,8 +67,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      ColumnBuilder columnBuilder
   )
   {
     final byte version = bb.get();
@@ -174,10 +172,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
             arrayDictionarybuffer,
             byteOrder
         );
-        final int size;
-        try (ColumnarInts throwAway = ints.get()) {
-          size = throwAway.size();
-        }
         arrayElementDictionarySupplier = FixedIndexed.read(
             arrayElementDictionaryBuffer,
             CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
@@ -195,9 +189,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
             ints,
             valueIndexes,
             arrayElementIndexes,
-            bitmapSerdeFactory.getBitmapFactory(),
-            columnConfig,
-            size
+            bitmapSerdeFactory.getBitmapFactory()
         );
       }
       catch (IOException ex) {
@@ -219,9 +211,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
   private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
   private final Supplier<ColumnarInts> encodedValueColumnSupplier;
-  @SuppressWarnings("unused")
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
-  @SuppressWarnings("unused")
   private final GenericIndexed<ImmutableBitmap> arrayElementIndexes;
   private final ImmutableBitmap nullValueBitmap;
 
@@ -236,9 +226,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       Supplier<ColumnarInts> encodedValueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       GenericIndexed<ImmutableBitmap> elementIndexes,
-      BitmapFactory bitmapFactory,
-      @SuppressWarnings("unused") ColumnConfig columnConfig,
-      @SuppressWarnings("unused") int numRows
+      BitmapFactory bitmapFactory
   )
   {
     this.logicalType = logicalType;

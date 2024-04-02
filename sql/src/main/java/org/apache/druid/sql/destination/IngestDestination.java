@@ -29,5 +29,5 @@ import org.apache.druid.guice.annotations.UnstableApi;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface IngestDestination
 {
-  String getType();
+  String getDestinationName();
 }

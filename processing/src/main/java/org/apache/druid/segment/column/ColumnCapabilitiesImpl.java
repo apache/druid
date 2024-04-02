@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 /**
  *
  */
+@SuppressWarnings("Immutable")
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
   public static final CoercionLogic ALL_FALSE = new CoercionLogic()

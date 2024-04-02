@@ -27,11 +27,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -90,7 +88,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
@@ -876,14 +873,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         Preconditions.checkNotNull(id, "id");
         Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
         if (taskRunner.isPresent()) {
-          Optional<? extends TaskRunnerWorkItem> item = Iterables.tryFind(
-              taskRunner.get().getRunningTasks(),
-              (Predicate<TaskRunnerWorkItem>) taskRunnerWorkItem -> id.equals(taskRunnerWorkItem.getTaskId())
-          );
-
-          if (item.isPresent()) {
-            return item.get().getLocation();
-          }
+          return taskRunner.get().getTaskLocation(id);
         } else {
           log.error("Failed to get task runner because I'm not the leader!");
         }
@@ -894,7 +884,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @Override
       public Optional<TaskStatus> getTaskStatus(String id)
       {
-        return taskStorage.getStatus(id);
+        final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+        if (taskQueue.isPresent()) {
+          return taskQueue.get().getTaskStatus(id);
+        } else {
+          return taskStorage.getStatus(id);
+        }
       }
     };
 
@@ -1159,14 +1154,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     Instant handleNoticeEndTime = Instant.now();
                     Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
                     String noticeType = notice.getType();
-                    log.debug(
-                        "Handled notice [%s] from notices queue in [%d] ms, "
-                        + "current notices queue size [%d] for datasource [%s]",
-                        noticeType,
-                        timeElapsed.toMillis(),
-                        getNoticesQueueSize(),
-                        dataSource
-                    );
+                    if (log.isDebugEnabled()) {
+                      log.debug(
+                          "Handled notice [%s] from notices queue in [%d] ms, "
+                              + "current notices queue size [%d] for datasource [%s]",
+                          noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource
+                      );
+                    }
                     emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {
@@ -3939,9 +3933,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         try {
           taskQueue.get().add(indexTask);
         }
-        catch (EntryExistsException e) {
+        catch (DruidException e) {
           stateManager.recordThrowableEvent(e);
-          log.error("Tried to add task [%s] but it already exists", indexTask.getId());
+          log.noStackTrace().error(e, "Tried to add task [%s] but encountered error", indexTask.getId());
         }
       } else {
         log.error("Failed to get task queue because I'm not the leader!");

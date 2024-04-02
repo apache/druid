@@ -45,13 +45,18 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.Test;
+import org.hamcrest.CoreMatchers;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests the input-source-specific table functions: http, inline and localfiles.
@@ -318,11 +323,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"," +
         "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\"," +
         "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}," +
-        "\"granularity\":{\"type\":\"all\"}}," +
+        "\"columnTypes\":[\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"}}," +
         "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]," +
         "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"dst\"},\"partitionedBy\":{\"type\":\"all\"}}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"}}";
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
@@ -349,16 +354,16 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
         "PARTITIONED BY ALL TIME";
     didTest = true; // Else the framework will complain
-    testBuilder()
-        .plannerConfig(PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN)
-        .sql(query)
-        // Regular user does not have permission on extern or other table functions
-        .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
-        .expectedException(expected -> {
-          expected.expect(ForbiddenException.class);
-          expected.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
-        })
-        .run();
+    ForbiddenException e = assertThrows(
+        ForbiddenException.class,
+        () -> testBuilder()
+            .plannerConfig(PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN)
+            .sql(query)
+            // Regular user does not have permission on extern or other table functions
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .run()
+    );
+    assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(Access.DEFAULT_ERROR_MESSAGE)));
   }
 
   @Test

@@ -83,9 +83,14 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
 
     for (int i = 0; i < frame.numRows(); i++) {
-      final boolean isPartiallyNull =
-          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).limit(3).anyMatch(Objects::isNull);
-      Assert.assertEquals(isPartiallyNull, !widget.isCompletelyNonNullKey(i));
+      final boolean isAllNonNull =
+          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).limit(3).allMatch(Objects::nonNull);
+
+      // null key part, if any, is always the second one (1)
+      Assert.assertTrue(widget.hasNonNullKeyParts(i, new int[0]));
+      Assert.assertTrue(widget.hasNonNullKeyParts(i, new int[]{0, 2}));
+      Assert.assertEquals(isAllNonNull, widget.hasNonNullKeyParts(i, new int[]{0, 1, 2}));
+      Assert.assertEquals(isAllNonNull, widget.hasNonNullKeyParts(i, new int[]{1}));
     }
   }
 
@@ -102,9 +107,9 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
 
     for (int i = 0; i < frame.numRows(); i++) {
-      final boolean isPartiallyNull =
-          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).anyMatch(Objects::isNull);
-      Assert.assertEquals(isPartiallyNull, !widget.isCompletelyNonNullKey(i));
+      final boolean isAllNonNull =
+          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).allMatch(Objects::nonNull);
+      Assert.assertEquals(isAllNonNull, widget.hasNonNullKeyParts(i, new int[]{0, 1, 2, 3}));
     }
   }
 

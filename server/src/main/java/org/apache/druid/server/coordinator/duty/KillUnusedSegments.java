@@ -19,11 +19,9 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -31,9 +29,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
@@ -41,6 +42,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +55,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * negative meaning the interval end target will be in the future. Also, {@link #durationToRetain} can be ignored if
  * {@link #ignoreDurationToRetain} is enabled, meaning that there is no upper bound to the end interval of segments that
  * will be killed. The umbrella interval of the unused segments per datasource to be killed is determined by
- * {@link #findIntervalForKill(String, DateTime)}, which takes into account the configured {@link #bufferPeriod}. However,
- * the kill task needs to check again for max {@link #bufferPeriod} for the unused segments in the widened interval
+ * {@link #findIntervalForKill(String, DateTime, CoordinatorRunStats)}, which takes into account the configured {@link #bufferPeriod}.
+ * However, the kill task needs to check again for max {@link #bufferPeriod} for the unused segments in the widened interval
  * as there can be multiple unused segments with different {@code used_status_last_updated} time.
  * </p>
  * <p>
@@ -65,7 +67,8 @@ public class KillUnusedSegments implements CoordinatorDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
-  public static final Predicate<TaskStatusPlus> IS_AUTO_KILL_TASK =
+
+  private static final Predicate<TaskStatusPlus> IS_AUTO_KILL_TASK =
       status -> null != status
                 && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
@@ -87,29 +90,37 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final OverlordClient overlordClient;
 
   public KillUnusedSegments(
-      SegmentsMetadataManager segmentsMetadataManager,
-      OverlordClient overlordClient,
-      DruidCoordinatorConfig config
+      final SegmentsMetadataManager segmentsMetadataManager,
+      final OverlordClient overlordClient,
+      final DruidCoordinatorConfig config
   )
   {
     if (config.getCoordinatorKillPeriod().getMillis() < config.getCoordinatorIndexingPeriod().getMillis()) {
-      throw InvalidInput.exception(
-          "druid.coordinator.kill.period[%s] must be >= druid.coordinator.period.indexingPeriod[%s]",
-          config.getCoordinatorKillPeriod(),
-          config.getCoordinatorIndexingPeriod()
-      );
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              StringUtils.format(
+                                     "druid.coordinator.kill.period[%s] is invalid. It must be greater than or "
+                                     + "equal to druid.coordinator.period.indexingPeriod[%s].",
+                                     config.getCoordinatorKillPeriod(),
+                                     config.getCoordinatorIndexingPeriod()
+                                 )
+                          );
     }
     if (config.getCoordinatorKillMaxSegments() < 0) {
-      throw InvalidInput.exception(
-          "druid.coordinator.kill.maxSegments[%s] is invalid. It must be a positive integer.",
-          config.getCoordinatorKillMaxSegments()
-      );
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(StringUtils.format(
+                                     "druid.coordinator.kill.maxSegments[%d] is invalid. It must be a positive integer.",
+                                     config.getCoordinatorKillMaxSegments()
+                                 )
+                          );
     }
     this.period = config.getCoordinatorKillPeriod();
     this.ignoreDurationToRetain = config.getCoordinatorKillIgnoreDurationToRetain();
     this.durationToRetain = config.getCoordinatorKillDurationToRetain();
     if (this.ignoreDurationToRetain) {
-      log.debug(
+      log.info(
           "druid.coordinator.kill.durationToRetain[%s] will be ignored when discovering segments to kill "
           + "because druid.coordinator.kill.ignoreDurationToRetain is set to true.",
           this.durationToRetain
@@ -132,7 +143,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  public DruidCoordinatorRuntimeParams run(final DruidCoordinatorRuntimeParams params)
   {
     if (!canDutyRun()) {
       log.debug(
@@ -146,130 +157,129 @@ public class KillUnusedSegments implements CoordinatorDuty
     return runInternal(params);
   }
 
-  @VisibleForTesting
-  DruidCoordinatorRuntimeParams runInternal(DruidCoordinatorRuntimeParams params)
+  private DruidCoordinatorRuntimeParams runInternal(final DruidCoordinatorRuntimeParams params)
   {
-    TaskStats taskStats = new TaskStats();
-    Collection<String> dataSourcesToKill =
-        params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
-    double killTaskSlotRatio = params.getCoordinatorDynamicConfig().getKillTaskSlotRatio();
-    int maxKillTaskSlots = params.getCoordinatorDynamicConfig().getMaxKillTaskSlots();
-    int killTaskCapacity = getKillTaskCapacity(
-        CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient),
-        killTaskSlotRatio,
-        maxKillTaskSlots
-    );
-    int availableKillTaskSlots = getAvailableKillTaskSlots(
-        killTaskCapacity,
-        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
-    );
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
 
-    taskStats.availableTaskSlots = availableKillTaskSlots;
-    taskStats.maxSlots = killTaskCapacity;
+    final int availableKillTaskSlots = getAvailableKillTaskSlots(dynamicConfig, stats);
+    Collection<String> dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
 
-    if (0 < availableKillTaskSlots) {
+    if (availableKillTaskSlots > 0) {
       // If no datasource has been specified, all are eligible for killing unused segments
       if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
         dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
       }
 
-      log.debug("Killing unused segments for datasources[%s]", dataSourcesToKill);
       lastKillTime = DateTimes.nowUtc();
-      taskStats.submittedTasks = killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
+      killUnusedSegments(dataSourcesToKill, availableKillTaskSlots, stats);
     }
 
     // any datasources that are no longer being considered for kill should have their
     // last kill interval removed from map.
     datasourceToLastKillIntervalEnd.keySet().retainAll(dataSourcesToKill);
-    addStats(taskStats, stats);
     return params;
   }
 
-  private void addStats(
-      TaskStats taskStats,
-      CoordinatorRunStats stats
+  /**
+   * Spawn kill tasks for each datasource in {@code dataSourcesToKill} upto {@code availableKillTaskSlots}.
+   */
+  private void killUnusedSegments(
+      @Nullable final Collection<String> dataSourcesToKill,
+      final int availableKillTaskSlots,
+      final CoordinatorRunStats stats
   )
   {
-    stats.add(Stats.Kill.AVAILABLE_SLOTS, taskStats.availableTaskSlots);
-    stats.add(Stats.Kill.SUBMITTED_TASKS, taskStats.submittedTasks);
-    stats.add(Stats.Kill.MAX_SLOTS, taskStats.maxSlots);
-  }
+    if (CollectionUtils.isNullOrEmpty(dataSourcesToKill) || availableKillTaskSlots <= 0) {
+      stats.add(Stats.Kill.SUBMITTED_TASKS, 0);
+      return;
+    }
 
-  private int killUnusedSegments(
-      Collection<String> dataSourcesToKill,
-      int availableKillTaskSlots
-  )
-  {
+    final Collection<String> remainingDatasourcesToKill = new ArrayList<>(dataSourcesToKill);
     int submittedTasks = 0;
-    if (0 < availableKillTaskSlots && !CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
-      for (String dataSource : dataSourcesToKill) {
-        if (submittedTasks >= availableKillTaskSlots) {
-          log.debug(StringUtils.format(
-              "Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
-              + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
-          break;
-        }
-        final DateTime maxUsedStatusLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
-        final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime);
-        if (intervalToKill == null) {
-          datasourceToLastKillIntervalEnd.remove(dataSource);
-          continue;
-        }
+    for (String dataSource : dataSourcesToKill) {
+      if (submittedTasks >= availableKillTaskSlots) {
+        log.info(
+            "Submitted [%d] kill tasks and reached kill task slot limit [%d].",
+            submittedTasks, availableKillTaskSlots
+        );
+        break;
+      }
+      final DateTime maxUsedStatusLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
+      final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime, stats);
+      if (intervalToKill == null) {
+        datasourceToLastKillIntervalEnd.remove(dataSource);
+        continue;
+      }
 
-        try {
-          FutureUtils.getUnchecked(
-              overlordClient.runKillTask(
-                  TASK_ID_PREFIX,
-                  dataSource,
-                  intervalToKill,
-                  maxSegmentsToKill,
-                  maxUsedStatusLastUpdatedTime
-              ),
-              true
-          );
-          ++submittedTasks;
-          datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
-        }
-        catch (Exception ex) {
-          log.error(ex, "Failed to submit kill task for dataSource[%s] in interval[%s]", dataSource, intervalToKill);
-          if (Thread.currentThread().isInterrupted()) {
-            log.warn("Skipping kill task scheduling because thread is interrupted.");
-            break;
-          }
+      try {
+        FutureUtils.getUnchecked(
+            overlordClient.runKillTask(
+                TASK_ID_PREFIX,
+                dataSource,
+                intervalToKill,
+                null,
+                maxSegmentsToKill,
+                maxUsedStatusLastUpdatedTime
+            ),
+            true
+        );
+        ++submittedTasks;
+        datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
+        remainingDatasourcesToKill.remove(dataSource);
+      }
+      catch (Exception ex) {
+        log.error(ex, "Failed to submit kill task for dataSource[%s] in interval[%s]", dataSource, intervalToKill);
+        if (Thread.currentThread().isInterrupted()) {
+          log.warn("Skipping kill task scheduling because thread is interrupted.");
+          break;
         }
       }
     }
 
-    if (log.isDebugEnabled()) {
-      log.debug(
-          "Submitted [%d] kill tasks for [%d] datasources.%s",
-          submittedTasks,
-          dataSourcesToKill.size(),
-          availableKillTaskSlots < dataSourcesToKill.size()
-              ? StringUtils.format(
-              " Datasources skipped: %s",
-              ImmutableList.copyOf(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size())
-          )
-              : ""
-      );
-    }
+    log.info(
+        "Submitted [%d] kill tasks for [%d] datasources. Remaining datasources to kill: %s",
+        submittedTasks, dataSourcesToKill.size(), remainingDatasourcesToKill
+    );
 
-    // report stats
-    return submittedTasks;
+    stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
   }
 
   /**
+   * <p>
    * Calculates the interval for which segments are to be killed in a datasource.
+   * Since this method compares datetime as strings, it cannot find unused segments that are outside
+   * the range [{@link DateTimes#COMPARE_DATE_AS_STRING_MIN}, {@link DateTimes#COMPARE_DATE_AS_STRING_MAX}),
+   * such as {@link org.apache.druid.java.util.common.granularity.Granularities#ALL} partitioned segments
+   * and segments that end in {@link DateTimes#MAX}.
+   *</p><p>
+   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
+   * </p>
    */
   @Nullable
-  private Interval findIntervalForKill(String dataSource, DateTime maxUsedStatusLastUpdatedTime)
+  private Interval findIntervalForKill(
+      final String dataSource,
+      final DateTime maxUsedStatusLastUpdatedTime,
+      final CoordinatorRunStats stats
+  )
   {
     final DateTime maxEndTime = ignoreDurationToRetain
                                 ? DateTimes.COMPARE_DATE_AS_STRING_MAX
                                 : DateTimes.nowUtc().minus(durationToRetain);
-    List<Interval> unusedSegmentIntervals = segmentsMetadataManager
-        .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill, maxUsedStatusLastUpdatedTime);
+
+    final List<Interval> unusedSegmentIntervals = segmentsMetadataManager.getUnusedSegmentIntervals(
+        dataSource,
+        datasourceToLastKillIntervalEnd.get(dataSource),
+        maxEndTime,
+        maxSegmentsToKill,
+        maxUsedStatusLastUpdatedTime
+    );
+
+    // Each unused segment interval returned above has a 1:1 correspondence with an unused segment. So we can assume
+    // these are eligible segments for deletion by the kill task. After the umbrella interval is computed
+    // below, we cannot say the same as there can be multiple unused segments with different usedStatusLastUpdatedTime.
+    final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
+    stats.add(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, datasourceKey, unusedSegmentIntervals.size());
 
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;
@@ -280,43 +290,25 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
   }
 
-  private int getAvailableKillTaskSlots(int killTaskCapacity, int numActiveKillTasks)
-  {
-    return Math.max(
-        0,
-        killTaskCapacity - numActiveKillTasks
-    );
-  }
-
   private boolean canDutyRun()
   {
     return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
-  @VisibleForTesting
-  static int getKillTaskCapacity(int totalWorkerCapacity, double killTaskSlotRatio, int maxKillTaskSlots)
+  private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
   {
-    return Math.min((int) (totalWorkerCapacity * Math.min(killTaskSlotRatio, 1.0)), maxKillTaskSlots);
-  }
+    final int killTaskCapacity = Math.min(
+        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient) * Math.min(config.getKillTaskSlotRatio(), 1.0)),
+        config.getMaxKillTaskSlots()
+    );
 
-  @VisibleForTesting
-  Map<String, DateTime> getDatasourceToLastKillIntervalEnd()
-  {
-    return datasourceToLastKillIntervalEnd;
-  }
+    final int availableKillTaskSlots = Math.max(
+        0,
+        killTaskCapacity - CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
+    );
 
-
-  static class TaskStats
-  {
-    int availableTaskSlots;
-    int maxSlots;
-    int submittedTasks;
-
-    TaskStats()
-    {
-      availableTaskSlots = 0;
-      maxSlots = 0;
-      submittedTasks = 0;
-    }
+    stats.add(Stats.Kill.AVAILABLE_SLOTS, availableKillTaskSlots);
+    stats.add(Stats.Kill.MAX_SLOTS, killTaskCapacity);
+    return availableKillTaskSlots;
   }
 }

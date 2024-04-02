@@ -34,7 +34,7 @@ env:
   MVN: mvn -B
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
+  MAVEN_OPTS: -Xmx8g
 
 jobs:
   static-checks:
@@ -45,9 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
@@ -118,9 +118,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '8'
@@ -144,15 +144,37 @@ jobs:
           --levels ERROR \
           --scope JavaInspectionsScope
 
+  openrewrite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+          cache: 'maven'
+
+      - name: maven install
+        run: |
+          echo 'Running Maven install...' &&
+          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+      - name: rewrite:dryRun
+        run: |
+          ${MVN} rewrite:dryRun ${MAVEN_SKIP}
+
   web-checks:
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'

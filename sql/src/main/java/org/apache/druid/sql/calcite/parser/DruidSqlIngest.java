@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -43,7 +44,7 @@ public abstract class DruidSqlIngest extends SqlInsert
   @Nullable
   protected final SqlNodeList clusteredBy;
   @Nullable
-  private final String exportFileFormat;
+  private final SqlIdentifier exportFileFormat;
 
   public DruidSqlIngest(
       SqlParserPos pos,
@@ -53,7 +54,7 @@ public abstract class DruidSqlIngest extends SqlInsert
       SqlNodeList columnList,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat
   )
   {
     super(pos, keywords, targetTable, source, columnList);
@@ -76,7 +77,7 @@ public abstract class DruidSqlIngest extends SqlInsert
   }
 
   @Nullable
-  public String getExportFileFormat()
+  public SqlIdentifier getExportFileFormat()
   {
     return exportFileFormat;
   }
@@ -88,6 +89,7 @@ public abstract class DruidSqlIngest extends SqlInsert
         .addAll(super.getOperandList())
         .add(partitionedBy)
         .add(clusteredBy)
+        .add(exportFileFormat)
         .build();
   }
 }

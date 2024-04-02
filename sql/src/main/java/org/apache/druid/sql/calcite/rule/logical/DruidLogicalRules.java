@@ -25,11 +25,12 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 
@@ -51,8 +52,10 @@ public class DruidLogicalRules
     return new ArrayList<>(
         ImmutableList.of(
             new DruidTableScanRule(
-                RelOptRule.operand(LogicalTableScan.class, null, RelOptRule.any()),
-                StringUtils.format("%s", DruidTableScanRule.class.getSimpleName())
+                LogicalTableScan.class,
+                Convention.NONE,
+                DruidLogicalConvention.instance(),
+                DruidTableScanRule.class.getSimpleName()
             ),
             new DruidAggregateRule(
                 LogicalAggregate.class,
@@ -90,6 +93,18 @@ public class DruidLogicalRules
                 Convention.NONE,
                 DruidLogicalConvention.instance(),
                 DruidWindowRule.class.getSimpleName()
+            ),
+            new DruidUnionRule(
+                LogicalUnion.class,
+                Convention.NONE,
+                DruidLogicalConvention.instance(),
+                DruidUnionRule.class.getSimpleName()
+            ),
+            new DruidJoinRule(
+                LogicalJoin.class,
+                Convention.NONE,
+                DruidLogicalConvention.instance(),
+                DruidJoinRule.class.getSimpleName()
             )
         )
     );

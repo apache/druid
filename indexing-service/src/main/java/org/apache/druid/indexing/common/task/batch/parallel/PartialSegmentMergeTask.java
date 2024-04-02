@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -270,29 +269,24 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
                                                .map(AggregatorFactory::getName)
                                                .collect(Collectors.toList());
 
-        // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
-        final DataSegment segment = RetryUtils.retry(
-            () -> segmentPusher.push(
-                mergedFileAndDimensionNames.lhs,
-                new DataSegment(
-                    getDataSource(),
-                    interval,
-                    Preconditions.checkNotNull(
-                        AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
-                        "version for interval[%s]",
-                        interval
-                    ),
-                    null, // will be filled in the segmentPusher
-                    mergedFileAndDimensionNames.rhs,
-                    metricNames,
-                    createShardSpec(toolbox, interval, bucketId),
-                    null, // will be filled in the segmentPusher
-                    0     // will be filled in the segmentPusher
+        final DataSegment segment = segmentPusher.push(
+            mergedFileAndDimensionNames.lhs,
+            new DataSegment(
+                getDataSource(),
+                interval,
+                Preconditions.checkNotNull(
+                    AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
+                    "version for interval[%s]",
+                    interval
                 ),
-                false
+                null, // will be filled in the segmentPusher
+                mergedFileAndDimensionNames.rhs,
+                metricNames,
+                createShardSpec(toolbox, interval, bucketId),
+                null, // will be filled in the segmentPusher
+                0     // will be filled in the segmentPusher
             ),
-            exception -> !(exception instanceof NullPointerException) && exception instanceof Exception,
-            5
+            false
         );
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);

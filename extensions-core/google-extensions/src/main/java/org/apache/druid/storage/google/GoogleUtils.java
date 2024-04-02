@@ -20,6 +20,7 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpResponseException;
+import com.google.cloud.storage.StorageException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -40,6 +41,9 @@ public class GoogleUtils
     if (t instanceof HttpResponseException) {
       final HttpResponseException e = (HttpResponseException) t;
       return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
+    } else if (t instanceof StorageException) {
+      final StorageException e = (StorageException) t;
+      return e.isRetryable();
     }
     return t instanceof IOException;
   }

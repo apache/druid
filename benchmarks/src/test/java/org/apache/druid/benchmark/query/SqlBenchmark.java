@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,6 +28,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.ExpressionModule;
@@ -38,6 +41,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -49,6 +54,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSket
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -59,6 +65,7 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
@@ -105,6 +112,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Benchmark that tests various SQL queries.
@@ -455,14 +463,65 @@ public class SqlBenchmark
   private int rowsPerSegment;
 
   // Can be "false", "true", or "force"
-  @Param({"force"})
+  @Param({"false", "force"})
   private String vectorize;
 
   // Can be "none" or "front-coded-N"
-  @Param({"none", "front-coded-4"})
+  @Param({
+      "none",
+      "front-coded-4"
+  })
   private String stringEncoding;
 
-  @Param({"28", "29", "30", "31"})
+  @Param({
+      "explicit",
+      "auto"
+  })
+  private String schema;
+
+  @Param({
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40"
+  })
   private String query;
 
   // Can be STORAGE_MMAP, STORAGE_FRAME_ROW, or STORAGE_FRAME_COLUMNAR
@@ -483,14 +542,25 @@ public class SqlBenchmark
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
 
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-
-    final QueryableIndex index = segmentGenerator.generate(
-        dataSegment,
-        schemaInfo,
-        IndexSpec.builder().withStringDictionaryEncoding(getStringEncodingStrategy()).build(),
-        Granularities.NONE,
-        rowsPerSegment
-    );
+    final QueryableIndex index;
+    if ("auto".equals(schema)) {
+      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                      .getDimensions()
+                                                      .stream()
+                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                      .collect(Collectors.toList());
+      index = segmentGenerator.generate(
+          dataSegment,
+          schemaInfo,
+          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
+          TransformSpec.NONE,
+          IndexSpec.DEFAULT,
+          Granularities.NONE,
+          rowsPerSegment
+      );
+    } else {
+      index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+    }
 
     final Pair<PlannerFactory, SqlEngine> sqlSystem = createSqlSystem(
         ImmutableMap.of(dataSegment, index),
@@ -501,6 +571,33 @@ public class SqlBenchmark
 
     plannerFactory = sqlSystem.lhs;
     engine = sqlSystem.rhs;
+
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] planResult = resultSequence.toList().get(0);
+      log.info("Native query plan:\n" +
+               jsonMapper.writerWithDefaultPrettyPrinter()
+                         .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Yielder<Object[]> yielder = Yielders.each(resultSequence);
+      int rowCounter = 0;
+      while (!yielder.isDone()) {
+        rowCounter++;
+        yielder.next(yielder.get());
+      }
+      log.info("Total result row count:" + rowCounter);
+    }
   }
 
   private StringEncodingStrategy getStringEncodingStrategy()

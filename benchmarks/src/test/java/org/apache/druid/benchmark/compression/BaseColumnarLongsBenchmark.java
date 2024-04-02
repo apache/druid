@@ -240,7 +240,8 @@ public class BaseColumnarLongsBenchmark
             "lz4-longs",
             ByteOrder.LITTLE_ENDIAN,
             CompressionFactory.LongEncodingStrategy.LONGS,
-            CompressionStrategy.LZ4
+            CompressionStrategy.LZ4,
+            writeOutMedium.getCloser()
         );
         break;
       case "lz4-auto":
@@ -250,7 +251,8 @@ public class BaseColumnarLongsBenchmark
             "lz4-auto",
             ByteOrder.LITTLE_ENDIAN,
             CompressionFactory.LongEncodingStrategy.AUTO,
-            CompressionStrategy.LZ4
+            CompressionStrategy.LZ4,
+            writeOutMedium.getCloser()
         );
         break;
       case "none-longs":
@@ -260,7 +262,8 @@ public class BaseColumnarLongsBenchmark
             "none-longs",
             ByteOrder.LITTLE_ENDIAN,
             CompressionFactory.LongEncodingStrategy.LONGS,
-            CompressionStrategy.NONE
+            CompressionStrategy.NONE,
+            writeOutMedium.getCloser()
         );
         break;
       case "none-auto":
@@ -270,7 +273,8 @@ public class BaseColumnarLongsBenchmark
             "none-auto",
             ByteOrder.LITTLE_ENDIAN,
             CompressionFactory.LongEncodingStrategy.AUTO,
-            CompressionStrategy.NONE
+            CompressionStrategy.NONE,
+            writeOutMedium.getCloser()
         );
         break;
       case "zstd-longs":
@@ -280,7 +284,8 @@ public class BaseColumnarLongsBenchmark
                 "zstd-longs",
                 ByteOrder.LITTLE_ENDIAN,
                 CompressionFactory.LongEncodingStrategy.LONGS,
-                CompressionStrategy.ZSTD
+                CompressionStrategy.ZSTD,
+                writeOutMedium.getCloser()
         );
         break;
       case "zstd-auto":
@@ -290,7 +295,8 @@ public class BaseColumnarLongsBenchmark
                 "zstd-auto",
                 ByteOrder.LITTLE_ENDIAN,
                 CompressionFactory.LongEncodingStrategy.AUTO,
-                CompressionStrategy.ZSTD
+                CompressionStrategy.ZSTD,
+                writeOutMedium.getCloser()
         );
         break;
       default:

@@ -21,46 +21,32 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.annotations.VisibleForTesting;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Comparable>
+public abstract class ArrayNumericGroupByColumnSelectorStrategy
     implements GroupByColumnSelectorStrategy
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;
 
-  protected final List<List<T>> dictionary;
-  protected final Object2IntMap<List<T>> reverseDictionary;
-  protected long estimatedFootprint = 0L;
-
+  private final List<Object[]> dictionary;
+  private final Object2IntMap<Object[]> reverseDictionary;
+  private long estimatedFootprint = 0L;
   private final int valueFootprint;
 
-  public ArrayNumericGroupByColumnSelectorStrategy(final int valueFootprint)
+  public ArrayNumericGroupByColumnSelectorStrategy(final int valueFootprint, final ColumnType arrayType)
   {
     this.dictionary = DictionaryBuilding.createDictionary();
-    this.reverseDictionary = DictionaryBuilding.createReverseDictionary();
-    this.valueFootprint = valueFootprint;
-  }
-
-  @VisibleForTesting
-  ArrayNumericGroupByColumnSelectorStrategy(
-      List<List<T>> dictionary,
-      Object2IntOpenHashMap<List<T>> reverseDictionary,
-      int valueFootprint
-  )
-  {
-    this.dictionary = dictionary;
-    this.reverseDictionary = reverseDictionary;
+    this.reverseDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(arrayType);
     this.valueFootprint = valueFootprint;
   }
 
@@ -82,8 +68,8 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
-      final List<T> value = dictionary.get(id);
-      resultRow.set(selectorPlus.getResultRowPosition(), new ComparableList(value));
+      final Object[] value = dictionary.get(id);
+      resultRow.set(selectorPlus.getResultRowPosition(), value);
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), null);
     }
@@ -140,7 +126,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
     return (int) (estimatedFootprint - priorFootprint);
   }
 
-  protected int addToIndexedDictionary(List<T> t)
+  protected int addToIndexedDictionary(Object[] t)
   {
     final int dictId = reverseDictionary.getInt(t);
     if (dictId < 0) {
@@ -149,7 +135,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
       reverseDictionary.put(t, size);
 
       // Footprint estimate: one pointer, one value per list entry.
-      estimatedFootprint += DictionaryBuilding.estimateEntryFootprint(t.size() * (Long.BYTES + valueFootprint));
+      estimatedFootprint += DictionaryBuilding.estimateEntryFootprint(t.length * (Long.BYTES + valueFootprint));
       return size;
     }
     return dictId;
@@ -160,32 +146,33 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
   {
     StringComparator comparator = stringComparator == null ? StringComparators.NUMERIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-      List<T> lhs = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
-      List<T> rhs = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+      Object[] lhs = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
+      Object[] rhs = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
 
-      int minLength = Math.min(lhs.size(), rhs.size());
+      int minLength = Math.min(lhs.length, rhs.length);
+      //noinspection ArrayEquality
       if (lhs == rhs) {
         return 0;
       } else {
         for (int i = 0; i < minLength; i++) {
-          final T left = lhs.get(i);
-          final T right = rhs.get(i);
+          final Object left = lhs[i];
+          final Object right = rhs[i];
           final int cmp;
           if (left == null && right == null) {
             cmp = 0;
           } else if (left == null) {
             cmp = -1;
           } else {
-            cmp = comparator.compare(String.valueOf(lhs.get(i)), String.valueOf(rhs.get(i)));
+            cmp = comparator.compare(String.valueOf(left), String.valueOf(right));
           }
           if (cmp == 0) {
             continue;
           }
           return cmp;
         }
-        if (lhs.size() == rhs.size()) {
+        if (lhs.length == rhs.length) {
           return 0;
-        } else if (lhs.size() < rhs.size()) {
+        } else if (lhs.length < rhs.length) {
           return -1;
         }
         return 1;

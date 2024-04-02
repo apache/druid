@@ -100,10 +100,6 @@ public abstract class NumericLastBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (timeSelector.isNull()) {
-      return;
-    }
-
     long lastTime = buf.getLong(position);
     if (needsFoldCheck) {
       final Object object = valueSelector.getObject();
@@ -119,6 +115,10 @@ public abstract class NumericLastBufferAggregator implements BufferAggregator
         }
         return;
       }
+    }
+
+    if (timeSelector.isNull()) {
+      return;
     }
 
     long time = timeSelector.getLong();

@@ -2689,7 +2689,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  // If shouldCleanup is false, cleanup should be a no-op
+  // If isStandaloneTask is false, cleanup should be a no-op
   @Test
   public void testCleanupIndexTask() throws Exception
   {

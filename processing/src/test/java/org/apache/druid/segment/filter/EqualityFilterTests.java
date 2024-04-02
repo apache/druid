@@ -48,14 +48,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
 
-@RunWith(Enclosed.class)
 public class EqualityFilterTests
 {
   @RunWith(Parameterized.class)
@@ -123,6 +121,7 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("vdim0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
       assertFilterMatches(new EqualityFilter("vdim0", ColumnType.LONG, 1L, null), ImmutableList.of("1"));
     }
+
 
     @Test
     public void testListFilteredVirtualColumn()
@@ -405,6 +404,20 @@ public class EqualityFilterTests
             ImmutableList.of("0", "1", "2", "3", "4", "5")
         );
       }
+    }
+
+
+    @Test
+    public void testSingleValueVirtualStringColumnMissingColumnCoalesce()
+    {
+      assertFilterMatches(
+          new EqualityFilter("fake-nvl", ColumnType.STRING, "0", null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter("fake-nvl", ColumnType.STRING, "hello", null),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
     }
 
     @Test

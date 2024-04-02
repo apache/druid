@@ -37,6 +37,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -45,11 +46,8 @@ import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.ordering.StringComparator;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -370,7 +368,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       for (final OrderByColumnSpec column : defaultLimitSpec.getColumns()) {
         final Optional<ColumnType> type = resultSignature.getColumnType(column.getDimension());
 
-        if (!type.isPresent() || !isNaturalComparator(type.get().getType(), column.getDimensionComparator())) {
+        if (!type.isPresent() || !DimensionComparisonUtils.isNaturalComparator(type.get().getType(), column.getDimensionComparator())) {
           throw new ISE(
               "Must use natural comparator for column [%s] of type [%s]",
               column.getDimension(),
@@ -381,19 +379,4 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     }
   }
 
-  /**
-   * Only allow ordering the queries from the MSQ engine, ignoring the comparator that is set in the query. This
-   * function checks if it is safe to do so, which is the case if the natural comparator is used for the dimension.
-   * Since MSQ executes the queries planned by the SQL layer, this is a sanity check as we always add the natural
-   * comparator for the dimensions there
-   */
-  private static boolean isNaturalComparator(final ValueType type, final StringComparator comparator)
-  {
-    if (StringComparators.NATURAL.equals(comparator)) {
-      return true;
-    }
-    return ((type == ValueType.STRING && StringComparators.LEXICOGRAPHIC.equals(comparator))
-            || (type.isNumeric() && StringComparators.NUMERIC.equals(comparator)))
-           && !type.isArray();
-  }
 }

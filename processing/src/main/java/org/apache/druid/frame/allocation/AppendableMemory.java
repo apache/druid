@@ -135,8 +135,13 @@ public class AppendableMemory implements Closeable
     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
       // Allocation needed.
       // Math.max(allocationSize, bytes) in case "bytes" is greater than SOFT_MAXIMUM_ALLOCATION_SIZE.
+      // However, cap the allocation request to the available bytes in the allocator, in case the requested bytes
+      // are less than what are available in the allocator, however the SOFT_MAXIMUM_ALLOCATION_SIZE is greater than the
+      // bytes available in the allocator. In such a case where bytes < available < SOFT_MAXIMUM_ALLOCATION_SIZE, we
+      // want to allocate all the available memory in the allocator, and in the other cases where available is the greatest
+      // of all, we want to allocate according to the max of bytes & SOFT_MAXIMUM_ALLOCATION_SIZE
       final Optional<ResourceHolder<WritableMemory>> newMemory =
-          allocator.allocate(Math.max(nextAllocationSize, bytes));
+          allocator.allocate(Math.min(allocator.available(), Math.max(nextAllocationSize, bytes)));
 
       if (!newMemory.isPresent()) {
         return false;

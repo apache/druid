@@ -25,8 +25,13 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -64,6 +69,22 @@ public class JavaScriptFilter implements Filter
   {
     // suboptimal, since we need create one context per call to predicate.apply()
     return Filters.makeValueMatcher(factory, dimension, predicateFactory);
+  }
+
+  @Override
+  public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
+  {
+    return ColumnProcessors.makeVectorProcessor(
+        dimension,
+        VectorValueMatcherColumnProcessorFactory.instance(),
+        factory
+    ).makeMatcher(predicateFactory);
+  }
+
+  @Override
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
+  {
+    return true;
   }
 
   @Override

@@ -314,7 +314,7 @@ public class MultiStageQueryContextTest
 
   private static List<String> decodeSortOrder(@Nullable final String input)
   {
-    return MultiStageQueryContext.decodeSortOrder(input);
+    return MultiStageQueryContext.decodeList(MultiStageQueryContext.CTX_SORT_ORDER, input);
   }
 
   private static IndexSpec decodeIndexSpec(@Nullable final Object inputSpecObject)

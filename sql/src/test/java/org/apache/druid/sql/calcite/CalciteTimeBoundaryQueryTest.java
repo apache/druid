@@ -33,7 +33,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 

@@ -112,7 +112,8 @@ function start() {
   echo "$pid" > "$DRUID_PID_FILE"
   _log "Druid started with pid ${pid}"
 
-  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 30
+  _wait_for_200_response "http://localhost:8888/proxy/coordinator/status" 3 30
+  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 10
 }
 
 function stop() {

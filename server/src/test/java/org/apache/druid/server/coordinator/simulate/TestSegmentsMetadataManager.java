@@ -39,24 +39,25 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 {
-  private final ConcurrentMap<String, DataSegment> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegment> allSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
 
   private volatile DataSourcesSnapshot snapshot;
 
   public void addSegment(DataSegment segment)
   {
-    segments.put(segment.getId().toString(), segment);
+    allSegments.put(segment.getId().toString(), segment);
     usedSegments.put(segment.getId().toString(), segment);
     snapshot = null;
   }
 
   public void removeSegment(DataSegment segment)
   {
-    segments.remove(segment.getId().toString());
+    allSegments.remove(segment.getId().toString());
     usedSegments.remove(segment.getId().toString());
     snapshot = null;
   }
@@ -86,7 +87,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval)
+  public int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions)
   {
     return 0;
   }
@@ -100,11 +101,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
-    if (!segments.containsKey(segmentId)) {
+    if (!allSegments.containsKey(segmentId)) {
       return false;
     }
 
-    usedSegments.put(segmentId, segments.get(segmentId));
+    usedSegments.put(segmentId, allSegments.get(segmentId));
     return true;
   }
 
@@ -115,7 +116,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval)
+  public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions)
   {
     return 0;
   }
@@ -124,8 +125,10 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public int markSegmentsAsUnused(Set<SegmentId> segmentIds)
   {
     int numModifiedSegments = 0;
+
     for (SegmentId segmentId : segmentIds) {
-      if (usedSegments.remove(segmentId.toString()) != null) {
+      if (allSegments.containsKey(segmentId.toString())) {
+        usedSegments.remove(segmentId.toString());
         ++numModifiedSegments;
       }
     }
@@ -209,7 +212,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public Set<String> retrieveAllDataSourceNames()
   {
-    return null;
+    return allSegments.values().stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
   }
 
   @Override

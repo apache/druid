@@ -200,8 +200,8 @@ To perform ingestion with rollup:
 2. Set [`finalizeAggregations: false`](reference.md#context-parameters) in your context. This causes aggregation
    functions to write their internal state to the generated segments, instead of the finalized end result, and enables
    further aggregation at query time.
-3. See [ARRAY types](../querying/arrays.md#sql-based-ingestion-with-rollup) for information about ingesting `ARRAY` columns
-4. See [multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion-with-rollup) for information to ingest multi-value VARCHAR columns
+3. See [ARRAY types](../querying/arrays.md#sql-based-ingestion) for information about ingesting `ARRAY` columns
+4. See [multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion) for information to ingest multi-value VARCHAR columns
 
 When you do all of these things, Druid understands that you intend to do an ingestion with rollup, and it writes
 rollup-related metadata into the generated segments. Other applications can then use [`segmentMetadata`

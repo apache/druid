@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
@@ -37,15 +38,17 @@ import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
+import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.hamcrest.CoreMatchers;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 public class CalciteExportTest extends CalciteIngestionDmlTest
@@ -77,7 +80,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
 
   // Disabled until replace supports external destinations. To be enabled after that point.
   @Test
-  @Ignore
+  @Disabled
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
@@ -170,6 +173,59 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .build()
+        )
+        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
+        .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+
+  @Test
+  public void testInsertIntoExternParameterized()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
+                                + "AS CSV "
+                                + "SELECT dim2 FROM foo WHERE dim2=?", TestExportStorageConnector.TYPE_NAME))
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "val")))
+        .expectQuery(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    "foo"
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(equality("dim2", "val", ColumnType.STRING))
+                .columns("dim2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        )
+        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
+        .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+  // Disabled until replace supports external destinations. To be enabled after that point.
+  @Test
+  @Disabled
+  public void testReplaceIntoExternParameterized()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+                                + "AS CSV "
+                                + "SELECT dim2 FROM foo WHERE dim2=?", TestExportStorageConnector.TYPE_NAME))
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "val")))
+        .expectQuery(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    "foo"
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(equality("dim2", "val", ColumnType.STRING))
+                .columns("dim2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
