@@ -20,7 +20,6 @@
 package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexer.report.TaskReport;
 
 public interface TaskReportFileWriter
 {

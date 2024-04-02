@@ -44,7 +44,6 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.Map;
 
 public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhaseParallelIndexingTest
 {
@@ -134,7 +133,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         false
     );
 
-    final RowIngestionMetersTotals expectedTotals = RowMeters.with().totalProcessed(200);
+    final RowIngestionMetersTotals expectedTotals = RowMeters.with().bytes(5630).totalProcessed(200);
     final TaskReport.ReportMap expectedReports =
         maxNumConcurrentSubTasks <= 1
         ? buildExpectedTaskReportSequential(
@@ -173,7 +172,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
-        new RowIngestionMetersTotals(200, 0, 0, 0, 0)
+        new RowIngestionMetersTotals(200, 5630, 0, 0, 0)
     );
     TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);

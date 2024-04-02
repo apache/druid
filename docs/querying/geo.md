@@ -142,8 +142,9 @@ The `radius` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`coords`|Origin coordinates in the form [x, y]|yes|
-|`radius`|The float radius value|yes|
+|`coords`|Center coordinates in the form [x, y]|yes|
+|`radius`|The float radius value according to specified unit|yes|
+|`radiusUnit`|String value of radius unit in lowercase, default value is 'euclidean'. Allowed units are euclidean, meters, miles, kilometers.|no|
 
 #### Polygon
 
