@@ -434,7 +434,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // a specialized implementation of this interface against, say, a Frame object that can deal with arrays instead
     // of trying to optimize this generic implementation.
     Object[][] results = new Object[aggFactories.length][numRows];
-    int resultStorageIndex = 0;
+
+    // if the upper offset is -ve, then we need to ignore those many rows prior to the current row
+    int resultStorageIndex = upperOffset < 0 ? -1 * upperOffset : 0;
 
     AtomicInteger rowIdProvider = new AtomicInteger(0);
     final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
@@ -455,7 +457,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // Prime the results
-    if (rowIdProvider.get() < numRows) {
+    if (rowIdProvider.get() < numRows && resultStorageIndex < numRows) {
       for (int i = 0; i < aggs.length; i++) {
         aggs[i].aggregate();
         results[i][resultStorageIndex] = aggs[i].get();
@@ -468,7 +470,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // From here out, we want to aggregate, peel off a row of results and then accumulate the aggregation
-    for (int rowId = rowIdProvider.get(); rowId < numRows; ++rowId) {
+    int maxRows = numRows - (upperOffset < 0 ? -1 * upperOffset : 0);
+    for (int rowId = rowIdProvider.get(); rowId < maxRows; ++rowId) {
       for (int i = 0; i < aggs.length; i++) {
         aggs[i].aggregate();
         results[i][resultStorageIndex] = aggs[i].get();
