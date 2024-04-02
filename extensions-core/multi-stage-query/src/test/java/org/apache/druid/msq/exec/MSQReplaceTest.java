@@ -79,11 +79,8 @@ public class MSQReplaceTest extends MSQTestBase
   private static final Map<String, Object> QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
-                      Tasks.TASK_LOCK_TYPE,
-                      StringUtils.toLowerCase(TaskLockType.REPLACE.name())
-                  )
-                  .put( Tasks.STORE_COMPACTION_STATE_KEY, true)
+                  .put(Tasks.TASK_LOCK_TYPE, StringUtils.toLowerCase(TaskLockType.REPLACE.name()))
+                  .put(Tasks.STORE_COMPACTION_STATE_KEY, true)
                   .build();
 
   public static Collection<Object[]> data()

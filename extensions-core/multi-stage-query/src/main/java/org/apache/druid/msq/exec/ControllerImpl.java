@@ -1739,7 +1739,7 @@ public class ControllerImpl implements Controller
         DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
         if (!destination.isReplaceTimeChunks()) {
           // Store compaction state only for replace queries.
-          log.error(
+          log.warn(
               "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
               queryDef.getQueryId()
           );

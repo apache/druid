@@ -379,7 +379,7 @@ public class DataSegmentTest
     List<Object> metricsSpec = ImmutableList.of(ImmutableMap.of("type", "count", "name", "count"));
     Map<String, Object> transformSpec = ImmutableMap.of(
         "filter",
-        ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo" )
+        ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")
     );
     Map<String, Object> indexSpec = Collections.singletonMap("test", "map");
     Map<String, Object> granularitySpec = Collections.singletonMap("test2", "map");
