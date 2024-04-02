@@ -1793,7 +1793,6 @@ public class ControllerImpl implements Controller
           false
       );
     } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
-      // Using Long.MAX_VALUE for MaxTotalRows as that is the default used by a compaction task.
       partitionSpec = new DynamicPartitionsSpec(null, DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS);
     } else {
       throw new MSQException(
