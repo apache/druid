@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -134,7 +135,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     );
 
     final RowIngestionMetersTotals expectedTotals = RowMeters.with().totalProcessed(200);
-    final Map<String, Object> expectedReports =
+    final TaskReport.ReportMap expectedReports =
         maxNumConcurrentSubTasks <= 1
         ? buildExpectedTaskReportSequential(
             task.getId(),
@@ -148,7 +149,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
             expectedTotals
         );
 
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
   }
 
@@ -169,12 +170,12 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         false,
         false
     );
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
+    TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
         new RowIngestionMetersTotals(200, 0, 0, 0, 0)
     );
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
   }
 }

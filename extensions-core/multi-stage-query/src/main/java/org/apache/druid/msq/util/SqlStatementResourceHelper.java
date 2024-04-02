@@ -32,6 +32,7 @@ import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -45,7 +46,10 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.SqlStatementState;
@@ -243,12 +247,12 @@ public class SqlStatementResourceHelper
       TaskStatusResponse taskResponse,
       TaskStatusPlus statusPlus,
       SqlStatementState sqlStatementState,
-      Map<String, Object> msqPayload
+      TaskReport.ReportMap msqPayload
   )
   {
-    Map<String, Object> exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
-    Map<String, Object> exception = getMap(exceptionDetails, "error");
-    if (exceptionDetails == null || exception == null) {
+    MSQErrorReport exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
+    MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
+    if (exceptionDetails == null || fault == null) {
       return Optional.of(new SqlStatementResult(
           queryId,
           sqlStatementState,
@@ -258,9 +262,11 @@ public class SqlStatementResourceHelper
           null,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build("%s", taskResponse.getStatus().getErrorMsg()).toErrorResponse()
+                        .build("%s", taskResponse.getStatus().getErrorMsg())
+                        .toErrorResponse()
       ));
     }
+
 
     final String errorMessage = String.valueOf(exception.getOrDefault("errorMessage", statusPlus.getErrorMsg()));
     exception.remove("errorMessage");
@@ -361,9 +367,9 @@ public class SqlStatementResourceHelper
     return null;
   }
 
-  public static Map<String, Object> getQueryExceptionDetails(Map<String, Object> payload)
+  public static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
   {
-    return getMap(getMap(payload, "status"), "errorReport");
+    return payload.getStatus().getErrorReport();
   }
 
   public static Map<String, Object> getMap(Map<String, Object> map, String key)
@@ -374,9 +380,10 @@ public class SqlStatementResourceHelper
     return (Map<String, Object>) map.get(key);
   }
 
-  public static Map<String, Object> getPayload(Map<String, Object> results)
+  public static MSQTaskReportPayload getPayload(TaskReport.ReportMap results)
   {
-    Map<String, Object> msqReport = getMap(results, "multiStageQuery");
-    return getMap(msqReport, "payload");
+    return results.findReport("multiStageQuery", MSQTaskReport.class)
+                  .map(MSQTaskReport::getPayload)
+                  .orElse(null);
   }
 }

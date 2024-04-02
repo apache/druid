@@ -50,7 +50,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
@@ -416,7 +416,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
-    final Map<String, Object> liveReports = buildLiveIngestionStatsReport(
+    final TaskReport.ReportMap liveReports = buildLiveIngestionStatsReport(
         ingestionState,
         getTaskCompletionUnparseableEvents(),
         doGetRowStats(full != null)

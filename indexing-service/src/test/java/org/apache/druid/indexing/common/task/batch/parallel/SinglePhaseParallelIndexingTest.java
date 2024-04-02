@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -446,9 +447,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         false,
         Collections.emptyList()
     );
-    Map<String, Object> actualReports = task.doGetLiveReports(true);
+    TaskReport.ReportMap actualReports = task.doGetLiveReports(true);
     final long processedBytes = useInputFormatApi ? 335 : 0;
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
+    TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
             new ParseExceptionReport(
@@ -497,7 +498,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     TaskContainer taskContainer = getIndexingServiceClient().getTaskContainer(task.getId());
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
-    Map<String, Object> actualReports = executedTask.doGetLiveReports(true);
+    TaskReport.ReportMap actualReports = executedTask.doGetLiveReports(true);
 
     final long processedBytes = useInputFormatApi ? 335 : 0;
     RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1);
@@ -516,7 +517,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         )
     );
 
-    Map<String, Object> expectedReports;
+    TaskReport.ReportMap expectedReports;
     if (useInputFormatApi) {
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),

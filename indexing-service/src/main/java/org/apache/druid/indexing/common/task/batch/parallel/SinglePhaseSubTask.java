@@ -33,7 +33,7 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -542,7 +542,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
-  private Map<String, Object> doGetLiveReports(boolean isFullReport)
+  private TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     return buildLiveIngestionStatsReport(
         ingestionState,

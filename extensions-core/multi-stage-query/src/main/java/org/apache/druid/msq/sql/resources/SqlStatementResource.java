@@ -39,6 +39,7 @@ import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -512,12 +513,11 @@ public class SqlStatementResource
   )
   {
     if (sqlStatementState == SqlStatementState.SUCCESS) {
-      Map<String, Object> payload =
+      MSQTaskReportPayload msqTaskReportPayload =
           SqlStatementResourceHelper.getPayload(contactOverlord(
               overlordClient.taskReportAsMap(queryId),
               queryId
           ));
-      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(payload, MSQTaskReportPayload.class);
       Optional<List<PageInformation>> pageList = SqlStatementResourceHelper.populatePageList(
           msqTaskReportPayload,
           msqDestination
@@ -735,8 +735,8 @@ public class SqlStatementResource
         );
       }
 
-      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
+      MSQTaskReportPayload msqTaskReportPayload = SqlStatementResourceHelper.getPayload(
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
 
       if (msqTaskReportPayload.getResults().getResultYielder() == null) {
         results = Optional.empty();
@@ -746,8 +746,8 @@ public class SqlStatementResource
 
     } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
 
-      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
+      MSQTaskReportPayload msqTaskReportPayload = SqlStatementResourceHelper.getPayload(
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
 
       List<PageInformation> pages =
           SqlStatementResourceHelper.populatePageList(

@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -183,7 +184,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 
-  Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
+  TaskReport.ReportMap runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
     return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);

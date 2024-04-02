@@ -31,12 +31,12 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -903,25 +903,27 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return null;
   }
 
-  protected Map<String, Object> buildLiveIngestionStatsReport(
+  protected TaskReport.ReportMap buildLiveIngestionStatsReport(
       IngestionState ingestionState,
       Map<String, Object> unparseableEvents,
       Map<String, Object> rowStats
   )
   {
-    final Map<String, Object> payload = new HashMap<>();
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", unparseableEvents);
-    payload.put("rowStats", rowStats);
-
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", IngestionStatsAndErrorsTaskReport.REPORT_KEY);
-
-    return Collections.singletonMap(
-        IngestionStatsAndErrorsTaskReport.REPORT_KEY,
-        ingestionStatsAndErrors
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrors(
+                ingestionState,
+                unparseableEvents,
+                rowStats,
+                null,
+                false,
+                0L,
+                null,
+                null,
+                null
+            )
+        )
     );
   }
 
