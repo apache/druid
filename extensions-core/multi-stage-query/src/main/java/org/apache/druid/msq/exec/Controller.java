@@ -32,7 +32,6 @@ import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Interface for the controller of a multi-stage query.
@@ -123,6 +122,6 @@ public interface Controller
   List<String> getTaskIds();
 
   @Nullable
-  Map<String, TaskReport> liveReports();
+  TaskReport.ReportMap liveReports();
 
 }

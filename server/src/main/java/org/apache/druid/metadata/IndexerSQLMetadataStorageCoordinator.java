@@ -185,11 +185,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                               .allMatch(Intervals::canCompareEndpointsAsStrings);
     final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
-    SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
-        queryBuilder,
-        compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
-        intervalMode,
-        connector
+    queryBuilder.append(
+        SqlSegmentsMetadataQuery.getConditionForIntervalsAndMatchMode(
+            compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
+            intervalMode,
+            connector.getQuoteString()
+        )
     );
 
     final String queryString = StringUtils.format(queryBuilder.toString(), dbTables.getSegmentsTable());
@@ -200,7 +201,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("dataSource", dataSource);
 
           if (compareIntervalEndpointsAsString) {
-            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+            SqlSegmentsMetadataQuery.bindIntervalsToQuery(query, intervals);
           }
 
           final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query

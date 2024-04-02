@@ -21,11 +21,9 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.Map;
-
 public interface TaskReportFileWriter
 {
-  void write(String taskId, Map<String, TaskReport> reports);
+  void write(String taskId, TaskReport.ReportMap reports);
 
   void setObjectMapper(ObjectMapper objectMapper);
 }

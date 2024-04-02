@@ -43,7 +43,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -1182,7 +1182,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         newDataSchemaMetadata()
     );
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1268,7 +1268,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
     Assert.assertNull(newDataSchemaMetadata());
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,

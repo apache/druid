@@ -121,6 +121,20 @@ public class RetrieveSegmentsActionsTest
   }
 
   @Test
+  public void testRetrieveUnusedSegmentsActionWithEmptyVersions()
+  {
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
+        task.getDataSource(),
+        INTERVAL,
+        ImmutableList.of(),
+        null,
+        null
+    );
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(ImmutableSet.of(), observedUnusedSegments);
+  }
+
+  @Test
   public void testRetrieveUnusedSegmentsActionWithMinUsedLastUpdatedTime()
   {
     final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null, DateTimes.MIN);

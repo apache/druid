@@ -45,6 +45,10 @@ import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Map;
 
+/**
+ * Classic {@link SelectorFilter} test. Consider adding tests to {@link EqualityFilterTests} in addition to, or
+ * instead of here.
+ */
 @RunWith(Parameterized.class)
 public class SelectorFilterTest extends BaseFilterTest
 {

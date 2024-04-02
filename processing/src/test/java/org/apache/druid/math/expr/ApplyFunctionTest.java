@@ -93,6 +93,10 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
     assertExpr("filter((x) -> x > 2, [1, 2, 3, 4, 5])", new Long[] {3L, 4L, 5L});
     assertExpr("filter((x) -> x > 2, b)", new Long[] {3L, 4L, 5L});
+
+    String dummyNull = null;
+    assertExpr("filter((x) -> array_contains([], x), ['a', 'b'])", dummyNull);
+    assertExpr("filter((x) -> array_contains([], x), null)", dummyNull);
   }
 
   @Test

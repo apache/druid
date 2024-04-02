@@ -45,7 +45,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
 
 public class ControllerChatHandler implements ChatHandler
 {
@@ -189,7 +188,7 @@ public class ControllerChatHandler implements ChatHandler
   public Response httpGetLiveReports(@Context final HttpServletRequest req)
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    final Map<String, TaskReport> reports = controller.liveReports();
+    final TaskReport.ReportMap reports = controller.liveReports();
     if (reports == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
