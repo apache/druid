@@ -60,6 +60,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -478,11 +479,17 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       if (sqlTypeName != null) {
         relType = typeFactory.createSqlType(sqlTypeName);
       } else {
-        relType = RowSignatures.columnTypeToRelDataType(
-            typeFactory,
-            ColumnType.fromString(definedCol.sqlStorageType()),
-            sourceField.getType().isNullable()
-        );
+        ColumnType columnType = ColumnType.fromString(definedCol.sqlStorageType());
+        if (columnType != null && columnType.getType().equals(ValueType.COMPLEX)) {
+          relType = RowSignatures.makeComplexType(typeFactory, columnType, sourceField.getType().isNullable());
+        } else {
+          relType = RowSignatures.columnTypeToRelDataType(
+              typeFactory,
+              columnType,
+              // this nullability is ignored for complex types for some reason, hence the check for complex above.
+              sourceField.getType().isNullable()
+          );
+        }
       }
 
       fields.add(Pair.of(
