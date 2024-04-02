@@ -465,7 +465,7 @@ public class OverlordResource
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
     for (String taskId : taskIds) {
       final Optional<TaskStatus> optional;
-      if (taskQueue.isPresent() && false) {
+      if (taskQueue.isPresent()) {
         optional = taskQueue.get().getTaskStatus(taskId);
       } else {
         optional = taskStorageQueryAdapter.getStatus(taskId);
