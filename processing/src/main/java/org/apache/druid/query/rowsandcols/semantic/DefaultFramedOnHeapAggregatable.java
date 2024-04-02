@@ -436,7 +436,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     Object[][] results = new Object[aggFactories.length][numRows];
 
     // if the upper offset is -ve, then we need to ignore those many rows prior to the current row
-    int resultStorageIndex = upperOffset < 0 ? -1 * upperOffset : 0;
+    int resultStorageIndex = -1 * Math.min(upperOffset, 0);
 
     AtomicInteger rowIdProvider = new AtomicInteger(0);
     final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
@@ -470,8 +470,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // From here out, we want to aggregate, peel off a row of results and then accumulate the aggregation
-    int maxRows = numRows - (upperOffset < 0 ? -1 * upperOffset : 0);
-    for (int rowId = rowIdProvider.get(); rowId < maxRows; ++rowId) {
+    int lastRowIndex = numRows + Math.min(upperOffset, 0);
+    for (int rowId = rowIdProvider.get(); rowId < lastRowIndex; ++rowId) {
       for (int i = 0; i < aggs.length; i++) {
         aggs[i].aggregate();
         results[i][resultStorageIndex] = aggs[i].get();
@@ -524,7 +524,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // a specialized implementation of this interface against, say, a Frame object that can deal with arrays instead
     // of trying to optimize this generic implementation.
     Object[][] results = new Object[aggFactories.length][numRows];
-    int resultStorageIndex = numRows - 1;
+
+    // if the lower offset is +ve, then we need to ignore those many rows following to the current row
+    int resultStorageIndex = numRows - 1 - Math.max(lowerOffset, 0);
 
     AtomicInteger rowIdProvider = new AtomicInteger(numRows - 1);
     final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
@@ -537,7 +539,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // If there is a lower offset, we accumulate those aggregations before starting to generate results
-    for (int i = 0; i < lowerOffset; ++i) {
+    for (int i = 0; i < -1 * lowerOffset; ++i) {
       for (Aggregator agg : aggs) {
         agg.aggregate();
       }
@@ -545,7 +547,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // Prime the results
-    if (rowIdProvider.get() >= 0) {
+    if (rowIdProvider.get() >= 0 && resultStorageIndex >= 0) {
       for (int i = 0; i < aggs.length; i++) {
         aggs[i].aggregate();
         results[i][resultStorageIndex] = aggs[i].get();
@@ -558,7 +560,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // From here out, we want to aggregate, peel off a row of results and then accumulate the aggregation
-    for (int rowId = rowIdProvider.get(); rowId >= 0; --rowId) {
+    int firstRowIndex = Math.max(lowerOffset, 0);
+    for (int rowId = rowIdProvider.get(); rowId >= firstRowIndex; --rowId) {
       for (int i = 0; i < aggs.length; i++) {
         aggs[i].aggregate();
         results[i][resultStorageIndex] = aggs[i].get();
