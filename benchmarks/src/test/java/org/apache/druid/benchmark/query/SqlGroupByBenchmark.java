@@ -21,10 +21,10 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -92,6 +92,7 @@ public class SqlGroupByBenchmark
   static {
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
+    NestedDataModule.registerHandlersAndSerde();
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -122,29 +123,29 @@ public class SqlGroupByBenchmark
   };
 
   @Param({
-//      "string-Sequential-100_000",
-//      "string-Sequential-10_000_000",
+      "string-Sequential-100_000",
+      "string-Sequential-10_000_000",
       // "string-Sequential-1_000_000_000",
-//      "string-ZipF-1_000_000",
-//      "string-Uniform-1_000_000",
+      "string-ZipF-1_000_000",
+      "string-Uniform-1_000_000",
 
-//      "multi-string-Sequential-100_000",
-//      "multi-string-Sequential-10_000_000",
+      "multi-string-Sequential-100_000",
+      "multi-string-Sequential-10_000_000",
       // "multi-string-Sequential-1_000_000_000",
-//      "multi-string-ZipF-1_000_000",
-//      "multi-string-Uniform-1_000_000",
+      "multi-string-ZipF-1_000_000",
+      "multi-string-Uniform-1_000_000",
 
-//      "long-Sequential-100_000",
-//      "long-Sequential-10_000_000",
+      "long-Sequential-100_000",
+      "long-Sequential-10_000_000",
       // "long-Sequential-1_000_000_000",
-//      "long-ZipF-1_000_000",
-//      "long-Uniform-1_000_000",
+      "long-ZipF-1_000_000",
+      "long-Uniform-1_000_000",
 
-//      "double-ZipF-1_000_000",
-//      "double-Uniform-1_000_000",
+      "double-ZipF-1_000_000",
+      "double-Uniform-1_000_000",
 
-//      "float-ZipF-1_000_000",
-//      "float-Uniform-1_000_000",
+      "float-ZipF-1_000_000",
+      "float-Uniform-1_000_000",
 
       "stringArray-Sequential-100_000",
       "stringArray-Sequential-3_000_000",
@@ -329,6 +330,10 @@ public class SqlGroupByBenchmark
                                                                                         .add(dataSegment, index)
                                                                                         .add(dataSegment2, index);
     closer.register(walker);
+
+    // Hacky and pollutes global namespace, but it is fine since benchmarks are run in isolation. Wasn't able
+    // to work up a cleaner way of doing it by modifying the injector.
+    CalciteTests.getJsonMapper().registerModules(NestedDataModule.getJacksonModulesList());
 
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
