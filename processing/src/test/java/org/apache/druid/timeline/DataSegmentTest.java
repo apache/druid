@@ -364,30 +364,45 @@ public class DataSegmentTest
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(7))
                                            .size(0)
-                                            .build();
+                                           .build();
     Assert.assertEquals(segment1, segment2.withLastCompactionState(compactionState));
   }
 
   @Test
   public void testAnnotateWithLastCompactionState()
   {
+    DynamicPartitionsSpec dynamicPartitionsSpec = new DynamicPartitionsSpec(null, null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+        "bar",
+        "foo"
+    )));
+    List<Object> metricsSpec = ImmutableList.of(ImmutableMap.of("type", "count", "name", "count"));
+    Map<String, Object> transformSpec = ImmutableMap.of(
+        "filter",
+        ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo" )
+    );
+    Map<String, Object> indexSpec = Collections.singletonMap("test", "map");
+    Map<String, Object> granularitySpec = Collections.singletonMap("test2", "map");
+
     final CompactionState compactionState = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-        ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-        Collections.singletonMap("test", "map"),
-        Collections.singletonMap("test2", "map2")
+        dynamicPartitionsSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec
     );
 
-    final Function<Set<DataSegment>, Set<DataSegment>> annotateFn = CompactionState.compactionStateAnnotateFunction(
-        new DynamicPartitionsSpec(null, null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-        ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-        Collections.singletonMap("test", "map"),
-        Collections.singletonMap("test2", "map2")
-    );
+    final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
+        CompactionState.addCompactionStateToSegments(
+            dynamicPartitionsSpec,
+            dimensionsSpec,
+            metricsSpec,
+            transformSpec,
+            indexSpec,
+            granularitySpec
+        );
+
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
                                             .interval(Intervals.of("2012-01-01/2012-01-02"))
@@ -403,7 +418,7 @@ public class DataSegmentTest
                                             .shardSpec(getShardSpec(7))
                                             .size(0)
                                             .build();
-    Assert.assertEquals(ImmutableSet.of(segment1), annotateFn.apply(ImmutableSet.of(segment2)));
+    Assert.assertEquals(ImmutableSet.of(segment1), addCompactionStateFunction.apply(ImmutableSet.of(segment2)));
   }
 
   @Test

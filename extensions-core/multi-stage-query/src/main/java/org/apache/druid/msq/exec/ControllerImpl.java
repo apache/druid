@@ -67,6 +67,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -219,6 +220,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -1725,9 +1727,7 @@ public class ControllerImpl implements Controller
 
       //noinspection unchecked
       @SuppressWarnings("unchecked")
-      final Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
-
-      Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = Function.identity();
+      Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
 
       boolean storeCompactionState = QueryContext.of(task.getQuerySpec().getQuery().getContext())
                                                  .getBoolean(
@@ -1736,34 +1736,35 @@ public class ControllerImpl implements Controller
                                                  );
 
       if (!segments.isEmpty() && storeCompactionState) {
-
         DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
         if (!destination.isReplaceTimeChunks()) {
-          // Only do this for replace queries, whether originating directly or via compaction
-          log.error("storeCompactionState flag set for a non-REPLACE query [%s]", queryDef.getQueryId());
+          // Store compaction state only for replace queries.
+          log.error(
+              "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
+              queryDef.getQueryId()
+          );
         } else {
-
           DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
               .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
 
           ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
 
-          compactionStateAnnotateFunction = prepareCompactionStateAnnotateFunction(
+          Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = addCompactionStateToSegments(
               task(),
               context.jsonMapper(),
               dataSchema,
               shardSpec,
               queryDef.getQueryId()
           );
+          segments = compactionStateAnnotateFunction.apply(segments);
         }
       }
-
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
-      publishAllSegments(compactionStateAnnotateFunction.apply(segments));
+      publishAllSegments(segments);
     }
   }
 
-  public static Function<Set<DataSegment>, Set<DataSegment>> prepareCompactionStateAnnotateFunction(
+  private static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       MSQControllerTask task,
       ObjectMapper jsonMapper,
       DataSchema dataSchema,
@@ -1771,30 +1772,41 @@ public class ControllerImpl implements Controller
       String queryId
   )
   {
+    final MSQTuningConfig tuningConfig = task.getQuerySpec().getTuningConfig();
     PartitionsSpec partitionSpec;
 
-    if ((Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
-         || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
+    // There is currently no way of specifying either maxRowsPerSegment or maxTotalRows for an MSQ task.
+    if (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)) {
+      String partitionDimension = ((SingleDimensionShardSpec) shardSpec).getDimension();
+      partitionSpec = new SingleDimensionPartitionsSpec(
+          tuningConfig.getRowsPerSegment(),
+          null,
+          partitionDimension,
+          false
+      );
+    } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
       List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
       partitionSpec = new DimensionRangePartitionsSpec(
-          task.getQuerySpec().getTuningConfig().getRowsPerSegment(),
+          tuningConfig.getRowsPerSegment(),
           null,
           partitionDimensions,
           false
       );
-
     } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
-      partitionSpec = new DynamicPartitionsSpec(task.getQuerySpec().getTuningConfig().getRowsPerSegment(), null);
+      // Using Long.MAX_VALUE for MaxTotalRows as that is the default used by a compaction task.
+      partitionSpec = new DynamicPartitionsSpec(null, DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS);
     } else {
-      log.error(
-          "Query [%s] skipping storing compaction state in segments as shard spec of unsupported type [%s].",
-          queryId, shardSpec.getType()
-      );
-      return Function.identity();
+      throw new MSQException(
+          UnknownFault.forMessage(
+              StringUtils.format(
+                  "Query[%s] cannot store compaction state in segments as shard spec of unsupported type[%s].",
+                  queryId,
+                  shardSpec.getType()
+              )));
     }
 
-    Granularity segmentGranularity = ((DataSourceMSQDestination) task.getQuerySpec()
-                                                                     .getDestination()).getSegmentGranularity();
+    Granularity segmentGranularity = ((DataSourceMSQDestination) task.getQuerySpec().getDestination())
+        .getSegmentGranularity();
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
@@ -1806,9 +1818,9 @@ public class ControllerImpl implements Controller
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
     Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                                         ? null
-                                        : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
-                                                                                          .getFilter()).asMap(
-                                            jsonMapper);
+                                        : new ClientCompactionTaskTransformSpec(
+                                            dataSchema.getTransformSpec().getFilter()
+                                        ).asMap(jsonMapper);
     List<Object> metricsSpec = dataSchema.getAggregators() == null
                                ? null
                                : jsonMapper.convertValue(
@@ -1817,11 +1829,11 @@ public class ControllerImpl implements Controller
                                    });
 
 
-    IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
+    IndexSpec indexSpec = tuningConfig.getIndexSpec();
 
-    log.info("Query [%s] storing compaction state in segments.", queryId);
+    log.info("Query[%s] storing compaction state in segments.", queryId);
 
-    return CompactionState.compactionStateAnnotateFunction(
+    return CompactionState.addCompactionStateToSegments(
         partitionSpec,
         dimensionsSpec,
         metricsSpec,
@@ -1891,8 +1903,9 @@ public class ControllerImpl implements Controller
       }
     } else {
       shuffleSpecFactory = querySpec.getDestination()
-                                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery()
-                                                                                                          .context()));
+                                    .getShuffleSpecFactory(
+                                        MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
+                                    );
       queryToPlan = querySpec.getQuery();
     }
 

@@ -150,7 +150,7 @@ public class CompactionState
            '}';
   }
 
-  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+  public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       PartitionsSpec partitionsSpec,
       DimensionsSpec dimensionsSpec,
       List<Object> metricsSpec,

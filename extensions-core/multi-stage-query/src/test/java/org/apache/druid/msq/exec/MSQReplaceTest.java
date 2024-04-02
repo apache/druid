@@ -83,10 +83,7 @@ public class MSQReplaceTest extends MSQTestBase
                       Tasks.TASK_LOCK_TYPE,
                       StringUtils.toLowerCase(TaskLockType.REPLACE.name())
                   )
-                  .put(
-                      Tasks.STORE_COMPACTION_STATE_KEY,
-                      true
-                  )
+                  .put( Tasks.STORE_COMPACTION_STATE_KEY, true)
                   .build();
 
   public static Collection<Object[]> data()
@@ -954,8 +951,7 @@ public class MSQReplaceTest extends MSQTestBase
                          expectedCompactionState(
                              context,
                              Collections.emptyList(),
-                             Collections.singletonList(new FloatDimensionSchema(
-                                 "m1")),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
                          )
                      )
@@ -1095,21 +1091,23 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
-                                                             "foobar",
-                                                             Intervals.of(
-                                                                 "2000-01-01T00:00:00.000Z/2000-04-01T00:00:00.000Z"),
-                                                             "test",
-                                                             0
-                                                         ),
-                                                         SegmentId.of(
-                                                             "foobar",
-                                                             Intervals.of(
-                                                                 "2001-01-01T00:00:00.000Z/2001-04-01T00:00:00.000Z"),
-                                                             "test",
-                                                             0
-                                                         )
-                                         )
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of(
+                                 "foobar",
+                                 Intervals.of(
+                                     "2000-01-01T00:00:00.000Z/2000-04-01T00:00:00.000Z"),
+                                 "test",
+                                 0
+                             ),
+                             SegmentId.of(
+                                 "foobar",
+                                 Intervals.of(
+                                     "2001-01-01T00:00:00.000Z/2001-04-01T00:00:00.000Z"),
+                                 "test",
+                                 0
+                             )
+                         )
                      )
                      .setExpectedResultRows(
                          ImmutableList.of(
@@ -1848,7 +1846,9 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   private CompactionState expectedCompactionState(
-      Map<String, Object> context, List<String> partitionDimensions, List<DimensionSchema> dimensions,
+      Map<String, Object> context,
+      List<String> partitionDimensions,
+      List<DimensionSchema> dimensions,
       GranularityType segmentGranularity
   )
   {

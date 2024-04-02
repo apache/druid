@@ -991,7 +991,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           Tasks.DEFAULT_STORE_COMPACTION_STATE
       );
       final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
-          prepareCompactionStateAnnotateFunction(
+          addCompactionStateToSegments(
               storeCompactionState,
               toolbox,
               ingestionSchema
