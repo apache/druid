@@ -36,6 +36,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -247,11 +248,12 @@ public class SqlStatementResourceHelper
       TaskStatusResponse taskResponse,
       TaskStatusPlus statusPlus,
       SqlStatementState sqlStatementState,
-      TaskReport.ReportMap msqPayload
+      TaskReport.ReportMap msqPayload,
+      ObjectMapper jsonMapper
   )
   {
-    MSQErrorReport exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
-    MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
+    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
+    final MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
     if (exceptionDetails == null || fault == null) {
       return Optional.of(new SqlStatementResult(
           queryId,
@@ -267,15 +269,10 @@ public class SqlStatementResourceHelper
       ));
     }
 
+    final String errorMessage = fault.getErrorMessage() == null ? statusPlus.getErrorMsg() : fault.getErrorMessage();
+    final String errorCode = fault.getErrorCode() == null ? "unknown" : fault.getErrorCode();
 
-    final String errorMessage = String.valueOf(exception.getOrDefault("errorMessage", statusPlus.getErrorMsg()));
-    exception.remove("errorMessage");
-    String errorCode = String.valueOf(exception.getOrDefault("errorCode", "unknown"));
-    exception.remove("errorCode");
-    Map<String, String> stringException = new HashMap<>();
-    for (Map.Entry<String, Object> exceptionKeys : exception.entrySet()) {
-      stringException.put(exceptionKeys.getKey(), String.valueOf(exceptionKeys.getValue()));
-    }
+    final Map<String, String> exceptionContext = buildExceptionContext(fault, jsonMapper);
     return Optional.of(new SqlStatementResult(
         queryId,
         sqlStatementState,
@@ -291,7 +288,7 @@ public class SqlStatementResourceHelper
             DruidException ex = bob.forPersona(DruidException.Persona.USER)
                                    .ofCategory(DruidException.Category.UNCATEGORIZED)
                                    .build(errorMessage);
-            ex.withContext(stringException);
+            ex.withContext(exceptionContext);
             return ex;
           }
         }).toErrorResponse()
@@ -372,18 +369,31 @@ public class SqlStatementResourceHelper
     return payload.getStatus().getErrorReport();
   }
 
-  public static Map<String, Object> getMap(Map<String, Object> map, String key)
-  {
-    if (map == null) {
-      return null;
-    }
-    return (Map<String, Object>) map.get(key);
-  }
-
   public static MSQTaskReportPayload getPayload(TaskReport.ReportMap results)
   {
-    return results.findReport("multiStageQuery", MSQTaskReport.class)
-                  .map(MSQTaskReport::getPayload)
-                  .orElse(null);
+    com.google.common.base.Optional<MSQTaskReport> report = results.findReport("multiStageQuery");
+    return report.isPresent() ? report.get().getPayload() : null;
+  }
+
+  private static Map<String, String> buildExceptionContext(MSQFault fault, ObjectMapper mapper)
+  {
+    try {
+      final Map<String, Object> msqFaultAsMap = new HashMap<>(
+          mapper.readValue(
+              mapper.writeValueAsBytes(fault),
+              JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+          )
+      );
+      msqFaultAsMap.remove("errorCode");
+      msqFaultAsMap.remove("errorMessage");
+
+      final Map<String, String> exceptionContext = new HashMap<>();
+      msqFaultAsMap.forEach((key, value) -> exceptionContext.put(key, String.valueOf(value)));
+
+      return exceptionContext;
+    }
+    catch (Exception e) {
+      throw DruidException.defensive("Could not read MSQFault[%s] as a map: [%s]", fault, e.getMessage());
+    }
   }
 }

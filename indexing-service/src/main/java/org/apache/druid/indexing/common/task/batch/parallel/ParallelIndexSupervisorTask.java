@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -1690,10 +1691,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           continue;
         }
 
-        final IngestionStatsAndErrors payload = report.findReport(
-            IngestionStatsAndErrorsTaskReport.REPORT_KEY,
-            IngestionStatsAndErrorsTaskReport.class
-        ).map(IngestionStatsAndErrorsTaskReport::getPayload).orElse(null);
+        final Optional<IngestionStatsAndErrorsTaskReport> ingestionStatsReport
+            = report.findReport(IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+
+        final IngestionStatsAndErrors payload;
+        if (ingestionStatsReport.isPresent()) {
+          payload = ingestionStatsReport.get().getPayload();
+        } else {
+          payload = null;
+        }
 
         Map<String, Object> rowStats = payload.getRowStats();
         Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
