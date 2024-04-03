@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -53,10 +52,10 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -463,9 +462,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   {
     TaskReport.ReportMap taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
-        new TypeReference<TaskReport.ReportMap>()
-        {
-        }
+        TaskReport.ReportMap.class
     );
     return IngestionStatsAndErrors.getPayloadFromTaskReports(
         taskReports

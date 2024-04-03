@@ -17,11 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 

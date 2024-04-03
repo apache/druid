@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -1134,9 +1133,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     try {
       Object payload = getObjectMapper().readValue(
           taskRunner.getTaskReportsFile(),
-          new TypeReference<TaskReport.ReportMap>()
-          {
-          }
+          TaskReport.ReportMap.class
       ).get(KillTaskReport.REPORT_KEY).getPayload();
       return getObjectMapper().convertValue(payload, KillTaskReport.Stats.class);
     }

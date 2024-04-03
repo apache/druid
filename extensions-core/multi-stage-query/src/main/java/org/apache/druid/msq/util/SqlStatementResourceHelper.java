@@ -364,14 +364,20 @@ public class SqlStatementResourceHelper
     return null;
   }
 
-  public static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
+  @Nullable
+  private static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
   {
-    return payload.getStatus().getErrorReport();
+    return payload == null ? null : payload.getStatus().getErrorReport();
   }
 
-  public static MSQTaskReportPayload getPayload(TaskReport.ReportMap results)
+  @Nullable
+  public static MSQTaskReportPayload getPayload(TaskReport.ReportMap reportMap)
   {
-    com.google.common.base.Optional<MSQTaskReport> report = results.findReport("multiStageQuery");
+    if (reportMap == null) {
+      return null;
+    }
+
+    com.google.common.base.Optional<MSQTaskReport> report = reportMap.findReport("multiStageQuery");
     return report.isPresent() ? report.get().getPayload() : null;
   }
 

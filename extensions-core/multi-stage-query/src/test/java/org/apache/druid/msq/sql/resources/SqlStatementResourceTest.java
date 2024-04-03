@@ -107,22 +107,17 @@ public class SqlStatementResourceTest extends MSQTestBase
 {
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
   private static final String ACCEPTED_SELECT_MSQ_QUERY = "QUERY_ID_1";
   private static final String RUNNING_SELECT_MSQ_QUERY = "QUERY_ID_2";
   private static final String FINISHED_SELECT_MSQ_QUERY = "QUERY_ID_3";
-
   private static final String ERRORED_SELECT_MSQ_QUERY = "QUERY_ID_4";
 
-
   private static final String RUNNING_NON_MSQ_TASK = "QUERY_ID_5";
-
   private static final String FAILED_NON_MSQ_TASK = "QUERY_ID_6";
-
   private static final String FINISHED_NON_MSQ_TASK = "QUERY_ID_7";
 
-
   private static final String ACCEPTED_INSERT_MSQ_TASK = "QUERY_ID_8";
-
   private static final String RUNNING_INSERT_MSQ_QUERY = "QUERY_ID_9";
   private static final String FINISHED_INSERT_MSQ_QUERY = "QUERY_ID_10";
   private static final String ERRORED_INSERT_MSQ_QUERY = "QUERY_ID_11";
@@ -344,10 +339,10 @@ public class SqlStatementResourceTest extends MSQTestBase
   private static final String FAILURE_MSG = "failure msg";
   private static SqlStatementResource resource;
 
-  private static String SUPERUSER = "superuser";
-  private static String STATE_R_USER = "stateR";
-  private static String STATE_W_USER = "stateW";
-  private static String STATE_RW_USER = "stateRW";
+  private static final String SUPERUSER = "superuser";
+  private static final String STATE_R_USER = "stateR";
+  private static final String STATE_W_USER = "stateW";
+  private static final String STATE_RW_USER = "stateRW";
 
   private AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
   {

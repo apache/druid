@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -26,12 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexer.report.IngestionStatsAndErrors;
-import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexer.report.KillTaskReport;
-import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,8 +45,7 @@ public class TaskReportSerdeTest
 
   public TaskReportSerdeTest()
   {
-    TestUtils testUtils = new TestUtils();
-    jsonMapper = testUtils.getTestObjectMapper();
+    jsonMapper = new DefaultObjectMapper();
     jsonMapper.registerSubtypes(ExceptionalTaskReport.class);
   }
 
