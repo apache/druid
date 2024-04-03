@@ -627,25 +627,16 @@ public class InFilterTests
 
     private void assertTypedFilterMatches(DimFilter filter, List<String> expectedRows)
     {
-      // this filter only tests in sql compatible mode
-      if (NullHandling.sqlCompatible()) {
-        super.assertFilterMatches(filter, expectedRows);
-        try {
-          // make sure round trip json serde is cool
-          super.assertFilterMatches(
-              jsonMapper.readValue(jsonMapper.writeValueAsString(filter), DimFilter.class),
-              expectedRows
-          );
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      } else {
-        Throwable t = Assert.assertThrows(
-            DruidException.class,
-            () -> super.assertFilterMatches(filter, expectedRows)
+      super.assertFilterMatches(filter, expectedRows);
+      try {
+        // make sure round trip json serde is cool
+        super.assertFilterMatches(
+            jsonMapper.readValue(jsonMapper.writeValueAsString(filter), DimFilter.class),
+            expectedRows
         );
-        Assert.assertEquals("Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter", t.getMessage());
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
       }
     }
 
