@@ -26,6 +26,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.kafka.common.TopicPartition;
@@ -44,6 +45,28 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
   )
   {
     super(kafkaPartitions);
+  }
+
+  @Override
+  @JsonProperty("partitions")
+  public SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> getSeekableStreamSequenceNumbers()
+  {
+    if (seekableStreamSequenceNumbers instanceof SeekableStreamStartSequenceNumbers) {
+      return new KafkaSeekableStreamStartSequenceNumbers(
+          seekableStreamSequenceNumbers.getStream(),
+          ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getTopic(),
+          seekableStreamSequenceNumbers.getPartitionSequenceNumberMap(),
+          ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getPartitionOffsetMap(),
+          ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getExclusivePartitions()
+      );
+    } else {
+      return new KafkaSeekableStreamEndSequenceNumbers(
+          seekableStreamSequenceNumbers.getStream(),
+          ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getTopic(),
+          seekableStreamSequenceNumbers.getPartitionSequenceNumberMap(),
+          ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getPartitionOffsetMap()
+      );
+    }
   }
 
   @Override
@@ -88,42 +111,34 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
     if (!getClass().equals(other.getClass())) {
       return false;
     }
-    if (plus(other).equals(other.plus(this))) {
+    KafkaDataSourceMetadata thisPlusOther = (KafkaDataSourceMetadata) plus(other);
+    if (thisPlusOther.equals(other.plus(this))) {
       return true;
     }
-    return plusTopicPartition((KafkaDataSourceMetadata) other)
-        .equals(((KafkaDataSourceMetadata) other).plusTopicPartition(this));
-  }
 
-  @Override
-  public boolean matchesOld(DataSourceMetadata old)
-  {
-    if (!getClass().equals(old.getClass())) {
+    // check that thisPlusOther contains all metadata from other, and that there is no inconsistency or loss
+    KafkaDataSourceMetadata otherMetadata = (KafkaDataSourceMetadata) other;
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> otherSequenceNumbers = otherMetadata.getSeekableStreamSequenceNumbers();
+    if (!getSeekableStreamSequenceNumbers().isMultiTopicPartition() && !otherSequenceNumbers.isMultiTopicPartition()) {
       return false;
     }
-    if (plus(old).equals(old.plus(this))) {
-      return true;
-    }
-    // assume other is older or make a new version of this function
-    KafkaDataSourceMetadata oldMetadata = (KafkaDataSourceMetadata) old;
-    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
-    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> oldSequenceNumbers = oldMetadata.getSeekableStreamSequenceNumbers();
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> mergedSequenceNumbers = thisPlusOther.getSeekableStreamSequenceNumbers();
 
-    final Map<TopicPartition, Long> topicAndPartitionToSequenceNumber = sequenceNumbers.getPartitionSequenceNumberMap()
+    final Map<TopicPartition, Long> topicAndPartitionToSequenceNumber = mergedSequenceNumbers.getPartitionSequenceNumberMap()
         .entrySet()
         .stream()
         .collect(Collectors.toMap(
             e -> {
               KafkaTopicPartition kafkaTopicPartition = e.getKey();
-              return kafkaTopicPartition.asTopicPartition(sequenceNumbers.getStream());
+              return kafkaTopicPartition.asTopicPartition(mergedSequenceNumbers.getStream());
             },
             e -> e.getValue()
         ));
 
-    return oldSequenceNumbers.getPartitionSequenceNumberMap().entrySet().stream().noneMatch(
+    boolean allOtherFoundAndConsistent = otherSequenceNumbers.getPartitionSequenceNumberMap().entrySet().stream().noneMatch(
         e -> {
           KafkaTopicPartition kafkaTopicPartition = e.getKey();
-          TopicPartition topicPartition = kafkaTopicPartition.asTopicPartition(oldSequenceNumbers.getStream());
+          TopicPartition topicPartition = kafkaTopicPartition.asTopicPartition(otherSequenceNumbers.getStream());
           Long sequenceOffset = topicAndPartitionToSequenceNumber.get(topicPartition);
           long oldSequenceOffset = e.getValue();
           if (sequenceOffset == null || !sequenceOffset.equals(oldSequenceOffset)) {
@@ -139,34 +154,27 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
           return false;
         }
     );
-  }
 
-  private Map<TopicPartition, Long> plusTopicPartition(KafkaDataSourceMetadata other)
-  {
-    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> offsets = getSeekableStreamSequenceNumbers();
-    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> otherOffsets = other.getSeekableStreamSequenceNumbers();
-    final Map<TopicPartition, Long> topicPartitionToOffset = buildTopicPartitionToOffset(offsets);
-    final Map<TopicPartition, Long> topicPartitionToOtherOffset = buildTopicPartitionToOffset(
-        otherOffsets);
+    boolean allThisFoundAndConsistent = this.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap().entrySet().stream().noneMatch(
+        e -> {
+          KafkaTopicPartition kafkaTopicPartition = e.getKey();
+          TopicPartition topicPartition = kafkaTopicPartition.asTopicPartition(this.getSeekableStreamSequenceNumbers().getStream());
+          Long oldSequenceOffset = topicAndPartitionToSequenceNumber.get(topicPartition);
+          long sequenceOffset = e.getValue();
+          if (oldSequenceOffset == null || !oldSequenceOffset.equals(sequenceOffset)) {
+            LOGGER.info(
+                "sequenceOffset found for currently computed and stored metadata does not match for "
+                + "topicPartition: [%s].  currentSequenceOffset: [%s], oldSequenceOffset: [%s]",
+                topicPartition,
+                sequenceOffset,
+                oldSequenceOffset
+            );
+            return true;
+          }
+          return false;
+        }
+    );
 
-    topicPartitionToOffset.putAll(topicPartitionToOtherOffset);
-
-    return topicPartitionToOffset;
-
-  }
-
-  private Map<TopicPartition, Long> buildTopicPartitionToOffset(
-      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> sequenceNumbers)
-  {
-    return sequenceNumbers.getPartitionSequenceNumberMap()
-        .entrySet()
-        .stream()
-        .collect(Collectors.toMap(
-            e -> {
-              KafkaTopicPartition kafkaTopicPartition = e.getKey();
-              return kafkaTopicPartition.asTopicPartition(sequenceNumbers.getStream());
-            },
-            e -> e.getValue()
-        ));
+    return allOtherFoundAndConsistent && allThisFoundAndConsistent;
   }
 }

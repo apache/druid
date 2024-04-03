@@ -28,7 +28,7 @@ import java.util.Objects;
 public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>
     implements DataSourceMetadata
 {
-  private final SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers;
+  protected final SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers;
 
   public SeekableStreamDataSourceMetadata(
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers
@@ -74,7 +74,7 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that =
         (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
 
-    return createConcreteDataSourceMetaData(seekableStreamSequenceNumbers.plus(that.seekableStreamSequenceNumbers));
+    return createConcreteDataSourceMetaData(getSeekableStreamSequenceNumbers().plus(that.getSeekableStreamSequenceNumbers()));
   }
 
   @Override

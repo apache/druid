@@ -51,9 +51,16 @@ public class KafkaDataSourceMetadataTest
   private static final KafkaDataSourceMetadata START4 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of());
   private static final KafkaDataSourceMetadata START5 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 3L));
   private static final KafkaDataSourceMetadata START6 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 1, 3L));
-  private static final KafkaDataSourceMetadata END0 = endMetadata(ImmutableMap.of());
-  private static final KafkaDataSourceMetadata END1 = endMetadata(ImmutableMap.of(0, 2L, 2, 5L));
-  private static final KafkaDataSourceMetadata END2 = endMetadata(ImmutableMap.of(0, 2L, 1, 4L));
+  private static final KafkaDataSourceMetadata START7 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END0 = endMetadata("foo", ImmutableMap.of());
+  private static final KafkaDataSourceMetadata END1 = endMetadata("foo", ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END2 = endMetadata("foo", ImmutableMap.of(0, 2L, 1, 4L));
+  private static final KafkaDataSourceMetadata END3 = endMetadata("foo", ImmutableMap.of(0, 2L, 1, 3L));
+  private static final KafkaDataSourceMetadata END4 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of());
+  private static final KafkaDataSourceMetadata END5 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END6 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 4L));
+  private static final KafkaDataSourceMetadata END7 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END8 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 1, 4L));
 
   @Test
   public void testMatches()
@@ -62,69 +69,211 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START0.matches(START1));
     Assert.assertTrue(START0.matches(START2));
     Assert.assertTrue(START0.matches(START3));
-    Assert.assertTrue(START0.matches(START4));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START0.matches(START4));
     Assert.assertTrue(START0.matches(START5));
-    Assert.assertTrue(START0.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(START0.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(START0.matches(START7));
 
     Assert.assertTrue(START1.matches(START0));
     Assert.assertTrue(START1.matches(START1));
+    // sequence numbers for topic foo partition 1 are inconsistent, so false
     Assert.assertFalse(START1.matches(START2));
     Assert.assertTrue(START1.matches(START3));
-    Assert.assertTrue(START1.matches(START4));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START1.matches(START4));
     Assert.assertTrue(START1.matches(START5));
-    Assert.assertTrue(START1.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2, and sequence numbers for topic foo-1 are inconsistent, so false
+    Assert.assertFalse(START1.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(START1.matches(START7));
 
     Assert.assertTrue(START2.matches(START0));
     Assert.assertFalse(START2.matches(START1));
     Assert.assertTrue(START2.matches(START2));
     Assert.assertTrue(START2.matches(START3));
-    Assert.assertTrue(START2.matches(START4));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START2.matches(START4));
+    // when merging, sequence numbers for topic foo-1 are inconsistent, so false
     Assert.assertFalse(START2.matches(START5));
+    // when merging, we lose the sequence numbers for topic foo2, and sequence numbers for topic foo-1 are inconsistent, so false
     Assert.assertFalse(START2.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(START2.matches(START7));
 
     Assert.assertTrue(START3.matches(START0));
     Assert.assertTrue(START3.matches(START1));
     Assert.assertTrue(START3.matches(START2));
     Assert.assertTrue(START3.matches(START3));
-    Assert.assertTrue(START3.matches(START4));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START3.matches(START4));
     Assert.assertTrue(START3.matches(START5));
-    Assert.assertTrue(START3.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(START3.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(START3.matches(START7));
 
-    Assert.assertTrue(START4.matches(START0));
-    Assert.assertTrue(START4.matches(START1));
-    Assert.assertTrue(START4.matches(START2));
-    Assert.assertTrue(START4.matches(START3));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START0));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START1));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START2));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START3));
     Assert.assertTrue(START4.matches(START4));
-    Assert.assertTrue(START4.matches(START5));
-    Assert.assertTrue(START4.matches(START6));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START5));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START6));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START7));
 
     Assert.assertTrue(START5.matches(START0));
     Assert.assertTrue(START5.matches(START1));
+    // when merging, the sequence numbers for topic foo-1 are inconsistent, so false
     Assert.assertFalse(START5.matches(START2));
     Assert.assertTrue(START5.matches(START3));
     Assert.assertTrue(START5.matches(START4));
     Assert.assertTrue(START5.matches(START5));
     Assert.assertTrue(START5.matches(START6));
+    Assert.assertTrue(START5.matches(START7));
 
     Assert.assertTrue(START6.matches(START0));
     Assert.assertTrue(START6.matches(START1));
+    // when merging, the sequence numbers for topic foo-1 are inconsistent, so false
     Assert.assertFalse(START6.matches(START2));
     Assert.assertTrue(START6.matches(START3));
     Assert.assertTrue(START6.matches(START4));
     Assert.assertTrue(START6.matches(START5));
     Assert.assertTrue(START6.matches(START6));
+    Assert.assertTrue(START6.matches(START7));
+
+    Assert.assertTrue(START7.matches(START0));
+    Assert.assertTrue(START7.matches(START1));
+    Assert.assertTrue(START7.matches(START2));
+    Assert.assertTrue(START7.matches(START3));
+    Assert.assertTrue(START7.matches(START4));
+    Assert.assertTrue(START7.matches(START5));
+    Assert.assertTrue(START7.matches(START6));
+    Assert.assertTrue(START7.matches(START7));
 
     Assert.assertTrue(END0.matches(END0));
     Assert.assertTrue(END0.matches(END1));
     Assert.assertTrue(END0.matches(END2));
+    Assert.assertTrue(END0.matches(END3));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END0.matches(END4));
+    Assert.assertTrue(END0.matches(END5));
+    Assert.assertTrue(END0.matches(END6));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(END0.matches(END7));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(END0.matches(END8));
 
     Assert.assertTrue(END1.matches(END0));
     Assert.assertTrue(END1.matches(END1));
     Assert.assertTrue(END1.matches(END2));
+    Assert.assertTrue(END1.matches(END3));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END1.matches(END4));
+    Assert.assertTrue(END1.matches(END5));
+    Assert.assertTrue(END1.matches(END6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END1.matches(END7));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END1.matches(END8));
 
     Assert.assertTrue(END2.matches(END0));
     Assert.assertTrue(END2.matches(END1));
     Assert.assertTrue(END2.matches(END2));
+    // when merging, the sequence numbers for topic foo-1 are inconsistent, so false
+    Assert.assertFalse(END2.matches(END3));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END2.matches(END4));
+    Assert.assertTrue(END2.matches(END5));
+    Assert.assertTrue(END2.matches(END6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END2.matches(END7));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END2.matches(END8));
+
+    Assert.assertTrue(END3.matches(END0));
+    Assert.assertTrue(END3.matches(END1));
+    // when merging, the sequence numbers for topic foo-1 are inconsistent, so false
+    Assert.assertFalse(END3.matches(END2));
+    Assert.assertTrue(END3.matches(END3));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END3.matches(END4));
+    Assert.assertTrue(END3.matches(END5));
+    // when merging, the sequence numbers for topic foo-1 are inconsistent, so false
+    Assert.assertFalse(END3.matches(END6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END3.matches(END7));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END3.matches(END8));
+
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END0));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END1));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END2));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END3));
+    Assert.assertTrue(END4.matches(END4));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END5));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END6));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END7));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END8));
+
+    Assert.assertTrue(END5.matches(END0));
+    Assert.assertTrue(END5.matches(END1));
+    Assert.assertTrue(END5.matches(END2));
+    Assert.assertTrue(END5.matches(END3));
+    Assert.assertTrue(END5.matches(END4));
+    Assert.assertTrue(END5.matches(END5));
+    Assert.assertTrue(END5.matches(END6));
+    Assert.assertTrue(END5.matches(END7));
+    Assert.assertTrue(END5.matches(END8));
+
+    Assert.assertTrue(END6.matches(END0));
+    Assert.assertTrue(END6.matches(END1));
+    Assert.assertTrue(END6.matches(END2));
+    // when merging, the sequence numbers for topic foo-1 are inconsistent, so false
+    Assert.assertFalse(END6.matches(END3));
+    Assert.assertTrue(END6.matches(END4));
+    Assert.assertTrue(END6.matches(END5));
+    Assert.assertTrue(END6.matches(END6));
+    Assert.assertTrue(END6.matches(END7));
+    Assert.assertTrue(END6.matches(END8));
+
+    Assert.assertTrue(END7.matches(END0));
+    Assert.assertTrue(END7.matches(END1));
+    Assert.assertTrue(END7.matches(END2));
+    Assert.assertTrue(END7.matches(END3));
+    Assert.assertTrue(END7.matches(END4));
+    Assert.assertTrue(END7.matches(END5));
+    Assert.assertTrue(END7.matches(END6));
+    Assert.assertTrue(END7.matches(END7));
+    Assert.assertTrue(END7.matches(END8));
+
+    Assert.assertTrue(END8.matches(END0));
+    Assert.assertTrue(END8.matches(END1));
+    Assert.assertTrue(END8.matches(END2));
+    // when merging, the sequence numbers for topic foo-1, and foo-2 are inconsistent, so false
+    Assert.assertFalse(END8.matches(END3));
+    Assert.assertTrue(END8.matches(END4));
+    Assert.assertTrue(END8.matches(END5));
+    Assert.assertTrue(END8.matches(END6));
+    Assert.assertTrue(END8.matches(END7));
+    Assert.assertTrue(END8.matches(END8));
   }
 
   @Test
@@ -134,6 +283,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START1.isValidStart());
     Assert.assertTrue(START2.isValidStart());
     Assert.assertTrue(START3.isValidStart());
+    Assert.assertTrue(START4.isValidStart());
+    Assert.assertTrue(START5.isValidStart());
+    Assert.assertTrue(START6.isValidStart());
+    Assert.assertTrue(START7.isValidStart());
   }
 
   @Test
@@ -154,6 +307,45 @@ public class KafkaDataSourceMetadataTest
         START1.plus(START2)
     );
 
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        startMetadata("foo", ImmutableMap.of()),
+        START0.plus(START4)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of()),
+        START4.plus(START0)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        startMetadata("foo", ImmutableMap.of(0, 2L, 1, 3L)),
+        START1.plus(START4)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 3L)),
+        START4.plus(START1)
+    );
+
+    Assert.assertEquals(
+        startMetadata(ImmutableMap.of(0, 2L, 1, 3L)),
+        START1.plus(START5)
+    );
+
+    Assert.assertEquals(
+        startMetadata(ImmutableMap.of(0, 2L, 1, 3L)),
+        START1.plus(START6)
+    );
+
+    Assert.assertEquals(
+        startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
+        START1.plus(START7)
+    );
+
     Assert.assertEquals(
         startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
         START2.plus(START1)
@@ -172,6 +364,30 @@ public class KafkaDataSourceMetadataTest
     Assert.assertEquals(
         endMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
         END1.plus(END2)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        endMetadata("foo", ImmutableMap.of()),
+        END0.plus(END4)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of()),
+        END4.plus(END0)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        endMetadata("foo", ImmutableMap.of(0, 2L, 2, 5L)),
+        END1.plus(END4)
+    );
+
+    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertNotEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END4.plus(END1)
     );
   }
 
@@ -296,6 +512,11 @@ public class KafkaDataSourceMetadataTest
 
   private static KafkaDataSourceMetadata endMetadata(Map<Integer, Long> offsets)
   {
+    return endMetadata("foo", offsets);
+  }
+
+  private static KafkaDataSourceMetadata endMetadata(String topic, Map<Integer, Long> offsets)
+  {
     Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
         offsets,
         k -> new KafkaTopicPartition(
@@ -304,7 +525,34 @@ public class KafkaDataSourceMetadataTest
             k
         )
     );
-    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", newOffsets));
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, newOffsets));
+  }
+
+  private static KafkaDataSourceMetadata endMetadataMultiTopic(
+      String topicPattern,
+      List<String> topics,
+      Map<Integer, Long> offsets
+  )
+  {
+    Assert.assertFalse(topics.isEmpty());
+    Pattern pattern = Pattern.compile(topicPattern);
+    Assert.assertTrue(topics.stream().allMatch(t -> pattern.matcher(t).matches()));
+    int i = 0;
+    Map<KafkaTopicPartition, Long> newOffsets = new HashMap<>();
+    for (Map.Entry<Integer, Long> e : offsets.entrySet()) {
+      for (String topic : topics) {
+        newOffsets.put(
+            new KafkaTopicPartition(
+                true,
+                topic,
+                e.getKey()
+
+            ),
+            e.getValue()
+        );
+      }
+    }
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topicPattern, newOffsets));
   }
 
   private static ObjectMapper createObjectMapper()

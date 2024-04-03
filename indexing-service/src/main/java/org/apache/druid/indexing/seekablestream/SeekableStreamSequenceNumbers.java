@@ -41,6 +41,14 @@ public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetTy
   String getStream();
 
   /**
+   * Returns whether the sequence number data is for possibly multiple streams / topics.
+   */
+  default boolean isMultiTopicPartition()
+  {
+    return false;
+  }
+
+  /**
    * Returns a map of partitionId -> sequenceNumber.
    */
   Map<PartitionIdType, SequenceOffsetType> getPartitionSequenceNumberMap();
