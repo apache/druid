@@ -39,7 +39,6 @@ import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
