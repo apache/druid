@@ -51,7 +51,13 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   const buttons: JSX.Element[] = [];
 
   if (typeof queryErrorDuration === 'number') {
-    buttons.push(<Button key="timing" minimal text={formatDurationHybrid(queryErrorDuration)} />);
+    buttons.push(
+      <Button
+        key="timing"
+        minimal
+        text={`Error after ${formatDurationHybrid(queryErrorDuration)}`}
+      />,
+    );
   }
 
   if (queryResult) {
