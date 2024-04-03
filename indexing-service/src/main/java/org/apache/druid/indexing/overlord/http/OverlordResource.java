@@ -810,7 +810,7 @@ public class OverlordResource
                   statusPlus.getId(),
                   statusPlus.getGroupId(),
                   statusPlus.getType(),
-                  runnerWorkItem.getCreatedTime(),
+                  statusPlus.getCreatedTime(),
                   runnerWorkItem.getQueueInsertionTime(),
                   statusPlus.getStatusCode(),
                   taskRunner.getRunnerTaskState(statusPlus.getId()), // this is racy for remoteTaskRunner

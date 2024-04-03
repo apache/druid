@@ -41,6 +41,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
@@ -222,7 +224,17 @@ public class RowSignatures
     )
     {
       super(typeName, isNullable, null);
-      this.columnType = columnType;
+      // homogenize complex type names to common name
+      final ComplexMetricSerde serde = columnType.getComplexTypeName() != null
+          ?
+          ComplexMetrics.getSerdeForType(columnType.getComplexTypeName())
+          : null;
+
+      if (serde != null) {
+        this.columnType = ColumnType.ofComplex(serde.getTypeName());
+      } else {
+        this.columnType = columnType;
+      }
       this.computeDigest();
     }
 
