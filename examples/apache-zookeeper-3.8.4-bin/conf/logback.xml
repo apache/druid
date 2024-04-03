@@ -1,0 +1,114 @@
+<!--
+ Copyright 2022 The Apache Software Foundation
+
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+ Define some default values that can be overridden by system properties
+-->
+<configuration>
+  <!-- Uncomment this if you would like to expose Logback JMX beans -->
+  <!--jmxConfigurator /-->
+
+  <property name="zookeeper.console.threshold" value="INFO" />
+
+  <property name="zookeeper.log.dir" value="." />
+  <property name="zookeeper.log.file" value="zookeeper.log" />
+  <property name="zookeeper.log.threshold" value="INFO" />
+  <property name="zookeeper.log.maxfilesize" value="256MB" />
+  <property name="zookeeper.log.maxbackupindex" value="20" />
+
+  <!--
+    console
+    Add "console" to root logger if you want to use this
+  -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{ISO8601} [myid:%X{myid}] - %-5p [%t:%C{1}@%L] - %m%n</pattern>
+    </encoder>
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>${zookeeper.console.threshold}</level>
+    </filter>
+  </appender>
+
+  <!--
+    Add ROLLINGFILE to root logger to get log file output
+  -->
+  <!--appender name="ROLLINGFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <File>${zookeeper.log.dir}/${zookeeper.log.file}</File>
+    <encoder>
+      <pattern>%d{ISO8601} [myid:%X{myid}] - %-5p [%t:%C{1}@%L] - %m%n</pattern>
+    </encoder>
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>${zookeeper.log.threshold}</level>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+      <maxIndex>${zookeeper.log.maxbackupindex}</maxIndex>
+      <FileNamePattern>${zookeeper.log.dir}/${zookeeper.log.file}.%i</FileNamePattern>
+    </rollingPolicy>
+    <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+      <MaxFileSize>${zookeeper.log.maxfilesize}</MaxFileSize>
+    </triggeringPolicy>
+  </appender-->
+
+  <!--
+    Add TRACEFILE to root logger to get log file output
+    Log TRACE level and above messages to a log file
+  -->
+  <!--property name="zookeeper.tracelog.dir" value="${zookeeper.log.dir}" />
+  <property name="zookeeper.tracelog.file" value="zookeeper_trace.log" />
+  <appender name="TRACEFILE" class="ch.qos.logback.core.FileAppender">
+    <File>${zookeeper.tracelog.dir}/${zookeeper.tracelog.file}</File>
+    <encoder>
+      <pattern>%d{ISO8601} [myid:%X{myid}] - %-5p [%t:%C{1}@%L] - %m%n</pattern>
+    </encoder>
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>TRACE</level>
+    </filter>
+  </appender-->
+
+  <!--
+    zk audit logging
+  -->
+  <!--property name="zookeeper.auditlog.file" value="zookeeper_audit.log" />
+  <property name="zookeeper.auditlog.threshold" value="INFO" />
+  <property name="audit.logger" value="INFO, RFAAUDIT" />
+
+  <appender name="RFAAUDIT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <File>${zookeeper.log.dir}/${zookeeper.auditlog.file}</File>
+    <encoder>
+      <pattern>%d{ISO8601} %p %c{2}: %m%n</pattern>
+    </encoder>
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>${zookeeper.auditlog.threshold}</level>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+      <maxIndex>10</maxIndex>
+      <FileNamePattern>${zookeeper.log.dir}/${zookeeper.auditlog.file}.%i</FileNamePattern>
+    </rollingPolicy>
+    <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+      <MaxFileSize>10MB</MaxFileSize>
+    </triggeringPolicy>
+  </appender>
+
+  <logger name="org.apache.zookeeper.audit.Slf4jAuditLogger" additivity="false" level="${audit.logger}">
+    <appender-ref ref="RFAAUDIT" />
+  </logger-->
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE" />
+  </root>
+</configuration>

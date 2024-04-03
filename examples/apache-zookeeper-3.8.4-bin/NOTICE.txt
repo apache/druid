@@ -1,0 +1,35 @@
+Apache ZooKeeper
+Copyright 2009-2023 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+This product includes software components originally
+developed for Airlift (https://github.com/airlift/airlift),
+licensed under the Apache 2.0 license. The licensing terms
+for Airlift code can be found at:
+https://github.com/airlift/airlift/blob/master/LICENSE
+
+This project also includes some files with the following licenses.
+
+These BSD licensed files:
+  ./zookeeper-client/zookeeper-client-c/src/hashtable/hashtable.c
+  ./zookeeper-client/zookeeper-client-c/src/hashtable/hashtable.h
+  ./zookeeper-client/zookeeper-client-c/src/hashtable/hashtable_itr.c
+  ./zookeeper-client/zookeeper-client-c/src/hashtable/hashtable_itr.h
+  ./zookeeper-client/zookeeper-client-c/src/hashtable/hashtable_private.h
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/yui-min.js
+  ./zookeeper-docs/src/main/resources/markdown/skin/prototype.js
+
+These MIT licensed files:
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/date.format.js
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/g.bar.js
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/g.dot.js
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/g.line.js
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/g.pie.js
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/g.raphael.js
+  ./zookeeper-contrib/zookeeper-contrib-loggraph/src/main/resources/webapp/org/apache/zookeeper/graph/resources/raphael.js
+
+This Apache 2.0 licensed file:
+./zookeeper-contrib/zookeeper-contrib-zooinspector/src/main/java/com/nitido/utils/toaster/Toaster.java
+

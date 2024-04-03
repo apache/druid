@@ -1,0 +1,363 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2022 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Internals</h1>
+<ul>
+<li><a href="#ch_Introduction">Introduction</a></li>
+<li><a href="#sc_atomicBroadcast">Atomic Broadcast</a>
+<ul>
+<li><a href="#sc_guaranteesPropertiesDefinitions">Guarantees, Properties, and Definitions</a></li>
+<li><a href="#sc_leaderElection">Leader Activation</a></li>
+<li><a href="#sc_activeMessaging">Active Messaging</a></li>
+<li><a href="#sc_summary">Summary</a></li>
+<li><a href="#sc_comparisons">Comparisons</a></li>
+</ul>
+</li>
+<li><a href="#sc_consistency">Consistency Guarantees</a></li>
+<li><a href="#sc_quorum">Quorums</a></li>
+<li><a href="#sc_logging">Logging</a>
+<ul>
+<li><a href="#sc_developerGuidelines">Developer Guidelines</a>
+<ul>
+<li><a href="#sc_rightLevel">Logging at the Right Level</a></li>
+<li><a href="#sc_slf4jIdioms">Use of Standard slf4j Idioms</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><a name="ch_Introduction"></a></p>
+<h2>Introduction</h2>
+<p>This document contains information on the inner workings of ZooKeeper. It discusses the following topics:</p>
+<ul>
+<li><a href="#sc_atomicBroadcast">Atomic Broadcast</a></li>
+<li><a href="#sc_consistency">Consistency Guarantees</a></li>
+<li><a href="#sc_quorum">Quorums</a></li>
+<li><a href="#sc_logging">Logging</a></li>
+</ul>
+<p><a name="sc_atomicBroadcast"></a></p>
+<h2>Atomic Broadcast</h2>
+<p>At the heart of ZooKeeper is an atomic messaging system that keeps all of the servers in sync.</p>
+<p><a name="sc_guaranteesPropertiesDefinitions"></a></p>
+<h3>Guarantees, Properties, and Definitions</h3>
+<p>The specific guarantees provided by the messaging system used by ZooKeeper are the following:</p>
+<ul>
+<li>
+<p><em><em>Reliable delivery</em></em> : If a message <code>m</code>, is delivered by one server, message <code>m</code> will be eventually delivered by all servers.</p>
+</li>
+<li>
+<p><em><em>Total order</em></em> : If a message <code>a</code> is delivered before message <code>b</code> by one server, message <code>a</code> will be delivered before <code>b</code> by all servers.</p>
+</li>
+<li>
+<p><em><em>Causal order</em></em> : If a message <code>b</code> is sent after a message <code>a</code> has been delivered by the sender of <code>b</code>, message <code>a</code> must be ordered before <code>b</code>. If a sender sends <code>c</code> after sending <code>b</code>, <code>c</code> must be ordered after <code>b</code>.</p>
+</li>
+</ul>
+<p>The ZooKeeper messaging system also needs to be efficient, reliable, and easy to implement and maintain. We make heavy use of messaging, so we need the system to be able to handle thousands of requests per second. Although we can require at least k+1 correct servers to send new messages, we must be able to recover from correlated failures such as power outages. When we implemented the system we had little time and few engineering resources, so we needed a protocol that is accessible to engineers and is easy to implement. We found that our protocol satisfied all of these goals.</p>
+<p>Our protocol assumes that we can construct point-to-point FIFO channels between the servers. While similar services usually assume message delivery that can lose or reorder messages, our assumption of FIFO channels is very practical given that we use TCP for communication. Specifically we rely on the following property of TCP:</p>
+<ul>
+<li>
+<p><em><em>Ordered delivery</em></em> : Data is delivered in the same order it is sent and a message <code>m</code> is delivered only after all messages sent before <code>m</code> have been delivered. (The corollary to this is that if message <code>m</code> is lost all messages after <code>m</code> will be lost.)</p>
+</li>
+<li>
+<p><em><em>No message after close</em></em> : Once a FIFO channel is closed, no messages will be received from it.</p>
+</li>
+</ul>
+<p>FLP proved that consensus cannot be achieved in asynchronous distributed systems if failures are possible. To ensure that we achieve consensus in the presence of failures we use timeouts. However, we rely on time for liveness not for correctness. So, if timeouts stop working (e.g., skewed clocks) the messaging system may hang, but it will not violate its guarantees.</p>
+<p>When describing the ZooKeeper messaging protocol we will talk of packets, proposals, and messages:</p>
+<ul>
+<li>
+<p><em><em>Packet</em></em> : a sequence of bytes sent through a FIFO channel.</p>
+</li>
+<li>
+<p><em><em>Proposal</em></em> : a unit of agreement. Proposals are agreed upon by exchanging packets with a quorum of ZooKeeper servers. Most proposals contain messages, however the NEW_LEADER proposal is an example of a proposal that does not contain to a message.</p>
+</li>
+<li>
+<p><em><em>Message</em></em> : a sequence of bytes to be atomically broadcast to all ZooKeeper servers. A message put into a proposal and agreed upon before it is delivered.</p>
+</li>
+</ul>
+<p>As stated above, ZooKeeper guarantees a total order of messages, and it also guarantees a total order of proposals. ZooKeeper exposes the total ordering using a ZooKeeper transaction id (<em>zxid</em>). All proposals will be stamped with a zxid when it is proposed and exactly reflects the total ordering. Proposals are sent to all ZooKeeper servers and committed when a quorum of them acknowledge the proposal. If a proposal contains a message, the message will be delivered when the proposal is committed. Acknowledgement means the server has recorded the proposal to persistent storage. Our quorums have the requirement that any pair of quorum must have at least one server in common. We ensure this by requiring that all quorums have size (<em>n/2+1</em>) where n is the number of servers that make up a ZooKeeper service.</p>
+<p>The zxid has two parts: the epoch and a counter. In our implementation the zxid is a 64-bit number. We use the high order 32-bits for the epoch and the low order 32-bits for the counter. Because zxid consists of two parts, zxid can be represented both as a number and as a pair of integers, (<em>epoch, count</em>). The epoch number represents a change in leadership. Each time a new leader comes into power it will have its own epoch number. We have a simple algorithm to assign a unique zxid to a proposal: the leader simply increments the zxid to obtain a unique zxid for each proposal. <em>Leadership activation will ensure that only one leader uses a given epoch, so our simple algorithm guarantees that every proposal will have a unique id.</em></p>
+<p>ZooKeeper messaging consists of two phases:</p>
+<ul>
+<li>
+<p><em><em>Leader activation</em></em> : In this phase a leader establishes the correct state of the system and gets ready to start making proposals.</p>
+</li>
+<li>
+<p><em><em>Active messaging</em></em> : In this phase a leader accepts messages to propose and coordinates message delivery.</p>
+</li>
+</ul>
+<p>ZooKeeper is a holistic protocol. We do not focus on individual proposals, rather look at the stream of proposals as a whole. Our strict ordering allows us to do this efficiently and greatly simplifies our protocol. Leadership activation embodies this holistic concept. A leader becomes active only when a quorum of followers (The leader counts as a follower as well. You can always vote for yourself ) has synced up with the leader, they have the same state. This state consists of all of the proposals that the leader believes have been committed and the proposal to follow the leader, the NEW_LEADER proposal. (Hopefully you are thinking to yourself, <em>Does the set of proposals that the leader believes has been committed include all the proposals that really have been committed?</em> The answer is <em>yes</em>. Below, we make clear why.)</p>
+<p><a name="sc_leaderElection"></a></p>
+<h3>Leader Activation</h3>
+<p>Leader activation includes leader election (<code>FastLeaderElection</code>). ZooKeeper messaging doesn't care about the exact method of electing a leader as long as the following holds:</p>
+<ul>
+<li>The leader has seen the highest zxid of all the followers.</li>
+<li>A quorum of servers have committed to following the leader.</li>
+</ul>
+<p>Of these two requirements only the first, the highest zxid among the followers needs to hold for correct operation. The second requirement, a quorum of followers, just needs to hold with high probability. We are going to recheck the second requirement, so if a failure happens during or after the leader election and quorum is lost, we will recover by abandoning leader activation and running another election.</p>
+<p>After leader election a single server will be designated as a leader and start waiting for followers to connect. The rest of the servers will try to connect to the leader. The leader will sync up with the followers by sending any proposals they are missing, or if a follower is missing too many proposals, it will send a full snapshot of the state to the follower.</p>
+<p>There is a corner case in which a follower that has proposals, <code>U</code>, not seen by a leader arrives. Proposals are seen in order, so the proposals of <code>U</code> will have a zxids higher than zxids seen by the leader. The follower must have arrived after the leader election, otherwise the follower would have been elected leader given that it has seen a higher zxid. Since committed proposals must be seen by a quorum of servers, and a quorum of servers that elected the leader did not see <code>U</code>, the proposals of <code>U</code> have not been committed, so they can be discarded. When the follower connects to the leader, the leader will tell the follower to discard <code>U</code>.</p>
+<p>A new leader establishes a zxid to start using for new proposals by getting the epoch, e, of the highest zxid it has seen and setting the next zxid to use to be (e+1, 0), after the leader syncs with a follower, it will propose a NEW_LEADER proposal. Once the NEW_LEADER proposal has been committed, the leader will activate and start receiving and issuing proposals.</p>
+<p>It all sounds complicated but here are the basic rules of operation during leader activation:</p>
+<ul>
+<li>A follower will ACK the NEW_LEADER proposal after it has synced with the leader.</li>
+<li>A follower will only ACK a NEW_LEADER proposal with a given zxid from a single server.</li>
+<li>A new leader will COMMIT the NEW_LEADER proposal when a quorum of followers has ACKed it.</li>
+<li>A follower will commit any state it received from the leader when the NEW_LEADER proposal is COMMIT.</li>
+<li>A new leader will not accept new proposals until the NEW_LEADER proposal has been COMMITTED.</li>
+</ul>
+<p>If leader election terminates erroneously, we don't have a problem since the NEW_LEADER proposal will not be committed since the leader will not have quorum. When this happens, the leader and any remaining followers will timeout and go back to leader election.</p>
+<p><a name="sc_activeMessaging"></a></p>
+<h3>Active Messaging</h3>
+<p>Leader Activation does all the heavy lifting. Once the leader is coronated he can start blasting out proposals. As long as he remains the leader no other leader can emerge since no other leader will be able to get a quorum of followers. If a new leader does emerge, it means that the leader has lost quorum, and the new leader will clean up any mess left over during her leadership activation.</p>
+<p>ZooKeeper messaging operates similar to a classic two-phase commit.</p>
+<p><img src="images/2pc.jpg" alt="Two phase commit" /></p>
+<p>All communication channels are FIFO, so everything is done in order. Specifically the following operating constraints are observed:</p>
+<ul>
+<li>The leader sends proposals to all followers using the same order. Moreover, this order follows the order in which requests have been received. Because we use FIFO channels this means that followers also receive proposals in order.</li>
+<li>Followers process messages in the order they are received. This means that messages will be ACKed in order and the leader will receive ACKs from followers in order, due to the FIFO channels. It also means that if message <code>m</code> has been written to non-volatile storage, all messages that were proposed before <code>m</code> have been written to non-volatile storage.</li>
+<li>The leader will issue a COMMIT to all followers as soon as a quorum of followers have ACKed a message. Since messages are ACKed in order, COMMITs will be sent by the leader as received by the followers in order.</li>
+<li>COMMITs are processed in order. Followers deliver a proposal message when that proposal is committed.</li>
+</ul>
+<p><a name="sc_summary"></a></p>
+<h3>Summary</h3>
+<p>So there you go. Why does it work? Specifically, why does a set of proposals believed by a new leader always contain any proposal that has actually been committed? First, all proposals have a unique zxid, so unlike other protocols, we never have to worry about two different values being proposed for the same zxid; followers (a leader is also a follower) see and record proposals in order; proposals are committed in order; there is only one active leader at a time since followers only follow a single leader at a time; a new leader has seen all committed proposals from the previous epoch since it has seen the highest zxid from a quorum of servers; any uncommitted proposals from a previous epoch seen by a new leader will be committed by that leader before it becomes active.</p>
+<p><a name="sc_comparisons"></a></p>
+<h3>Comparisons</h3>
+<p>Isn't this just Multi-Paxos? No, Multi-Paxos requires some way of assuring that there is only a single coordinator. We do not count on such assurances. Instead we use the leader activation to recover from leadership change or old leaders believing they are still active.</p>
+<p>Isn't this just Paxos? Your active messaging phase looks just like phase 2 of Paxos? Actually, to us active messaging looks just like 2 phase commit without the need to handle aborts. Active messaging is different from both in the sense that it has cross proposal ordering requirements. If we do not maintain strict FIFO ordering of all packets, it all falls apart. Also, our leader activation phase is different from both of them. In particular, our use of epochs allows us to skip blocks of uncommitted proposals and to not worry about duplicate proposals for a given zxid.</p>
+<p><a name="sc_consistency"></a></p>
+<h2>Consistency Guarantees</h2>
+<p>The <a href="https://jepsen.io/consistency">consistency</a> guarantees of ZooKeeper lie between sequential consistency and linearizability. In this section, we explain the exact consistency guarantees that ZooKeeper provides.</p>
+<p>Write operations in ZooKeeper are <em>linearizable</em>. In other words, each <code>write</code> will appear to take effect atomically at some point between when the client issues the request and receives the corresponding response. This means that the writes performed by all the clients in ZooKeeper can be totally ordered in such a way that respects the real-time ordering of these writes. However, merely stating that write operations are linearizable is meaningless unless we also talk about read operations.</p>
+<p>Read operations in ZooKeeper are <em>not linearizable</em> since they can return potentially stale data. This is because a <code>read</code> in ZooKeeper is not a quorum operation and a server will respond immediately to a client that is performing a <code>read</code>. ZooKeeper does this because it prioritizes performance over consistency for the read use case. However, reads in ZooKeeper are <em>sequentially consistent</em>, because <code>read</code> operations will appear to take effect in some sequential order that furthermore respects the order of each client's operations. A common pattern to work around this is to issue a <code>sync</code> before issuing a <code>read</code>. This too does <strong>not</strong> strictly guarantee up-to-date data because <code>sync</code> is <a href="https://issues.apache.org/jira/browse/ZOOKEEPER-1675">not currently a quorum operation</a>. To illustrate, consider a scenario where two servers simultaneously think they are the leader, something that could occur if the TCP connection timeout is smaller than <code>syncLimit * tickTime</code>. Note that this is <a href="https://www.amazon.com/ZooKeeper-Distributed-Coordination-Flavio-Junqueira/dp/1449361307">unlikely</a> to occur in practice, but should be kept in mind nevertheless when discussing strict theoretical guarantees. Under this scenario, it is possible that the <code>sync</code> is served by the “leader” with stale data, thereby allowing the following <code>read</code> to be stale as well. The stronger guarantee of linearizability is provided if an actual quorum operation (e.g., a <code>write</code>) is performed before a <code>read</code>.</p>
+<p>Overall, the consistency guarantees of ZooKeeper are formally captured by the notion of <a href="http://webee.technion.ac.il/people/idish/ftp/OSC-IPL17.pdf">ordered sequential consistency</a> or <code>OSC(U)</code> to be exact, which lies between sequential consistency and linearizability.</p>
+<p><a name="sc_quorum"></a></p>
+<h2>Quorums</h2>
+<p>Atomic broadcast and leader election use the notion of quorum to guarantee a consistent view of the system. By default, ZooKeeper uses majority quorums, which means that every voting that happens in one of these protocols requires a majority to vote on. One example is acknowledging a leader proposal: the leader can only commit once it receives an acknowledgement from a quorum of servers.</p>
+<p>If we extract the properties that we really need from our use of majorities, we have that we only need to guarantee that groups of processes used to validate an operation by voting (e.g., acknowledging a leader proposal) pairwise intersect in at least one server. Using majorities guarantees such a property. However, there are other ways of constructing quorums different from majorities. For example, we can assign weights to the votes of servers, and say that the votes of some servers are more important. To obtain a quorum, we get enough votes so that the sum of weights of all votes is larger than half of the total sum of all weights.</p>
+<p>A different construction that uses weights and is useful in wide-area deployments (co-locations) is a hierarchical one. With this construction, we split the servers into disjoint groups and assign weights to processes. To form a quorum, we have to get a hold of enough servers from a majority of groups G, such that for each group g in G, the sum of votes from g is larger than half of the sum of weights in g. Interestingly, this construction enables smaller quorums. If we have, for example, 9 servers, we split them into 3 groups, and assign a weight of 1 to each server, then we are able to form quorums of size 4. Note that two subsets of processes composed each of a majority of servers from each of a majority of groups necessarily have a non-empty intersection. It is reasonable to expect that a majority of co-locations will have a majority of servers available with high probability.</p>
+<p>With ZooKeeper, we provide a user with the ability of configuring servers to use majority quorums, weights, or a hierarchy of groups.</p>
+<p><a name="sc_logging"></a></p>
+<h2>Logging</h2>
+<p>Zookeeper uses <a href="http://www.slf4j.org/index.html">slf4j</a> as an abstraction layer for logging. <a href="https://logback.qos.ch/">Logback</a> is chosen the logging backend since ZooKeeper version 3.8.0. For better embedding support, it is planned in the future to leave the decision of choosing the final logging implementation to the end user. Therefore, always use the slf4j api to write log statements in the code, but configure logback for how to log at runtime. Note that slf4j has no FATAL level, former messages at FATAL level have been moved to ERROR level. For information on configuring logback for ZooKeeper, see the <a href="zookeeperAdmin.html#sc_logging">Logging</a> section of the <a href="zookeeperAdmin.html">ZooKeeper Administrator's Guide.</a></p>
+<p><a name="sc_developerGuidelines"></a></p>
+<h3>Developer Guidelines</h3>
+<p>Please follow the  <a href="http://www.slf4j.org/manual.html">slf4j manual</a> when creating log statements within code. Also read the <a href="http://www.slf4j.org/faq.html#logging_performance">FAQ on performance</a>, when creating log statements. Patch reviewers will look for the following:</p>
+<p><a name="sc_rightLevel"></a></p>
+<h4>Logging at the Right Level</h4>
+<p>There are several levels of logging in slf4j.</p>
+<p>It's important to pick the right one. In order of higher to lower severity:</p>
+<ol>
+<li>ERROR level designates error events that might still allow the application to continue running.</li>
+<li>WARN level designates potentially harmful situations.</li>
+<li>INFO level designates informational messages that highlight the progress of the application at coarse-grained level.</li>
+<li>DEBUG Level designates fine-grained informational events that are most useful to debug an application.</li>
+<li>TRACE Level designates finer-grained informational events than the DEBUG.</li>
+</ol>
+<p>ZooKeeper is typically run in production such that log messages of INFO level severity and higher (more severe) are output to the log.</p>
+<p><a name="sc_slf4jIdioms"></a></p>
+<h4>Use of Standard slf4j Idioms</h4>
+<p><em>Static Message Logging</em></p>
+<pre><code>LOG.debug(&quot;process completed successfully!&quot;);
+</code></pre>
+<p>However when creating parameterized messages are required, use formatting anchors.</p>
+<pre><code>LOG.debug(&quot;got {} messages in {} minutes&quot;,new Object[]{count,time});
+</code></pre>
+<p><em>Naming</em></p>
+<p>Loggers should be named after the class in which they are used.</p>
+<pre><code>public class Foo {
+    private static final Logger LOG = LoggerFactory.getLogger(Foo.class);
+    ....
+    public Foo() {
+        LOG.info(&quot;constructing Foo&quot;);
+</code></pre>
+<p><em>Exception handling</em></p>
+<pre><code>try {
+    // code
+} catch (XYZException e) {
+    // do this
+    LOG.error(&quot;Something bad happened&quot;, e);
+    // don't do this (generally)
+    // LOG.error(e);
+    // why? because &quot;don't do&quot; case hides the stack trace
+
+    // continue process here as you need... recover or (re)throw
+}
+</code></pre>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

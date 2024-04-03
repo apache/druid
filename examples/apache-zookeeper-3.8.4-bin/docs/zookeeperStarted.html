@@ -1,0 +1,374 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2022 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Getting Started Guide</h1>
+<ul>
+<li><a href="#getting-started-coordinating-distributed-applications-with-zooKeeper">Getting Started: Coordinating Distributed Applications with ZooKeeper</a>
+<ul>
+<li><a href="#sc_Prerequisites">Pre-requisites</a></li>
+<li><a href="#sc_Download">Download</a></li>
+<li><a href="#sc_InstallingSingleMode">Standalone Operation</a></li>
+<li><a href="#sc_FileManagement">Managing ZooKeeper Storage</a></li>
+<li><a href="#sc_ConnectingToZooKeeper">Connecting to ZooKeeper</a></li>
+<li><a href="#sc_ProgrammingToZooKeeper">Programming to ZooKeeper</a></li>
+<li><a href="#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a></li>
+<li><a href="#other-optimizations">Other Optimizations</a></li>
+</ul>
+</li>
+</ul>
+<p><a name="getting-started-coordinating-distributed-applications-with-zooKeeper"></a></p>
+<h2>Getting Started: Coordinating Distributed Applications with ZooKeeper</h2>
+<p>This document contains information to get you started quickly with ZooKeeper. It is aimed primarily at developers hoping to try it out, and contains simple installation instructions for a single ZooKeeper server, a few commands to verify that it is running, and a simple programming example. Finally, as a convenience, there are a few sections regarding more complicated installations, for example running replicated deployments, and optimizing the transaction log. However for the complete instructions for commercial deployments, please refer to the <a href="zookeeperAdmin.html">ZooKeeper Administrator's Guide</a>.</p>
+<p><a name="sc_Prerequisites"></a></p>
+<h3>Pre-requisites</h3>
+<p>See <a href="zookeeperAdmin.html#sc_systemReq">System Requirements</a> in the Admin guide.</p>
+<p><a name="sc_Download"></a></p>
+<h3>Download</h3>
+<p>To get a ZooKeeper distribution, download a recent <a href="http://zookeeper.apache.org/releases.html">stable</a> release from one of the Apache Download Mirrors.</p>
+<p><a name="sc_InstallingSingleMode"></a></p>
+<h3>Standalone Operation</h3>
+<p>Setting up a ZooKeeper server in standalone mode is straightforward. The server is contained in a single JAR file, so installation consists of creating a configuration.</p>
+<p>Once you've downloaded a stable ZooKeeper release unpack it and cd to the root</p>
+<p>To start ZooKeeper you need a configuration file. Here is a sample, create it in <strong>conf/zoo.cfg</strong>:</p>
+<pre><code>tickTime=2000
+dataDir=/var/lib/zookeeper
+clientPort=2181
+</code></pre>
+<p>This file can be called anything, but for the sake of this discussion call it <strong>conf/zoo.cfg</strong>. Change the value of <strong>dataDir</strong> to specify an existing (empty to start with) directory.  Here are the meanings for each of the fields:</p>
+<ul>
+<li>
+<p><strong><em>tickTime</em></strong> : the basic time unit in milliseconds used by ZooKeeper. It is used to do heartbeats and the minimum session timeout will be twice the tickTime.</p>
+</li>
+<li>
+<p><strong><em>dataDir</em></strong> : the location to store the in-memory database snapshots and, unless specified otherwise, the transaction log of updates to the database.</p>
+</li>
+<li>
+<p><strong><em>clientPort</em></strong> : the port to listen for client connections</p>
+</li>
+</ul>
+<p>Now that you created the configuration file, you can start ZooKeeper:</p>
+<pre><code>bin/zkServer.sh start
+</code></pre>
+<p>ZooKeeper logs messages using <em>logback</em> -- more detail available in the <a href="zookeeperProgrammers.html#Logging">Logging</a> section of the Programmer's Guide. You will see log messages coming to the console (default) and/or a log file depending on the logback configuration.</p>
+<p>The steps outlined here run ZooKeeper in standalone mode. There is no replication, so if ZooKeeper process fails, the service will go down. This is fine for most development situations, but to run ZooKeeper in replicated mode, please see <a href="#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a>.</p>
+<p><a name="sc_FileManagement"></a></p>
+<h3>Managing ZooKeeper Storage</h3>
+<p>For long running production systems ZooKeeper storage must be managed externally (dataDir and logs). See the section on <a href="zookeeperAdmin.html#sc_maintenance">maintenance</a> for more details.</p>
+<p><a name="sc_ConnectingToZooKeeper"></a></p>
+<h3>Connecting to ZooKeeper</h3>
+<pre><code>$ bin/zkCli.sh -server 127.0.0.1:2181
+</code></pre>
+<p>This lets you perform simple, file-like operations.</p>
+<p>Once you have connected, you should see something like:</p>
+<pre><code>Connecting to localhost:2181
+...
+Welcome to ZooKeeper!
+JLine support is enabled
+[zkshell: 0]
+</code></pre>
+<p>From the shell, type <code>help</code> to get a listing of commands that can be executed from the client, as in:</p>
+<pre><code>[zkshell: 0] help
+ZooKeeper -server host:port cmd args
+addauth scheme auth
+close
+config [-c] [-w] [-s]
+connect host:port
+create [-s] [-e] [-c] [-t ttl] path [data] [acl]
+delete [-v version] path
+deleteall path
+delquota [-n|-b] path
+get [-s] [-w] path
+getAcl [-s] path
+getAllChildrenNumber path
+getEphemerals path
+history
+listquota path
+ls [-s] [-w] [-R] path
+ls2 path [watch]
+printwatches on|off
+quit
+reconfig [-s] [-v version] [[-file path] | [-members serverID=host:port1:port2;port3[,...]*]] | [-add serverId=host:port1:port2;port3[,...]]* [-remove serverId[,...]*]
+redo cmdno
+removewatches path [-c|-d|-a] [-l]
+rmr path
+set [-s] [-v version] path data
+setAcl [-s] [-v version] [-R] path acl
+setquota -n|-b val path
+stat [-w] path
+sync path
+</code></pre>
+<p>From here, you can try a few simple commands to get a feel for this simple command line interface.  First, start by issuing the list command, as in <code>ls</code>, yielding:</p>
+<pre><code>[zkshell: 8] ls /
+[zookeeper]
+</code></pre>
+<p>Next, create a new znode by running <code>create /zk_test my_data</code>. This creates a new znode and associates the string &quot;my_data&quot; with the node. You should see:</p>
+<pre><code>[zkshell: 9] create /zk_test my_data
+Created /zk_test
+</code></pre>
+<p>Issue another <code>ls /</code> command to see what the directory looks like:</p>
+<pre><code>[zkshell: 11] ls /
+[zookeeper, zk_test]
+</code></pre>
+<p>Notice that the zk_test directory has now been created.</p>
+<p>Next, verify that the data was associated with the znode by running the <code>get</code> command, as in:</p>
+<pre><code>[zkshell: 12] get /zk_test
+my_data
+cZxid = 5
+ctime = Fri Jun 05 13:57:06 PDT 2009
+mZxid = 5
+mtime = Fri Jun 05 13:57:06 PDT 2009
+pZxid = 5
+cversion = 0
+dataVersion = 0
+aclVersion = 0
+ephemeralOwner = 0
+dataLength = 7
+numChildren = 0
+</code></pre>
+<p>We can change the data associated with zk_test by issuing the <code>set</code> command, as in:</p>
+<pre><code>[zkshell: 14] set /zk_test junk
+cZxid = 5
+ctime = Fri Jun 05 13:57:06 PDT 2009
+mZxid = 6
+mtime = Fri Jun 05 14:01:52 PDT 2009
+pZxid = 5
+cversion = 0
+dataVersion = 1
+aclVersion = 0
+ephemeralOwner = 0
+dataLength = 4
+numChildren = 0
+[zkshell: 15] get /zk_test
+junk
+cZxid = 5
+ctime = Fri Jun 05 13:57:06 PDT 2009
+mZxid = 6
+mtime = Fri Jun 05 14:01:52 PDT 2009
+pZxid = 5
+cversion = 0
+dataVersion = 1
+aclVersion = 0
+ephemeralOwner = 0
+dataLength = 4
+numChildren = 0
+</code></pre>
+<p>(Notice we did a <code>get</code> after setting the data and it did, indeed, change.</p>
+<p>Finally, let's <code>delete</code> the node by issuing:</p>
+<pre><code>[zkshell: 16] delete /zk_test
+[zkshell: 17] ls /
+[zookeeper]
+[zkshell: 18]
+</code></pre>
+<p>That's it for now. To explore more, see the <a href="zookeeperCLI.html">Zookeeper CLI</a>.</p>
+<p><a name="sc_ProgrammingToZooKeeper"></a></p>
+<h3>Programming to ZooKeeper</h3>
+<p>ZooKeeper has a Java bindings and C bindings. They are functionally equivalent. The C bindings exist in two variants: single threaded and multi-threaded. These differ only in how the messaging loop is done. For more information, see the <a href="zookeeperProgrammers.html#ch_programStructureWithExample">Programming Examples in the ZooKeeper Programmer's Guide</a> for sample code using the different APIs.</p>
+<p><a name="sc_RunningReplicatedZooKeeper"></a></p>
+<h3>Running Replicated ZooKeeper</h3>
+<p>Running ZooKeeper in standalone mode is convenient for evaluation, some development, and testing. But in production, you should run ZooKeeper in replicated mode. A replicated group of servers in the same application is called a <em>quorum</em>, and in replicated mode, all servers in the quorum have copies of the same configuration file.</p>
+<h6>Note</h6>
+<blockquote>
+<p>For replicated mode, a minimum of three servers are required, and it is strongly recommended that you have an odd number of servers. If you only have two servers, then you are in a situation where if one of them fails, there are not enough machines to form a majority quorum. Two servers are inherently <strong>less</strong> stable than a single server, because there are two single points of failure.</p>
+</blockquote>
+<p>The required <strong>conf/zoo.cfg</strong> file for replicated mode is similar to the one used in standalone mode, but with a few differences. Here is an example:</p>
+<pre><code>tickTime=2000
+dataDir=/var/lib/zookeeper
+clientPort=2181
+initLimit=5
+syncLimit=2
+server.1=zoo1:2888:3888
+server.2=zoo2:2888:3888
+server.3=zoo3:2888:3888
+</code></pre>
+<p>The new entry, <strong>initLimit</strong> is timeouts ZooKeeper uses to limit the length of time the ZooKeeper servers in quorum have to connect to a leader. The entry <strong>syncLimit</strong> limits how far out of date a server can be from a leader.</p>
+<p>With both of these timeouts, you specify the unit of time using <strong>tickTime</strong>. In this example, the timeout for initLimit is 5 ticks at 2000 milliseconds a tick, or 10 seconds.</p>
+<p>The entries of the form <em>server.X</em> list the servers that make up the ZooKeeper service. When the server starts up, it knows which server it is by looking for the file <em>myid</em> in the data directory. That file has the contains the server number, in ASCII.</p>
+<p>Finally, note the two port numbers after each server name: &quot; 2888&quot; and &quot;3888&quot;. Peers use the former port to connect to other peers. Such a connection is necessary so that peers can communicate, for example, to agree upon the order of updates. More specifically, a ZooKeeper server uses this port to connect followers to the leader. When a new leader arises, a follower opens a TCP connection to the leader using this port. Because the default leader election also uses TCP, we currently require another port for leader election. This is the second port in the server entry.</p>
+<h6>Note</h6>
+<blockquote>
+<p>If you want to test multiple servers on a single machine, specify the servername as <em>localhost</em> with unique quorum &amp; leader election ports (i.e. 2888:3888, 2889:3889, 2890:3890 in the example above) for each server.X in that server's config file. Of course separate _dataDir_s and distinct _clientPort_s are also necessary (in the above replicated example, running on a single <em>localhost</em>, you would still have three config files).</p>
+<p>Please be aware that setting up multiple servers on a single machine will not create any redundancy. If something were to happen which caused the machine to die, all of the zookeeper servers would be offline. Full redundancy requires that each server have its own machine. It must be a completely separate physical server. Multiple virtual machines on the same physical host are still vulnerable to the complete failure of that host.</p>
+<p>If you have multiple network interfaces in your ZooKeeper machines, you can also instruct ZooKeeper to bind on all of your interfaces and automatically switch to a healthy interface in case of a network failure. For details, see the <a href="zookeeperAdmin.html#id_multi_address">Configuration Parameters</a>.</p>
+</blockquote>
+<p><a name="other-optimizations"></a></p>
+<h3>Other Optimizations</h3>
+<p>There are a couple of other configuration parameters that can greatly increase performance:</p>
+<ul>
+<li>To get low latencies on updates it is important to have a dedicated transaction log directory. By default transaction logs are put in the same directory as the data snapshots and <em>myid</em> file. The dataLogDir parameters indicates a different directory to use for the transaction logs.</li>
+</ul>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

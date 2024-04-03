@@ -1,0 +1,356 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2004 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Recipes and Solutions</h1>
+<ul>
+<li><a href="#ch_recipes">A Guide to Creating Higher-level Constructs with ZooKeeper</a>
+<ul>
+<li><a href="#sc_recipes_errorHandlingNote">Important Note About Error Handling</a></li>
+<li><a href="#sc_outOfTheBox">Out of the Box Applications: Name Service, Configuration, Group Membership</a></li>
+<li><a href="#sc_recipes_eventHandles">Barriers</a>
+<ul>
+<li><a href="#sc_doubleBarriers">Double Barriers</a></li>
+</ul>
+</li>
+<li><a href="#sc_recipes_Queues">Queues</a>
+<ul>
+<li><a href="#sc_recipes_priorityQueues">Priority Queues</a></li>
+</ul>
+</li>
+<li><a href="#sc_recipes_Locks">Locks</a>
+<ul>
+<li><a href="#sc_recipes_GuidNote">Recoverable Errors and the GUID</a></li>
+<li><a href="#Shared+Locks">Shared Locks</a></li>
+<li><a href="#sc_revocableSharedLocks">Revocable Shared Locks</a></li>
+</ul>
+</li>
+<li><a href="#sc_recipes_twoPhasedCommit">Two-phased Commit</a></li>
+<li><a href="#sc_leaderElection">Leader Election</a></li>
+</ul>
+</li>
+</ul>
+<p><a name="ch_recipes"></a></p>
+<h2>A Guide to Creating Higher-level Constructs with ZooKeeper</h2>
+<p>In this article, you'll find guidelines for using ZooKeeper to implement higher order functions. All of them are conventions implemented at the client and do not require special support from ZooKeeper. Hopefully the community will capture these conventions in client-side libraries to ease their use and to encourage standardization.</p>
+<p>One of the most interesting things about ZooKeeper is that even though ZooKeeper uses <em>asynchronous</em> notifications, you can use it to build <em>synchronous</em> consistency primitives, such as queues and locks. As you will see, this is possible because ZooKeeper imposes an overall order on updates, and has mechanisms to expose this ordering.</p>
+<p>Note that the recipes below attempt to employ best practices. In particular, they avoid polling, timers or anything else that would result in a &quot;herd effect&quot;, causing bursts of traffic and limiting scalability.</p>
+<p>There are many useful functions that can be imagined that aren't included here - revocable read-write priority locks, as just one example. And some of the constructs mentioned here - locks, in particular - illustrate certain points, even though you may find other constructs, such as event handles or queues, a more practical means of performing the same function. In general, the examples in this section are designed to stimulate thought.</p>
+<p><a name="sc_recipes_errorHandlingNote"></a></p>
+<h3>Important Note About Error Handling</h3>
+<p>When implementing the recipes you must handle recoverable exceptions (see the <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>). In particular, several of the recipes employ sequential ephemeral nodes. When creating a sequential ephemeral node there is an error case in which the create() succeeds on the server but the server crashes before returning the name of the node to the client. When the client reconnects its session is still valid and, thus, the node is not removed. The implication is that it is difficult for the client to know if its node was created or not. The recipes below include measures to handle this.</p>
+<p><a name="sc_outOfTheBox"></a></p>
+<h3>Out of the Box Applications: Name Service, Configuration, Group Membership</h3>
+<p>Name service and configuration are two of the primary applications of ZooKeeper. These two functions are provided directly by the ZooKeeper API.</p>
+<p>Another function directly provided by ZooKeeper is <em>group membership</em>. The group is represented by a node. Members of the group create ephemeral nodes under the group node. Nodes of the members that fail abnormally will be removed automatically when ZooKeeper detects the failure.</p>
+<p><a name="sc_recipes_eventHandles"></a></p>
+<h3>Barriers</h3>
+<p>Distributed systems use <em>barriers</em> to block processing of a set of nodes until a condition is met at which time all the nodes are allowed to proceed. Barriers are implemented in ZooKeeper by designating a barrier node. The barrier is in place if the barrier node exists. Here's the pseudo code:</p>
+<ol>
+<li>Client calls the ZooKeeper API's <strong>exists()</strong> function on the barrier node, with <em>watch</em> set to true.</li>
+<li>If <strong>exists()</strong> returns false, the barrier is gone and the client proceeds</li>
+<li>Else, if <strong>exists()</strong> returns true, the clients wait for a watch event from ZooKeeper for the barrier node.</li>
+<li>When the watch event is triggered, the client reissues the <strong>exists( )</strong> call, again waiting until the barrier node is removed.</li>
+</ol>
+<p><a name="sc_doubleBarriers"></a></p>
+<h4>Double Barriers</h4>
+<p>Double barriers enable clients to synchronize the beginning and the end of a computation. When enough processes have joined the barrier, processes start their computation and leave the barrier once they have finished. This recipe shows how to use a ZooKeeper node as a barrier.</p>
+<p>The pseudo code in this recipe represents the barrier node as <em>b</em>. Every client process <em>p</em> registers with the barrier node on entry and unregisters when it is ready to leave. A node registers with the barrier node via the <strong>Enter</strong> procedure below, it waits until <em>x</em> client process register before proceeding with the computation. (The <em>x</em> here is up to you to determine for your system.)</p>
+<table>
+<thead>
+<tr><th> <strong>Enter</strong>                         </th><th> <strong>Leave</strong>                     </th></tr>
+</thead>
+<tbody>
+<tr><td> 1. Create a name <em><em>n</em> = <em>b</em>+“/”+<em>p</em></em> </td><td> 1. <strong>L = getChildren(b, false)</strong> </td></tr>
+<tr><td> 2. Set watch: <strong>exists(<em>b</em> + ‘‘/ready’’, true)</strong> </td><td> 2. if no children, exit </td></tr>
+<tr><td> 3. Create child: <strong>create(<em>n</em>, EPHEMERAL)</strong>  </td><td> 3. if <em>p</em> is only process node in L, delete(n) and exit </td></tr>
+<tr><td> 4. <strong>L = getChildren(b, false)</strong>  </td><td> 4. if <em>p</em> is the lowest process node in L, wait on highest process node in L </td></tr>
+<tr><td> 5. if fewer children in L than_x_, wait for watch event  </td><td> 5. else **delete(<em>n</em>)**if still exists and wait on lowest process node in L </td></tr>
+<tr><td> 6. else <strong>create(b + ‘‘/ready’’, REGULAR)</strong> </td><td> 6. goto 1 </td></tr>
+</tbody>
+</table>
+<p>On entering, all processes watch on a ready node and create an ephemeral node as a child of the barrier node. Each process but the last enters the barrier and waits for the ready node to appear at line 5. The process that creates the xth node, the last process, will see x nodes in the list of children and create the ready node, waking up the other processes. Note that waiting processes wake up only when it is time to exit, so waiting is efficient.</p>
+<p>On exit, you can't use a flag such as <em>ready</em> because you are watching for process nodes to go away. By using ephemeral nodes, processes that fail after the barrier has been entered do not prevent correct processes from finishing. When processes are ready to leave, they need to delete their process nodes and wait for all other processes to do the same.</p>
+<p>Processes exit when there are no process nodes left as children of <em>b</em>. However, as an efficiency, you can use the lowest process node as the ready flag. All other processes that are ready to exit watch for the lowest existing process node to go away, and the owner of the lowest process watches for any other process node (picking the highest for simplicity) to go away. This means that only a single process wakes up on each node deletion except for the last node, which wakes up everyone when it is removed.</p>
+<p><a name="sc_recipes_Queues"></a></p>
+<h3>Queues</h3>
+<p>Distributed queues are a common data structure. To implement a distributed queue in ZooKeeper, first designate a znode to hold the queue, the queue node. The distributed clients put something into the queue by calling create() with a pathname ending in &quot;queue-&quot;, with the <em>sequence</em> and <em>ephemeral</em> flags in the create() call set to true. Because the <em>sequence</em> flag is set, the new pathname will have the form <em>path-to-queue-node</em>/queue-X, where X is a monotonic increasing number. A client that wants to be removed from the queue calls ZooKeeper's <strong>getChildren( )</strong> function, with <em>watch</em> set to true on the queue node, and begins processing nodes with the lowest number. The client does not need to issue another <strong>getChildren( )</strong> until it exhausts the list obtained from the first <strong>getChildren( )</strong> call. If there are no children in the queue node, the reader waits for a watch notification to check the queue again.</p>
+<h6>Note</h6>
+<blockquote>
+<p>There now exists a Queue implementation in ZooKeeper recipes directory. This is distributed with the release -- zookeeper-recipes/zookeeper-recipes-queue directory of the release artifact.</p>
+</blockquote>
+<p><a name="sc_recipes_priorityQueues"></a></p>
+<h4>Priority Queues</h4>
+<p>To implement a priority queue, you need only make two simple changes to the generic <a href="#sc_recipes_Queues">queue recipe</a> . First, to add to a queue, the pathname ends with &quot;queue-YY&quot; where YY is the priority of the element with lower numbers representing higher priority (just like UNIX). Second, when removing from the queue, a client uses an up-to-date children list meaning that the client will invalidate previously obtained children lists if a watch notification triggers for the queue node.</p>
+<p><a name="sc_recipes_Locks"></a></p>
+<h3>Locks</h3>
+<p>Fully distributed locks that are globally synchronous, meaning at any snapshot in time no two clients think they hold the same lock. These can be implemented using ZooKeeper. As with priority queues, first define a lock node.</p>
+<h6>Note</h6>
+<blockquote>
+<p>There now exists a Lock implementation in ZooKeeper recipes directory. This is distributed with the release -- zookeeper-recipes/zookeeper-recipes-lock directory of the release artifact.</p>
+</blockquote>
+<p>Clients wishing to obtain a lock do the following:</p>
+<ol>
+<li>Call <strong>create( )</strong> with a pathname of &quot;<em>locknode</em>/guid-lock-&quot; and the <em>sequence</em> and <em>ephemeral</em> flags set. The <em>guid</em> is needed in case the create() result is missed. See the note below.</li>
+<li>Call <strong>getChildren( )</strong> on the lock node <em>without</em> setting the watch flag (this is important to avoid the herd effect).</li>
+<li>If the pathname created in step <strong>1</strong> has the lowest sequence number suffix, the client has the lock and the client exits the protocol.</li>
+<li>The client calls <strong>exists( )</strong> with the watch flag set on the path in the lock directory with the next lowest sequence number.</li>
+<li>if <strong>exists( )</strong> returns null, go to step <strong>2</strong>. Otherwise, wait for a notification for the pathname from the previous step before going to step <strong>2</strong>.</li>
+</ol>
+<p>The unlock protocol is very simple: clients wishing to release a lock simply delete the node they created in step 1.</p>
+<p>Here are a few things to notice:</p>
+<ul>
+<li>
+<p>The removal of a node will only cause one client to wake up since each node is watched by exactly one client. In this way, you avoid the herd effect.</p>
+</li>
+<li>
+<p>There is no polling or timeouts.</p>
+</li>
+<li>
+<p>Because of the way you implement locking, it is easy to see the amount of lock contention, break locks, debug locking problems, etc.</p>
+</li>
+</ul>
+<p><a name="sc_recipes_GuidNote"></a></p>
+<h4>Recoverable Errors and the GUID</h4>
+<ul>
+<li>If a recoverable error occurs calling <strong>create()</strong> the client should call <strong>getChildren()</strong> and check for a node containing the <em>guid</em> used in the path name. This handles the case (noted <a href="#sc_recipes_errorHandlingNote">above</a>) of the create() succeeding on the server but the server crashing before returning the name of the new node.</li>
+</ul>
+<p><a name="Shared+Locks"></a></p>
+<h4>Shared Locks</h4>
+<p>You can implement shared locks by with a few changes to the lock protocol:</p>
+<table>
+<thead>
+<tr><th> <strong>Obtaining a read lock:</strong> </th><th> <strong>Obtaining a write lock:</strong> </th></tr>
+</thead>
+<tbody>
+<tr><td> 1. Call <strong>create( )</strong> to create a node with pathname &quot;<em>guid-/read-</em>&quot;. This is the lock node use later in the protocol. Make sure to set both the <em>sequence</em> and <em>ephemeral</em> flags. </td><td> 1. Call <strong>create( )</strong> to create a node with pathname &quot;<em>guid-/write-</em>&quot;. This is the lock node spoken of later in the protocol. Make sure to set both <em>sequence</em> and <em>ephemeral</em> flags. </td></tr>
+<tr><td> 2. Call <strong>getChildren( )</strong> on the lock node <em>without</em> setting the <em>watch</em> flag - this is important, as it avoids the herd effect. </td><td> 2. Call <strong>getChildren( )</strong> on the lock node <em>without</em> setting the <em>watch</em> flag - this is important, as it avoids the herd effect. </td></tr>
+<tr><td> 3. If there are no children with a pathname starting with &quot;<em>write-</em>&quot; and having a lower sequence number than the node created in step <strong>1</strong>, the client has the lock and can exit the protocol. </td><td> 3. If there are no children with a lower sequence number than the node created in step <strong>1</strong>, the client has the lock and the client exits the protocol. </td></tr>
+<tr><td> 4. Otherwise, call <strong>exists( )</strong>, with <em>watch</em> flag, set on the node in lock directory with pathname starting with &quot;<em>write-</em>&quot; having the next lowest sequence number. </td><td> 4. Call <strong>exists( ),</strong> with <em>watch</em> flag set, on the node with the pathname that has the next lowest sequence number. </td></tr>
+<tr><td> 5. If <strong>exists( )</strong> returns <em>false</em>, goto step <strong>2</strong>. </td><td> 5. If <strong>exists( )</strong> returns <em>false</em>, goto step <strong>2</strong>. Otherwise, wait for a notification for the pathname from the previous step before going to step <strong>2</strong>. </td></tr>
+<tr><td> 6. Otherwise, wait for a notification for the pathname from the previous step before going to step <strong>2</strong> </td><td>  </td></tr>
+</tbody>
+</table>
+<p>Notes:</p>
+<ul>
+<li>
+<p>It might appear that this recipe creates a herd effect: when there is a large group of clients waiting for a read lock, and all getting notified more or less simultaneously when the &quot;<em>write-</em>&quot; node with the lowest sequence number is deleted. In fact. that's valid behavior: as all those waiting reader clients should be released since they have the lock. The herd effect refers to releasing a &quot;herd&quot; when in fact only a single or a small number of machines can proceed.</p>
+</li>
+<li>
+<p>See the <a href="#sc_recipes_GuidNote">note for Locks</a> on how to use the guid in the node.</p>
+</li>
+</ul>
+<p><a name="sc_revocableSharedLocks"></a></p>
+<h4>Revocable Shared Locks</h4>
+<p>With minor modifications to the Shared Lock protocol, you make shared locks revocable by modifying the shared lock protocol:</p>
+<p>In step <strong>1</strong>, of both obtain reader and writer lock protocols, call <strong>getData( )</strong> with <em>watch</em> set, immediately after the call to <strong>create( )</strong>. If the client subsequently receives notification for the node it created in step <strong>1</strong>, it does another <strong>getData( )</strong> on that node, with <em>watch</em> set and looks for the string &quot;unlock&quot;, which signals to the client that it must release the lock. This is because, according to this shared lock protocol, you can request the client with the lock give up the lock by calling <strong>setData()</strong> on the lock node, writing &quot;unlock&quot; to that node.</p>
+<p>Note that this protocol requires the lock holder to consent to releasing the lock. Such consent is important, especially if the lock holder needs to do some processing before releasing the lock. Of course you can always implement <em>Revocable Shared Locks with Freaking Laser Beams</em> by stipulating in your protocol that the revoker is allowed to delete the lock node if after some length of time the lock isn't deleted by the lock holder.</p>
+<p><a name="sc_recipes_twoPhasedCommit"></a></p>
+<h3>Two-phased Commit</h3>
+<p>A two-phase commit protocol is an algorithm that lets all clients in a distributed system agree either to commit a transaction or abort.</p>
+<p>In ZooKeeper, you can implement a two-phased commit by having a coordinator create a transaction node, say &quot;/app/Tx&quot;, and one child node per participating site, say &quot;/app/Tx/s_i&quot;. When coordinator creates the child node, it leaves the content undefined. Once each site involved in the transaction receives the transaction from the coordinator, the site reads each child node and sets a watch. Each site then processes the query and votes &quot;commit&quot; or &quot;abort&quot; by writing to its respective node. Once the write completes, the other sites are notified, and as soon as all sites have all votes, they can decide either &quot;abort&quot; or &quot;commit&quot;. Note that a node can decide &quot;abort&quot; earlier if some site votes for &quot;abort&quot;.</p>
+<p>An interesting aspect of this implementation is that the only role of the coordinator is to decide upon the group of sites, to create the ZooKeeper nodes, and to propagate the transaction to the corresponding sites. In fact, even propagating the transaction can be done through ZooKeeper by writing it in the transaction node.</p>
+<p>There are two important drawbacks of the approach described above. One is the message complexity, which is O(n²). The second is the impossibility of detecting failures of sites through ephemeral nodes. To detect the failure of a site using ephemeral nodes, it is necessary that the site create the node.</p>
+<p>To solve the first problem, you can have only the coordinator notified of changes to the transaction nodes, and then notify the sites once coordinator reaches a decision. Note that this approach is scalable, but it is slower too, as it requires all communication to go through the coordinator.</p>
+<p>To address the second problem, you can have the coordinator propagate the transaction to the sites, and have each site creating its own ephemeral node.</p>
+<p><a name="sc_leaderElection"></a></p>
+<h3>Leader Election</h3>
+<p>A simple way of doing leader election with ZooKeeper is to use the <strong>SEQUENCE|EPHEMERAL</strong> flags when creating znodes that represent &quot;proposals&quot; of clients. The idea is to have a znode, say &quot;/election&quot;, such that each znode creates a child znode &quot;/election/guid-n_&quot; with both flags SEQUENCE|EPHEMERAL. With the sequence flag, ZooKeeper automatically appends a sequence number that is greater than anyone previously appended to a child of &quot;/election&quot;. The process that created the znode with the smallest appended sequence number is the leader.</p>
+<p>That's not all, though. It is important to watch for failures of the leader, so that a new client arises as the new leader in the case the current leader fails. A trivial solution is to have all application processes watching upon the current smallest znode, and checking if they are the new leader when the smallest znode goes away (note that the smallest znode will go away if the leader fails because the node is ephemeral). But this causes a herd effect: upon a failure of the current leader, all other processes receive a notification, and execute getChildren on &quot;/election&quot; to obtain the current list of children of &quot;/election&quot;. If the number of clients is large, it causes a spike on the number of operations that ZooKeeper servers have to process. To avoid the herd effect, it is sufficient to watch for the next znode down on the sequence of znodes. If a client receives a notification that the znode it is watching is gone, then it becomes the new leader in the case that there is no smaller znode. Note that this avoids the herd effect by not having all clients watching the same znode.</p>
+<p>Here's the pseudo code:</p>
+<p>Let ELECTION be a path of choice of the application. To volunteer to be a leader:</p>
+<ol>
+<li>Create znode z with path &quot;ELECTION/guid-n_&quot; with both SEQUENCE and EPHEMERAL flags;</li>
+<li>Let C be the children of &quot;ELECTION&quot;, and I am the sequence number of z;</li>
+<li>Watch for changes on &quot;ELECTION/guid-n_j&quot;, where j is the largest sequence number such that j &lt; i and n_j is a znode in C;</li>
+</ol>
+<p>Upon receiving a notification of znode deletion:</p>
+<ol>
+<li>Let C be the new set of children of ELECTION;</li>
+<li>If z is the smallest node in C, then execute leader procedure;</li>
+<li>Otherwise, watch for changes on &quot;ELECTION/guid-n_j&quot;, where j is the largest sequence number such that j &lt; i and n_j is a znode in C;</li>
+</ol>
+<p>Notes:</p>
+<ul>
+<li>
+<p>Note that the znode having no preceding znode on the list of children do not imply that the creator of this znode is aware that it is the current leader. Applications may consider creating a separate znode to acknowledge that the leader has executed the leader procedure.</p>
+</li>
+<li>
+<p>See the <a href="#sc_recipes_GuidNote">note for Locks</a> on how to use the guid in the node.</p>
+</li>
+</ul>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

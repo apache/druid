@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2004 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper</h1>
+<ul>
+<li><a href="#ch_DesignOverview">ZooKeeper: A Distributed Coordination Service for Distributed Applications</a>
+<ul>
+<li><a href="#sc_designGoals">Design Goals</a></li>
+<li><a href="#sc_dataModelNameSpace">Data model and the hierarchical namespace</a></li>
+<li><a href="#Nodes+and+ephemeral+nodes">Nodes and ephemeral nodes</a></li>
+<li><a href="#Conditional+updates+and+watches">Conditional updates and watches</a></li>
+<li><a href="#Guarantees">Guarantees</a></li>
+<li><a href="#Simple+API">Simple API</a></li>
+<li><a href="#Implementation">Implementation</a></li>
+<li><a href="#Uses">Uses</a></li>
+<li><a href="#Performance">Performance</a></li>
+<li><a href="#Reliability">Reliability</a></li>
+<li><a href="#The+ZooKeeper+Project">The ZooKeeper Project</a></li>
+</ul>
+</li>
+</ul>
+<p><a name="ch_DesignOverview"></a></p>
+<h2>ZooKeeper: A Distributed Coordination Service for Distributed Applications</h2>
+<p>ZooKeeper is a distributed, open-source coordination service for distributed applications. It exposes a simple set of primitives that distributed applications can build upon to implement higher level services for synchronization, configuration maintenance, and groups and naming. It is designed to be easy to program to, and uses a data model styled after the familiar directory tree structure of file systems. It runs in Java and has bindings for both Java and C.</p>
+<p>Coordination services are notoriously hard to get right. They are especially prone to errors such as race conditions and deadlock. The motivation behind ZooKeeper is to relieve distributed applications the responsibility of implementing coordination services from scratch.</p>
+<p><a name="sc_designGoals"></a></p>
+<h3>Design Goals</h3>
+<p><strong>ZooKeeper is simple.</strong> ZooKeeper allows distributed processes to coordinate with each other through a shared hierarchical namespace which is organized similarly to a standard file system. The namespace consists of data registers - called znodes, in ZooKeeper parlance - and these are similar to files and directories. Unlike a typical file system, which is designed for storage, ZooKeeper data is kept in-memory, which means ZooKeeper can achieve high throughput and low latency numbers.</p>
+<p>The ZooKeeper implementation puts a premium on high performance, highly available, strictly ordered access. The performance aspects of ZooKeeper means it can be used in large, distributed systems. The reliability aspects keep it from being a single point of failure. The strict ordering means that sophisticated synchronization primitives can be implemented at the client.</p>
+<p><strong>ZooKeeper is replicated.</strong> Like the distributed processes it coordinates, ZooKeeper itself is intended to be replicated over a set of hosts called an ensemble.</p>
+<p><img src="images/zkservice.jpg" alt="ZooKeeper Service" /></p>
+<p>The servers that make up the ZooKeeper service must all know about each other. They maintain an in-memory image of state, along with a transaction logs and snapshots in a persistent store. As long as a majority of the servers are available, the ZooKeeper service will be available.</p>
+<p>Clients connect to a single ZooKeeper server. The client maintains a TCP connection through which it sends requests, gets responses, gets watch events, and sends heart beats. If the TCP connection to the server breaks, the client will connect to a different server.</p>
+<p><strong>ZooKeeper is ordered.</strong> ZooKeeper stamps each update with a number that reflects the order of all ZooKeeper transactions. Subsequent operations can use the order to implement higher-level abstractions, such as synchronization primitives.</p>
+<p><strong>ZooKeeper is fast.</strong> It is especially fast in &quot;read-dominant&quot; workloads. ZooKeeper applications run on thousands of machines, and it performs best where reads are more common than writes, at ratios of around 10:1.</p>
+<p><a name="sc_dataModelNameSpace"></a></p>
+<h3>Data model and the hierarchical namespace</h3>
+<p>The namespace provided by ZooKeeper is much like that of a standard file system. A name is a sequence of path elements separated by a slash (/). Every node in ZooKeeper's namespace is identified by a path.</p>
+<h4>ZooKeeper's Hierarchical Namespace</h4>
+<p><img src="images/zknamespace.jpg" alt="ZooKeeper's Hierarchical Namespace" /></p>
+<p><a name="Nodes+and+ephemeral+nodes"></a></p>
+<h3>Nodes and ephemeral nodes</h3>
+<p>Unlike standard file systems, each node in a ZooKeeper namespace can have data associated with it as well as children. It is like having a file-system that allows a file to also be a directory. (ZooKeeper was designed to store coordination data: status information, configuration, location information, etc., so the data stored at each node is usually small, in the byte to kilobyte range.) We use the term <em>znode</em> to make it clear that we are talking about ZooKeeper data nodes.</p>
+<p>Znodes maintain a stat structure that includes version numbers for data changes, ACL changes, and timestamps, to allow cache validations and coordinated updates. Each time a znode's data changes, the version number increases. For instance, whenever a client retrieves data it also receives the version of the data.</p>
+<p>The data stored at each znode in a namespace is read and written atomically. Reads get all the data bytes associated with a znode and a write replaces all the data. Each node has an Access Control List (ACL) that restricts who can do what.</p>
+<p>ZooKeeper also has the notion of ephemeral nodes. These znodes exists as long as the session that created the znode is active. When the session ends the znode is deleted.</p>
+<p><a name="Conditional+updates+and+watches"></a></p>
+<h3>Conditional updates and watches</h3>
+<p>ZooKeeper supports the concept of <em>watches</em>. Clients can set a watch on a znode. A watch will be triggered and removed when the znode changes. When a watch is triggered, the client receives a packet saying that the znode has changed. If the connection between the client and one of the ZooKeeper servers is broken, the client will receive a local notification.</p>
+<p><strong>New in 3.6.0:</strong> Clients can also set permanent, recursive watches on a znode that are not removed when triggered and that trigger for changes on the registered znode as well as any children znodes recursively.</p>
+<p><a name="Guarantees"></a></p>
+<h3>Guarantees</h3>
+<p>ZooKeeper is very fast and very simple. Since its goal, though, is to be a basis for the construction of more complicated services, such as synchronization, it provides a set of guarantees. These are:</p>
+<ul>
+<li>Sequential Consistency - Updates from a client will be applied in the order that they were sent.</li>
+<li>Atomicity - Updates either succeed or fail. No partial results.</li>
+<li>Single System Image - A client will see the same view of the service regardless of the server that it connects to. i.e., a client will never see an older view of the system even if the client fails over to a different server with the same session.</li>
+<li>Reliability - Once an update has been applied, it will persist from that time forward until a client overwrites the update.</li>
+<li>Timeliness - The clients view of the system is guaranteed to be up-to-date within a certain time bound.</li>
+</ul>
+<p><a name="Simple+API"></a></p>
+<h3>Simple API</h3>
+<p>One of the design goals of ZooKeeper is providing a very simple programming interface. As a result, it supports only these operations:</p>
+<ul>
+<li>
+<p><em>create</em> : creates a node at a location in the tree</p>
+</li>
+<li>
+<p><em>delete</em> : deletes a node</p>
+</li>
+<li>
+<p><em>exists</em> : tests if a node exists at a location</p>
+</li>
+<li>
+<p><em>get data</em> : reads the data from a node</p>
+</li>
+<li>
+<p><em>set data</em> : writes data to a node</p>
+</li>
+<li>
+<p><em>get children</em> : retrieves a list of children of a node</p>
+</li>
+<li>
+<p><em>sync</em> : waits for data to be propagated</p>
+</li>
+</ul>
+<p><a name="Implementation"></a></p>
+<h3>Implementation</h3>
+<p><a href="#zkComponents">ZooKeeper Components</a> shows the high-level components of the ZooKeeper service. With the exception of the request processor, each of the servers that make up the ZooKeeper service replicates its own copy of each of the components.</p>
+<p><a name="zkComponents"></a></p>
+<p><img src="images/zkcomponents.jpg" alt="ZooKeeper Components" /></p>
+<p>The replicated database is an in-memory database containing the entire data tree. Updates are logged to disk for recoverability, and writes are serialized to disk before they are applied to the in-memory database.</p>
+<p>Every ZooKeeper server services clients. Clients connect to exactly one server to submit requests. Read requests are serviced from the local replica of each server database. Requests that change the state of the service, write requests, are processed by an agreement protocol.</p>
+<p>As part of the agreement protocol all write requests from clients are forwarded to a single server, called the <em>leader</em>. The rest of the ZooKeeper servers, called <em>followers</em>, receive message proposals from the leader and agree upon message delivery. The messaging layer takes care of replacing leaders on failures and syncing followers with leaders.</p>
+<p>ZooKeeper uses a custom atomic messaging protocol. Since the messaging layer is atomic, ZooKeeper can guarantee that the local replicas never diverge. When the leader receives a write request, it calculates what the state of the system is when the write is to be applied and transforms this into a transaction that captures this new state.</p>
+<p><a name="Uses"></a></p>
+<h3>Uses</h3>
+<p>The programming interface to ZooKeeper is deliberately simple. With it, however, you can implement higher order operations, such as synchronizations primitives, group membership, ownership, etc.</p>
+<p><a name="Performance"></a></p>
+<h3>Performance</h3>
+<p>ZooKeeper is designed to be highly performance. But is it? The results of the ZooKeeper's development team at Yahoo! Research indicate that it is. (See <a href="#zkPerfRW">ZooKeeper Throughput as the Read-Write Ratio Varies</a>.) It is especially high performance in applications where reads outnumber writes, since writes involve synchronizing the state of all servers. (Reads outnumbering writes is typically the case for a coordination service.)</p>
+<p><a name="zkPerfRW"></a></p>
+<p><img src="images/zkperfRW-3.2.jpg" alt="ZooKeeper Throughput as the Read-Write Ratio Varies" /></p>
+<p>The <a href="#zkPerfRW">ZooKeeper Throughput as the Read-Write Ratio Varies</a> is a throughput graph of ZooKeeper release 3.2 running on servers with dual 2Ghz Xeon and two SATA 15K RPM drives.  One drive was used as a dedicated ZooKeeper log device. The snapshots were written to the OS drive. Write requests were 1K writes and the reads were 1K reads.  &quot;Servers&quot; indicate the size of the ZooKeeper ensemble, the number of servers that make up the service. Approximately 30 other servers were used to simulate the clients. The ZooKeeper ensemble was configured such that leaders do not allow connections from clients.</p>
+<h6>Note</h6>
+<blockquote>
+<p>In version 3.2 r/w performance improved by ~2x compared to the <a href="http://zookeeper.apache.org/docs/r3.1.1/zookeeperOver.html#Performance">previous 3.1 release</a>.</p>
+</blockquote>
+<p>Benchmarks also indicate that it is reliable, too. <a href="#zkPerfReliability">Reliability in the Presence of Errors</a> shows how a deployment responds to various failures. The events marked in the figure are the following:</p>
+<ol>
+<li>Failure and recovery of a follower</li>
+<li>Failure and recovery of a different follower</li>
+<li>Failure of the leader</li>
+<li>Failure and recovery of two followers</li>
+<li>Failure of another leader</li>
+</ol>
+<p><a name="Reliability"></a></p>
+<h3>Reliability</h3>
+<p>To show the behavior of the system over time as failures are injected we ran a ZooKeeper service made up of 7 machines. We ran the same saturation benchmark as before, but this time we kept the write percentage at a constant 30%, which is a conservative ratio of our expected workloads.</p>
+<p><a name="zkPerfReliability"></a></p>
+<p><img src="images/zkperfreliability.jpg" alt="Reliability in the Presence of Errors" /></p>
+<p>There are a few important observations from this graph. First, if followers fail and recover quickly, then ZooKeeper is able to sustain a high throughput despite the failure. But maybe more importantly, the leader election algorithm allows for the system to recover fast enough to prevent throughput from dropping substantially. In our observations, ZooKeeper takes less than 200ms to elect a new leader. Third, as followers recover, ZooKeeper is able to raise throughput again once they start processing requests.</p>
+<p><a name="The+ZooKeeper+Project"></a></p>
+<h3>The ZooKeeper Project</h3>
+<p>ZooKeeper has been <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/PoweredBy">successfully used</a> in many industrial applications.  It is used at Yahoo! as the coordination and failure recovery service for Yahoo! Message Broker, which is a highly scalable publish-subscribe system managing thousands of topics for replication and data delivery.  It is used by the Fetching Service for Yahoo! crawler, where it also manages failure recovery. A number of Yahoo! advertising systems also use ZooKeeper to implement reliable services.</p>
+<p>All users and developers are encouraged to join the community and contribute their expertise. See the <a href="http://zookeeper.apache.org/">Zookeeper Project on Apache</a> for more information.</p>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

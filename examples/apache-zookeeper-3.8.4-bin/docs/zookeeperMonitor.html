@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2021 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Monitor Guide</h1>
+<ul>
+<li>
+<p><a href="#Metrics-System">New Metrics System</a></p>
+<ul>
+<li><a href="#Metrics">Metrics</a></li>
+<li><a href="#Prometheus">Prometheus</a></li>
+<li><a href="#Alerting">Alerting with Prometheus</a></li>
+<li><a href="#Grafana">Grafana</a></li>
+<li><a href="#influxdb">InfluxDB</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#JMX">JMX</a></p>
+</li>
+<li>
+<p><a href="#four-letter-words">Four letter words</a></p>
+</li>
+</ul>
+<p><a name="Metrics-System"></a></p>
+<h2>New Metrics System</h2>
+<p>The feature:<code>New Metrics System</code> has been available since 3.6.0 which provides the abundant metrics to help users monitor the ZooKeeper on the topic: znode, network, disk, quorum, leader election, client, security, failures, watch/session, requestProcessor, and so forth.</p>
+<p><a name="Metrics"></a></p>
+<h3>Metrics</h3>
+<p>All the metrics are included in the <code>ServerMetrics.java</code>.</p>
+<p><a name="Prometheus"></a></p>
+<h3>Prometheus</h3>
+<ul>
+<li>Running a <a href="https://prometheus.io/">Prometheus</a> monitoring service is the easiest way to ingest and record ZooKeeper's metrics.</li>
+<li>Pre-requisites:</li>
+<li>enable the <code>Prometheus MetricsProvider</code> by setting <code>metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider</code> in the zoo.cfg.</li>
+<li>the Port is also configurable by setting <code>metricsProvider.httpPort</code>（the default value:7000）</li>
+<li>Install Prometheus: Go to the official website download <a href="https://prometheus.io/download/">page</a>, download the latest release.</li>
+<li>
+<p>Set Prometheus's scraper to target the ZooKeeper cluster endpoints:</p>
+<pre><code class="language-bash">cat &gt; /tmp/test-zk.yaml &lt;&lt;EOF
+global:
+  scrape_interval: 10s
+scrape_configs:
+  - job_name: test-zk
+    static_configs:
+    - targets: ['192.168.10.32:7000','192.168.10.33:7000','192.168.10.34:7000']
+EOF
+cat /tmp/test-zk.yaml
+</code></pre>
+</li>
+<li>
+<p>Set up the Prometheus handler:</p>
+<pre><code class="language-bash">nohup /tmp/prometheus \
+    --config.file /tmp/test-zk.yaml \
+    --web.listen-address &quot;:9090&quot; \
+    --storage.tsdb.path &quot;/tmp/test-zk.data&quot; &gt;&gt; /tmp/test-zk.log  2&gt;&amp;1 &amp;
+</code></pre>
+</li>
+<li>
+<p>Now Prometheus will scrape zk metrics every 10 seconds.</p>
+</li>
+</ul>
+<p><a name="Alerting"></a></p>
+<h3>Alerting with Prometheus</h3>
+<ul>
+<li>
+<p>We recommend that you read <a href="https://prometheus.io/docs/practices/alerting/">Prometheus Official Alerting Page</a> to explore some principles of alerting</p>
+</li>
+<li>
+<p>We recommend that you use <a href="https://www.prometheus.io/docs/alerting/latest/alertmanager/">Prometheus Alertmanager</a> which can help users to receive alerting email or instant message(by webhook) in a more convenient way</p>
+</li>
+<li>
+<p>We provide an alerting example where these metrics should be taken a special attention. Note: this is for your reference only, and you need to adjust them according to your actual situation and resource environment</p>
+<pre><code>use ./promtool check rules rules/zk.yml to check the correctness of the config file
+cat rules/zk.yml
+
+groups:
+- name: zk-alert-example
+  rules:
+  - alert: ZooKeeper server is down
+    expr:  up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} ZooKeeper server is down&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} ZooKeeper server is down: [{{ $value }}].&quot;
+
+  - alert: create too many znodes
+    expr: znode_count &gt; 1000000
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} create too many znodes&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} create too many znodes: [{{ $value }}].&quot;
+
+  - alert: create too many connections
+    expr: num_alive_connections &gt; 50 # suppose we use the default maxClientCnxns: 60
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} create too many connections&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} create too many connections: [{{ $value }}].&quot;
+
+  - alert: znode total occupied memory is too big
+    expr: approximate_data_size /1024 /1024 &gt; 1 * 1024 # more than 1024 MB(1 GB)
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} znode total occupied memory is too big&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} znode total occupied memory is too big: [{{ $value }}] MB.&quot;
+
+  - alert: set too many watch
+    expr: watch_count &gt; 10000
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} set too many watch&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} set too many watch: [{{ $value }}].&quot;
+
+  - alert: a leader election happens
+    expr: increase(election_time_count[5m]) &gt; 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} a leader election happens&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} a leader election happens: [{{ $value }}].&quot;
+
+  - alert: open too many files
+    expr: open_file_descriptor_count &gt; 300
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} open too many files&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} open too many files: [{{ $value }}].&quot;
+
+  - alert: fsync time is too long
+    expr: rate(fsynctime_sum[1m]) &gt; 100
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} fsync time is too long&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} fsync time is too long: [{{ $value }}].&quot;
+
+  - alert: take snapshot time is too long
+    expr: rate(snapshottime_sum[5m]) &gt; 100
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} take snapshot time is too long&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} take snapshot time is too long: [{{ $value }}].&quot;
+
+  - alert: avg latency is too high
+    expr: avg_latency &gt; 100
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;Instance {{ $labels.instance }} avg latency is too high&quot;
+      description: &quot;{{ $labels.instance }} of job {{$labels.job}} avg latency is too high: [{{ $value }}].&quot;
+
+  - alert: JvmMemoryFillingUp
+    expr: jvm_memory_bytes_used / jvm_memory_bytes_max{area=&quot;heap&quot;} &gt; 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: &quot;JVM memory filling up (instance {{ $labels.instance }})&quot;
+      description: &quot;JVM memory is filling up (&gt; 80%)\n labels: {{ $labels }}  value = {{ $value }}\n&quot;
+</code></pre>
+</li>
+</ul>
+<p><a name="Grafana"></a></p>
+<h3>Grafana</h3>
+<ul>
+<li>Grafana has built-in Prometheus support; just add a Prometheus data source:
+<pre><code class="language-bash">Name:   test-zk
+Type:   Prometheus
+Url:    http://localhost:9090
+Access: proxy
+</code></pre>
+</li>
+<li>Then download and import the default ZooKeeper dashboard <a href="https://grafana.com/dashboards/10465">template</a> and customize.</li>
+<li>Users can ask for Grafana dashboard account if having any good improvements by writing a email to <strong>dev@zookeeper.apache.org</strong>.</li>
+</ul>
+<p><a name="influxdb"></a></p>
+<h3>InfluxDB</h3>
+<p>InfluxDB is an open source time series data that is often used to store metrics from Zookeeper. You can <a href="https://portal.influxdata.com/downloads/">download</a> the open source version or create a <a href="https://cloud2.influxdata.com/signup">free</a> account on InfluxDB Cloud. In either case, configure the <a href="https://www.influxdata.com/integration/apache-zookeeper/">Apache Zookeeper Telegraf plugin</a> to start collecting and storing metrics from your Zookeeper clusters into your InfluxDB instance. There is also an <a href="https://www.influxdata.com/influxdb-templates/zookeeper-monitor/">Apache Zookeeper InfluxDB template</a> that includes the Telegraf configurations and a dashboard to get you set up right away.</p>
+<p><a name="JMX"></a></p>
+<h2>JMX</h2>
+<p>More details can be found in <a href="http://zookeeper.apache.org/doc/current/zookeeperJMX.html">here</a></p>
+<p><a name="four-letter-words"></a></p>
+<h2>Four letter words</h2>
+<p>More details can be found in <a href="http://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_zkCommands">here</a></p>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

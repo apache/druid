@@ -1,0 +1,690 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2004 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Java Example</h1>
+<ul>
+<li><a href="#ch_Introduction">A Simple Watch Client</a>
+<ul>
+<li><a href="#sc_requirements">Requirements</a></li>
+<li><a href="#sc_design">Program Design</a></li>
+</ul>
+</li>
+<li><a href="#sc_executor">The Executor Class</a></li>
+<li><a href="#sc_DataMonitor">The DataMonitor Class</a></li>
+<li><a href="#sc_completeSourceCode">Complete Source Listings</a></li>
+</ul>
+<p><a name="ch_Introduction"></a></p>
+<h2>A Simple Watch Client</h2>
+<p>To introduce you to the ZooKeeper Java API, we develop here a very simple watch client. This ZooKeeper client watches a znode for changes and responds to by starting or stopping a program.</p>
+<p><a name="sc_requirements"></a></p>
+<h3>Requirements</h3>
+<p>The client has four requirements:</p>
+<ul>
+<li>It takes as parameters:</li>
+<li>the address of the ZooKeeper service</li>
+<li>the name of a znode - the one to be watched</li>
+<li>the name of a file to write the output to</li>
+<li>an executable with arguments.</li>
+<li>It fetches the data associated with the znode and starts the executable.</li>
+<li>If the znode changes, the client re-fetches the contents and restarts the executable.</li>
+<li>If the znode disappears, the client kills the executable.</li>
+</ul>
+<p><a name="sc_design"></a></p>
+<h3>Program Design</h3>
+<p>Conventionally, ZooKeeper applications are broken into two units, one which maintains the connection, and the other which monitors data.  In this application, the class called the <strong>Executor</strong> maintains the ZooKeeper connection, and the class called the <strong>DataMonitor</strong> monitors the data in the ZooKeeper tree. Also, Executor contains the main thread and contains the execution logic. It is responsible for what little user interaction there is, as well as interaction with the executable program you pass in as an argument and which the sample (per the requirements) shuts down and restarts, according to the state of the znode.</p>
+<p><a name="sc_executor"></a></p>
+<h2>The Executor Class</h2>
+<p>The Executor object is the primary container of the sample application. It contains both the <strong>ZooKeeper</strong> object, <strong>DataMonitor</strong>, as described above in <a href="#sc_design">Program Design</a>.</p>
+<pre><code>// from the Executor class...
+
+public static void main(String[] args) {
+    if (args.length &lt; 4) {
+        System.err
+                .println(&quot;USAGE: Executor hostPort znode filename program [args ...]&quot;);
+        System.exit(2);
+    }
+    String hostPort = args[0];
+    String znode = args[1];
+    String filename = args[2];
+    String exec[] = new String[args.length - 3];
+    System.arraycopy(args, 3, exec, 0, exec.length);
+    try {
+        new Executor(hostPort, znode, filename, exec).run();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+public Executor(String hostPort, String znode, String filename,
+        String exec[]) throws KeeperException, IOException {
+    this.filename = filename;
+    this.exec = exec;
+    zk = new ZooKeeper(hostPort, 3000, this);
+    dm = new DataMonitor(zk, znode, null, this);
+}
+
+public void run() {
+    try {
+        synchronized (this) {
+            while (!dm.dead) {
+                wait();
+            }
+        }
+    } catch (InterruptedException e) {
+    }
+}
+</code></pre>
+<p>Recall that the Executor's job is to start and stop the executable whose name you pass in on the command line. It does this in response to events fired by the ZooKeeper object. As you can see in the code above, the Executor passes a reference to itself as the Watcher argument in the ZooKeeper constructor. It also passes a reference to itself as DataMonitorListener argument to the DataMonitor constructor. Per the Executor's definition, it implements both these interfaces:</p>
+<pre><code>public class Executor implements Watcher, Runnable, DataMonitor.DataMonitorListener {
+...
+</code></pre>
+<p>The <strong>Watcher</strong> interface is defined by the ZooKeeper Java API. ZooKeeper uses it to communicate back to its container. It supports only one method, <code>process()</code>, and ZooKeeper uses it to communicates generic events that the main thread would be interested in, such as the state of the ZooKeeper connection or the ZooKeeper session. The Executor in this example simply forwards those events down to the DataMonitor to decide what to do with them. It does this simply to illustrate the point that, by convention, the Executor or some Executor-like object &quot;owns&quot; the ZooKeeper connection, but it is free to delegate the events to other events to other objects. It also uses this as the default channel on which to fire watch events. (More on this later.)</p>
+<pre><code>public void process(WatchedEvent event) {
+    dm.process(event);
+}
+</code></pre>
+<p>The <strong>DataMonitorListener</strong> interface, on the other hand, is not part of the ZooKeeper API. It is a completely custom interface, designed for this sample application. The DataMonitor object uses it to communicate back to its container, which is also the Executor object. The DataMonitorListener interface looks like this:</p>
+<pre><code>public interface DataMonitorListener {
+    /**
+    * The existence status of the node has changed.
+    */
+    void exists(byte data[]);
+
+    /**
+    * The ZooKeeper session is no longer valid.
+    *
+    * @param rc
+    * the ZooKeeper reason code
+    */
+    void closing(int rc);
+}
+</code></pre>
+<p>This interface is defined in the DataMonitor class and implemented in the Executor class. When <code>Executor.exists()</code> is invoked, the Executor decides whether to start up or shut down per the requirements. Recall that the requires say to kill the executable when the znode ceases to <em>exist</em>.</p>
+<p>When <code>Executor.closing()</code> is invoked, the Executor decides whether or not to shut itself down in response to the ZooKeeper connection permanently disappearing.</p>
+<p>As you might have guessed, DataMonitor is the object that invokes these methods, in response to changes in ZooKeeper's state.</p>
+<p>Here are Executor's implementation of <code>DataMonitorListener.exists()</code> and <code>DataMonitorListener.closing</code>:</p>
+<pre><code>public void exists( byte[] data ) {
+    if (data == null) {
+        if (child != null) {
+            System.out.println(&quot;Killing process&quot;);
+            child.destroy();
+            try {
+                child.waitFor();
+            } catch (InterruptedException e) {
+           }
+        }
+        child = null;
+    } else {
+        if (child != null) {
+            System.out.println(&quot;Stopping child&quot;);
+            child.destroy();
+            try {
+               child.waitFor();
+            } catch (InterruptedException e) {
+            e.printStackTrace();
+            }
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(filename);
+            fos.write(data);
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            System.out.println(&quot;Starting child&quot;);
+            child = Runtime.getRuntime().exec(exec);
+            new StreamWriter(child.getInputStream(), System.out);
+            new StreamWriter(child.getErrorStream(), System.err);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public void closing(int rc) {
+    synchronized (this) {
+        notifyAll();
+    }
+}
+</code></pre>
+<p><a name="sc_DataMonitor"></a></p>
+<h2>The DataMonitor Class</h2>
+<p>The DataMonitor class has the meat of the ZooKeeper logic. It is mostly asynchronous and event driven. DataMonitor kicks things off in the constructor with:</p>
+<pre><code>public DataMonitor(ZooKeeper zk, String znode, Watcher chainedWatcher,
+        DataMonitorListener listener) {
+    this.zk = zk;
+    this.znode = znode;
+    this.chainedWatcher = chainedWatcher;
+    this.listener = listener;
+
+    // Get things started by checking if the node exists. We are going
+    // to be completely event driven
+</code></pre>
+<p>The call to <code>ZooKeeper.exists()</code> checks for the existence of the znode, sets a watch, and passes a reference to itself (<code>this</code>) as the completion callback object. In this sense, it kicks things off, since the real processing happens when the watch is triggered.</p>
+<h6>Note</h6>
+<blockquote>
+<p>Don't confuse the completion callback with the watch callback. The <code>ZooKeeper.exists()</code> completion callback, which happens to be the method <code>StatCallback.processResult()</code> implemented in the DataMonitor object, is invoked when the asynchronous <em>setting of the watch</em> operation (by <code>ZooKeeper.exists()</code>) completes on the server.</p>
+<p>The triggering of the watch, on the other hand, sends an event to the <em>Executor</em> object, since the Executor registered as the Watcher of the ZooKeeper object.</p>
+<p>As an aside, you might note that the DataMonitor could also register itself as the Watcher for this particular watch event. This is new to ZooKeeper 3.0.0 (the support of multiple Watchers). In this example, however, DataMonitor does not register as the Watcher.</p>
+</blockquote>
+<p>When the <code>ZooKeeper.exists()</code> operation completes on the server, the ZooKeeper API invokes this completion callback on the client:</p>
+<pre><code>public void processResult(int rc, String path, Object ctx, Stat stat) {
+    boolean exists;
+    switch (rc) {
+    case Code.Ok:
+        exists = true;
+        break;
+    case Code.NoNode:
+        exists = false;
+        break;
+    case Code.SessionExpired:
+    case Code.NoAuth:
+        dead = true;
+        listener.closing(rc);
+        return;
+    default:
+        // Retry errors
+        zk.exists(znode, true, this, null);
+        return;
+    }
+
+    byte b[] = null;
+    if (exists) {
+        try {
+            b = zk.getData(znode, false, null);
+        } catch (KeeperException e) {
+            // We don't need to worry about recovering now. The watch
+            // callbacks will kick off any exception handling
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            return;
+        }
+    }     
+    if ((b == null &amp;amp;&amp;amp; b != prevData)
+        || (b != null &amp;amp;&amp;amp; !Arrays.equals(prevData, b))) {
+        listener.exists(b);&lt;/emphasis&gt;
+        prevData = b;
+    }
+}
+</code></pre>
+<p>The code first checks the error codes for znode existence, fatal errors, and recoverable errors. If the file (or znode) exists, it gets the data from the znode, and then invoke the exists() callback of Executor if the state has changed. Note, it doesn't have to do any Exception processing for the getData call because it has watches pending for anything that could cause an error: if the node is deleted before it calls <code>ZooKeeper.getData()</code>, the watch event set by the <code>ZooKeeper.exists()</code> triggers a callback; if there is a communication error, a connection watch event fires when the connection comes back up.</p>
+<p>Finally, notice how DataMonitor processes watch events:</p>
+<pre><code>public void process(WatchedEvent event) {
+    String path = event.getPath();
+    if (event.getType() == Event.EventType.None) {
+        // We are are being told that the state of the
+        // connection has changed
+        switch (event.getState()) {
+        case SyncConnected:
+            // In this particular example we don't need to do anything
+            // here - watches are automatically re-registered with
+            // server and any watches triggered while the client was
+            // disconnected will be delivered (in order of course)
+            break;
+        case Expired:
+            // It's all over
+            dead = true;
+            listener.closing(KeeperException.Code.SessionExpired);
+            break;
+        }
+    } else {
+        if (path != null &amp;&amp; path.equals(znode)) {
+            // Something has changed on the node, let's find out
+            zk.exists(znode, true, this, null);
+        }
+    }
+    if (chainedWatcher != null) {
+        chainedWatcher.process(event);
+    }
+}
+</code></pre>
+<p>If the client-side ZooKeeper libraries can re-establish the communication channel (SyncConnected event) to ZooKeeper before session expiration (Expired event) all of the session's watches will automatically be re-established with the server (auto-reset of watches is new in ZooKeeper 3.0.0). See <a href="zookeeperProgrammers.html#ch_zkWatches">ZooKeeper Watches</a> in the programmer guide for more on this. A bit lower down in this function, when DataMonitor gets an event for a znode, it calls<code>ZooKeeper.exists()</code> to find out what has changed.</p>
+<p><a name="sc_completeSourceCode"></a></p>
+<h2>Complete Source Listings</h2>
+<h3>Executor.java</h3>
+<pre><code>/**
+ * A simple example program to use DataMonitor to start and
+ * stop executables based on a znode. The program watches the
+ * specified znode and saves the data that corresponds to the
+ * znode in the filesystem. It also starts the specified program
+ * with the specified arguments when the znode exists and kills
+ * the program if the znode goes away.
+ */
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+
+public class Executor
+    implements Watcher, Runnable, DataMonitor.DataMonitorListener
+{
+    String znode;
+    DataMonitor dm;
+    ZooKeeper zk;
+    String filename;
+    String exec[];
+    Process child;
+
+    public Executor(String hostPort, String znode, String filename,
+            String exec[]) throws KeeperException, IOException {
+        this.filename = filename;
+        this.exec = exec;
+        zk = new ZooKeeper(hostPort, 3000, this);
+        dm = new DataMonitor(zk, znode, null, this);
+    }
+
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        if (args.length &lt; 4) {
+            System.err
+                    .println(&quot;USAGE: Executor hostPort znode filename program [args ...]&quot;);
+            System.exit(2);
+        }
+        String hostPort = args[0];
+        String znode = args[1];
+        String filename = args[2];
+        String exec[] = new String[args.length - 3];
+        System.arraycopy(args, 3, exec, 0, exec.length);
+        try {
+            new Executor(hostPort, znode, filename, exec).run();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /***************************************************************************
+     * We do process any events ourselves, we just need to forward them on.
+     *
+     * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.proto.WatcherEvent)
+     */
+    public void process(WatchedEvent event) {
+        dm.process(event);
+    }
+
+    public void run() {
+        try {
+            synchronized (this) {
+                while (!dm.dead) {
+                    wait();
+                }
+            }
+        } catch (InterruptedException e) {
+        }
+    }
+
+    public void closing(int rc) {
+        synchronized (this) {
+            notifyAll();
+        }
+    }
+
+    static class StreamWriter extends Thread {
+        OutputStream os;
+
+        InputStream is;
+
+        StreamWriter(InputStream is, OutputStream os) {
+            this.is = is;
+            this.os = os;
+            start();
+        }
+
+        public void run() {
+            byte b[] = new byte[80];
+            int rc;
+            try {
+                while ((rc = is.read(b)) &gt; 0) {
+                    os.write(b, 0, rc);
+                }
+            } catch (IOException e) {
+            }
+
+        }
+    }
+
+    public void exists(byte[] data) {
+        if (data == null) {
+            if (child != null) {
+                System.out.println(&quot;Killing process&quot;);
+                child.destroy();
+                try {
+                    child.waitFor();
+                } catch (InterruptedException e) {
+                }
+            }
+            child = null;
+        } else {
+            if (child != null) {
+                System.out.println(&quot;Stopping child&quot;);
+                child.destroy();
+                try {
+                    child.waitFor();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                FileOutputStream fos = new FileOutputStream(filename);
+                fos.write(data);
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                System.out.println(&quot;Starting child&quot;);
+                child = Runtime.getRuntime().exec(exec);
+                new StreamWriter(child.getInputStream(), System.out);
+                new StreamWriter(child.getErrorStream(), System.err);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+</code></pre>
+<h3>DataMonitor.java</h3>
+<pre><code>/**
+ * A simple class that monitors the data and existence of a ZooKeeper
+ * node. It uses asynchronous ZooKeeper APIs.
+ */
+import java.util.Arrays;
+
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.AsyncCallback.StatCallback;
+import org.apache.zookeeper.KeeperException.Code;
+import org.apache.zookeeper.data.Stat;
+
+public class DataMonitor implements Watcher, StatCallback {
+
+    ZooKeeper zk;
+    String znode;
+    Watcher chainedWatcher;
+    boolean dead;
+    DataMonitorListener listener;
+    byte prevData[];
+
+    public DataMonitor(ZooKeeper zk, String znode, Watcher chainedWatcher,
+            DataMonitorListener listener) {
+        this.zk = zk;
+        this.znode = znode;
+        this.chainedWatcher = chainedWatcher;
+        this.listener = listener;
+        // Get things started by checking if the node exists. We are going
+        // to be completely event driven
+        zk.exists(znode, true, this, null);
+    }
+
+    /**
+     * Other classes use the DataMonitor by implementing this method
+     */
+    public interface DataMonitorListener {
+        /**
+         * The existence status of the node has changed.
+         */
+        void exists(byte data[]);
+
+        /**
+         * The ZooKeeper session is no longer valid.
+         *
+         * @param rc
+         *                the ZooKeeper reason code
+         */
+        void closing(int rc);
+    }
+
+    public void process(WatchedEvent event) {
+        String path = event.getPath();
+        if (event.getType() == Event.EventType.None) {
+            // We are are being told that the state of the
+            // connection has changed
+            switch (event.getState()) {
+            case SyncConnected:
+                // In this particular example we don't need to do anything
+                // here - watches are automatically re-registered with
+                // server and any watches triggered while the client was
+                // disconnected will be delivered (in order of course)
+                break;
+            case Expired:
+                // It's all over
+                dead = true;
+                listener.closing(KeeperException.Code.SessionExpired);
+                break;
+            }
+        } else {
+            if (path != null &amp;&amp; path.equals(znode)) {
+                // Something has changed on the node, let's find out
+                zk.exists(znode, true, this, null);
+            }
+        }
+        if (chainedWatcher != null) {
+            chainedWatcher.process(event);
+        }
+    }
+
+    public void processResult(int rc, String path, Object ctx, Stat stat) {
+        boolean exists;
+        switch (rc) {
+        case Code.Ok:
+            exists = true;
+            break;
+        case Code.NoNode:
+            exists = false;
+            break;
+        case Code.SessionExpired:
+        case Code.NoAuth:
+            dead = true;
+            listener.closing(rc);
+            return;
+        default:
+            // Retry errors
+            zk.exists(znode, true, this, null);
+            return;
+        }
+
+        byte b[] = null;
+        if (exists) {
+            try {
+                b = zk.getData(znode, false, null);
+            } catch (KeeperException e) {
+                // We don't need to worry about recovering now. The watch
+                // callbacks will kick off any exception handling
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                return;
+            }
+        }
+        if ((b == null &amp;&amp; b != prevData)
+                || (b != null &amp;&amp; !Arrays.equals(prevData, b))) {
+            listener.exists(b);
+            prevData = b;
+        }
+    }
+}
+</code></pre>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

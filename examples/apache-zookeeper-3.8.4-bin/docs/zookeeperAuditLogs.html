@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2022 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Audit Logging</h1>
+<ul>
+<li><a href="#ch_auditLogs">ZooKeeper Audit Logs</a></li>
+<li><a href="#ch_reconfig_format">ZooKeeper Audit Log Configuration</a></li>
+<li><a href="#ch_zkAuditUser">Who is taken as user in audit logs?</a> <a name="ch_auditLogs"></a></li>
+</ul>
+<h2>ZooKeeper Audit Logs</h2>
+<p>Apache ZooKeeper supports audit logs from version 3.6.0. By default audit logs are disabled. To enable audit logs configure audit.enable=true in conf/zoo.cfg. Audit logs are not logged on all the ZooKeeper servers, but logged only on the servers where client is connected as depicted in below figure.</p>
+<p><img src="images/zkAuditLogs.jpg" alt="Audit Logs" /></p>
+<p>The audit log captures detailed information for the operations that are selected to be audited. The audit information is written as a set of key=value pairs for the following keys</p>
+<table>
+<thead>
+<tr><th> Key   </th><th> Value </th></tr>
+</thead>
+<tbody>
+<tr><td>session </td><td> client session id </td></tr>
+<tr><td>user </td><td> comma separated list of users who are associate with a client session. For more on this, see <a href="#ch_zkAuditUser">Who is taken as user in audit logs</a>.</td></tr>
+<tr><td>ip </td><td> client IP address</td></tr>
+<tr><td>operation </td><td> any one of the selected operations for audit. Possible values are(serverStart, serverStop, create, delete, setData, setAcl, multiOperation, reconfig, ephemeralZNodeDeleteOnSessionClose)</td></tr>
+<tr><td>znode </td><td> path of the znode</td></tr>
+<tr><td>znode type </td><td> type of znode in case of creation operation</td></tr>
+<tr><td>acl </td><td> String representation of znode ACL like cdrwa(create, delete,read, write, admin). This is logged only for setAcl operation</td></tr>
+<tr><td>result </td><td> result of the operation. Possible values are (success/failure/invoked). Result &quot;invoked&quot; is used for serverStop operation because stop is logged before ensuring that server actually stopped.</td></tr>
+</tbody>
+</table>
+<p>Below are sample audit logs for all operations, where client is connected from 192.168.1.2, client principal is zkcli@HADOOP.COM, server principal is zookeeper/192.168.1.3@HADOOP.COM</p>
+<pre><code>user=zookeeper/192.168.1.3 operation=serverStart   result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=create    znode=/a    znode_type=persistent  result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=create    znode=/a    znode_type=persistent  result=failure
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=setData   znode=/a    result=failure
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=setData   znode=/a    result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=setAcl    znode=/a    acl=world:anyone:cdrwa  result=failure
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=setAcl    znode=/a    acl=world:anyone:cdrwa  result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=create    znode=/b    znode_type=persistent  result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=setData   znode=/b    result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=delete    znode=/b    result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=multiOperation    result=failure
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=delete    znode=/a    result=failure
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=delete    znode=/a    result=success
+session=0x19344730001   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=create   znode=/ephemral znode_type=ephemral result=success
+session=0x19344730001   user=zookeeper/192.168.1.3   operation=ephemeralZNodeDeletionOnSessionCloseOrExpire  znode=/ephemral result=success
+session=0x19344730000   user=192.168.1.2,zkcli@HADOOP.COM  ip=192.168.1.2    operation=reconfig  znode=/zookeeper/config result=success
+user=zookeeper/192.168.1.3 operation=serverStop    result=invoked
+</code></pre>
+<p><a name="ch_auditConfig"></a></p>
+<h2>ZooKeeper Audit Log Configuration</h2>
+<p>By default audit logs are disabled. To enable audit logs configure <code>audit.enable=true</code> in <em>conf/zoo.cfg</em>. Audit logging is done using logback. Following is the default logback configuration for audit logs in <code>conf/logback.xml</code></p>
+<pre><code>&lt;!--
+  zk audit logging
+--&gt;
+&lt;!--property name=&quot;zookeeper.auditlog.file&quot; value=&quot;zookeeper_audit.log&quot; /&gt;
+&lt;property name=&quot;zookeeper.auditlog.threshold&quot; value=&quot;INFO&quot; /&gt;
+&lt;property name=&quot;audit.logger&quot; value=&quot;INFO, RFAAUDIT&quot; /&gt;
+
+&lt;appender name=&quot;RFAAUDIT&quot; class=&quot;ch.qos.logback.core.rolling.RollingFileAppender&quot;&gt;
+  &lt;File&gt;${zookeeper.log.dir}/${zookeeper.auditlog.file}&lt;/File&gt;
+  &lt;encoder&gt;
+    &lt;pattern&gt;%d{ISO8601} %p %c{2}: %m%n&lt;/pattern&gt;
+  &lt;/encoder&gt;
+  &lt;filter class=&quot;ch.qos.logback.classic.filter.ThresholdFilter&quot;&gt;
+    &lt;level&gt;${zookeeper.auditlog.threshold}&lt;/level&gt;
+  &lt;/filter&gt;
+  &lt;rollingPolicy class=&quot;ch.qos.logback.core.rolling.FixedWindowRollingPolicy&quot;&gt;
+    &lt;maxIndex&gt;10&lt;/maxIndex&gt;
+    &lt;FileNamePattern&gt;${zookeeper.log.dir}/${zookeeper.auditlog.file}.%i&lt;/FileNamePattern&gt;
+  &lt;/rollingPolicy&gt;
+  &lt;triggeringPolicy class=&quot;ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy&quot;&gt;
+    &lt;MaxFileSize&gt;10MB&lt;/MaxFileSize&gt;
+  &lt;/triggeringPolicy&gt;
+&lt;/appender&gt;
+
+&lt;logger name=&quot;org.apache.zookeeper.audit.Slf4jAuditLogger&quot; additivity=&quot;false&quot; level=&quot;${audit.logger}&quot;&gt;
+  &lt;appender-ref ref=&quot;RFAAUDIT&quot; /&gt;
+&lt;/logger--&gt;
+</code></pre>
+<p>Change above configuration to customize the auditlog file, number of backups, max file size, custom audit logger etc.</p>
+<p><a name="ch_zkAuditUser"></a></p>
+<h2>Who is taken as user in audit logs?</h2>
+<p>By default there are only four authentication provider:</p>
+<ul>
+<li>IPAuthenticationProvider</li>
+<li>SASLAuthenticationProvider</li>
+<li>X509AuthenticationProvider</li>
+<li>DigestAuthenticationProvider</li>
+</ul>
+<p>User is decided based on the configured authentication provider:</p>
+<ul>
+<li>When IPAuthenticationProvider is configured then authenticated IP is taken as user</li>
+<li>When SASLAuthenticationProvider is configured then client principal is taken as user</li>
+<li>When X509AuthenticationProvider is configured then client certificate is taken as user</li>
+<li>When DigestAuthenticationProvider is configured then authenticated user is user</li>
+</ul>
+<p>Custom authentication provider can override org.apache.zookeeper.server.auth.AuthenticationProvider.getUserName(String id) to provide user name. If authentication provider is not overriding this method then whatever is stored in org.apache.zookeeper.data.Id.id is taken as user. Generally only user name is stored in this field but it is up to the custom authentication provider what they store in it. For audit logging value of org.apache.zookeeper.data.Id.id would be taken as user.</p>
+<p>In ZooKeeper Server not all the operations are done by clients but some operations are done by the server itself. For example when client closes the session, ephemeral znodes are deleted by the Server. These deletion are not done by clients directly but it is done the server itself these are called system operations. For these system operations the user associated with the ZooKeeper server are taken as user while audit logging these operations. For example if in ZooKeeper server principal is zookeeper/hadoop.hadoop.com@HADOOP.COM then this becomes the system user and all the system operations will be logged with this user name.</p>
+<pre><code>user=zookeeper/hadoop.hadoop.com@HADOOP.COM operation=serverStart result=success
+</code></pre>
+<p>If there is no user associate with ZooKeeper server then the user who started the ZooKeeper server is taken as the user. For example if server started by root then root is taken as the system user</p>
+<pre><code>user=root operation=serverStart result=success
+</code></pre>
+<p>Single client can attach multiple authentication schemes to a session, in this case all authenticated schemes will taken taken as user and will be presented as comma separated list. For example if a client is authenticate with principal zkcli@HADOOP.COM and ip 127.0.0.1 then create znode audit log will be as:</p>
+<pre><code>session=0x10c0bcb0000 user=zkcli@HADOOP.COM,127.0.0.1 ip=127.0.0.1 operation=create znode=/a result=success
+</code></pre>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

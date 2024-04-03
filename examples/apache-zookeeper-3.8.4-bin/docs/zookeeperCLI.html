@@ -1,0 +1,660 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2021 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper-cli: the ZooKeeper command line interface</h1>
+<h2>Pre-requisites</h2>
+<p>Enter into the ZooKeeper-cli</p>
+<pre><code class="language-bash"># connect to the localhost with the default port:2181
+bin/zkCli.sh
+# connect to the remote host with timeout:3s
+bin/zkCli.sh -timeout 3000 -server remoteIP:2181
+# connect to the remote host with -waitforconnection option to wait for connection success before executing commands
+bin/zkCli.sh -waitforconnection -timeout 3000 -server remoteIP:2181
+# connect with a custom client configuration properties file
+bin/zkCli.sh -client-configuration /path/to/client.properties
+</code></pre>
+<h2>help</h2>
+<p>Showing helps about ZooKeeper commands</p>
+<pre><code class="language-bash">[zkshell: 1] help
+# a sample one
+[zkshell: 2] h
+ZooKeeper -server host:port cmd args
+	addauth scheme auth
+	close
+	config [-c] [-w] [-s]
+	connect host:port
+	create [-s] [-e] [-c] [-t ttl] path [data] [acl]
+	delete [-v version] path
+	deleteall path
+	delquota [-n|-b|-N|-B] path
+	get [-s] [-w] path
+	getAcl [-s] path
+	getAllChildrenNumber path
+	getEphemerals path
+	history
+	listquota path
+	ls [-s] [-w] [-R] path
+	printwatches on|off
+	quit
+	reconfig [-s] [-v version] [[-file path] | [-members serverID=host:port1:port2;port3[,...]*]] | [-add serverId=host:port1:port2;port3[,...]]* [-remove serverId[,...]*]
+	redo cmdno
+	removewatches path [-c|-d|-a] [-l]
+	set [-s] [-v version] path data
+	setAcl [-s] [-v version] [-R] path acl
+	setquota -n|-b|-N|-B val path
+	stat [-w] path
+	sync path
+	version
+</code></pre>
+<h2>addauth</h2>
+<p>Add a authorized user for ACL</p>
+<pre><code class="language-bash">[zkshell: 9] getAcl /acl_digest_test
+    Insufficient permission : /acl_digest_test
+[zkshell: 10] addauth digest user1:12345
+[zkshell: 11] getAcl /acl_digest_test
+    'digest,'user1:+owfoSBn/am19roBPzR1/MfCblE=
+    : cdrwa
+# add a super user
+# Notice:set zookeeper.DigestAuthenticationProvider
+# e.g. zookeeper.DigestAuthenticationProvider.superDigest=zookeeper:qW/HnTfCSoQpB5G8LgkwT3IbiFc=
+[zkshell: 12] addauth digest zookeeper:admin
+</code></pre>
+<h2>close</h2>
+<p>Close this client/session.</p>
+<pre><code class="language-bash">[zkshell: 0] close
+	2019-03-09 06:42:22,178 [myid:] - INFO  [main-EventThread:ClientCnxn$EventThread@528] - EventThread shut down for session: 0x10007ab7c550006
+	2019-03-09 06:42:22,179 [myid:] - INFO  [main:ZooKeeper@1346] - Session: 0x10007ab7c550006 closed
+</code></pre>
+<h2>config</h2>
+<p>Showing the config of quorum membership</p>
+<pre><code class="language-bash">[zkshell: 17] config
+	server.1=[2001:db8:1:0:0:242:ac11:2]:2888:3888:participant
+	server.2=[2001:db8:1:0:0:242:ac11:2]:12888:13888:participant
+	server.3=[2001:db8:1:0:0:242:ac11:2]:22888:23888:participant
+	version=0
+</code></pre>
+<h2>connect</h2>
+<p>Connect a ZooKeeper server.</p>
+<pre><code class="language-bash">[zkshell: 4] connect
+	2019-03-09 06:43:33,179 [myid:localhost:2181] - INFO  [main-SendThread(localhost:2181):ClientCnxn$SendThread@986] - Socket connection established, initiating session, client: /127.0.0.1:35144, server: localhost/127.0.0.1:2181
+	2019-03-09 06:43:33,189 [myid:localhost:2181] - INFO  [main-SendThread(localhost:2181):ClientCnxn$SendThread@1421] - Session establishment complete on server localhost/127.0.0.1:2181, sessionid = 0x10007ab7c550007, negotiated timeout = 30000
+	connect &quot;localhost:2181,localhost:2182,localhost:2183&quot;
+
+# connect a remote server
+[zkshell: 5] connect remoteIP:2181
+</code></pre>
+<h2>create</h2>
+<p>Create a znode.</p>
+<pre><code class="language-bash"># create a persistent_node
+[zkshell: 7] create /persistent_node
+	Created /persistent_node
+
+# create a ephemeral node
+[zkshell: 8] create -e /ephemeral_node mydata
+	Created /ephemeral_node
+
+# create the persistent-sequential node
+[zkshell: 9] create -s /persistent_sequential_node mydata
+	Created /persistent_sequential_node0000000176
+
+# create the ephemeral-sequential_node
+[zkshell: 10] create -s -e /ephemeral_sequential_node mydata
+	Created /ephemeral_sequential_node0000000174
+
+# create a node with the schema
+[zkshell: 11] create /zk-node-create-schema mydata digest:user1:+owfoSBn/am19roBPzR1/MfCblE=:crwad
+	Created /zk-node-create-schema
+[zkshell: 12] addauth digest user1:12345
+[zkshell: 13] getAcl /zk-node-create-schema
+	'digest,'user1:+owfoSBn/am19roBPzR1/MfCblE=
+	: cdrwa
+
+# create the container node.When the last child of a container is deleted,the container becomes to be deleted
+[zkshell: 14] create -c /container_node mydata
+	Created /container_node
+[zkshell: 15] create -c /container_node/child_1 mydata
+	Created /container_node/child_1
+[zkshell: 16] create -c /container_node/child_2 mydata
+	Created /container_node/child_2
+[zkshell: 17] delete /container_node/child_1
+[zkshell: 18] delete /container_node/child_2
+[zkshell: 19] get /container_node
+	org.apache.zookeeper.KeeperException$NoNodeException: KeeperErrorCode = NoNode for /container_node
+
+# create the ttl node.
+# set zookeeper.extendedTypesEnabled=true
+# Otherwise:KeeperErrorCode = Unimplemented for /ttl_node
+[zkshell: 20] create -t 3000 /ttl_node mydata
+	Created /ttl_node
+# after 3s later
+[zkshell: 21] get /ttl_node
+	org.apache.zookeeper.KeeperException$NoNodeException: KeeperErrorCode = NoNode for /ttl_node
+</code></pre>
+<h2>delete</h2>
+<p>Delete a node with a specific path</p>
+<pre><code class="language-bash">[zkshell: 2] delete /config/topics/test
+[zkshell: 3] ls /config/topics/test
+	Node does not exist: /config/topics/test
+</code></pre>
+<h2>deleteall</h2>
+<p>Delete all nodes under a specific path</p>
+<pre><code class="language-bash">zkshell: 1] ls /config
+	[changes, clients, topics]
+[zkshell: 2] deleteall /config
+[zkshell: 3] ls /config
+	Node does not exist: /config
+</code></pre>
+<h2>delquota</h2>
+<p>Delete the quota under a path</p>
+<pre><code class="language-bash">[zkshell: 1] delquota /quota_test
+[zkshell: 2] listquota /quota_test
+	absolute path is /zookeeper/quota/quota_test/zookeeper_limits
+	quota for /quota_test does not exist.
+[zkshell: 3] delquota -n /c1
+[zkshell: 4] delquota -N /c2
+[zkshell: 5] delquota -b /c3
+[zkshell: 6] delquota -B /c4
+
+</code></pre>
+<h2>get</h2>
+<p>Get the data of the specific path</p>
+<pre><code class="language-bash">[zkshell: 10] get /latest_producer_id_block
+	{&quot;version&quot;:1,&quot;broker&quot;:0,&quot;block_start&quot;:&quot;0&quot;,&quot;block_end&quot;:&quot;999&quot;}
+
+# -s to show the stat
+[zkshell: 11] get -s /latest_producer_id_block
+	{&quot;version&quot;:1,&quot;broker&quot;:0,&quot;block_start&quot;:&quot;0&quot;,&quot;block_end&quot;:&quot;999&quot;}
+	cZxid = 0x90000009a
+	ctime = Sat Jul 28 08:14:09 UTC 2018
+	mZxid = 0x9000000a2
+	mtime = Sat Jul 28 08:14:12 UTC 2018
+	pZxid = 0x90000009a
+	cversion = 0
+	dataVersion = 1
+	aclVersion = 0
+	ephemeralOwner = 0x0
+	dataLength = 60
+	numChildren = 0
+
+# -w to set a watch on the data change, Notice: turn on the printwatches
+[zkshell: 12] get -w /latest_producer_id_block
+	{&quot;version&quot;:1,&quot;broker&quot;:0,&quot;block_start&quot;:&quot;0&quot;,&quot;block_end&quot;:&quot;999&quot;}
+[zkshell: 13] set /latest_producer_id_block mydata
+	WATCHER::
+	WatchedEvent state:SyncConnected type:NodeDataChanged path:/latest_producer_id_block
+</code></pre>
+<h2>getAcl</h2>
+<p>Get the ACL permission of one path</p>
+<pre><code class="language-bash">[zkshell: 4] create /acl_test mydata ip:127.0.0.1:crwda
+	Created /acl_test
+[zkshell: 5] getAcl /acl_test
+	'ip,'127.0.0.1
+	: cdrwa
+	[zkshell: 6] getAcl /testwatch
+	'world,'anyone
+	: cdrwa
+</code></pre>
+<h2>getAllChildrenNumber</h2>
+<p>Get all numbers of children nodes under a specific path</p>
+<pre><code class="language-bash">[zkshell: 1] getAllChildrenNumber /
+	73779
+[zkshell: 2] getAllChildrenNumber /ZooKeeper
+	2
+[zkshell: 3] getAllChildrenNumber /ZooKeeper/quota
+	0
+</code></pre>
+<h2>getEphemerals</h2>
+<p>Get all the ephemeral nodes created by this session</p>
+<pre><code class="language-bash">[zkshell: 1] create -e /test-get-ephemerals &quot;ephemeral node&quot;
+	Created /test-get-ephemerals
+[zkshell: 2] getEphemerals
+	[/test-get-ephemerals]
+[zkshell: 3] getEphemerals /
+	[/test-get-ephemerals]
+[zkshell: 4] create -e /test-get-ephemerals-1 &quot;ephemeral node&quot;
+	Created /test-get-ephemerals-1
+[zkshell: 5] getEphemerals /test-get-ephemerals
+	test-get-ephemerals     test-get-ephemerals-1
+[zkshell: 6] getEphemerals /test-get-ephemerals
+	[/test-get-ephemerals-1, /test-get-ephemerals]
+[zkshell: 7] getEphemerals /test-get-ephemerals-1
+	[/test-get-ephemerals-1]
+</code></pre>
+<h2>history</h2>
+<p>Showing the history about the recent 11 commands that you have executed</p>
+<pre><code class="language-bash">[zkshell: 7] history
+	0 - close
+	1 - close
+	2 - ls /
+	3 - ls /
+	4 - connect
+	5 - ls /
+	6 - ll
+	7 - history
+</code></pre>
+<h2>listquota</h2>
+<p>Listing the quota of one path</p>
+<pre><code class="language-bash">[zkshell: 1] listquota /c1
+             absolute path is /zookeeper/quota/c1/zookeeper_limits
+             Output quota for /c1 count=-1,bytes=-1=;byteHardLimit=-1;countHardLimit=2
+             Output stat for /c1 count=4,bytes=0
+</code></pre>
+<h2>ls</h2>
+<p>Listing the child nodes of one path</p>
+<pre><code class="language-bash">[zkshell: 36] ls /quota_test
+	[child_1, child_2, child_3]
+
+# -s to show the stat
+[zkshell: 37] ls -s /quota_test
+	[child_1, child_2, child_3]
+	cZxid = 0x110000002d
+	ctime = Thu Mar 07 11:19:07 UTC 2019
+	mZxid = 0x110000002d
+	mtime = Thu Mar 07 11:19:07 UTC 2019
+	pZxid = 0x1100000033
+	cversion = 3
+	dataVersion = 0
+	aclVersion = 0
+	ephemeralOwner = 0x0
+	dataLength = 0
+	numChildren = 3
+
+# -R to show the child nodes recursely
+[zkshell: 38] ls -R /quota_test
+	/quota_test
+	/quota_test/child_1
+	/quota_test/child_2
+	/quota_test/child_3
+
+# -w to set a watch on the child change,Notice: turn on the printwatches
+[zkshell: 39] ls -w /brokers
+	[ids, seqid, topics]
+[zkshell: 40] delete /brokers/ids
+	WATCHER::
+	WatchedEvent state:SyncConnected type:NodeChildrenChanged path:/brokers
+</code></pre>
+<h2>printwatches</h2>
+<p>A switch to turn on/off whether printing watches or not.</p>
+<pre><code class="language-bash">[zkshell: 0] printwatches
+	printwatches is on
+[zkshell: 1] printwatches off
+[zkshell: 2] printwatches
+	printwatches is off
+[zkshell: 3] printwatches on
+[zkshell: 4] printwatches
+	printwatches is on
+</code></pre>
+<h2>quit</h2>
+<p>Quit the CLI windows.</p>
+<pre><code class="language-bash">[zkshell: 1] quit
+</code></pre>
+<h2>reconfig</h2>
+<p>Change the membership of the ensemble during the runtime.</p>
+<p>Before using this cli,read the details in the <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a> about the reconfig feature,especially the &quot;Security&quot; part.</p>
+<p>Pre-requisites:</p>
+<ol>
+<li>
+<p>set reconfigEnabled=true in the zoo.cfg</p>
+</li>
+<li>
+<p>add a super user or skipAcl,otherwise will get “Insufficient permission”. e.g. addauth digest zookeeper:admin</p>
+</li>
+</ol>
+<pre><code class="language-bash"># Change follower 2 to an observer and change its port from 2182 to 12182
+# Add observer 5 to the ensemble
+# Remove Observer 4 from the ensemble
+[zkshell: 1] reconfig --add 2=localhost:2781:2786:observer;12182 --add 5=localhost:2781:2786:observer;2185 -remove 4
+	Committed new configuration:
+	server.1=localhost:2780:2785:participant;0.0.0.0:2181
+	server.2=localhost:2781:2786:observer;0.0.0.0:12182
+	server.3=localhost:2782:2787:participant;0.0.0.0:2183
+	server.5=localhost:2784:2789:observer;0.0.0.0:2185
+	version=1c00000002
+
+# -members to appoint the membership
+[zkshell: 2] reconfig -members server.1=localhost:2780:2785:participant;0.0.0.0:2181,server.2=localhost:2781:2786:observer;0.0.0.0:12182,server.3=localhost:2782:2787:participant;0.0.0.0:12183
+	Committed new configuration:
+	server.1=localhost:2780:2785:participant;0.0.0.0:2181
+	server.2=localhost:2781:2786:observer;0.0.0.0:12182
+	server.3=localhost:2782:2787:participant;0.0.0.0:12183
+	version=f9fe0000000c
+
+# Change the current config to the one in the myNewConfig.txt
+# But only if current config version is 2100000010
+[zkshell: 3] reconfig -file /data/software/zookeeper/zookeeper-test/conf/myNewConfig.txt -v 2100000010
+	Committed new configuration:
+	server.1=localhost:2780:2785:participant;0.0.0.0:2181
+	server.2=localhost:2781:2786:observer;0.0.0.0:12182
+	server.3=localhost:2782:2787:participant;0.0.0.0:2183
+	server.5=localhost:2784:2789:observer;0.0.0.0:2185
+	version=220000000c
+</code></pre>
+<h2>redo</h2>
+<p>Redo the cmd with the index from history.</p>
+<pre><code class="language-bash">[zkshell: 4] history
+	0 - ls /
+	1 - get /consumers
+	2 - get /hbase
+	3 - ls  /hbase
+	4 - history
+[zkshell: 5] redo 3
+	[backup-masters, draining, flush-table-proc, hbaseid, master-maintenance, meta-region-server, namespace, online-snapshot, replication, rs, running, splitWAL, switch, table, table-lock]
+</code></pre>
+<h2>removewatches</h2>
+<p>Remove the watches under a node.</p>
+<pre><code class="language-bash">[zkshell: 1] get -w /brokers
+	null
+[zkshell: 2] removewatches /brokers
+	WATCHER::
+	WatchedEvent state:SyncConnected type:DataWatchRemoved path:/brokers
+
+</code></pre>
+<h2>set</h2>
+<p>Set/update the data on a path.</p>
+<pre><code class="language-bash">[zkshell: 50] set /brokers myNewData
+
+# -s to show the stat of this node.
+[zkshell: 51] set -s /quota_test mydata_for_quota_test
+	cZxid = 0x110000002d
+	ctime = Thu Mar 07 11:19:07 UTC 2019
+	mZxid = 0x1100000038
+	mtime = Thu Mar 07 11:42:41 UTC 2019
+	pZxid = 0x1100000033
+	cversion = 3
+	dataVersion = 2
+	aclVersion = 0
+	ephemeralOwner = 0x0
+	dataLength = 21
+	numChildren = 3
+
+# -v to set the data with CAS,the version can be found from dataVersion using stat.
+[zkshell: 52] set -v 0 /brokers myNewData
+[zkshell: 53] set -v 0 /brokers myNewData
+	version No is not valid : /brokers
+</code></pre>
+<h2>setAcl</h2>
+<p>Set the Acl permission for one node.</p>
+<pre><code class="language-bash">[zkshell: 28] addauth digest user1:12345
+[zkshell: 30] setAcl /acl_auth_test auth:user1:12345:crwad
+[zkshell: 31] getAcl /acl_auth_test
+	'digest,'user1:+owfoSBn/am19roBPzR1/MfCblE=
+	: cdrwa
+
+# -R to set Acl recursely
+[zkshell: 32] ls /acl_auth_test
+	[child_1, child_2]
+[zkshell: 33] getAcl /acl_auth_test/child_2
+	'world,'anyone
+	: cdrwa
+[zkshell: 34] setAcl -R /acl_auth_test auth:user1:12345:crwad
+[zkshell: 35] getAcl /acl_auth_test/child_2
+	'digest,'user1:+owfoSBn/am19roBPzR1/MfCblE=
+	: cdrwa
+
+# -v set Acl with the acl version which can be found from the aclVersion using the stat
+[zkshell: 36] stat /acl_auth_test
+	cZxid = 0xf9fc0000001c
+	ctime = Tue Mar 26 16:50:58 CST 2019
+	mZxid = 0xf9fc0000001c
+	mtime = Tue Mar 26 16:50:58 CST 2019
+	pZxid = 0xf9fc0000001f
+	cversion = 2
+	dataVersion = 0
+	aclVersion = 3
+	ephemeralOwner = 0x0
+	dataLength = 0
+	numChildren = 2
+[zkshell: 37] setAcl -v 3 /acl_auth_test auth:user1:12345:crwad
+</code></pre>
+<h2>setquota</h2>
+<p>Set the quota in one path.</p>
+<pre><code class="language-bash"># -n to limit the number of child nodes(included itself)
+[zkshell: 18] setquota -n 2 /quota_test
+[zkshell: 19] create /quota_test/child_1
+	Created /quota_test/child_1
+[zkshell: 20] create /quota_test/child_2
+	Created /quota_test/child_2
+[zkshell: 21] create /quota_test/child_3
+	Created /quota_test/child_3
+# Notice:don't have a hard constraint,just log the warning info
+	2019-03-07 11:22:36,680 [myid:1] - WARN  [SyncThread:0:DataTree@374] - Quota exceeded: /quota_test count=3 limit=2
+	2019-03-07 11:22:41,861 [myid:1] - WARN  [SyncThread:0:DataTree@374] - Quota exceeded: /quota_test count=4 limit=2
+
+# -b to limit the bytes(data length) of one path
+[zkshell: 22] setquota -b 5 /brokers
+[zkshell: 23] set /brokers &quot;I_love_zookeeper&quot;
+# Notice:don't have a hard constraint,just log the warning info
+	WARN  [CommitProcWorkThread-7:DataTree@379] - Quota exceeded: /brokers bytes=4206 limit=5
+
+# -N count Hard quota
+[zkshell: 3] create /c1
+Created /c1
+[zkshell: 4] setquota -N 2 /c1
+[zkshell: 5] listquota /c1
+absolute path is /zookeeper/quota/c1/zookeeper_limits
+Output quota for /c1 count=-1,bytes=-1=;byteHardLimit=-1;countHardLimit=2
+Output stat for /c1 count=2,bytes=0
+[zkshell: 6] create /c1/ch-3
+Count Quota has exceeded : /c1/ch-3
+
+# -B byte Hard quota
+[zkshell: 3] create /c2
+[zkshell: 4] setquota -B 4 /c2
+[zkshell: 5] set /c2 &quot;foo&quot;
+[zkshell: 6] set /c2 &quot;foo-bar&quot;
+Bytes Quota has exceeded : /c2
+[zkshell: 7] get /c2
+foo
+</code></pre>
+<h2>stat</h2>
+<p>Showing the stat/metadata of one node.</p>
+<pre><code class="language-bash">[zkshell: 1] stat /hbase
+	cZxid = 0x4000013d9
+	ctime = Wed Jun 27 20:13:07 CST 2018
+	mZxid = 0x4000013d9
+	mtime = Wed Jun 27 20:13:07 CST 2018
+	pZxid = 0x500000001
+	cversion = 17
+	dataVersion = 0
+	aclVersion = 0
+	ephemeralOwner = 0x0
+	dataLength = 0
+	numChildren = 15
+</code></pre>
+<h2>sync</h2>
+<p>Sync the data of one node between leader and followers(Asynchronous sync)</p>
+<pre><code class="language-bash">[zkshell: 14] sync /
+[zkshell: 15] Sync is OK
+</code></pre>
+<h2>version</h2>
+<p>Show the version of the ZooKeeper client/CLI</p>
+<pre><code class="language-bash">[zkshell: 1] version
+ZooKeeper CLI version: 3.6.0-SNAPSHOT-29f9b2c1c0e832081f94d59a6b88709c5f1bb3ca, built on 05/30/2019 09:26 GMT
+</code></pre>
+<h2>whoami</h2>
+<p>Gives all authentication information added into the current session.</p>
+<pre><code>[zkshell: 1] whoami
+Auth scheme: User
+ip: 127.0.0.1
+[zkshell: 2] addauth digest user1:12345
+[zkshell: 3] whoami
+Auth scheme: User
+ip: 127.0.0.1
+digest: user1
+</code></pre>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

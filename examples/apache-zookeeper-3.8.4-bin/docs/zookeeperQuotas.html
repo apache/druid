@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2004 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper Quota's Guide</h1>
+<h3>A Guide to Deployment and Administration</h3>
+<ul>
+<li><a href="#zookeeper_quotas">Quotas</a>
+<ul>
+<li><a href="#Setting+Quotas">Setting Quotas</a></li>
+<li><a href="#Listing+Quotas">Listing Quotas</a></li>
+<li><a href="#Deleting+Quotas">Deleting Quotas</a></li>
+</ul>
+</li>
+</ul>
+<p><a name="zookeeper_quotas"></a></p>
+<h2>Quotas</h2>
+<p>ZooKeeper has both namespace and bytes quotas. You can use the ZooKeeperMain class to setup quotas. ZooKeeper prints <em>WARN</em> messages if users exceed the quota assigned to them. The messages are printed in the log of the ZooKeeper.</p>
+<p>Notice: What the <code>namespace</code> quota means is the count quota which limits the number of children under the path(included itself).</p>
+<pre><code>$ bin/zkCli.sh -server host:port**
+</code></pre>
+<p>The above command gives you a command line option of using quotas.</p>
+<p><a name="Setting+Quotas"></a></p>
+<h3>Setting Quotas</h3>
+<ul>
+<li>
+<p>You can use <code>setquota</code> to set a quota on a ZooKeeper node. It has an option of setting quota with <code>-n</code> (for namespace/count) and <code>-b</code> (for bytes/data length).</p>
+</li>
+<li>
+<p>The ZooKeeper quota is stored in ZooKeeper itself in <strong>/zookeeper/quota</strong>. To disable other people from changing the quotas, users can set the ACL for <strong>/zookeeper/quota</strong> ,so that only admins are able to read and write to it.</p>
+</li>
+<li>
+<p>If the quota doesn't exist in the specified path,create the quota, otherwise update the quota.</p>
+</li>
+<li>
+<p>The Scope of the quota users set is all the nodes under the path specified (included itself).</p>
+</li>
+<li>
+<p>In order to simplify the calculation of quota in the current directory/hierarchy structure, a complete tree path(from root to leaf node) can be set only one quota. In the situation when setting a quota in a path which its parent or child node already has a quota. <code>setquota</code> will reject and tell the specified parent or child path, users can adjust allocations of quotas(delete/move-up/move-down the quota) according to specific circumstances.</p>
+</li>
+<li>
+<p>Combined with the Chroot, the quota will have a better isolation effectiveness between different applications.For example:</p>
+<pre><code class="language-bash"># Chroot is:
+192.168.0.1:2181,192.168.0.2:2181,192.168.0.3:2181/apps/app1
+setquota -n 100000 /apps/app1
+</code></pre>
+</li>
+<li>
+<p>Users cannot set the quota on the path under <strong>/zookeeper/quota</strong></p>
+</li>
+<li>
+<p>The quota supports the soft and hard quota. The soft quota just logs the warning info when exceeding the quota, but the hard quota also throws a <code>QuotaExceededException</code>. When setting soft and hard quota on the same path, the hard quota has the priority.</p>
+</li>
+</ul>
+<p><a name="Listing+Quotas"></a></p>
+<h3>Listing Quotas</h3>
+<p>You can use <em>listquota</em> to list a quota on a ZooKeeper node.</p>
+<p><a name="Deleting+Quotas"></a></p>
+<h3>Deleting Quotas</h3>
+<p>You can use <em>delquota</em> to delete quota on a ZooKeeper node.</p>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

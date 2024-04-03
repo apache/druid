@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2004 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>Introduction to Oracle Quorum</h1>
+<p>The introduction to Oracle Quorum increases the availability of a cluster of 2 ZooKeeper instances with a failure detector as known as the Oracle. The Oracle is designed to grant the permission to the instance which is the only remaining instance in a 2-instance configuration when the other instance is identified as faulty by the fail detector, the Oracle.</p>
+<h2>The implementation of the Oracle</h2>
+<p>Every instance shall access to a file which contains either 0 or 1 to indicate whether this instance is authorized by the Oracle. However, this design can be changed since the fail detector algorithms vary from each other. Therefore, ones can override the method of <em>askOracle()</em> in <em>QuorumOracleMaj</em> to adapt the preferred way of deciphering the message from the Oracle.</p>
+<h2>The deployment contexts</h2>
+<p>The Oracle is designed to increase the availability of a cluster of 2 ZooKeeper instances; thus, the size of the voting member is <strong>2</strong>. In other words, the Oracle solves the consensus problem of a possibility of faulty instance in a two-instance ensemble.</p>
+<p>In the case that the size of the voting members exceeds 2, the expected way to make the Oracle work correctly is to reconfigure the size of the cluster when a faulty machine is identified. For example, with a configuration of 5 instances, when a faulty machine breaks the connection with the Leader, it is expected to have a <em>reconfig</em> client request to the cluster, which makes the cluster to re-form as the configuration of 4 instances. Therefore, once the size of the voting member equals to 2, the configuration falls into the problem domain which the Oracle is designed to address.</p>
+<h2>How to deploy the Oracle in <em>zoo.cfg</em></h2>
+<p>Regardless of the size of the cluster, the <em>oraclePath</em> must be configured at the time of the initialization, which is like other static parameters. The below shows the correct way to specify and enable the Oracle.</p>
+<pre><code>oraclePath=/to/some/file
+</code></pre>
+<h4>An example of zoo.cfg:</h4>
+<pre><code>dataDir=/data
+dataLogDir=/datalog
+tickTime=2000
+initLimit=5
+syncLimit=2
+autopurge.snapRetainCount=3
+autopurge.purgeInterval=0
+maxClientCnxns=60
+standaloneEnabled=true
+admin.enableServer=true
+oraclePath=/chassis/mastership
+server.1=0.0.0.0:2888:3888;2181
+server.2=hw1:2888:3888;2181
+</code></pre>
+<p>The QuorumOracleMaj is designed to read the result of a failure detector, which is written on a text file, the oracle file.<br />
+The configuration in the zoo.cfg like the following:</p>
+<pre><code>oraclePath=/to/some/file
+</code></pre>
+<p>Suppose you have the result of the failure detector written on /some/path/result.txt, and then the correct configuration is the following:</p>
+<pre><code>oraclePath=/some/path/result.txt
+</code></pre>
+<p>So, what is the correct content of the provided file? An example file can be created with the following command from the terminal:</p>
+<pre><code>$echo 1 &gt; /some/path/result.txt
+</code></pre>
+<p>Any equivalent files are suitable for the current implementation of QuorumOracleMaj. The number of oracle files should be equal to the number of ZooKeeper instances configured to enable the Oracle. In other words, each ZooKeeper instance should have its oracle file, and the files shall not be shared; otherwise, the issues in the next section will arise.</p>
+<h2>What differs after the deployment of the Oracle enabled</h2>
+<p>The <em>QuorumPeerConfig</em> will create an instance of <em>QuorumOracleMaj</em> instead of the default QuorumVerifier, <em>QuorumMaj</em> when it reads the <em>zoo.cfg</em> contains <em>oraclePath</em>. QuorumOracleMaj inheritances from QuorumMaj, and differs from its superclass by overriding the method of <em>containsQuorum()</em>. QuorumOracleMaj is designed to execute its version of <em>containsQuorum</em> when the Leader loses all of its followers, and fails to maintain the quorum. In other cases, <em>QuorumOracleMaj</em> shall execute as <em>QuorumMaj</em>.</p>
+<h2>What we should pay attention to the Oracle</h2>
+<p>We consider an asynchronous distributed system which consists of <strong>2</strong> ZooKeeper instances and an Oracle.</p>
+<h3>Liveness Issue:</h3>
+<p>When we consider the oracle satisfies the following property introduced by [CT]:</p>
+<pre><code>Strong Completeness: There is a time after which every process that crashes is permanently suspected by every correct processes
+</code></pre>
+<p>The liveness of the system is ensured by the Oracle. However, when the introduced oracle fails to maintain this property, the lost of the liveness is expected as the following example,</p>
+<p>Suppose we have a Leader and a Follower, which are running in the broadcasting state, The system will lose its liveness when:</p>
+<ol>
+<li>The Leader fails, but the Oracle does not detect the faulty Leader, which means the Oracle will not authorize the Follower to become a new Leader.
+<ol>
+<li>When a Follower fails, but the Oracle does not detect the faulty follower, which means the Oracle will authorize the Leader to move system forward.</li>
+</ol>
+</li>
+</ol>
+<h3>Safety Issue:</h3>
+<h4>Lost of Progress</h4>
+<p>The progress can lost when multiple failures occurs in the system at different time as the following example,</p>
+<p>Suppose we have a Leader(Ben) and a Follower(John) in the broadcasting state,</p>
+<pre><code>At T1 with zxid(0x1_1): L-Ben fails, and the F-John takes over the system under the authorization from the Oracle.
+At T2 with zxid(0x2_1): The F-John becomes a new Leader, L-John, and starts a new epoch.
+At T3 with zxid(0x2_A): L-John fails
+At T4 with zxid(0x2_A): Ben recovers up and starts its leader election.
+At T5 with zxid(0x3_1): Ben becomes the new leader, L-Ben, under the authorization from the Oracle.
+</code></pre>
+<p>In this case, the system loses its progress after the L-Ben failed.</p>
+<p>However, the lost of progress can be prevented by making the Oracle is capable of referring the latest zxid. When the Oracle could refer to the latest zxid,</p>
+<pre><code>At T5 with zxid(0x2_A): Ben will not end his leader election because the Oracle would not authorize although John is down.
+</code></pre>
+<p>Nevertheless, we exchange the liveness for the safety.</p>
+<h4>Split Brain Issue</h4>
+<p>We consider the Oracle satisfies the following desired property introduced by [CT],</p>
+<pre><code>Accuracy: There is a time after which some correct processes is never suspected by any processes
+</code></pre>
+<p>Nevertheless, the decisions which the Oracle gives out should be mutual exclusive.</p>
+<p>In other words,</p>
+<p>Suppose we have a Leader(Ben) and a Follower(John) in the broadcasting state,</p>
+<ul>
+<li>At any time, the Oracle will not authorize both Ben and John even though the failure detectors think each other is faulty. Or
+<ul>
+<li>At any time, for any two values in any two Oracle files respectively, the values are not both equal to 1.</li>
+</ul>
+</li>
+</ul>
+<p>The split brain is expected when the Oracle fails to maintain this property during the leader election phase of</p>
+<ol>
+<li>Start of the system
+<ol>
+<li>A failed instance recovers from failures.</li>
+</ol>
+</li>
+</ol>
+<h2>Examples of Concepts for Implementation of a Failure Detector</h2>
+<p>One should consider that the failure detector's outcome is to authorize the querying ZooKeeper instance whether it has the right to move the system forward without waiting for the faulty instance, which is identified by the failure detector.</p>
+<h3>An Implementation of Hardware</h3>
+<p>Suppose two dedicated pieces of hardware, hw1 and hw2, can host ZooKeeper instances, zk1 and zk2, respectively, and form a cluster. A hardware device is attached to both of the hardware, and it is capable of determining whether the hardware is power on or not. So, when hw1 is not power on, the zk1 is undoubtedly faulty. Therefore, the hardware device updates the oracle file on hw2 to 1, which indicates that zk1 is faulty and authorizes zk2 to move the system forwards.</p>
+<h3>An Implementation of Software</h3>
+<p>Suppose two dedicated pieces of hardware, hw1 and hw2, can host ZooKeeper instances, zk1 and zk2, respectively, and form a cluster. One can have two more services, o1 and o2, on hw1 and hw2, respectively. The job of o1 and o2 are detecting the other hardware is alive or not. For example, o1 can constantly ping hw2 to determine if hw2 is power on or not. When o1 cannot ping hw2, o1 identifies that hw2 is faulty and then update the oracle file of zk1 to 1, which indicates that zk2 is faulty and authorizes zk1 to move the system forwards.</p>
+<h3>Use USB devices as Oracle to Maintain Progress</h3>
+<p>In macOS,10.15.7 (19H2), the external storage devices are mounted under <code>/Volumes</code>. Thus, we can insert a USB device which contains the required information as the oracle. When the device is connected, the oracle authorizes the leader to move system forward, which also means the other instance fails. There are <strong>SIX</strong> steps to reproduce this stimulation.</p>
+<ul>
+<li>Firstly, insert a USB device named <code>Oracle</code>, and then we can expect that  <code>/Volumes/Oracle</code> is accessible.</li>
+<li>Secondly, we create a file contains <code>1</code> under <code>/Volumes/Oracle</code> named <code>mastership</code>. Now we can access <code>/Volumes/Oracle/mastership</code>, and so does the zookeeper instances to see whether it has the right to move the system forward. The file can easily be generated by the following command:
+<p>$echo 1 &gt; mastership</p>
+</li>
+<li>
+<p>Thirdly, you shall have a <code>zoo.cfg</code> like the example below:</p>
+<p>dataDir=/data dataLogDir=/datalog tickTime=2000 initLimit=5 syncLimit=2 autopurge.snapRetainCount=3 autopurge.purgeInterval=0 maxClientCnxns=60 standaloneEnabled=true admin.enableServer=true oraclePath=/Volumes/Oracle/mastership server.1=0.0.0.0:2888:3888;2181 server.2=hw1:2888:3888;2181</p>
+</li>
+</ul>
+<p><em>(NOTE) The split brain issues will not occur because there is only a SINGLE USB device in this stimulation.</em> <em>Additionally, <code>mastership</code> should not be shared by multiple instances.</em> <em>Thus, only one ZooKeeper instance is configured with Oracle.</em> <em>For more, please refer to Section Safety Issue.</em></p>
+<ul>
+<li>Fourthly, start the cluster, and it is expected it forms a quorum normally.</li>
+<li>Fifthly, terminate the instance either without attaching to a USB device or <code>mastership</code> contains 0. There are two scenarios to expect:</li>
+</ul>
+<ol>
+<li>A leader failure occurs, and the remained instance finishes the leader election on its own due to the oracle.</li>
+<li>The quorum is still maintained due to the oracle.</li>
+</ol>
+<ul>
+<li>Lastly, when the USB device is removed, <code>/Volumes/Oracle/mastership</code> becomes unavailable. Therefore, according to the current implementation, whenever the Leader queries the oracle, the oracle throws an exception and return <code>FALSE</code>. Repeat the fifth step, and then it is expected that either the system cannot recover from a leader failure ,or the leader loses the quorum. In either case, the service is interrupted.</li>
+</ul>
+<p>With these steps, we can show and practice how the oracle works with two-instance systems with ease.</p>
+<h2>REFERENCE</h2>
+<p>[CT] Tushar Deepak Chandra and Sam Toueg. 1991. Unreliable failure detectors for asynchronous systems (preliminary version). In <i>Proceedings of the tenth annual ACM symposium on Principles of distributed computing</i> (<i>PODC '91</i>). Association for Computing Machinery, New York, NY, USA, 325–340. DOI:https://doi.org/10.1145/112600.112627</p>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>

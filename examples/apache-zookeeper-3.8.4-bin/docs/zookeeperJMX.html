@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>ZooKeeper: Because Coordinating Distributed Systems is a Zoo</title>
+    <link type="text/css" href="skin/basic.css" rel="stylesheet">
+    <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+    <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+    <link type="text/css" href="skin/profile.css" rel="stylesheet">
+    <script src="skin/getBlank.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/getMenu.js" language="javascript" type="text/javascript"></script>
+    <script src="skin/init.js" language="javascript" type="text/javascript"></script>
+    <link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init();">
+<div id="top">
+    <div class="breadtrail">
+        <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://zookeeper.apache.org/">ZooKeeper</a>
+    </div>
+    <div class="header">
+        <div class="projectlogo">
+            <a href="http://zookeeper.apache.org/"><img class="logoImage" alt="ZooKeeper" src="images/zookeeper_small.gif" title="ZooKeeper: distributed coordination"></a>
+        </div>
+        <div class="searchbox">
+            <form action="http://www.google.com/search" method="get">
+                <input value="zookeeper.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp;
+                <input name="Search" value="Search" type="submit">
+            </form>
+        </div>
+        <ul id="tabs">
+            <li>
+                <a class="unselected" href="http://zookeeper.apache.org/">Project</a>
+            </li>
+            <li>
+                <a class="unselected" href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/">Wiki</a>
+            </li>
+            <li class="current">
+                <a class="selected" href="index.html">ZooKeeper 3.8 Documentation</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="main">
+    <div id="publishedStrip">
+        <div id="level2tabs"></div>
+        <script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+    </div>
+    <div class="breadtrail">
+        &nbsp;
+    </div>
+    <div id="menu">
+        <div onclick="SwitchMenu('menu_1', 'skin/')" id="menu_1Title" class="menutitle">Overview</div>
+        <div id="menu_1" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="index.html">Welcome</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOver.html">Overview</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperStarted.html">Getting Started</a>
+            </div>
+            <div class="menuitem">
+                <a href="releasenotes.html">Release Notes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_2', 'skin/')" id="menu_2Title" class="menutitle">Developer</div>
+        <div id="menu_2" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="apidocs/zookeeper-server/index.html">API Docs</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperProgrammers.html">Programmer's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperUseCases.html">Use Cases</a>
+            </div>
+            <div class="menuitem">
+                <a href="javaExample.html">Java Example</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTutorial.html">Barrier and Queue Tutorial</a>
+            </div>
+            <div class="menuitem">
+                <a href="recipes.html">Recipes</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_3', 'skin/')" id="menu_3Title" class="menutitle">Admin &amp; Ops</div>
+        <div id="menu_3" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperAdmin.html">Administrator's Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperQuotas.html">Quota Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperJMX.html">JMX</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperHierarchicalQuorums.html">Hierarchical Quorums</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperOracleQuorums.html">Oracle Quorum</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperObservers.html">Observers Guide</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperReconfig.html">Dynamic Reconfiguration</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperCLI.html">ZooKeeper CLI</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperTools.html">ZooKeeper Tools</a>
+            </div>
+            <div class="menuitem">
+                <a href="zookeeperMonitor.html">ZooKeeper Monitor</a>
+            </div>
+			<div class="menuitem">
+                <a href="zookeeperAuditLogs.html">Audit Logs</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_4', 'skin/')" id="menu_4Title" class="menutitle">Contributor</div>
+        <div id="menu_4" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="zookeeperInternals.html">ZooKeeper Internals</a>
+            </div>
+        </div>
+        <div onclick="SwitchMenu('menu_5', 'skin/')" id="menu_5Title" class="menutitle">Miscellaneous</div>
+        <div id="menu_5" class="menuitemgroup">
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER">Wiki</a>
+            </div>
+            <div class="menuitem">
+                <a href="https://cwiki.apache.org/confluence/display/ZOOKEEPER/FAQ">FAQ</a>
+            </div>
+            <div class="menuitem">
+                <a href="http://zookeeper.apache.org/mailing_lists.html">Mailing Lists</a>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+<!--
+Copyright 2002-2022 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+//-->
+<h1>ZooKeeper JMX</h1>
+<ul>
+<li><a href="#ch_jmx">JMX</a></li>
+<li><a href="#ch_starting">Starting ZooKeeper with JMX enabled</a></li>
+<li><a href="#ch_console">Run a JMX console</a></li>
+<li><a href="#ch_reference">ZooKeeper MBean Reference</a></li>
+</ul>
+<p><a name="ch_jmx"></a></p>
+<h2>JMX</h2>
+<p>Apache ZooKeeper has extensive support for JMX, allowing you to view and manage a ZooKeeper serving ensemble.</p>
+<p>This document assumes that you have basic knowledge of JMX. See <a href="http://java.sun.com/javase/technologies/core/mntr-mgmt/javamanagement/">Sun JMX Technology</a> page to get started with JMX.</p>
+<p>See the <a href="http://java.sun.com/javase/6/docs/technotes/guides/management/agent.html">JMX Management Guide</a> for details on setting up local and remote management of VM instances. By default the included <em>zkServer.sh</em> supports only local management - review the linked document to enable support for remote management (beyond the scope of this document).</p>
+<p><a name="ch_starting"></a></p>
+<h2>Starting ZooKeeper with JMX enabled</h2>
+<p>The class <em>org.apache.zookeeper.server.quorum.QuorumPeerMain</em> will start a JMX manageable ZooKeeper server. This class registers the proper MBeans during initialization to support JMX monitoring and management of the instance. See <em>bin/zkServer.sh</em> for one example of starting ZooKeeper using QuorumPeerMain.</p>
+<p><a name="ch_console"></a></p>
+<h2>Run a JMX console</h2>
+<p>There are a number of JMX consoles available which can connect to the running server. For this example we will use Sun's <em>jconsole</em>.</p>
+<p>The Java JDK ships with a simple JMX console named <a href="http://java.sun.com/developer/technicalArticles/J2SE/jconsole.html">jconsole</a> which can be used to connect to ZooKeeper and inspect a running server. Once you've started ZooKeeper using QuorumPeerMain start <em>jconsole</em>, which typically resides in <em>JDK_HOME/bin/jconsole</em></p>
+<p>When the &quot;new connection&quot; window is displayed either connect to local process (if jconsole started on the same host as Server) or use the remote process connection.</p>
+<p>By default the &quot;overview&quot; tab for the VM is displayed (this is a great way to get insight into the VM btw). Select the &quot;MBeans&quot; tab.</p>
+<p>You should now see <em>org.apache.ZooKeeperService</em> on the left hand side. Expand this item and depending on how you've started the server you will be able to monitor and manage various service related features.</p>
+<h4>Logback MBeans registration <em>(new in 3.8.0)</em></h4>
+<p>Logback is the default logging backend of ZooKeeper since version 3.8.0. It can be configured to register JMX MBeans by adding <code>&lt;jmxConfigurator /&gt;</code> to <em>logback.xml</em>. More information can be found on Logback's <a href="https://logback.qos.ch/manual/jmxConfig.html">website</a>.</p>
+<h4>Log4j MBeans <em>(deprecated)</em></h4>
+<p>Also note that ZooKeeper will register log4j MBeans as well if log4j1 is configured as the logging backend of SLF4j. In the same section along the left hand side you will see &quot;log4j&quot;. Expand that to manage log4j through JMX. Of particular interest is the ability to dynamically change the logging levels used by editing the appender and root thresholds. Log4j MBean registration can be disabled by passing <em>-Dzookeeper.jmx.log4j.disable=true</em> to the JVM when starting ZooKeeper. In addition, we can specify the name of the MBean with the <em>-Dzookeeper.jmx.log4j.mbean=log4j:hierarchy=default</em> option, in case we need to upgrade an integrated system using the old MBean name (<code>log4j:hierarchy = default</code>).</p>
+<p><a name="ch_reference"></a></p>
+<h2>ZooKeeper MBean Reference</h2>
+<p>This table details JMX for a server participating in a replicated ZooKeeper ensemble (ie not standalone). This is the typical case for a production environment.</p>
+<h3>MBeans, their names and description</h3>
+<table>
+<thead>
+<tr><th> MBean </th><th> MBean Object Name </th><th> Description                               </th></tr>
+</thead>
+<tbody>
+<tr><td> Quorum </td><td> ReplicatedServer_id&lt;#&gt; </td><td> Represents the Quorum, or Ensemble - parent of all cluster members. Note that the object name includes the &quot;myid&quot; of the server (name suffix) that your JMX agent has connected to. </td></tr>
+<tr><td> LocalPeer/RemotePeer </td><td> replica.&lt;#&gt; </td><td> Represents a local or remote peer (ie server participating in the ensemble). Note that the object name includes the &quot;myid&quot; of the server (name suffix). </td></tr>
+<tr><td> LeaderElection </td><td> LeaderElection </td><td> Represents a ZooKeeper cluster leader election which is in progress. Provides information about the election, such as when it started. </td></tr>
+<tr><td> Leader </td><td> Leader </td><td> Indicates that the parent replica is the leader and provides attributes/operations for that server. Note that Leader is a subclass of ZooKeeperServer, so it provides all of the information normally associated with a ZooKeeperServer node. </td></tr>
+<tr><td> Follower </td><td> Follower </td><td> Indicates that the parent replica is a follower and provides attributes/operations for that server. Note that Follower is a subclass of ZooKeeperServer, so it provides all of the information normally associated with a ZooKeeperServer node. </td></tr>
+<tr><td> DataTree </td><td> InMemoryDataTree </td><td> Statistics on the in memory znode database, also operations to access finer (and more computationally intensive) statistics on the data (such as ephemeral count). InMemoryDataTrees are children of ZooKeeperServer nodes. </td></tr>
+<tr><td> ServerCnxn </td><td> &lt;session_id&gt; </td><td> Statistics on each client connection, also operations on those connections (such as termination). Note the object name is the session id of the connection in hex form. </td></tr>
+</tbody>
+</table>
+<p>This table details JMX for a standalone server. Typically standalone is only used in development situations.</p>
+<h3>MBeans, their names and description</h3>
+<table>
+<thead>
+<tr><th> MBean </th><th> MBean Object Name </th><th> Description            </th></tr>
+</thead>
+<tbody>
+<tr><td> ZooKeeperServer </td><td> StandaloneServer_port&lt;#&gt; </td><td> Statistics on the running server, also operations to reset these attributes. Note that the object name includes the client port of the server (name suffix). </td></tr>
+<tr><td> DataTree </td><td> InMemoryDataTree </td><td> Statistics on the in memory znode database, also operations to access finer (and more computationally intensive) statistics on the data (such as ephemeral count). </td></tr>
+<tr><td> ServerCnxn </td><td> &lt; session_id &gt; </td><td> Statistics on each client connection, also operations on those connections (such as termination). Note the object name is the session id of the connection in hex form. </td></tr>
+</tbody>
+</table>
+</div>
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+    <div class="lastmodified">
+        <script type="text/javascript">
+        <!--
+            document.write("Last Published: " + document.lastModified);
+        //  -->
+        </script>
+    </div>
+    <div class="copyright">
+        Copyright &copy; <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+    </div>
+    <div id="logos"></div>
+</div>
+</body>
+</html>
