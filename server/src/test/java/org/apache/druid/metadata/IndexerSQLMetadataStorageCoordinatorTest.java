@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -937,8 +938,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "java.lang.RuntimeException: Failed to update the metadata Store."
-            + " The new start metadata is ahead of last commited end state."),
+            InvalidInput.exception(
+                "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last commited"
+                + " end state[null]. Try resetting the supervisor."
+            ).toString()),
         result1
     );
 
@@ -963,10 +966,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "java.lang.RuntimeException: Inconsistent metadata state. This can happen when the input topic"
-            + " in the supervisor spec is updated without resetting the supervisor. "
-            + "Stored state: [ObjectMetadata{theObject={foo=baz}}], "
-            + "Target state: [ObjectMetadata{theObject=null}]."
+            InvalidInput.exception(
+                "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}]"
+                + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor."
+            ).toString()
         ),
         result2
     );
@@ -1038,10 +1041,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "java.lang.RuntimeException: Inconsistent metadata state. This can happen when the input topic"
-            + " in the supervisor spec is updated without resetting the supervisor. "
-            + "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
-            "Target state: [ObjectMetadata{theObject={foo=qux}}]."),
+            InvalidInput.exception(
+                "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}] and "
+                + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor."
+            ).toString()),
         result2
     );
 
