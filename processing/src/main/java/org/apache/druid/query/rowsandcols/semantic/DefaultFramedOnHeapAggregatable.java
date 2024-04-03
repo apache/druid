@@ -622,7 +622,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // a specialized implementation of this interface against, say, a Frame object that can deal with arrays instead
     // of trying to optimize this generic implementation.
     Object[][] results = new Object[aggFactories.length][numRows];
-    int resultStorageIndex = 0;
+
+    // start the storage index after ignoring start rows if upper offset is -ve
+    int resultStorageIndex = -1 * Math.min(upperOffset, 0);
 
     AtomicInteger rowIdProvider = new AtomicInteger(0);
     final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
@@ -632,6 +634,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     int nextIndex;
     int upperLimit;
     if (upperOffset > 0 && lowerOffset > 0) {
+      // consider this case as a regular case by moving the row provider by lowerOffset number of rows
+      for (int i = 0; i < lowerOffset; i++) {
+        rowIdProvider.incrementAndGet();
+      }
       nextIndex = 1;
       upperLimit = upperOffset - lowerOffset;
     } else if (lowerOffset < 0 && upperOffset < 0) {
@@ -654,7 +660,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // The first few rows will slowly build out the window to consume the upper-offset.  The window will not
     // be full until we have walked upperOffset number of rows, so phase 1 runs until we have consumed
     // upperOffset number of rows.
-    for (int upperIndex = 0; upperIndex < upperLimit; ++upperIndex) {
+    for (int upperIndex = 0; upperIndex < upperLimit && rowIdProvider.get() < numRows; ++upperIndex) {
       for (Aggregator[] aggregator : aggregators) {
         for (int j = 0; j < nextIndex; ++j) {
           aggregator[j].aggregate();
@@ -671,7 +677,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // End Phase 1, Enter Phase 2.  At this point, nextIndex == windowSize, rowIdProvider is the same as
     // upperOffset and the aggregators matrix is entirely non-null.  We need to iterate until our window has all of
     // the aggregators in it to fill up the final result set.
-    int endResultStorageIndex = numRows - windowSize;
+    int endResultStorageIndex = numRows - windowSize - Math.max(lowerOffset, 0);
     for (; resultStorageIndex < endResultStorageIndex; ++resultStorageIndex) {
       for (Aggregator[] aggregator : aggregators) {
         for (Aggregator value : aggregator) {
@@ -716,7 +722,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       nextIndex = 0;
     }
 
-    for (int rowId = rowIdProvider.get(); rowId < numRows; ++rowId) {
+    int lastRowIndex = numRows + Math.min(upperOffset, 0);
+    for (int rowId = rowIdProvider.get(); rowId < lastRowIndex; ++rowId) {
       for (Aggregator[] aggregator : aggregators) {
         for (int j = nextIndex; j < aggregator.length; ++j) {
           aggregator[j].aggregate();
@@ -735,7 +742,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     // End Phase 3, anything left in the window needs to be collected and put into our results
-    for (; nextIndex < windowSize; ++nextIndex) {
+    endResultStorageIndex = numRows - Math.max(lowerOffset, 0);
+    for (; nextIndex < windowSize && resultStorageIndex < endResultStorageIndex; ++nextIndex) {
       for (int i = 0; i < aggFactories.length; ++i) {
         results[i][resultStorageIndex] = aggregators[i][nextIndex].get();
         aggregators[i][nextIndex] = null;
@@ -762,10 +770,19 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // a specialized implementation of this interface against, say, a Frame object that can deal with arrays instead
     // of trying to optimize this generic implementation.
     Object[][] results = new Object[aggFactories.length][windowSize];
-    int resultStorageIndex = 0;
+
+    // start the storage index after ignoring start rows if upper offset is -ve
+    int resultStorageIndex = -1 * Math.min(upperOffset, 0);
 
     AtomicInteger rowIdProvider = new AtomicInteger(0);
     final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
+
+    if (upperOffset > 0 && lowerOffset > 0) {
+      // consider this case as a regular case by moving the row provider by lowerOffset number of rows
+      for (int i = 0; i < lowerOffset; i++) {
+        rowIdProvider.incrementAndGet();
+      }
+    }
 
     Aggregator[][] aggregators = new Aggregator[aggFactories.length][windowSize];
     for (int i = 0; i < aggregators.length; i++) {
@@ -775,11 +792,19 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       }
     }
 
-    // This is the index to stop at for the current window aperture
-    // The first row is used by all of the results for the lowerOffset num results, plus 1 for the "current row"
-    int stopIndex = Math.min(Math.abs(lowerOffset) + 1, windowSize);
+    int startIndex, stopIndex;
+    if (upperOffset < 0) {
+      startIndex = -1 * upperOffset;
+      stopIndex = Math.min(1 - lowerOffset, windowSize);
+    } else if (lowerOffset > 0) {
+      startIndex = 0;
+      stopIndex = Math.min(lowerOffset, windowSize);
+    } else {
+      // The first row is used by all the results for the lowerOffset num results, plus 1 for the "current row"
+      startIndex = 0;
+      stopIndex = Math.min(1 - lowerOffset, windowSize);
+    }
 
-    int startIndex = 0;
     int rowId = rowIdProvider.get();
     while (rowId < windowSize) {
       for (Aggregator[] aggregator : aggregators) {
@@ -788,7 +813,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
 
-      if (rowId >= upperOffset) {
+      if (rowId >= upperOffset && resultStorageIndex < windowSize) {
         for (int i = 0; i < aggregators.length; ++i) {
           results[i][resultStorageIndex] = aggregators[i][startIndex].get();
           aggregators[i][startIndex].close();
@@ -806,7 +831,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
 
-    for (; startIndex < windowSize; ++startIndex) {
+    for (; startIndex < windowSize && resultStorageIndex < windowSize; ++startIndex) {
       for (int i = 0; i < aggregators.length; ++i) {
         results[i][resultStorageIndex] = aggregators[i][startIndex].get();
         aggregators[i][startIndex].close();

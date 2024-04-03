@@ -126,16 +126,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
-    if (isPrecedingOrFollowing(lowerBound) &&
-        isPrecedingOrFollowing(upperBound) &&
-        lowerBound.getKind() == upperBound.getKind()) {
-      // this limitation can be lifted when https://github.com/apache/druid/issues/15739 is addressed
-      throw buildCalciteContextException(
-          "Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported.",
-          windowOrId
-      );
-    }
-
     boolean hasBounds = lowerBound != null || upperBound != null;
     if (call.getKind() == SqlKind.NTILE && hasBounds) {
       throw buildCalciteContextException(
