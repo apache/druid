@@ -233,7 +233,7 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void initValueShouldInitZero()
   {
-    target.initValue(buf, 0);
+    target.init(buf, 0);
     double initVal = buf.getDouble(0);
     Assert.assertEquals(0, initVal, EPSILON);
   }

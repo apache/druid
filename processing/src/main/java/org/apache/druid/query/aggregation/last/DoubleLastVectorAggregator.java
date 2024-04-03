@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -28,52 +29,70 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * Vectorized version of on heap 'last' aggregator for column selectors with type DOUBLE..
+ * Vectorized version of on heap 'last' aggregator for column selectors with type DOUBLE.
  */
 public class DoubleLastVectorAggregator extends NumericLastVectorAggregator<Double, SerializablePairLongDouble>
 {
-  double lastValue;
-
   public DoubleLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
     super(timeSelector, null, objectSelector);
-    lastValue = 0;
   }
 
   public DoubleLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
     super(timeSelector, valueSelector, null);
-    lastValue = 0;
   }
 
   @Override
-  void initValue(ByteBuffer buf, int position)
+  public void init(ByteBuffer buf, int position)
   {
-    buf.putDouble(position, 0.0d);
+    buf.putLong(position, Long.MIN_VALUE);
+    buf.put(position + NULLITY_OFFSET, NullHandling.replaceWithDefault() ? IS_NOT_NULL_BYTE : IS_NULL_BYTE);
+    buf.putDouble(position + VALUE_OFFSET, 0.0D);
+  }
+
+  @Nullable
+  @Override
+  public Object get(ByteBuffer buf, int position)
+  {
+    long time = buf.getLong(position);
+    if (buf.get(position + NULLITY_OFFSET) == IS_NULL_BYTE) {
+      return new SerializablePairLongDouble(time, null);
+    }
+    return new SerializablePairLongDouble(time, buf.getDouble(position + VALUE_OFFSET));
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, Double value)
+  void putValue(ByteBuffer buf, int position, long time, Double value)
   {
-    buf.putDouble(position, value);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.putDouble(position + VALUE_OFFSET, value);
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, VectorValueSelector valueSelector, int index)
+  void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
   {
-    buf.putDouble(position, valueSelector.getDoubleVector()[index]);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.putDouble(position + VALUE_OFFSET, valueSelector.getDoubleVector()[index]);
   }
 
   @Override
-  void putDefaultValue(ByteBuffer buf, int position)
+  void putNull(ByteBuffer buf, int position, long time)
   {
-    buf.putDouble(position, 0.0d);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
+    buf.putDouble(position + VALUE_OFFSET, 0.0D);
+
   }
 
   @Override
-  Double getValue(ByteBuffer buf, int position)
+  void putDefaultValue(ByteBuffer buf, int position, long time)
   {
-    return buf.getDouble(position);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.putDouble(position, 0.0D);
   }
 
   @Override
@@ -85,12 +104,6 @@ public class DoubleLastVectorAggregator extends NumericLastVectorAggregator<Doub
   )
   {
     return FirstLastUtils.readDoublePairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, index);
-  }
-
-  @Override
-  SerializablePairLongDouble createPair(long time, @Nullable Double value)
-  {
-    return new SerializablePairLongDouble(time, value);
   }
 }
 

@@ -149,9 +149,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public VectorAggregator factorizeVector(
-      VectorColumnSelectorFactory columnSelectorFactory
-  )
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
   {
     VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);

@@ -237,7 +237,7 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void initValueShouldBeZero()
   {
-    target.initValue(buf, 0);
+    target.init(buf, 0);
     float initVal = buf.getFloat(0);
     Assert.assertEquals(0.0f, initVal, EPSILON);
   }

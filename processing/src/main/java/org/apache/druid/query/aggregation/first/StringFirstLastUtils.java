@@ -38,25 +38,29 @@ public class StringFirstLastUtils
    * Return the object at a particular index from the vector selectors.
    * index of bounds issues is the responsibility of the caller
    */
+  @Nullable
   public static SerializablePairLongString readPairFromVectorSelectorsAtIndex(
-      VectorValueSelector timeSelector,
-      VectorObjectSelector valueSelector,
+      boolean[] timeNullityVector,
+      long[] timeVector,
+      Object[] maybeFoldedObjects,
       int index
   )
   {
     final long time;
     final String string;
-    final Object object = valueSelector.getObjectVector()[index];
+    final Object object = maybeFoldedObjects[index];
+
     if (object instanceof SerializablePairLongString) {
       final SerializablePairLongString pair = (SerializablePairLongString) object;
       time = pair.lhs;
       string = pair.rhs;
-    } else if (object != null) {
-      time = timeSelector.getLongVector()[index];
-      string = DimensionHandlerUtils.convertObjectToString(object);
     } else {
-      // Don't aggregate nulls.
-      return null;
+      if (timeNullityVector != null && timeNullityVector[index]) {
+        // Donot aggregate pairs where time is unknown
+        return null;
+      }
+      time = timeVector[index];
+      string = DimensionHandlerUtils.convertObjectToString(object);
     }
 
     return new SerializablePairLongString(time, string);

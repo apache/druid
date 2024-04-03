@@ -79,9 +79,13 @@ public class StringFirstVectorAggregator implements VectorAggregator
       final boolean foldNeeded = FirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index], SerializablePairLongString.class);
       if (foldNeeded) {
         final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
-            timeSelector,
-            valueSelector,
-            index
+            null,
+            null,
+            null,
+            0
+//            timeSelector,
+//            valueSelector,
+//            index
         );
         if (inPair != null) {
           firstTime = buf.getLong(position);
@@ -140,9 +144,10 @@ public class StringFirstVectorAggregator implements VectorAggregator
       if (timeVector[row] < firstTime) {
         if (foldNeeded) {
           final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
-              timeSelector,
-              valueSelector,
-              row
+              null, null, null, 0
+//              timeSelector,
+//              valueSelector,
+//              row
           );
           if (inPair != null) {
             if (inPair.lhs < firstTime) {

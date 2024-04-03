@@ -35,23 +35,30 @@ import java.nio.ByteBuffer;
 public abstract class NumericLastVectorAggregator<RhsType, PairType extends SerializablePair<Long, RhsType>>
     implements VectorAggregator
 {
-  private static final byte IS_NULL_BYTE = (byte) 1;
-  private static final byte IS_NOT_NULL_BYTE = (byte) 0;
+  protected static final byte IS_NULL_BYTE = (byte) 0;
+  protected static final byte IS_NOT_NULL_BYTE = (byte) 1;
+  protected static final int NULLITY_OFFSET = Long.BYTES;
+  protected static final int VALUE_OFFSET = NULLITY_OFFSET + Byte.BYTES;
 
-  static final int NULLITY_OFFSET = Long.BYTES;
-  static final int VALUE_OFFSET = NULLITY_OFFSET + Byte.BYTES;
-
+  @Nullable
+  private final VectorValueSelector timeSelector;
   @Nullable
   private final VectorValueSelector valueSelector;
   @Nullable
   private final VectorObjectSelector objectSelector;
   private final boolean useDefault = NullHandling.replaceWithDefault();
-  private final VectorValueSelector timeSelector;
-  private long lastTime;
 
 
+  /**
+   * TODO(laksh): valueSelector isn't used much here, only checked for nullity. However while calling the methods of the subclasses,
+   *  it gets used because it is clearer to know which selector is getting used. This gets used
+   *
+   *  timeSelector can be null, however aggregate functions are no-op then. Weird, since all numeric versions supply the selector,
+   *  only the case when the aggregator's capabilities are not present in the string version do we hit this case (not sure why this is
+   *  a possibility, and what benefit does it provides)
+   */
   NumericLastVectorAggregator(
-      VectorValueSelector timeSelector,
+      @Nullable VectorValueSelector timeSelector,
       @Nullable VectorValueSelector valueSelector,
       @Nullable VectorObjectSelector objectSelector
   )
@@ -63,50 +70,64 @@ public abstract class NumericLastVectorAggregator<RhsType, PairType extends Seri
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     this.objectSelector = objectSelector;
-    lastTime = Long.MIN_VALUE;
   }
-
-  @Override
-  public void init(ByteBuffer buf, int position)
-  {
-    buf.putLong(position, Long.MIN_VALUE);
-    buf.put(position + NULLITY_OFFSET, useDefault ? IS_NOT_NULL_BYTE : IS_NULL_BYTE);
-    initValue(buf, position + VALUE_OFFSET);
-  }
+//
+//  @Override
+//  public void init(ByteBuffer buf, int position)
+//  {
+//    buf.putLong(position, Long.MIN_VALUE);
+//    buf.put(position + NULLITY_OFFSET, useDefault ? IS_NOT_NULL_BYTE : IS_NULL_BYTE);
+//    initValue(buf, position + VALUE_OFFSET);
+//  }
 
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-
+    // Not a normal case, and this doesn't affect the folding. timeSelectors should be present (albeit irrelevent) when folding.
+    // timeSelector == null means that the aggregating column's capabilities aren't known, and it only happens for a special case
+    // while building string aggregator
+    if (timeSelector == null) {
+      return;
+    }
     // If objectSelector isn't null, then the objects might be folded up. If that's the case, whatever's represented by
     // the timeSelector doesn't hold any relevance.
     if (objectSelector != null) {
       final Object[] maybeFoldedObjects = objectSelector.getObjectVector();
       final boolean[] timeNullityVector = timeSelector.getNullVector();
       final long[] timeVector = timeSelector.getLongVector();
-      lastTime = buf.getLong(position);
+
+      PairType selectedPair = null;
 
       for (int index = endRow - 1; index >= startRow; --index) {
         PairType pair = readPairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, index);
         if (pair != null) {
-          if (pair.lhs >= lastTime) {
-            if (pair.rhs != null) {
-              updateTimeAndValue(buf, position, pair.lhs, pair.rhs);
-            } else if (useDefault) {
-              updateTimeAndDefaultValue(buf, position, pair.lhs);
-            } else {
-              updateTimeAndNull(buf, position, pair.lhs);
-            }
+          if (selectedPair == null) {
+            selectedPair = pair;
+          } else if (pair.lhs >= selectedPair.lhs) {
+            selectedPair = pair;
           }
         }
       }
+      // Something's been selected of the row vector
+      if (selectedPair != null) {
+        // Compare the latest value of the folded up row vector to the latest value in the buffer
+        if (selectedPair.lhs >= buf.getLong(position)) {
+          if (selectedPair.rhs != null) {
+            putValue(buf, position, selectedPair.lhs, selectedPair.rhs);
+          } else if (useDefault) {
+            putDefaultValue(buf, position, selectedPair.lhs);
+          } else {
+            putNull(buf, position, selectedPair.lhs);
+          }
+        }
+      }
+
     } else {
       // No object selector, no folding present. Check the timeSelector before checking the valueSelector
       final boolean[] timeNullityVector = timeSelector.getNullVector();
       final long[] timeVector = timeSelector.getLongVector();
       final boolean[] valueNullityVector = valueSelector.getNullVector();
       int selectedIndex = endRow - 1;
-      long lastTime = buf.getLong(position);
       for (int index = endRow - 1; index >= startRow; --index) {
         if (timeNullityVector != null && timeNullityVector[index]) {
           // Don't aggregate values where time isn't present
@@ -120,14 +141,14 @@ public abstract class NumericLastVectorAggregator<RhsType, PairType extends Seri
         // Compare the selectedIndex's value to the value on the buffer. This way, we write to the buffer only once
         // Weeds out empty vectors, where endRow == startRow
         if (selectedIndex >= startRow) {
-          if (timeVector[selectedIndex] >= lastTime) {
+          if (timeVector[selectedIndex] >= buf.getLong(position)) {
             // Write the value here
             if (valueNullityVector != null && !valueNullityVector[selectedIndex]) {
-              updateTimeAndValue(buf, position, timeVector[selectedIndex], valueSelector, selectedIndex);
+              putValue(buf, position, timeVector[selectedIndex], valueSelector, selectedIndex);
             } else if (useDefault) {
-              updateTimeAndDefaultValue(buf, position, timeVector[selectedIndex]);
+              putDefaultValue(buf, position, timeVector[selectedIndex]);
             } else {
-              updateTimeAndNull(buf, position, timeVector[index]);
+              putNull(buf, position, timeVector[index]);
             }
           }
         }
@@ -144,6 +165,12 @@ public abstract class NumericLastVectorAggregator<RhsType, PairType extends Seri
       int positionOffset
   )
   {
+    // Not a normal case, and this doesn't affect the folding. timeSelectors should be present (albeit irrelevent) when folding.
+    // timeSelector == null means that the aggregating column's capabilities aren't known, and it only happens for a special case
+    // while building string aggregator
+    if (timeSelector == null) {
+      return;
+    }
 
     // If objectSelector isn't null, then the objects might be folded up. If that's the case, whatever's represented by
     // the timeSelector doesn't hold any relevance. We should check for folded objects BEFORE even thinking about looking
@@ -162,11 +189,11 @@ public abstract class NumericLastVectorAggregator<RhsType, PairType extends Seri
         if (pair != null) {
           if (pair.lhs >= lastTime) {
             if (pair.rhs != null) {
-              updateTimeAndValue(buf, position, pair.lhs, pair.rhs);
+              putValue(buf, position, pair.lhs, pair.rhs);
             } else if (useDefault) {
-              updateTimeAndDefaultValue(buf, position, pair.lhs);
+              putDefaultValue(buf, position, pair.lhs);
             } else {
-              updateTimeAndNull(buf, position, pair.lhs);
+              putNull(buf, position, pair.lhs);
             }
           }
         }
@@ -187,94 +214,91 @@ public abstract class NumericLastVectorAggregator<RhsType, PairType extends Seri
         }
         if (timeVector[row] >= lastTime) {
           if (valueNullityVector != null && !valueNullityVector[row]) {
-            updateTimeAndValue(buf, position, timeVector[row], valueSelector, row);
+            putValue(buf, position, timeVector[row], valueSelector, row);
           } else if (useDefault) {
-            updateTimeAndDefaultValue(buf, position, timeVector[row]);
+            putDefaultValue(buf, position, timeVector[row]);
           } else {
-            updateTimeAndNull(buf, position, timeVector[row]);
+            putNull(buf, position, timeVector[row]);
           }
         }
       }
     }
   }
+//
+//  @Nullable
+//  @Override
+//  public Object get(ByteBuffer buf, int position)
+//  {
+//    if (buf.get(position + NULLITY_OFFSET) == IS_NULL_BYTE) {
+//      return createPair(buf.getLong(position), null);
+//    }
+//    return createPair(buf.getLong(position), getValue(buf, position + VALUE_OFFSET));
+//  }
 
-  @Nullable
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    if (buf.get(position + NULLITY_OFFSET) == IS_NULL_BYTE) {
-      return createPair(buf.getLong(position), null);
-    }
-    return createPair(buf.getLong(position), getValue(buf, position + VALUE_OFFSET));
-  }
-
-  private void updateTimeAndValue(ByteBuffer buf, int position, long time, RhsType value)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    putValue(buf, position + VALUE_OFFSET, value);
-  }
-
-  private void updateTimeAndValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    putValue(buf, position + VALUE_OFFSET, valueSelector, index);
-  }
-
-  private void updateTimeAndDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    putDefaultValue(buf, position + VALUE_OFFSET);
-  }
-
-  private void updateTimeAndNull(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, IS_NULL_BYTE);
-  }
-
-  /**
-   * Sets the initial value in the byte buffer at the given position
-   *
-   * 'position' refers to the location where the value of the pair will get updated (as opposed to the beginning of
-   * the serialized pair)
-   */
-  abstract void initValue(ByteBuffer buf, int position);
+//  private void updateTimeAndValue(ByteBuffer buf, int position, long time, RhsType value)
+//  {
+//    buf.putLong(position, time);
+//    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+//    putValue(buf, position + VALUE_OFFSET, value);
+//  }
+//
+//  private void updateTimeAndValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
+//  {
+//    buf.putLong(position, time);
+//    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+//    putValue(buf, position + VALUE_OFFSET, valueSelector, index);
+//  }
+//
+//  private void updateTimeAndDefaultValue(ByteBuffer buf, int position, long time)
+//  {
+//    buf.putLong(position, time);
+//    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+//    putDefaultValue(buf, position + VALUE_OFFSET);
+//  }
+//
+//  private void updateTimeAndNull(ByteBuffer buf, int position, long time)
+//  {
+//    buf.putLong(position, time);
+//    buf.put(position + NULLITY_OFFSET, IS_NULL_BYTE);
+//  }
 
   /**
    * Sets the value at the position. Subclasses can assume that the value isn't null
    *
    * 'position' refers to the location where the value of the pair will get updated (as opposed to the beginning of
    * the serialized pair)
+   *
+   * It is only used if objectSelector is supplied
    */
-  abstract void putValue(ByteBuffer buf, int position, RhsType value);
+  abstract void putValue(ByteBuffer buf, int position, long time, RhsType value);
 
   /**
-   * Sets the value represented by the valueSelector at the given index. A slightly redundant method to {@link #putValue(ByteBuffer, int, Object)}
+   * Sets the value represented by the valueSelector at the given index. A slightly redundant method to {@link #putValue(ByteBuffer, int, long, Object)}
    * to avoid autoboxing for the numeric types. Subclasses can assume that valueSelector.getNullVector[index] is false (i.e.
    * the value represented at the index isn't null)
+   *
+   * It is used if valueSelector is supplied
    */
-  abstract void putValue(ByteBuffer buf, int position, VectorValueSelector valueSelector, int index);
+  abstract void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index);
 
   /**
    * Sets the default value for the type in the byte buffer at the given position. It is only used when replaceNullWithDefault = true,
-   * therefore the callers don't need to handle any other case. It is separate from {@link #initValue} in case the initial value is
-   * different from the default value.
+   * therefore the callers don't need to handle any other case.
    *
    * 'position' refers to the location where the value of the pair will get updated (as opposed to the beginning of
    * the serialized pair)
    */
-  abstract void putDefaultValue(ByteBuffer buf, int position);
+  abstract void putDefaultValue(ByteBuffer buf, int position, long time);
 
-  /**
-   * Gets the value at the given position. It is okay to box, because we'd be wrapping it in a SerializablePair
-   *
-   * 'position' refers to the location where the value of the pair will get updated (as opposed to the beginning of
-   * the serialized pair)
-   */
-  abstract RhsType getValue(ByteBuffer buf, int position);
+  abstract void putNull(ByteBuffer buf, int position, long time);
+
+//  /**
+//   * Gets the value at the given position. It is okay to box, because we'd be wrapping it in a SerializablePair
+//   *
+//   * 'position' refers to the location where the value of the pair will get updated (as opposed to the beginning of
+//   * the serialized pair)
+//   */
+//  abstract RhsType getValue(ByteBuffer buf, int position);
 
   abstract PairType readPairFromVectorSelectors(
       boolean[] timeNullityVector,
@@ -283,7 +307,7 @@ public abstract class NumericLastVectorAggregator<RhsType, PairType extends Seri
       int index
   );
 
-  abstract PairType createPair(long time, @Nullable RhsType value);
+//  abstract PairType createPair(long time, @Nullable RhsType value);
 
   @Override
   public void close()

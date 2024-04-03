@@ -358,11 +358,11 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void initValueShouldBeMinDate()
+  public void initValueShouldBeMinLong()
   {
     target.init(buf, 0);
     long initVal = buf.getLong(0);
-    Assert.assertEquals(DateTimes.MIN.getMillis(), initVal);
+    Assert.assertEquals(Long.MIN_VALUE, initVal);
   }
 
   @Test

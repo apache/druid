@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.SerializablePairLongFloat;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -43,56 +45,65 @@ public class FloatLastVectorAggregator extends NumericLastVectorAggregator<Float
   }
 
   @Override
-  void initValue(ByteBuffer buf, int position)
+  public void init(ByteBuffer buf, int position)
   {
-    buf.putFloat(position, 0.0f);
+    buf.putLong(position, Long.MIN_VALUE);
+    buf.put(position + NULLITY_OFFSET, NullHandling.replaceWithDefault() ? IS_NOT_NULL_BYTE : IS_NULL_BYTE);
+    buf.putFloat(position + VALUE_OFFSET, 0.0F);
+  }
+
+  @Nullable
+  @Override
+  public Object get(ByteBuffer buf, int position)
+  {
+    long time = buf.getLong(position);
+    if (buf.get(position + NULLITY_OFFSET) == IS_NULL_BYTE) {
+      return new SerializablePairLongFloat(time, null);
+    }
+    return new SerializablePairLongFloat(time, buf.getFloat(position + VALUE_OFFSET));
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, Float value)
+  void putValue(ByteBuffer buf, int position, long time, Float value)
   {
-    buf.putFloat(position, value);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.putFloat(position + VALUE_OFFSET, value);
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, VectorValueSelector valueSelector, int index)
+  void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
   {
-    buf.putFloat(position, valueSelector.getFloatVector()[index]);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.putFloat(position + VALUE_OFFSET, valueSelector.getFloatVector()[index]);
   }
 
   @Override
-  void putDefaultValue(ByteBuffer buf, int position)
+  void putNull(ByteBuffer buf, int position, long time)
   {
-    buf.putFloat(position, 0.0f);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
+    buf.putFloat(position + VALUE_OFFSET, 0.0F);
   }
 
   @Override
-  Float getValue(ByteBuffer buf, int position)
+  void putDefaultValue(ByteBuffer buf, int position, long time)
   {
-    return buf.getFloat(position);
+    buf.putLong(position, time);
+    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.putFloat(position + VALUE_OFFSET, 0.0F);
   }
 
-  //  @Override
-//  void putValue(ByteBuffer buf, int position, int index)
-//  {
-//    lastValue = valueSelector != null ? valueSelector.getFloatVector()[index] : ((SerializablePairLongFloat) objectSelector.getObjectVector()[index]).getRhs();
-//    buf.putFloat(position, lastValue);
-//  }
-
-
-//  @Override
-//  public void initValue(ByteBuffer buf, int position)
-//  {
-//    buf.putFloat(position, 0);
-//  }
-
-
-//  @Nullable
-//  @Override
-//  public Object get(ByteBuffer buf, int position)
-//  {
-//    final boolean rhsNull = isValueNull(buf, position);
-//    return new SerializablePairLongFloat(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
-//  }
+  @Override
+  SerializablePairLongFloat readPairFromVectorSelectors(
+      boolean[] timeNullityVector,
+      long[] timeVector,
+      Object[] maybeFoldedObjects,
+      int index
+  )
+  {
+    return FirstLastUtils.readFloatPairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, index);
+  }
 }
 

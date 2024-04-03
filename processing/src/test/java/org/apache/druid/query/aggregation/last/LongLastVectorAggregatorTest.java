@@ -44,6 +44,11 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
+// Check with empty arrays, nulls
+// Check with folded up objects, and non-folded up objects
+// Check with coercing objects
+// Check both the functions that they work properly
+// Check with pre-existing value on the buffer, and no pre-existing value on the buffer
 public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
@@ -235,7 +240,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void initValueShouldInitZero()
   {
-    target.initValue(buf, 0);
+    target.init(buf, 0);
     long initVal = buf.getLong(0);
     Assert.assertEquals(0, initVal);
   }
@@ -243,6 +248,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void aggregate()
   {
+    target.init(buf, 0);
     target.aggregate(buf, 0, 0, pairs.length);
     Pair<Long, Long> result = (Pair<Long, Long>) target.get(buf, 0);
     Assert.assertEquals(pairs[3].lhs.longValue(), result.lhs.longValue());
