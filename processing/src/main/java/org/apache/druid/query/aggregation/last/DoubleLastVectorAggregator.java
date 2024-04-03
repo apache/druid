@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -29,7 +30,7 @@ import java.nio.ByteBuffer;
 /**
  * Vectorized version of on heap 'last' aggregator for column selectors with type DOUBLE..
  */
-public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
+public class DoubleLastVectorAggregator extends NumericLastVectorAggregator<Double, SerializablePairLongDouble>
 {
   double lastValue;
 
@@ -46,25 +47,50 @@ public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, int index)
+  void initValue(ByteBuffer buf, int position)
   {
-    lastValue = valueSelector != null ? valueSelector.getDoubleVector()[index] : ((SerializablePairLongDouble) objectSelector.getObjectVector()[index]).getRhs();
-    buf.putDouble(position, lastValue);
+    buf.putDouble(position, 0.0d);
   }
 
-
   @Override
-  public void initValue(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position, Double value)
   {
-    buf.putDouble(position, 0);
+    buf.putDouble(position, value);
   }
 
-  @Nullable
   @Override
-  public Object get(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position, VectorValueSelector valueSelector, int index)
   {
-    final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePairLongDouble(buf.getLong(position), rhsNull ? null : buf.getDouble(position + VALUE_OFFSET));
+    buf.putDouble(position, valueSelector.getDoubleVector()[index]);
+  }
+
+  @Override
+  void putDefaultValue(ByteBuffer buf, int position)
+  {
+    buf.putDouble(position, 0.0d);
+  }
+
+  @Override
+  Double getValue(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
+
+  @Override
+  SerializablePairLongDouble readPairFromVectorSelectors(
+      boolean[] timeNullityVector,
+      long[] timeVector,
+      Object[] maybeFoldedObjects,
+      int index
+  )
+  {
+    return FirstLastUtils.readDoublePairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, index);
+  }
+
+  @Override
+  SerializablePairLongDouble createPair(long time, @Nullable Double value)
+  {
+    return new SerializablePairLongDouble(time, value);
   }
 }
 

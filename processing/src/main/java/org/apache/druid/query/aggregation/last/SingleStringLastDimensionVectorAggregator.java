@@ -54,7 +54,7 @@ public class SingleStringLastDimensionVectorAggregator implements VectorAggregat
   {
     buf.putLong(position, Long.MIN_VALUE);
     buf.put(
-        position + NumericLastVectorAggregator.NULL_OFFSET,
+        position + NumericLastVectorAggregator.NULLITY_OFFSET,
         useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
     );
     buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, 0);
@@ -78,7 +78,7 @@ public class SingleStringLastDimensionVectorAggregator implements VectorAggregat
       if (latestTime > lastTime) {
         lastTime = latestTime;
         buf.putLong(position, lastTime);
-        buf.put(position + NumericLastVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+        buf.put(position + NumericLastVectorAggregator.NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
         buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, valueVector[index]);
       }
     }
@@ -100,7 +100,7 @@ public class SingleStringLastDimensionVectorAggregator implements VectorAggregat
       if (timeVector[row] > lastTime) {
         lastTime = timeVector[row];
         buf.putLong(position, lastTime);
-        buf.put(position + NumericLastVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+        buf.put(position + NumericLastVectorAggregator.NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
         buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, values[row]);
       }
     }

@@ -29,43 +29,70 @@ import java.nio.ByteBuffer;
 /**
  * Vectorized version of on heap 'last' aggregator for column selectors with type FLOAT..
  */
-public class FloatLastVectorAggregator extends NumericLastVectorAggregator
+public class FloatLastVectorAggregator extends NumericLastVectorAggregator<Float, SerializablePairLongFloat>
 {
-  float lastValue;
 
   public FloatLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
     super(timeSelector, null, objectSelector);
-    lastValue = 0;
   }
 
   public FloatLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
     super(timeSelector, valueSelector, null);
-    lastValue = 0;
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, int index)
+  void initValue(ByteBuffer buf, int position)
   {
-    lastValue = valueSelector != null ? valueSelector.getFloatVector()[index] : ((SerializablePairLongFloat) objectSelector.getObjectVector()[index]).getRhs();
-    buf.putFloat(position, lastValue);
+    buf.putFloat(position, 0.0f);
   }
-
 
   @Override
-  public void initValue(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position, Float value)
   {
-    buf.putFloat(position, 0);
+    buf.putFloat(position, value);
   }
 
-
-  @Nullable
   @Override
-  public Object get(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position, VectorValueSelector valueSelector, int index)
   {
-    final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePairLongFloat(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
+    buf.putFloat(position, valueSelector.getFloatVector()[index]);
   }
+
+  @Override
+  void putDefaultValue(ByteBuffer buf, int position)
+  {
+    buf.putFloat(position, 0.0f);
+  }
+
+  @Override
+  Float getValue(ByteBuffer buf, int position)
+  {
+    return buf.getFloat(position);
+  }
+
+  //  @Override
+//  void putValue(ByteBuffer buf, int position, int index)
+//  {
+//    lastValue = valueSelector != null ? valueSelector.getFloatVector()[index] : ((SerializablePairLongFloat) objectSelector.getObjectVector()[index]).getRhs();
+//    buf.putFloat(position, lastValue);
+//  }
+
+
+//  @Override
+//  public void initValue(ByteBuffer buf, int position)
+//  {
+//    buf.putFloat(position, 0);
+//  }
+
+
+//  @Nullable
+//  @Override
+//  public Object get(ByteBuffer buf, int position)
+//  {
+//    final boolean rhsNull = isValueNull(buf, position);
+//    return new SerializablePairLongFloat(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
+//  }
 }
 

@@ -19,10 +19,15 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 
@@ -65,5 +70,65 @@ public class FirstLastUtils
     final Class<?> clazz = obj.getClass();
     return clazz.isAssignableFrom(pairClass)
            || pairClass.isAssignableFrom(clazz);
+  }
+
+  @Nullable
+  public static SerializablePairLongDouble readDoublePairFromVectorSelectors(
+      @Nullable boolean[] timeNullityVector,
+      long[] timeVector,
+      Object[] objectVector,
+      int index
+  )
+  {
+    final long time;
+    final Double value;
+
+    final Object object = objectVector[index];
+
+    if (object instanceof SerializablePairLongDouble) {
+      // We got a folded object, ignore timeSelector completely, the object has all the info it requires
+      final SerializablePairLongDouble pair = (SerializablePairLongDouble) object;
+      // if time == null, don't aggregate
+      if (pair.lhs == null) {
+        return null;
+      }
+      time = pair.lhs;
+      value = pair.rhs;
+    } else {
+      if (timeNullityVector != null && timeNullityVector[index]) {
+        // Donot aggregate pairs where time is unknown
+        return null;
+      }
+      time = timeVector[index];
+      value = DimensionHandlerUtils.convertObjectToDouble(object);
+    }
+    return new SerializablePairLongDouble(time, value);
+  }
+
+  @Nullable
+  public static SerializablePairLongDouble readDoublePairFromSelectors(
+      final BaseLongColumnValueSelector timeSelector,
+      final BaseObjectColumnValueSelector<?> objectSelector
+  )
+  {
+    final long time;
+    final Double value;
+
+    final Object object = objectSelector.getObject();
+    if (object instanceof SerializablePairLongDouble) {
+      // We got a folded object, ignore timeSelector completely, the object has all the info it requires
+      final SerializablePairLongDouble pair = (SerializablePairLongDouble) object;
+      time = pair.lhs;
+      value = pair.rhs;
+    } else  {
+      // We don't have a folded up object, use timeSelector to get time, and objectSelector to get value
+      if (timeSelector.isNull()) {
+        // Don't aggregate null timed value
+        return null;
+      }
+      time = timeSelector.getLong();
+      value = DimensionHandlerUtils.convertObjectToDouble(objectSelector.getObject());
+    }
+    return new SerializablePairLongDouble(time, value);
   }
 }
