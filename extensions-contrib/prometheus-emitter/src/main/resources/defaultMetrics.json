@@ -126,5 +126,8 @@
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge", "help": "CPU used"},
 
   "coordinator_segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of served segments."},
-  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."}
+  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."},
+
+  "service/heartbeat" : { "dimensions" : ["dataSource", "type"], "type" : "gauge", "help":  "Metric indicating the service is up. This metric is only available if the ServiceStatusMonitor module is included."},
+  "zk/connected" : { "dimensions" : [], "type" : "gauge", "help":  "Indicator of connection status to zookeeper."}
 }

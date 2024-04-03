@@ -6265,7 +6265,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01T00:00:00'\n"
         + "OR __time >= '2001-02-01' AND __time < '2001-02-02'\n"
-        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'",
+        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'\n"
+        + "OR __time = '2001-04-01'\n"
+        + "OR __time = '2001-05-01 00:00:00'\n"
+        + "OR __time = '2001-06-01T00:00:00'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -6273,7 +6276,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       querySegmentSpec(
                           Intervals.of("2000-01-01/2001-01-01"),
                           Intervals.of("2001-02-01/2001-02-02"),
-                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001")
+                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001"),
+                          Intervals.of("2001-04-01/2001-04-01T00:00:00.001"),
+                          Intervals.of("2001-05-01/2001-05-01T00:00:00.001"),
+                          Intervals.of("2001-06-01/2001-06-01T00:00:00.001")
                       )
                   )
                   .granularity(Granularities.ALL)
@@ -14925,7 +14931,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testUnSupportedNullsFirst()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 DESC NULLS FIRST) from druid.foo")
         .run());
 
@@ -14936,7 +14941,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testUnSupportedNullsLast()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
         .run());
     assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
@@ -14948,7 +14952,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
 
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) from druid.foo")
         .run());
     assertThat(e, invalidSqlIs("The query contains a window frame which may return incorrect results. To disregard this warning, set [windowingStrictValidation] to false in the query context. (line [1], column [31])"));
@@ -14960,7 +14963,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
 
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN dim1 PRECEDING AND dim1 FOLLOWING) from druid.foo")
         .run());
     assertThat(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
@@ -14974,28 +14976,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     DruidException e;
     e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) from druid.foo")
         .run());
     assertThat(e, invalidSqlIs("Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported. (line [1], column [31])"));
 
     e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN 1 FOLLOWING AND 1 FOLLOWING) from druid.foo")
         .run());
     assertThat(e, invalidSqlIs("Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported. (line [1], column [31])"));
-  }
-
-
-  @Test
-  public void testWindowingErrorWithoutFeatureFlag()
-  {
-    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, false))
-        .sql("SELECT dim1,ROW_NUMBER() OVER () from druid.foo")
-        .run());
-
-    assertThat(e, invalidSqlIs("The query contains window functions; To run these window functions, specify [enableWindowing] in query context. (line [1], column [13])"));
   }
 
   @Test
@@ -15006,7 +14994,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(
         DruidException.class,
         () -> testBuilder()
-            .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
             .sql("SELECT ntile(4) OVER (ORDER BY dim1 ROWS BETWEEN 1 FOLLOWING AND CURRENT ROW) from druid.foo")
             .run()
     );
@@ -15214,7 +15201,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testBuilder()
         .sql(sql)
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .expectedQuery(
             WindowOperatorQueryBuilder.builder()
                 .setDataSource(
@@ -15302,7 +15288,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .queryContext(
             ImmutableMap.of(
-                PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
                 QueryContexts.ENABLE_DEBUG, true
             )
         )
@@ -15403,7 +15388,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .queryContext(
             ImmutableMap.of(
-                PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
                 QueryContexts.ENABLE_DEBUG, true
             )
         )

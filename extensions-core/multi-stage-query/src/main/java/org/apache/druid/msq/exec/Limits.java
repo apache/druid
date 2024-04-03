@@ -96,4 +96,11 @@ public class Limits
    * Max number of partition buckets for ingestion queries.
    */
   public static final int MAX_PARTITION_BUCKETS = 5_000;
+
+  /**
+   * Max number of rows with the same key in a window. This acts as a guardrail for
+   * data distribution with high cardinality
+   */
+  public static final int MAX_ROWS_MATERIALIZED_IN_WINDOW = 100_000;
+
 }

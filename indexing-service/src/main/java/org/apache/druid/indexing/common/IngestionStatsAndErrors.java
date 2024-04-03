@@ -27,36 +27,19 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
-public class IngestionStatsAndErrorsTaskReportData
+public class IngestionStatsAndErrors
 {
-  @JsonProperty
-  private IngestionState ingestionState;
+  private final IngestionState ingestionState;
+  private final Map<String, Object> unparseableEvents;
+  private final Map<String, Object> rowStats;
+  private final String errorMsg;
+  private final boolean segmentAvailabilityConfirmed;
+  private final long segmentAvailabilityWaitTimeMs;
+  private final Map<String, Long> recordsProcessed;
+  private final Long segmentsRead;
+  private final Long segmentsPublished;
 
-  @JsonProperty
-  private Map<String, Object> unparseableEvents;
-
-  @JsonProperty
-  private Map<String, Object> rowStats;
-
-  @JsonProperty
-  @Nullable
-  private String errorMsg;
-
-  @JsonProperty
-  private boolean segmentAvailabilityConfirmed;
-
-  @JsonProperty
-  private long segmentAvailabilityWaitTimeMs;
-
-  @JsonProperty
-  private Map<String, Long> recordsProcessed;
-
-  @JsonProperty
-  private Long segmentsRead;
-  @JsonProperty
-  private Long segmentsPublished;
-
-  public IngestionStatsAndErrorsTaskReportData(
+  public IngestionStatsAndErrors(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
@@ -139,12 +122,12 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentsPublished;
   }
 
-  public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
+  public static IngestionStatsAndErrors getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
   {
-    return (IngestionStatsAndErrorsTaskReportData) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                                              .getPayload();
+    return (IngestionStatsAndErrors) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+                                                .getPayload();
   }
 
   @Override
@@ -156,7 +139,7 @@ public class IngestionStatsAndErrorsTaskReportData
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    IngestionStatsAndErrorsTaskReportData that = (IngestionStatsAndErrorsTaskReportData) o;
+    IngestionStatsAndErrors that = (IngestionStatsAndErrors) o;
     return getIngestionState() == that.getIngestionState() &&
            Objects.equals(getUnparseableEvents(), that.getUnparseableEvents()) &&
            Objects.equals(getRowStats(), that.getRowStats()) &&

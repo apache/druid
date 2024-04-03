@@ -126,7 +126,7 @@ public class MSQTestWorkerContext implements WorkerContext
     final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
     {
       @Override
-      public void write(String taskId, Map<String, TaskReport> reports)
+      public void write(String taskId, TaskReport.ReportMap reports)
       {
 
       }
