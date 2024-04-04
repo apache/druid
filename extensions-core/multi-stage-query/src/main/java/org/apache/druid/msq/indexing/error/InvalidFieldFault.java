@@ -27,10 +27,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-@JsonTypeName(FrameFieldWriterFault.CODE)
-public class FrameFieldWriterFault extends BaseMSQFault
+@JsonTypeName(InvalidFieldFault.CODE)
+public class InvalidFieldFault extends BaseMSQFault
 {
-  static final String CODE = "FieldWriterError";
+  static final String CODE = "InvalidField";
 
   @Nullable
   private final String source;
@@ -40,28 +40,26 @@ public class FrameFieldWriterFault extends BaseMSQFault
   private final Integer rowNumber;
   @Nullable
   private final String errorMsg;
+  @Nullable
+  private final String logMsg;
 
-  public FrameFieldWriterFault(
+  public InvalidFieldFault(
       @Nullable @JsonProperty("source") String source,
       @Nullable @JsonProperty("column") String column,
       @Nullable @JsonProperty("rowNumber") Integer rowNumber,
-      @Nullable @JsonProperty("errorMsg") String errorMsg
+      @Nullable @JsonProperty("errorMsg") String errorMsg,
+      @Nullable @JsonProperty("logMsg") String logMsg
   )
   {
     super(
         CODE,
-        StringUtils.format(
-            "Error[%s] while writing a field for source[%s], rowNumber[%d], column[%s].",
-            errorMsg,
-            source,
-            rowNumber,
-            column
-        )
+        logMsg
     );
     this.column = column;
     this.rowNumber = rowNumber;
     this.source = source;
     this.errorMsg = errorMsg;
+    this.logMsg = logMsg;
   }
 
   @Nullable
@@ -95,6 +93,13 @@ public class FrameFieldWriterFault extends BaseMSQFault
   {
     return errorMsg;
   }
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getLogMsg()
+  {
+    return logMsg;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -108,7 +113,7 @@ public class FrameFieldWriterFault extends BaseMSQFault
     if (!super.equals(o)) {
       return false;
     }
-    FrameFieldWriterFault that = (FrameFieldWriterFault) o;
+    InvalidFieldFault that = (InvalidFieldFault) o;
     return Objects.equals(column, that.column)
            && Objects.equals(rowNumber, that.rowNumber)
            && Objects.equals(source, that.source)

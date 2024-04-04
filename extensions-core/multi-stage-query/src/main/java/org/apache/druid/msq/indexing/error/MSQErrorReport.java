@@ -249,11 +249,12 @@ public class MSQErrorReport
           }
         }
 
-        return new FrameFieldWriterFault(
+        return new InvalidFieldFault(
             frameFieldWriterException.getSource(),
             columnName,
             frameFieldWriterException.getRowNumber(),
-            frameFieldWriterException.getErrorMsg()
+            frameFieldWriterException.getErrorMsg(),
+            frameFieldWriterException.getMessage()
         );
 
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {
