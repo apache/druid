@@ -83,7 +83,13 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     try {
       RetryUtils.retry(
           (RetryUtils.Task<Void>) () -> {
-            storage.insert(config.getBucket(), path, new FileContent(contentType, file));
+            storage.insert(
+                config.getBucket(),
+                path,
+                new FileContent(contentType, file),
+                GoogleStorage.DEFAULT_BUFFER_SIZE
+            );
+
             return null;
           },
           GoogleUtils::isRetryable,

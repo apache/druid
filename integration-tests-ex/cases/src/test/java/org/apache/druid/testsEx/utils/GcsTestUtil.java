@@ -93,9 +93,11 @@ public class GcsTestUtil
   {
     LOG.info("Uploading file %s at path %s in bucket %s", filePath, GOOGLE_PREFIX, GOOGLE_BUCKET);
     File file = new File(filePath);
-    googleStorageClient.insert(GOOGLE_BUCKET,
-                               GOOGLE_PREFIX + "/" + file.getName(),
-                               new FileContent(contentType, file)
+    googleStorageClient.insert(
+        GOOGLE_BUCKET,
+        GOOGLE_PREFIX + "/" + file.getName(),
+        new FileContent(contentType, file),
+        GoogleStorage.DEFAULT_BUFFER_SIZE
     );
   }
 
