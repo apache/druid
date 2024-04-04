@@ -223,7 +223,9 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    checkSqlCompatible();
+    if (NullHandling.replaceWithDefault()) {
+      return convertToLegacy().optimize(mayIncludeUnknown);
+    }
     final List<?> matchValues = this.sortedMatchValues.get();
     if (matchValues.isEmpty()) {
       return FalseDimFilter.instance();
@@ -244,7 +246,9 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public Filter toFilter()
   {
-    checkSqlCompatible();
+    if (NullHandling.replaceWithDefault()) {
+      return convertToLegacy().toFilter();
+    }
     return this;
   }
 
@@ -417,13 +421,14 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
         .build();
   }
 
-  private void checkSqlCompatible()
+  private InDimFilter convertToLegacy()
   {
-    if (NullHandling.replaceWithDefault()) {
-      throw InvalidInput.exception(
-          "Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter"
-      );
-    }
+    return new InDimFilter(
+      column,
+      InDimFilter.ValuesSet.copyOf(sortedMatchValues.get().stream().map(Evals::asString).iterator()),
+      null,
+      filterTuning
+    );
   }
 
   private static boolean checkSorted(List<?> unsortedValues, ColumnType matchValueType)
