@@ -22,10 +22,12 @@ package org.apache.druid.msq.indexing.report;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class MSQSegmentReport
 {
-  String shardSpec;
-  String details;
+  private final String shardSpec;
+  private final String details;
 
   @JsonCreator
   public MSQSegmentReport(@JsonProperty("shardSpec") String shardSpec, @JsonProperty("details") String reason)
@@ -44,5 +46,33 @@ public class MSQSegmentReport
   public String getDetails()
   {
     return details;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MSQSegmentReport that = (MSQSegmentReport) o;
+    return Objects.equals(shardSpec, that.shardSpec) && Objects.equals(details, that.details);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(shardSpec, details);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MSQSegmentReport{" +
+           "shardSpec='" + shardSpec + '\'' +
+           ", details='" + details + '\'' +
+           '}';
   }
 }
