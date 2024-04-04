@@ -2056,8 +2056,8 @@ public class ControllerImpl implements Controller
   )
   {
     if (mayHaveMultiValuedClusterByFields) {
-      // DimensionRangeShardSpec cannot handle multi-valued fields.
-      return Pair.of(Collections.emptyList(), "Cannot use RangeShardSpec, the fields in the CLUSTER BY clause contains a multivalues. Using NumberedShardSpec instead.");
+      // DimensionRangeShardSpec cannot handle multivalued fields.
+      return Pair.of(Collections.emptyList(), "Cannot use RangeShardSpec, the fields in the CLUSTERED BY clause contains multivalued fields. Using NumberedShardSpec instead.");
     }
     final List<KeyColumn> clusterByColumns = clusterBy.getColumns();
     final List<String> shardColumns = new ArrayList<>();
@@ -2065,7 +2065,7 @@ public class ControllerImpl implements Controller
     final int numShardColumns = clusterByColumns.size() - clusterBy.getBucketByCount() - (boosted ? 1 : 0);
 
     if (numShardColumns == 0) {
-      return Pair.of(Collections.emptyList(), "Cannot use RangeShardSpec, as there are no shardColumns. Using NumberedShardSpec instead.");
+      return Pair.of(Collections.emptyList(), "Using NumberedShardSpec as no columns are supplied in the 'CLUSTERED BY' clause.");
     }
 
     for (int i = clusterBy.getBucketByCount(); i < clusterBy.getBucketByCount() + numShardColumns; i++) {
@@ -2086,7 +2086,7 @@ public class ControllerImpl implements Controller
 
       // DimensionRangeShardSpec only handles columns that appear as-is in the output.
       if (outputColumns.isEmpty()) {
-        return Pair.of(Collections.emptyList(), "Cannot use RangeShardSpec, RangeShardSpec only supports columns that appear as-is in the output. Using NumberedShardSpec instead.");
+        return Pair.of(Collections.emptyList(), StringUtils.format("Cannot use RangeShardSpec, Could not find output column name for column [%s]. Using NumberedShardSpec instead.", column.columnName()));
       }
 
       shardColumns.add(columnMappings.getOutputColumnName(outputColumns.getInt(0)));
