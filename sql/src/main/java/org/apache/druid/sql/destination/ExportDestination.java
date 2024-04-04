@@ -46,7 +46,7 @@ public class ExportDestination implements IngestDestination
   }
 
   @Override
-  public String getType()
+  public String getDestinationName()
   {
     return TYPE_KEY;
   }

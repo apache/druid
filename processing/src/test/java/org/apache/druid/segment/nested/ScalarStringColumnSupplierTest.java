@@ -191,8 +191,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+        bob
     );
     try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -209,8 +208,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+        bob
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

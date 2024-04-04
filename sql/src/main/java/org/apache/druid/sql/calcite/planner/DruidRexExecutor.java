@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
@@ -83,7 +84,11 @@ public class DruidRexExecutor implements RexExecutor
         final RexNode literal;
 
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
-          literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
+          if (exprResult.valueOrDefault() == null) {
+            literal = rexBuilder.makeNullLiteral(constExp.getType());
+          } else {
+            literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
+          }
         } else if (sqlTypeName == SqlTypeName.DATE) {
           // It is possible for an expression to have a non-null String value but it can return null when parsed
           // as a primitive long/float/double.
@@ -176,6 +181,17 @@ public class DruidRexExecutor implements RexExecutor
               }
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);
             }
+          } else if (constExp.getType().getComponentType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+            List<Boolean> resultAsBooleanList = new ArrayList<>(array.length);
+            for (Object val : exprResult.castTo(ExpressionType.LONG_ARRAY).asArray()) {
+              final Number longVal = (Number) val;
+              if (longVal == null) {
+                resultAsBooleanList.add(null);
+              } else {
+                resultAsBooleanList.add(Evals.asBoolean(longVal.longValue()));
+              }
+            }
+            literal = rexBuilder.makeLiteral(resultAsBooleanList, constExp.getType(), true);
           } else {
             literal = rexBuilder.makeLiteral(Arrays.asList(array), constExp.getType(), true);
           }

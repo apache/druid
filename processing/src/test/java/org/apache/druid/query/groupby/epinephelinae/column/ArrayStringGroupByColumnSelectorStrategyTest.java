@@ -27,7 +27,6 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.ComparableIntArray;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -124,7 +123,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(ComparableStringArray.of("a", "b"), row.get(0));
+    Assert.assertArrayEquals(new Object[]{"a", "b"}, (Object[]) row.get(0));
   }
 
 
@@ -141,7 +140,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(ComparableStringArray.of("f", "a"), row.get(0));
+    Assert.assertArrayEquals(new Object[]{"f", "a"}, (Object[]) row.get(0));
   }
 
   @Test
@@ -157,7 +156,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(ComparableStringArray.of("f", "a"), row.get(0));
+    Assert.assertArrayEquals(new Object[]{"f", "a"}, (Object[]) row.get(0));
   }
 
   @After

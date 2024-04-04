@@ -43,7 +43,9 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -86,6 +88,9 @@ import java.util.stream.Collectors;
  * <li><b>taskLockType</b>: Temporary flag to allow MSQ to use experimental lock types. Valid values are present in
  * {@link TaskLockType}. If the flag is not set, msq uses {@link TaskLockType#EXCLUSIVE} for replace queries and
  * {@link TaskLockType#SHARED} for insert queries.
+ *
+ * <li><b>maxRowsMaterializedInWindow</b>: Query context that specifies the largest window size that can be processed
+ * using window functions in MSQ. This is to ensure guardrails using window function in MSQ.
  *
  * </ol>
  **/
@@ -152,6 +157,11 @@ public class MultiStageQueryContext
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
   public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.MVD;
 
+  public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
+
+  public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
+
+  public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -297,7 +307,7 @@ public class MultiStageQueryContext
 
   public static List<String> getSortOrder(final QueryContext queryContext)
   {
-    return MultiStageQueryContext.decodeSortOrder(queryContext.getString(CTX_SORT_ORDER));
+    return decodeList(CTX_SORT_ORDER, queryContext.getString(CTX_SORT_ORDER));
   }
 
   @Nullable
@@ -316,37 +326,39 @@ public class MultiStageQueryContext
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
   }
 
-  /**
-   * Decodes {@link #CTX_SORT_ORDER} from either a JSON or CSV string.
-   */
-  @Nullable
-  @VisibleForTesting
-  static List<String> decodeSortOrder(@Nullable final String sortOrderString)
+  public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
   {
-    if (sortOrderString == null) {
+    return new HashSet<>(decodeList(CTX_SKIP_TYPE_VERIFICATION, queryContext.getString(CTX_SKIP_TYPE_VERIFICATION)));
+  }
+
+  /**
+   * Decodes a list from either a JSON or CSV string.
+   */
+  @VisibleForTesting
+  static List<String> decodeList(final String keyName, @Nullable final String listString)
+  {
+    if (listString == null) {
       return Collections.emptyList();
-    } else if (LOOKS_LIKE_JSON_ARRAY.matcher(sortOrderString).matches()) {
+    } else if (LOOKS_LIKE_JSON_ARRAY.matcher(listString).matches()) {
       try {
         // Not caching this ObjectMapper in a static, because we expect to use it infrequently (once per INSERT
         // query that uses this feature) and there is no need to keep it around longer than that.
-        return new ObjectMapper().readValue(sortOrderString, new TypeReference<List<String>>()
-        {
-        });
+        return new ObjectMapper().readValue(listString, new TypeReference<List<String>>() {});
       }
       catch (JsonProcessingException e) {
-        throw QueryContexts.badValueException(CTX_SORT_ORDER, "CSV or JSON array", sortOrderString);
+        throw QueryContexts.badValueException(keyName, "CSV or JSON array", listString);
       }
     } else {
       final RFC4180Parser csvParser = new RFC4180ParserBuilder().withSeparator(',').build();
 
       try {
-        return Arrays.stream(csvParser.parseLine(sortOrderString))
+        return Arrays.stream(csvParser.parseLine(listString))
                      .filter(s -> s != null && !s.isEmpty())
                      .map(String::trim)
                      .collect(Collectors.toList());
       }
       catch (IOException e) {
-        throw QueryContexts.badValueException(CTX_SORT_ORDER, "CSV or JSON array", sortOrderString);
+        throw QueryContexts.badValueException(keyName, "CSV or JSON array", listString);
       }
     }
   }

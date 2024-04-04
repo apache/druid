@@ -30,8 +30,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.segment.IntListUtils;
-import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 
@@ -48,16 +46,11 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
   private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
-  private final ColumnConfig columnConfig;
-  private final int numRows;
-
   public IndexedUtf8LexicographicalRangeIndexes(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,
-      boolean hasNull,
-      @Nullable ColumnConfig columnConfig,
-      int numRows
+      boolean hasNull
   )
   {
     Preconditions.checkArgument(dictionary.isSorted(), "Dictionary must be sorted");
@@ -65,8 +58,6 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
     this.hasNull = hasNull;
-    this.columnConfig = columnConfig;
-    this.numRows = numRows;
   }
 
   @Override
@@ -80,10 +71,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
   {
     final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
     final int start = range.leftInt(), end = range.rightInt();
-    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
-      return null;
-    }
-    return new SimpleImmutableBitmapDelegatingIterableIndex()
+    return new DictionaryRangeScanningBitmapIndex(1.0, end - start)
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -132,10 +120,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
   {
     final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
     final int start = range.leftInt(), end = range.rightInt();
-    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
-      return null;
-    }
-    return new SimpleImmutableBitmapDelegatingIterableIndex()
+    return new DictionaryRangeScanningBitmapIndex(1.0, end - start)
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()

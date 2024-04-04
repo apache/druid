@@ -22,12 +22,12 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -190,7 +189,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         intervalToUnzippedFiles
     );
 
-    taskClient.report(new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, ImmutableMap.of()));
+    taskClient.report(
+        new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, new TaskReport.ReportMap())
+    );
 
     return TaskStatus.success(getId());
   }
@@ -270,29 +271,24 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
                                                .map(AggregatorFactory::getName)
                                                .collect(Collectors.toList());
 
-        // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
-        final DataSegment segment = RetryUtils.retry(
-            () -> segmentPusher.push(
-                mergedFileAndDimensionNames.lhs,
-                new DataSegment(
-                    getDataSource(),
-                    interval,
-                    Preconditions.checkNotNull(
-                        AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
-                        "version for interval[%s]",
-                        interval
-                    ),
-                    null, // will be filled in the segmentPusher
-                    mergedFileAndDimensionNames.rhs,
-                    metricNames,
-                    createShardSpec(toolbox, interval, bucketId),
-                    null, // will be filled in the segmentPusher
-                    0     // will be filled in the segmentPusher
+        final DataSegment segment = segmentPusher.push(
+            mergedFileAndDimensionNames.lhs,
+            new DataSegment(
+                getDataSource(),
+                interval,
+                Preconditions.checkNotNull(
+                    AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
+                    "version for interval[%s]",
+                    interval
                 ),
-                false
+                null, // will be filled in the segmentPusher
+                mergedFileAndDimensionNames.rhs,
+                metricNames,
+                createShardSpec(toolbox, interval, bucketId),
+                null, // will be filled in the segmentPusher
+                0     // will be filled in the segmentPusher
             ),
-            exception -> !(exception instanceof NullPointerException) && exception instanceof Exception,
-            5
+            false
         );
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);

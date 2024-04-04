@@ -99,6 +99,13 @@ public class RowsAndColumnsHelper
     return this;
   }
 
+  public RowsAndColumnsHelper expectColumn(String col, float[] expectedVals)
+  {
+    final ColumnHelper helper = columnHelper(col, expectedVals.length, ColumnType.FLOAT);
+    helper.setExpectation(expectedVals);
+    return this;
+  }
+
   public RowsAndColumnsHelper expectColumn(String col, ColumnType type, Object... expectedVals)
   {
     return expectColumn(col, expectedVals, type);

@@ -92,8 +92,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.DateTime;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -699,7 +699,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
   }
 
-  @Before
+  @BeforeEach
   public void init() throws Exception
   {
     overlordClient = Mockito.mock(OverlordClient.class);
@@ -708,7 +708,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         sqlStatementFactory,
         objectMapper,
         overlordClient,
-        new LocalFileStorageConnector(tmpFolder.newFolder("local")),
+        new LocalFileStorageConnector(newTempFolder("local")),
         authorizerMapper
     );
   }

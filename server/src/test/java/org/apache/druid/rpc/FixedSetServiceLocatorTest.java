@@ -39,6 +39,16 @@ public class FixedSetServiceLocatorTest
       2
   );
 
+  public static final DruidServerMetadata DATA_SERVER_2 = new DruidServerMetadata(
+      "TestDataServer",
+      "hostName:8083",
+      null,
+      2,
+      ServerType.REALTIME,
+      "tier1",
+      2
+  );
+
   @Test
   public void testLocateNullShouldBeClosed() throws ExecutionException, InterruptedException
   {
@@ -47,7 +57,6 @@ public class FixedSetServiceLocatorTest
 
     Assert.assertTrue(serviceLocator.locate().get().isClosed());
   }
-
 
   @Test
   public void testLocateSingleServer() throws ExecutionException, InterruptedException
@@ -58,6 +67,20 @@ public class FixedSetServiceLocatorTest
     Assert.assertEquals(
         ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1)),
         serviceLocator.locate().get()
+    );
+  }
+
+  @Test
+  public void testLocateMultipleServers() throws ExecutionException, InterruptedException
+  {
+    FixedSetServiceLocator serviceLocator
+        = FixedSetServiceLocator.forDruidServerMetadata(ImmutableSet.of(DATA_SERVER_1, DATA_SERVER_2));
+
+    Assert.assertTrue(
+        ImmutableSet.of(
+            ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1)),
+            ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_2))
+        ).contains(serviceLocator.locate().get())
     );
   }
 }

@@ -30,6 +30,8 @@ public class DruidK8sConstants
   public static final String TASK_DATASOURCE = "task.datasource";
   public static final int PORT = 8100;
   public static final int TLS_PORT = 8091;
+  public static final int DEFAULT_CPU_MILLICORES = 1000;
+  public static final String DEFAULT_JAVA_HEAP_SIZE = "1G";
   public static final String TLS_ENABLED = "tls.enabled";
   public static final String TASK_JSON_ENV = "TASK_JSON";
   public static final String TASK_DIR_ENV = "TASK_DIR";

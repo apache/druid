@@ -88,7 +88,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
@@ -150,6 +149,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     implements Supervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
+  public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
+  public static final String AUTOSCALER_REQUIRED_TASKS_METRIC = "task/autoScaler/requiredCount";
 
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
@@ -404,11 +405,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class DynamicAllocationTasksNotice implements Notice
   {
     Callable<Integer> scaleAction;
+    ServiceEmitter emitter;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
-    DynamicAllocationTasksNotice(Callable<Integer> scaleAction)
+    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, ServiceEmitter emitter)
     {
       this.scaleAction = scaleAction;
+      this.emitter = emitter;
     }
 
     /**
@@ -449,17 +452,35 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               return;
             }
           }
+          final Integer desiredTaskCount = scaleAction.call();
+          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
+              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
-                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
+                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it! desired task count is [%s], active task count is [%s]",
                 nowTime - dynamicTriggerLastRunTime,
                 autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(),
-                dataSource
+                dataSource,
+                desiredTaskCount,
+                getActiveTaskGroupsCount()
             );
+
+            if (desiredTaskCount > 0) {
+              emitter.emit(event.setDimension(
+                                    AUTOSCALER_SKIP_REASON_DIMENSION,
+                                    "minTriggerScaleActionFrequencyMillis not elapsed yet"
+                                )
+                                .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            }
             return;
           }
-          final Integer desriedTaskCount = scaleAction.call();
-          boolean allocationSuccess = changeTaskCount(desriedTaskCount);
+
+          if (desiredTaskCount > 0) {
+            emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+          }
+
+          boolean allocationSuccess = changeTaskCount(desiredTaskCount);
           if (allocationSuccess) {
             dynamicTriggerLastRunTime = nowTime;
           }
@@ -1155,14 +1176,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     Instant handleNoticeEndTime = Instant.now();
                     Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
                     String noticeType = notice.getType();
-                    log.debug(
-                        "Handled notice [%s] from notices queue in [%d] ms, "
-                        + "current notices queue size [%d] for datasource [%s]",
-                        noticeType,
-                        timeElapsed.toMillis(),
-                        getNoticesQueueSize(),
-                        dataSource
-                    );
+                    if (log.isDebugEnabled()) {
+                      log.debug(
+                          "Handled notice [%s] from notices queue in [%d] ms, "
+                              + "current notices queue size [%d] for datasource [%s]",
+                          noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource
+                      );
+                    }
                     emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {
@@ -1210,9 +1230,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction, ServiceEmitter emitter)
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, emitter));
   }
 
   private Runnable buildRunTask()
@@ -3935,9 +3955,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         try {
           taskQueue.get().add(indexTask);
         }
-        catch (EntryExistsException e) {
+        catch (DruidException e) {
           stateManager.recordThrowableEvent(e);
-          log.error("Tried to add task [%s] but it already exists", indexTask.getId());
+          log.noStackTrace().error(e, "Tried to add task [%s] but encountered error", indexTask.getId());
         }
       } else {
         log.error("Failed to get task queue because I'm not the leader!");

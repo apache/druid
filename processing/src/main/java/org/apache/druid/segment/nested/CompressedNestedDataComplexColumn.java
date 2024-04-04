@@ -999,10 +999,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
 
-      final int size;
-      try (ColumnarInts throwAway = ints.get()) {
-        size = throwAway.size();
-      }
       columnBuilder.setIndexSupplier(
           new NestedFieldColumnIndexSupplier(
               types,
@@ -1015,8 +1011,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
               doubleDictionarySupplier,
               arrayDictionarySupplier,
               arrayElementDictionarySupplier,
-              arrayElementBitmaps,
-              size
+              arrayElementBitmaps
           ),
           true,
           false

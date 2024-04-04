@@ -2,9 +2,9 @@
 
 exports[`FlexibleQueryInput correctly formats helper HTML 1`] = `
 "
-<div class=\\"doc-name\\">COUNT</div>
-<div class=\\"doc-syntax\\">COUNT(*)</div>
-<div class=\\"doc-description\\">Counts the number of things</div>"
+<div class="doc-name">COUNT</div>
+<div class="doc-syntax">COUNT(*)</div>
+<div class="doc-description">Counts the number of things</div>"
 `;
 
 exports[`FlexibleQueryInput matches snapshot 1`] = `

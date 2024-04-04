@@ -258,6 +258,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
+|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -294,6 +295,9 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`worker/taskSlot/idle/count`|Number of idle task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for Middle Manager nodes.| `category`, `workerVersion`|Varies|
 |`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
 |`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/task/assigned/count`|Number of tasks assigned to an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/completed/count`|Number of tasks completed by an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 
 ## Shuffle metrics (Native parallel task)
 
@@ -332,6 +336,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/unneededEternityTombstone/count`|Number of non-overshadowed eternity tombstones marked as unused.| |Varies|
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
+|`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
 |`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
@@ -342,6 +347,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`killTask/availableSlot/count`| Number of available task slots that can be used for auto kill tasks in the auto kill run. This is the max number of task slots minus any currently running auto kill tasks.                                                                                                                                                                                                                                                                                                                     | |Varies|
 |`killTask/maxSlot/count`| Maximum number of task slots available for auto kill tasks in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                | |Varies|
 |`kill/task/count`| Number of tasks issued in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                                                    | |Varies|
+|`kill/eligibleUnusedSegments/count`|The number of unused segments of a datasource that are identified as eligible for deletion from the metadata store by the coordinator.|`dataSource`|Varies|
 |`kill/pendingSegments/count`|Number of stale pending segments deleted from the metadata store.|`dataSource`|Varies|
 |`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
 |`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.TaskLock;
@@ -38,10 +37,7 @@ import javax.annotation.Nullable;
  */
 public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
 {
-  @JsonIgnore
   private final TaskLockType type;
-
-  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator

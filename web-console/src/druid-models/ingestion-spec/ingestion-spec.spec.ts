@@ -24,6 +24,7 @@ import {
   cleanSpec,
   guessColumnTypeFromInput,
   guessColumnTypeFromSampleResponse,
+  guessKafkaInputFormat,
   guessSimpleInputFormat,
   updateSchemaWithSample,
   upgradeSpec,
@@ -669,6 +670,36 @@ describe('ingestion-spec', () => {
       });
     });
   });
+
+  describe('guessKafkaInputFormat', () => {
+    const sample = [
+      {
+        'kafka.timestamp': 1710962988515,
+        'kafka.topic': 'kttm2',
+        'raw':
+          '{"timestamp":"2019-08-25T00:00:00.031Z","session":"S56194838","number":"16","event":{"type":"PercentClear","percentage":55},"agent":{"type":"Browser","category":"Personal computer","browser":"Chrome","browser_version":"76.0.3809.100","os":"Windows 7","platform":"Windows"},"client_ip":"181.13.41.82","geo_ip":{"continent":"South America","country":"Argentina","region":"Santa Fe","city":"Rosario"},"language":["es","es-419"],"adblock_list":"NoAdblock","app_version":"1.9.6","path":"http://www.koalastothemax.com/","loaded_image":"http://www.koalastothemax.com/img/koalas2.jpg","referrer":"Direct","referrer_host":"Direct","server_ip":"172.31.57.89","screen":"1680x1050","window":"1680x939","session_length":76261,"timezone":"N/A","timezone_offset":"180"}',
+      },
+      {
+        'kafka.timestamp': 1710962988518,
+        'kafka.topic': 'kttm2',
+        'raw':
+          '{"timestamp":"2019-08-25T00:00:00.059Z","session":"S46093731","number":"24","event":{"type":"PercentClear","percentage":85},"agent":{"type":"Mobile Browser","category":"Smartphone","browser":"Chrome Mobile","browser_version":"50.0.2661.89","os":"Android","platform":"Android"},"client_ip":"177.242.100.0","geo_ip":{"continent":"North America","country":"Mexico","region":"Chihuahua","city":"Nuevo Casas Grandes"},"language":["en","es","es-419","es-MX"],"adblock_list":"NoAdblock","app_version":"1.9.6","path":"https://koalastothemax.com/","loaded_image":"https://koalastothemax.com/img/koalas1.jpg","referrer":"https://www.google.com/","referrer_host":"www.google.com","server_ip":"172.31.11.5","screen":"320x570","window":"540x743","session_length":252689,"timezone":"CDT","timezone_offset":"300"}',
+      },
+    ];
+
+    it('works when single topic', () => {
+      expect(guessKafkaInputFormat(sample, false)).toEqual({ type: 'json' });
+    });
+
+    it('works when multi-topic', () => {
+      expect(guessKafkaInputFormat(sample, true)).toEqual({
+        type: 'kafka',
+        valueFormat: {
+          type: 'json',
+        },
+      });
+    });
+  });
 });
 
 describe('spec utils', () => {
@@ -720,6 +751,7 @@ describe('spec utils', () => {
       expect(guessColumnTypeFromInput([null, 1, 2.1, 3], true)).toEqual('double');
       expect(guessColumnTypeFromInput([null, '1', '2.1', '3'], false)).toEqual('string');
       expect(guessColumnTypeFromInput([null, '1', '2.1', '3'], true)).toEqual('double');
+      expect(guessColumnTypeFromInput([null, '1.0', '2.0', '3.0'], true)).toEqual('double');
     });
 
     it('works for ARRAY<string>', () => {
@@ -834,66 +866,66 @@ describe('spec utils', () => {
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
                 "id",
-                Object {
+                {
                   "castToType": "ARRAY<STRING>",
                   "name": "tags",
                   "type": "auto",
                 },
-                Object {
+                {
                   "castToType": "ARRAY<LONG>",
                   "name": "nums",
                   "type": "auto",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "hour",
               "rollup": true,
               "segmentGranularity": "day",
             },
-            "metricsSpec": Array [
-              Object {
+            "metricsSpec": [
+              {
                 "name": "count",
                 "type": "count",
               },
-              Object {
+              {
                 "fieldName": "followers",
                 "name": "sum_followers",
                 "type": "longSum",
               },
-              Object {
+              {
                 "fieldName": "spend",
                 "name": "sum_spend",
                 "type": "doubleSum",
               },
             ],
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
+          "tuningConfig": {
             "forceGuaranteedRollup": true,
-            "partitionsSpec": Object {
+            "partitionsSpec": {
               "type": "hashed",
             },
             "type": "index_parallel",
@@ -911,66 +943,66 @@ describe('spec utils', () => {
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
                 "id",
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "tags",
                   "type": "string",
                 },
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "nums",
                   "type": "string",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "hour",
               "rollup": true,
               "segmentGranularity": "day",
             },
-            "metricsSpec": Array [
-              Object {
+            "metricsSpec": [
+              {
                 "name": "count",
                 "type": "count",
               },
-              Object {
+              {
                 "fieldName": "followers",
                 "name": "sum_followers",
                 "type": "longSum",
               },
-              Object {
+              {
                 "fieldName": "spend",
                 "name": "sum_spend",
                 "type": "doubleSum",
               },
             ],
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
+          "tuningConfig": {
             "forceGuaranteedRollup": true,
-            "partitionsSpec": Object {
+            "partitionsSpec": {
               "type": "hashed",
             },
             "type": "index_parallel",
@@ -988,57 +1020,57 @@ describe('spec utils', () => {
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
-                Object {
+                {
                   "name": "followers",
                   "type": "long",
                 },
-                Object {
+                {
                   "name": "spend",
                   "type": "double",
                 },
                 "id",
-                Object {
+                {
                   "castToType": "ARRAY<STRING>",
                   "name": "tags",
                   "type": "auto",
                 },
-                Object {
+                {
                   "castToType": "ARRAY<LONG>",
                   "name": "nums",
                   "type": "auto",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "none",
               "rollup": false,
               "segmentGranularity": "day",
             },
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
+          "tuningConfig": {
+            "partitionsSpec": {
               "type": "dynamic",
             },
             "type": "index_parallel",
@@ -1056,57 +1088,57 @@ describe('spec utils', () => {
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
-        Object {
-          "dataSchema": Object {
+        {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {
-              "dimensions": Array [
+            "dimensionsSpec": {
+              "dimensions": [
                 "user",
-                Object {
+                {
                   "name": "followers",
                   "type": "long",
                 },
-                Object {
+                {
                   "name": "spend",
                   "type": "double",
                 },
                 "id",
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "tags",
                   "type": "string",
                 },
-                Object {
+                {
                   "multiValueHandling": "SORTED_ARRAY",
                   "name": "nums",
                   "type": "string",
                 },
               ],
             },
-            "granularitySpec": Object {
+            "granularitySpec": {
               "queryGranularity": "none",
               "rollup": false,
               "segmentGranularity": "day",
             },
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "type": "json",
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
           },
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
+          "tuningConfig": {
+            "partitionsSpec": {
               "type": "dynamic",
             },
             "type": "index_parallel",

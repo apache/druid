@@ -320,18 +320,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     return (
       <ConnectExternalDataDialog
-        onSetExternalConfig={(
-          externalConfig,
-          timeExpression,
-          partitionedByHint,
-          forceMultiValue,
-        ) => {
+        onSetExternalConfig={(externalConfig, timeExpression, partitionedByHint, arrayMode) => {
           this.handleNewTab(
             WorkbenchQuery.fromInitExternalConfig(
               externalConfig,
               timeExpression,
               partitionedByHint,
-              forceMultiValue,
+              arrayMode,
             ),
             'Ext ' + guessDataSourceNameFromInputSource(externalConfig.inputSource),
           );
