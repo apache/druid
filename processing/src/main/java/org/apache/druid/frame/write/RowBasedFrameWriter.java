@@ -304,9 +304,9 @@ public class RowBasedFrameWriter implements FrameWriter
         throw Throwables.propagate(pe);
       }
       catch (Exception e) {
-        throw FrameFieldWriterException.builder().column(signature.getColumnName(i))
-                                       .errorMsg(e.getMessage())
-                                       .build();
+        throw InvalidFieldException.builder().column(signature.getColumnName(i))
+                                   .errorMsg(e.getMessage())
+                                   .build();
       }
 
       if (writeResult < 0) {

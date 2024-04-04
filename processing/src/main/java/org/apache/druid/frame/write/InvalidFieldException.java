@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 
-public class FrameFieldWriterException extends RuntimeException
+public class InvalidFieldException extends RuntimeException
 {
   @Nullable
   private final String source;
@@ -35,7 +35,7 @@ public class FrameFieldWriterException extends RuntimeException
   @Nullable
   private final String errorMsg;
 
-  private FrameFieldWriterException(
+  private InvalidFieldException(
       @Nullable @JsonProperty("source") String source,
       @Nullable @JsonProperty("column") String column,
       @Nullable @JsonProperty("rowNumber") Integer rowNumber,
@@ -84,9 +84,9 @@ public class FrameFieldWriterException extends RuntimeException
     return new Builder();
   }
 
-  public static Builder builder(FrameFieldWriterException frameFieldWriterException)
+  public static Builder builder(InvalidFieldException invalidFieldException)
   {
-    return new Builder(frameFieldWriterException);
+    return new Builder(invalidFieldException);
   }
 
   public static class Builder
@@ -104,17 +104,17 @@ public class FrameFieldWriterException extends RuntimeException
     {
     }
 
-    public Builder(FrameFieldWriterException frameFieldWriterException)
+    public Builder(InvalidFieldException invalidFieldException)
     {
-      source = frameFieldWriterException.source;
-      rowNumber = frameFieldWriterException.rowNumber;
-      column = frameFieldWriterException.column;
-      errorMsg = frameFieldWriterException.errorMsg;
+      source = invalidFieldException.source;
+      rowNumber = invalidFieldException.rowNumber;
+      column = invalidFieldException.column;
+      errorMsg = invalidFieldException.errorMsg;
     }
 
-    public FrameFieldWriterException build()
+    public InvalidFieldException build()
     {
-      return new FrameFieldWriterException(source, column, rowNumber, errorMsg);
+      return new InvalidFieldException(source, column, rowNumber, errorMsg);
     }
 
     public Builder column(String val)

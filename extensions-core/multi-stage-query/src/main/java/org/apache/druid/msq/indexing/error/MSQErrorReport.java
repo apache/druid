@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
-import org.apache.druid.frame.write.FrameFieldWriterException;
+import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
@@ -236,9 +236,9 @@ public class MSQErrorReport
             invalidNullByteException.getPosition()
         );
 
-      } else if (cause instanceof FrameFieldWriterException) {
-        FrameFieldWriterException frameFieldWriterException = (FrameFieldWriterException) cause;
-        String columnName = frameFieldWriterException.getColumn();
+      } else if (cause instanceof InvalidFieldException) {
+        InvalidFieldException invalidFieldException = (InvalidFieldException) cause;
+        String columnName = invalidFieldException.getColumn();
         if (columnMappings != null) {
           IntList outputColumnsForQueryColumn = columnMappings.getOutputColumnsForQueryColumn(columnName);
 
@@ -250,11 +250,11 @@ public class MSQErrorReport
         }
 
         return new InvalidFieldFault(
-            frameFieldWriterException.getSource(),
+            invalidFieldException.getSource(),
             columnName,
-            frameFieldWriterException.getRowNumber(),
-            frameFieldWriterException.getErrorMsg(),
-            frameFieldWriterException.getMessage()
+            invalidFieldException.getRowNumber(),
+            invalidFieldException.getErrorMsg(),
+            invalidFieldException.getMessage()
         );
 
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {

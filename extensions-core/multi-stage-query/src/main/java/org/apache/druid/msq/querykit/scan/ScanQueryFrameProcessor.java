@@ -36,7 +36,7 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
-import org.apache.druid.frame.write.FrameFieldWriterException;
+import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidNullByteException;
@@ -346,8 +346,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
                  .rowNumber(this.cursorOffset.getOffset() + 1)
                  .build();
     }
-    catch (FrameFieldWriterException ffwe) {
-      FrameFieldWriterException.Builder builder = FrameFieldWriterException.builder(ffwe);
+    catch (InvalidFieldException ffwe) {
+      InvalidFieldException.Builder builder = InvalidFieldException.builder(ffwe);
       throw
           builder.source(ParseExceptionUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
                  .rowNumber(this.cursorOffset.getOffset() + 1)

@@ -59,7 +59,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
-import org.apache.druid.frame.write.FrameFieldWriterException;
+import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -2984,18 +2984,18 @@ public class ControllerImpl implements Controller
                                   .build(),
           task.getQuerySpec().getColumnMappings()
       );
-    } else if (workerErrorReport.getFault() instanceof FrameFieldWriterException) {
-      FrameFieldWriterException ffre = (FrameFieldWriterException) workerErrorReport.getFault();
+    } else if (workerErrorReport.getFault() instanceof InvalidFieldException) {
+      InvalidFieldException ife = (InvalidFieldException) workerErrorReport.getFault();
       return MSQErrorReport.fromException(
           workerErrorReport.getTaskId(),
           workerErrorReport.getHost(),
           workerErrorReport.getStageNumber(),
-          FrameFieldWriterException.builder()
-                                   .source(ffre.getSource())
-                                   .rowNumber(ffre.getRowNumber())
-                                   .column(ffre.getColumn())
-                                   .errorMsg(ffre.getErrorMsg())
-                                   .build(),
+          InvalidFieldException.builder()
+                               .source(ife.getSource())
+                               .rowNumber(ife.getRowNumber())
+                               .column(ife.getColumn())
+                               .errorMsg(ife.getErrorMsg())
+                               .build(),
           task.getQuerySpec().getColumnMappings()
       );
     } else {
