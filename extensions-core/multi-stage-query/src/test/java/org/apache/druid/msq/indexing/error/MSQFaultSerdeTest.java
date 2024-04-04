@@ -71,6 +71,7 @@ public class MSQFaultSerdeTest
         Collections.singletonList(Intervals.of("2000/2001"))
     ));
     assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
+    assertFaultSerde(new FrameFieldWriterFault("the source", "the column", 1, "the error"));
     assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new QueryRuntimeFault("new error", "base error"));

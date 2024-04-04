@@ -43,7 +43,7 @@ public class FrameFieldWriterException extends RuntimeException
   )
   {
     super(StringUtils.format(
-        "Error[%s] while writing frame for source[%s], rowNumber[%d] column[%s]",
+        "Error[%s] while writing a field for source[%s], rowNumber[%d], column[%s].",
         errorMsg,
         source,
         rowNumber,
