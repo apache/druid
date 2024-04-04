@@ -97,7 +97,7 @@ public class GcsTestUtil
         GOOGLE_BUCKET,
         GOOGLE_PREFIX + "/" + file.getName(),
         new FileContent(contentType, file),
-        GoogleStorage.DEFAULT_BUFFER_SIZE
+        null
     );
   }
 

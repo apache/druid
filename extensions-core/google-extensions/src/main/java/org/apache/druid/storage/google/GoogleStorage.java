@@ -44,12 +44,6 @@ import java.util.stream.Collectors;
 
 public class GoogleStorage
 {
-  /**
-   * Pass to {@link #insert(String, String, AbstractInputStreamContent, int)} to use the default buffer size upstream,
-   * which is 15 MB as of this writing.
-   */
-  public static final int DEFAULT_BUFFER_SIZE = -1;
-
   private static final Logger log = new Logger(GoogleStorage.class);
   private static final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
 
@@ -76,16 +70,16 @@ public class GoogleStorage
    * @param bucket       target bucket
    * @param path         target path
    * @param mediaContent content to upload
-   * @param bufferSize   size of upload buffer, or {@link #DEFAULT_BUFFER_SIZE}
+   * @param bufferSize   size of upload buffer, or null to use the upstream default (15 MB as of this writing)
    */
   public void insert(
       final String bucket,
       final String path,
       final AbstractInputStreamContent mediaContent,
-      final int bufferSize
+      @Nullable final Integer bufferSize
   ) throws IOException
   {
-    if (bufferSize == DEFAULT_BUFFER_SIZE) {
+    if (bufferSize == null) {
       storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream());
     } else {
       storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream(), bufferSize);
