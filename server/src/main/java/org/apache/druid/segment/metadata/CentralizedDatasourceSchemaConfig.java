@@ -39,9 +39,6 @@ public class CentralizedDatasourceSchemaConfig
   private boolean taskSchemaPublishDisabled = false;
 
   @JsonProperty
-  private boolean foreignKeyCreationDisabled = false;
-
-  @JsonProperty
   public boolean isEnabled()
   {
     return enabled;
@@ -63,12 +60,6 @@ public class CentralizedDatasourceSchemaConfig
   public boolean isTaskSchemaPublishDisabled()
   {
     return taskSchemaPublishDisabled;
-  }
-
-  @JsonProperty
-  public boolean isForeignKeyCreationDisabled()
-  {
-    return foreignKeyCreationDisabled;
   }
 
   public static CentralizedDatasourceSchemaConfig create()

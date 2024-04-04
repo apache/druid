@@ -624,9 +624,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
 
-    if (centralizedDatasourceSchemaConfig.isForeignKeyCreationDisabled()) {
-      log.info("Constraint [%s] creation is disabled.", SCHEMA_ID_CONSTRAINT_NAME);
-    } else if (constraintExists(SCHEMA_ID_CONSTRAINT_NAME, tablesConfigSupplier.get().getSegmentsTable())) {
+    if (constraintExists(SCHEMA_ID_CONSTRAINT_NAME, tablesConfigSupplier.get().getSegmentsTable())) {
       log.info("Constraint [%s] already exists in table [%s]", SCHEMA_ID_CONSTRAINT_NAME, tablesConfigSupplier.get().getSegmentsTable());
     } else {
       alterCommands.add(

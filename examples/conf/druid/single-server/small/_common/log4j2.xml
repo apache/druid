@@ -87,14 +87,5 @@
     <Logger name="org.apache.kafka.clients.consumer.internals" level="warn" additivity="false">
       <Appender-ref ref="FileAppender"/>
     </Logger>
-    <Logger name="org.apache.druid.segment.metadata" level="debug" additivity="false">
-      <Appender-ref ref="FileAppender"/>
-    </Logger>
-    <Logger name="org.apache.druid.server.coordination" level="debug" additivity="false">
-      <Appender-ref ref="FileAppender"/>
-    </Logger>
-    <Logger name="org.apache.druid.metadata.SqlSegmentsMetadataManager" level="debug" additivity="false">
-      <Appender-ref ref="FileAppender"/>
-    </Logger>
   </Loggers>
 </Configuration>

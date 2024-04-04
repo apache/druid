@@ -1,8 +1,0 @@
-org.apache.jute
-org.apache.jute.compiler
-org.apache.jute.compiler.generated
-org.apache.zookeeper.data
-org.apache.zookeeper.proto
-org.apache.zookeeper.server.persistence
-org.apache.zookeeper.server.quorum
-org.apache.zookeeper.txn
