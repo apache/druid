@@ -712,7 +712,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, "", "", 2L, 2.0f, "1", 1L, 3.0f, "2", 2L, 4.0f, "21", "21"}
+            new Object[]{
+                1L,
+                1.0f,
+                "",
+                "",
+                2L,
+                2.0f,
+                "1",
+                1L,
+                NullHandling.replaceWithDefault() ? 4.0f : 3.0f,
+                NullHandling.replaceWithDefault() ? "1" : "2",
+                2L,
+                NullHandling.replaceWithDefault() ? 5.0f : 4.0f,
+                NullHandling.replaceWithDefault() ? "11" : "21",
+                NullHandling.replaceWithDefault() ? "11" : "21"
+            }
         )
     );
   }

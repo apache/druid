@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation.firstlast;
 
+import org.apache.druid.java.util.common.DateTimes;
+
 // TODO(laksh): javadoc
 public interface SelectionPredicate
 {
@@ -30,13 +32,13 @@ public interface SelectionPredicate
     @Override
     public long initValue()
     {
-      return Long.MAX_VALUE;
+      return DateTimes.MAX.getMillis();
     }
 
     @Override
     public boolean apply(long currentTime, long selectedTime)
     {
-      return currentTime <= selectedTime;
+      return currentTime < selectedTime;
     }
   };
 
@@ -45,7 +47,7 @@ public interface SelectionPredicate
     @Override
     public long initValue()
     {
-      return Long.MIN_VALUE;
+      return DateTimes.MIN.getMillis();
     }
 
     @Override
