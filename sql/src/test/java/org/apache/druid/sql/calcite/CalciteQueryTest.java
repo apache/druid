@@ -15509,4 +15509,77 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testBitwiseXor()
+  {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "select count(*) from (\n"
+        + "  select __time, cityName, bit_xor(cityName) c2\n"
+        + "  from wikipedia\n"
+        + "  group by __time, cityName\n"
+        + "  having bit_xor(cityName) is null\n"
+        + ")",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                new GroupByQuery.Builder()
+                                    .setDataSource(CalciteTests.WIKIPEDIA)
+                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                    .setGranularity(Granularities.ALL)
+                                    .setDimensions(
+                                        new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
+                                        new DefaultDimensionSpec("cityName", "d1", ColumnType.STRING)
+                                    )
+                                    .setLimitSpec(
+                                        NoopLimitSpec.instance()
+                                    )
+                                    .setAggregatorSpecs(aggregators(new FilteredAggregatorFactory(
+                                        new ExpressionLambdaAggregatorFactory(
+                                            "a0",
+                                            ImmutableSet.of("cityName"),
+                                            "__acc",
+                                            "0",
+                                            "0",
+                                            NullHandling.sqlCompatible(),
+                                            false,
+                                            false,
+                                            "bitwiseXor(\"__acc\", \"cityName\")",
+                                            "bitwiseXor(\"__acc\", \"a0\")",
+                                            null,
+                                            null,
+                                            ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                            TestExprMacroTable.INSTANCE
+                                        ),
+                                        notNull("cityName")
+                                    )))
+                                    .setHavingSpec(
+                                        having(
+                                            isNull("a0")
+                                        )
+                                    )
+                                    .setContext(OUTER_LIMIT_CONTEXT)
+                                    .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("_a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            useDefault ?
+            new Object[]{0L} : new Object[]{37091L}
+        )
+    );
+  }
 }
