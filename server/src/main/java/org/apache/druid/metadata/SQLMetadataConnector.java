@@ -67,8 +67,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
 
-  static final String SCHEMA_ID_CONSTRAINT_NAME = "schemaIdConstraint";
-
   static final int DEFAULT_MAX_TRIES = 10;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
@@ -147,8 +145,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   public abstract boolean tableExists(Handle handle, String tableName);
-
-  public abstract boolean constraintExists(String constraintName, String tableName);
 
   public abstract String limitClause(int limit);
 
@@ -370,10 +366,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  schema_id BIGINT,\n"
                 + "  num_rows BIGINT,\n"
                 + "  PRIMARY KEY (id),\n"
-                + "  CONSTRAINT %6$s FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
+                + "  FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
                 + ")",
-                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemaTable(),
-                SCHEMA_ID_CONSTRAINT_NAME
+                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemaTable()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
@@ -624,17 +619,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
 
-    if (constraintExists(SCHEMA_ID_CONSTRAINT_NAME, tablesConfigSupplier.get().getSegmentsTable())) {
-      log.info("Constraint [%s] already exists in table [%s]", SCHEMA_ID_CONSTRAINT_NAME, tablesConfigSupplier.get().getSegmentsTable());
-    } else {
-      alterCommands.add(
-          StringUtils.format(
-              "ALTER TABLE %1$s ADD CONSTRAINT %2$s FOREIGN KEY(schema_id) REFERENCES %3$s(id)",
-              tableName,
-              SCHEMA_ID_CONSTRAINT_NAME,
-              schemaTableName
-          ));
-    }
+    alterCommands.add(
+        StringUtils.format(
+            "ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)",
+            tableName,
+            schemaTableName
+        ));
 
     alterTable(
         tableName,

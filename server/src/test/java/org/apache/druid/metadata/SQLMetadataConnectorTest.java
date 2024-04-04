@@ -340,12 +340,6 @@ public class SQLMetadataConnectorTest
     }
 
     @Override
-    public boolean constraintExists(String constraintName, String tableName)
-    {
-      return false;
-    }
-
-    @Override
     public DBI getDBI()
     {
       return null;

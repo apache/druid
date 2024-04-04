@@ -177,20 +177,6 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public boolean constraintExists(String constraintName, String tableName)
-  {
-    return getDBI().withHandle(
-        handle -> !handle.createQuery(
-                             "SELECT conname AS constraint_name FROM pg_constraint WHERE "
-                             + "conrelid = (SELECT oid FROM pg_class WHERE relname = :tableName) AND conname = :constraintName;"
-                         )
-                         .bind("constraintName", constraintName)
-                         .bind("tableName", tableName)
-                         .list()
-                         .isEmpty());
-  }
-
-  @Override
   public Void insertOrUpdate(
       final String tableName,
       final String keyColumn,
