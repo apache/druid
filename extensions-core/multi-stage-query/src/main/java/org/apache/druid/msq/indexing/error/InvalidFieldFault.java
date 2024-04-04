@@ -113,15 +113,16 @@ public class InvalidFieldFault extends BaseMSQFault
       return false;
     }
     InvalidFieldFault that = (InvalidFieldFault) o;
-    return Objects.equals(column, that.column)
+    return Objects.equals(source, that.source)
+           && Objects.equals(column, that.column)
            && Objects.equals(rowNumber, that.rowNumber)
-           && Objects.equals(source, that.source)
-           && Objects.equals(errorMsg, that.errorMsg);
+           && Objects.equals(errorMsg, that.errorMsg)
+           && Objects.equals(logMsg, that.logMsg);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), column, rowNumber, source, errorMsg);
+    return Objects.hash(super.hashCode(), source, column, rowNumber, errorMsg, logMsg);
   }
 }
