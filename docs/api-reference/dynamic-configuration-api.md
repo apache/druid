@@ -44,7 +44,7 @@ Retrieves the current Coordinator dynamic configuration. Returns a JSON object w
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config</code>
+`GET` `/druid/coordinator/v1/config`
 
 #### Responses
 
@@ -86,7 +86,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-<summary>Click to show sample response</summary>
+<summary>View the response</summary>
 
 ```json
 {
@@ -120,7 +120,7 @@ For information on the supported properties, see [Dynamic configuration](../conf
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config</code>
+`POST` `/druid/coordinator/v1/config`
 
 #### Header parameters
 
@@ -226,7 +226,7 @@ Retrieves the history of changes to Coordinator dynamic configuration over an in
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/history</code>
+`GET` `/druid/coordinator/v1/config/history`
 
 #### Query parameters
 
@@ -283,7 +283,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 [
@@ -315,7 +315,7 @@ Returns an empty response body if there is no current Overlord dynamic configura
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/worker</code>
+`GET` `/druid/indexer/v1/worker`
 
 #### Responses
 
@@ -355,7 +355,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -380,7 +380,7 @@ For information on the supported properties, see [Overlord dynamic configuration
 
 #### URL
 
-<code class="postAPI">POST</code><code>/druid/indexer/v1/worker</code>
+`POST` `/druid/indexer/v1/worker`
 
 #### Header parameters
 
@@ -466,8 +466,7 @@ Retrieves the history of changes to Overlord dynamic configuration over an inter
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/worker/history</code>
-
+`GET` `/druid/indexer/v1/worker/history`
 
 #### Query parameters
 
@@ -523,7 +522,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 [
@@ -547,7 +546,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Returns an array of all the worker nodes in the cluster along with its corresponding metadata.
 
-<code class="getAPI">GET</code><code>/druid/indexer/v1/workers</code>
+`GET` `/druid/indexer/v1/workers`
 
 #### Responses
 
@@ -589,7 +588,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 [
@@ -621,7 +620,7 @@ Returns an empty response body if there are no Overlord scaling events.
 
 #### URL
 
-<code class="getAPI">GET</code><code>/druid/indexer/v1/scaling</code>
+`GET` `/druid/indexer/v1/scaling`
 
 #### Responses
 

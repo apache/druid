@@ -53,7 +53,7 @@ The reporting feature is supported by [native batch tasks](native-batch.md), the
 After a task completes, if it supports reports, its report can be retrieved at:
 
 ```
-http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/{taskId}/reports
 ```
 
 An example output is shown below:
@@ -168,7 +168,7 @@ For some task types, the indexing task can wait for the newly ingested segments 
 When a task is running, a live report containing ingestion state, unparseable events and moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:
 
 ```
-http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/{taskId}/reports
 ```
 
 An example output is shown below:
@@ -255,7 +255,7 @@ The [native batch task](native-batch.md), the Hadoop batch task, and Kafka and K
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
 ```
-http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/rowStats
+http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/{taskId}/rowStats
 ```
 
 An example report is shown below. The `movingAverages` section contains 1 minute, 5 minute, and 15 minute moving averages of increases to the four row counters, which have the same definitions as those in the completion report. The `totals` section shows the current totals.
@@ -302,7 +302,7 @@ An example report is shown below. The `movingAverages` section contains 1 minute
 For the Kafka Indexing Service, a GET to the following Overlord API will retrieve live row stat reports from each task being managed by the supervisor and provide a combined report.
 
 ```
-http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/<supervisor-id>/stats
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/{supervisorId}/stats
 ```
 
 ### Unparseable events
@@ -310,7 +310,7 @@ http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/<supervisor-i
 Lists of recently-encountered unparseable events can be retrieved from a running task with a GET to the following Peon API:
 
 ```
-http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/unparseableEvents
+http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/{taskId}/unparseableEvents
 ```
 
 Note that this functionality is not supported by all task types. Currently, it is only supported by the
