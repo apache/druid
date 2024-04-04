@@ -1793,7 +1793,7 @@ public class ControllerImpl implements Controller
           false
       );
     } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
-      partitionSpec = new DynamicPartitionsSpec(null, DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS);
+      partitionSpec = new DynamicPartitionsSpec(null, null);
     } else {
       throw new MSQException(
           UnknownFault.forMessage(
