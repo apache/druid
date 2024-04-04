@@ -28,10 +28,12 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * Vectorized version of on heap 'last' aggregator for column selectors with type DOUBLE.
+ * Vectorized version of on heap aggregator for column selectors with type DOUBLE.
  */
 public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<Double, SerializablePairLongDouble>
 {
+  private final SelectionPredicate selectionPredicate;
+
   protected DoubleFirstLastVectorAggregator(
       VectorValueSelector timeSelector,
       VectorObjectSelector objectSelector,
@@ -39,6 +41,7 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
   )
   {
     super(timeSelector, null, objectSelector, selectionPredicate);
+    this.selectionPredicate = selectionPredicate;
   }
 
   protected DoubleFirstLastVectorAggregator(
@@ -48,12 +51,13 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
   )
   {
     super(timeSelector, valueSelector, null, selectionPredicate);
+    this.selectionPredicate = selectionPredicate;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MIN_VALUE);
+    buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
         NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE

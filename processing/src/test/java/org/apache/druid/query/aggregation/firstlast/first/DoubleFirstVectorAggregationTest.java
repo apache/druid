@@ -234,7 +234,7 @@ public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTes
   public void initValueShouldInitZero()
   {
     target.init(buf, 0);
-    Assert.assertEquals(Long.MIN_VALUE, buf.getLong(0));
+    Assert.assertEquals(Long.MAX_VALUE, buf.getLong(0));
     Assert.assertEquals(0, buf.getDouble(FirstLastVectorAggregator.VALUE_OFFSET), EPSILON);
   }
 

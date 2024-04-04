@@ -30,14 +30,8 @@ import java.nio.ByteBuffer;
 
 public class StringFirstLastVectorAggregator extends FirstLastVectorAggregator<String, SerializablePairLongString>
 {
-  // Initialized with MIN_VALUE instead of DateTimes.MIN.getMillis(), as it can be a custom timeSelector (provided via LATEST_BY)
-  // that has a lower min than the times.min
-  private static final SerializablePairLongString INIT = new SerializablePairLongString(
-      Long.MIN_VALUE,
-      null
-  );
-
   private final int maxStringBytes;
+  private final SelectionPredicate selectionPredicate;
 
   protected StringFirstLastVectorAggregator(
       @Nullable final VectorValueSelector timeSelector,
@@ -48,12 +42,18 @@ public class StringFirstLastVectorAggregator extends FirstLastVectorAggregator<S
   {
     super(timeSelector, null, objectSelector, selectionPredicate);
     this.maxStringBytes = maxStringBytes;
+    this.selectionPredicate = selectionPredicate;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    StringFirstLastUtils.writePair(buf, position, INIT, maxStringBytes);
+    StringFirstLastUtils.writePair(
+        buf,
+        position,
+        new SerializablePairLongString(selectionPredicate.initValue(), null),
+        maxStringBytes
+    );
   }
 
   @Nullable
@@ -100,6 +100,11 @@ public class StringFirstLastVectorAggregator extends FirstLastVectorAggregator<S
       int index
   )
   {
-    return StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(timeNullityVector, timeVector, maybeFoldedObjects, index);
+    return StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
+        timeNullityVector,
+        timeVector,
+        maybeFoldedObjects,
+        index
+    );
   }
 }

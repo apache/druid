@@ -32,6 +32,8 @@ import java.nio.ByteBuffer;
  */
 public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Long, SerializablePairLongLong>
 {
+  private final SelectionPredicate selectionPredicate;
+
   protected LongFirstLastVectorAggregator(
       VectorValueSelector timeSelector,
       VectorObjectSelector objectSelector,
@@ -39,6 +41,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   )
   {
     super(timeSelector, null, objectSelector, selectionPredicate);
+    this.selectionPredicate = selectionPredicate;
   }
 
   protected LongFirstLastVectorAggregator(
@@ -48,12 +51,13 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   )
   {
     super(timeSelector, valueSelector, null, selectionPredicate);
+    this.selectionPredicate = selectionPredicate;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MIN_VALUE);
+    buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
         NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE

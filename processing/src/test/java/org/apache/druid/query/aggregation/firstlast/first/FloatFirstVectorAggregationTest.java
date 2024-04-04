@@ -265,7 +265,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
   public void initValueShouldBeZero()
   {
     target.init(buf, 0);
-    Assert.assertEquals(Long.MIN_VALUE, buf.getLong(0));
+    Assert.assertEquals(Long.MAX_VALUE, buf.getLong(0));
     Assert.assertEquals(0.0f, buf.getDouble(FirstLastVectorAggregator.VALUE_OFFSET), EPSILON);
   }
 
@@ -285,7 +285,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     target1.init(buf, 0);
     target1.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target1.get(buf, 0);
-    Assert.assertEquals(Long.MAX_VALUE, result.lhs.longValue());
+    Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
     Assert.assertEquals(NullHandling.defaultFloatValue(), result.rhs);
   }
 

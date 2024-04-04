@@ -58,19 +58,6 @@ public class FirstLastUtils
            || pairClass.isAssignableFrom(clazz);
   }
 
-  /**
-   * Returns whether an object *might* is assignable to/from the pairClass.
-   */
-  public static boolean objectNeedsFoldCheck(Object obj, Class pairClass)
-  {
-    if (obj == null) {
-      return false;
-    }
-    final Class<?> clazz = obj.getClass();
-    return clazz.isAssignableFrom(pairClass)
-           || pairClass.isAssignableFrom(clazz);
-  }
-
   @Nullable
   public static SerializablePairLongDouble readDoublePairFromVectorSelectors(
       @Nullable boolean[] timeNullityVector,

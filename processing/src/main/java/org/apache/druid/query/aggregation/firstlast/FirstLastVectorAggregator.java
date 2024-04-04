@@ -63,10 +63,12 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
       SelectionPredicate selectionPredicate
   )
   {
-    Preconditions.checkArgument(
-        (valueSelector != null && objectSelector == null) || (valueSelector == null && objectSelector != null),
-        "exactly one of 'valueSelector' and 'objectSelector' must be provided"
-    );
+    if (timeSelector != null) {
+      Preconditions.checkArgument(
+          (valueSelector != null && objectSelector == null) || (valueSelector == null && objectSelector != null),
+          "exactly one of 'valueSelector' and 'objectSelector' must be provided"
+      );
+    }
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     this.objectSelector = objectSelector;
@@ -82,6 +84,7 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
     if (timeSelector == null) {
       return;
     }
+
     // If objectSelector isn't null, then the objects might be folded up. If that's the case, whatever's represented by
     // the timeSelector doesn't hold any relevance.
     if (objectSelector != null) {
@@ -120,20 +123,25 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
       final boolean[] timeNullityVector = timeSelector.getNullVector();
       final long[] timeVector = timeSelector.getLongVector();
       final boolean[] valueNullityVector = valueSelector.getNullVector();
-      int selectedIndex = endRow - 1;
+      Integer selectedIndex = null;
+
       for (int index = endRow - 1; index >= startRow; --index) {
         if (timeNullityVector != null && timeNullityVector[index]) {
           // Don't aggregate values where time isn't present
           continue;
         }
         // Find the latest time inside the vector objects
-        if (selectionPredicate.apply(timeVector[index], timeVector[selectedIndex])) {
+        if (selectedIndex == null) {
           selectedIndex = index;
+        } else {
+          if (selectionPredicate.apply(timeVector[index], timeVector[selectedIndex])) {
+            selectedIndex = index;
+          }
         }
       }
       // Compare the selectedIndex's value to the value on the buffer. This way, we write to the buffer only once
       // Weeds out empty vectors, where endRow == startRow
-      if (selectedIndex >= startRow) {
+      if (selectedIndex != null) {
         if (selectionPredicate.apply(timeVector[selectedIndex], buf.getLong(position))) {
           // Write the value here
           if (valueNullityVector == null || !valueNullityVector[selectedIndex]) {

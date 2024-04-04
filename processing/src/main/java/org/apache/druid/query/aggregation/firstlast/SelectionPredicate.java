@@ -19,10 +19,39 @@
 
 package org.apache.druid.query.aggregation.firstlast;
 
+// TODO(laksh): javadoc
 public interface SelectionPredicate
 {
+  long initValue();
   boolean apply(long currentTime, long selectedTime);
 
-  SelectionPredicate FIRST_PREDICATE = (currentTime, selectedTime) -> currentTime <= selectedTime;
-  SelectionPredicate LAST_PREDICATE = (currentTime, selectedTime) -> currentTime >= selectedTime;
+  SelectionPredicate FIRST_PREDICATE = new SelectionPredicate()
+  {
+    @Override
+    public long initValue()
+    {
+      return Long.MAX_VALUE;
+    }
+
+    @Override
+    public boolean apply(long currentTime, long selectedTime)
+    {
+      return currentTime <= selectedTime;
+    }
+  };
+
+  SelectionPredicate LAST_PREDICATE = new SelectionPredicate()
+  {
+    @Override
+    public long initValue()
+    {
+      return Long.MIN_VALUE;
+    }
+
+    @Override
+    public boolean apply(long currentTime, long selectedTime)
+    {
+      return currentTime >= selectedTime;
+    }
+  };
 }

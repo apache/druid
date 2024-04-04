@@ -34,6 +34,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
 {
   private final SingleValueDimensionVectorSelector singleValueDimensionVectorSelector;
   private final int maxStringBytes;
+  private final SelectionPredicate selectionPredicate;
 
   protected SingleStringFirstLastDimensionVectorAggregator(
       VectorValueSelector timeSelector,
@@ -50,12 +51,13 @@ public class SingleStringFirstLastDimensionVectorAggregator
     );
     this.singleValueDimensionVectorSelector = singleValueDimensionVectorSelector;
     this.maxStringBytes = maxStringBytes;
+    this.selectionPredicate = selectionPredicate;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MIN_VALUE);
+    buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
         NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
@@ -104,7 +106,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
   @Override
   protected void putDefaultValue(ByteBuffer buf, int position, long time)
   {
-    buf.putLong(position, Long.MIN_VALUE);
+    buf.putLong(position, time);
     buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
     buf.putInt(position + VALUE_OFFSET, 0);
   }
@@ -112,7 +114,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
   @Override
   protected void putNull(ByteBuffer buf, int position, long time)
   {
-    buf.putLong(position, Long.MIN_VALUE);
+    buf.putLong(position, time);
     buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
     buf.putInt(position + VALUE_OFFSET, 0);
   }
@@ -179,11 +181,6 @@ public class SingleStringFirstLastDimensionVectorAggregator
     public boolean[] getNullVector()
     {
       return null;
-    }
-
-    public SingleValueDimensionVectorSelector getSingleValueDimensionVectorSelector()
-    {
-      return singleValueDimensionVectorSelector;
     }
   }
 }
