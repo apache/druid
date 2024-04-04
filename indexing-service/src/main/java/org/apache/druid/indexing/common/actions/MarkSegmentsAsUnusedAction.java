@@ -63,9 +63,8 @@ public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
   @Override
   public Integer perform(Task task, TaskActionToolbox toolbox)
   {
-    int numMarked = toolbox.getIndexerMetadataStorageCoordinator()
-                           .markSegmentsAsUnusedWithinInterval(dataSource, interval);
-    return numMarked;
+    return toolbox.getIndexerMetadataStorageCoordinator()
+                  .markSegmentsAsUnusedWithinInterval(dataSource, interval);
   }
 
   @Override

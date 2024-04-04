@@ -49,11 +49,10 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.CoreMatchers;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,14 +70,12 @@ import java.util.Map;
 /**
  * Tests INSERT and SELECT behaviour of MSQ with arrays and MVDs
  */
-@RunWith(Parameterized.class)
 public class MSQArraysTest extends MSQTestBase
 {
   private String dataFileNameJsonString;
   private String dataFileSignatureJsonString;
   private DataSource dataFileExternalDataSource;
 
-  @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
@@ -90,17 +87,11 @@ public class MSQArraysTest extends MSQTestBase
     return Arrays.asList(data);
   }
 
-  @Parameterized.Parameter(0)
-  public String contextName;
-
-  @Parameterized.Parameter(1)
-  public Map<String, Object> context;
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     // Read the file and make the name available to the tests
-    File dataFile = temporaryFolder.newFile();
+    File dataFile = newTempFile("dataFile");
     final InputStream resourceStream = NestedDataTestUtils.class.getClassLoader()
                                                                 .getResourceAsStream(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
     final InputStream decompressing = CompressionUtils.decompress(
@@ -134,8 +125,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
    * string arrays
    */
-  @Test
-  public void testInsertStringArrayWithArrayIngestModeNone()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertStringArrayWithArrayIngestModeNone(String contextName, Map<String, Object> context)
   {
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
@@ -156,8 +148,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
    * string arrays
    */
-  @Test
-  public void testReplaceMvdWithStringArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceMvdWithStringArray(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
@@ -182,8 +175,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
    * string arrays
    */
-  @Test
-  public void testReplaceStringArrayWithMvdInArrayMode()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceStringArrayWithMvdInArrayMode(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
@@ -209,8 +203,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
    * string arrays
    */
-  @Test
-  public void testReplaceStringArrayWithMvdInMvdMode()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceStringArrayWithMvdInMvdMode(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
@@ -236,8 +231,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
    * string arrays
    */
-  @Test
-  public void testReplaceMvdWithStringArraySkipValidation()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceMvdWithStringArraySkipValidation(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
@@ -284,8 +280,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
    * string arrays
    */
-  @Test
-  public void testReplaceMvdWithMvd()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceMvdWithMvd(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
@@ -322,8 +319,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd (default) and the only array type to be
    * ingested is string array
    */
-  @Test
-  public void testInsertOnFoo1WithMultiValueToArrayGroupByWithDefaultContext()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1WithMultiValueToArrayGroupByWithDefaultContext(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -343,8 +341,9 @@ public class MSQArraysTest extends MSQTestBase
   /**
    * Tests the INSERT query when 'auto' type is set
    */
-  @Test
-  public void testInsertArraysAutoType()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertArraysAutoType(String contextName, Map<String, Object> context)
   {
     List<Object[]> expectedRows = Arrays.asList(
         new Object[]{1672531200000L, null, null, null},
@@ -396,8 +395,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd and the user tries to ingest numeric array
    * types as well
    */
-  @Test
-  public void testInsertArraysWithStringArraysAsMVDs()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertArraysWithStringArraysAsMVDs(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
@@ -430,8 +430,9 @@ public class MSQArraysTest extends MSQTestBase
    * Tests the behaviour of INSERT query when arrayIngestMode is set to array and the user tries to ingest all
    * array types
    */
-  @Test
-  public void testInsertArraysAsArrays()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertArraysAsArrays(String contextName, Map<String, Object> context)
   {
     final List<Object[]> expectedRows = Arrays.asList(
         new Object[]{
@@ -602,27 +603,30 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testSelectOnArraysWithArrayIngestModeAsNone()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnArraysWithArrayIngestModeAsNone(String contextName, Map<String, Object> context)
   {
-    testSelectOnArrays("none");
+    testSelectOnArrays(contextName, context, "none");
   }
 
-  @Test
-  public void testSelectOnArraysWithArrayIngestModeAsMVD()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnArraysWithArrayIngestModeAsMVD(String contextName, Map<String, Object> context)
   {
-    testSelectOnArrays("mvd");
+    testSelectOnArrays(contextName, context, "mvd");
   }
 
-  @Test
-  public void testSelectOnArraysWithArrayIngestModeAsArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnArraysWithArrayIngestModeAsArray(String contextName, Map<String, Object> context)
   {
-    testSelectOnArrays("array");
+    testSelectOnArrays(contextName, context, "array");
   }
 
   // Tests the behaviour of the select with the given arrayIngestMode. The expectation should be the same, since the
   // arrayIngestMode should only determine how the array gets ingested at the end.
-  public void testSelectOnArrays(String arrayIngestMode)
+  public void testSelectOnArrays(String contextName, Map<String, Object> context, String arrayIngestMode)
   {
     final List<Object[]> expectedRows = Arrays.asList(
         new Object[]{
@@ -839,8 +843,9 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testScanWithOrderByOnStringArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testScanWithOrderByOnStringArray(String contextName, Map<String, Object> context)
   {
     final List<Object[]> expectedRows = Arrays.asList(
         new Object[]{Arrays.asList("d", "e")},
@@ -902,8 +907,9 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testScanWithOrderByOnLongArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testScanWithOrderByOnLongArray(String contextName, Map<String, Object> context)
   {
     final List<Object[]> expectedRows = Arrays.asList(
         new Object[]{null},
@@ -964,8 +970,9 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testScanWithOrderByOnDoubleArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testScanWithOrderByOnDoubleArray(String contextName, Map<String, Object> context)
   {
     final List<Object[]> expectedRows = Arrays.asList(
         new Object[]{null},
@@ -1026,8 +1033,9 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testScanExternBooleanArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testScanExternBooleanArray(String contextName, Map<String, Object> context)
   {
     final List<Object[]> expectedRows = Collections.singletonList(
         new Object[]{Arrays.asList(1L, 0L, null)}
@@ -1073,8 +1081,9 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
-  @Test
-  public void testScanExternArrayWithNonConvertibleType()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testScanExternArrayWithNonConvertibleType(String contextName, Map<String, Object> context)
   {
     final List<Object[]> expectedRows = Collections.singletonList(
         new Object[]{Arrays.asList(null, null)}

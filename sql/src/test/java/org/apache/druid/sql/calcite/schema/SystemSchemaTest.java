@@ -110,14 +110,12 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.DateTime;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -170,24 +168,21 @@ public class SystemSchemaTest extends CalciteTestBase
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private FilteredServerInventoryView serverInventoryView;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
   }
 
-  @Before
-  public void setUp() throws Exception
+  @BeforeEach
+  public void setUp(@TempDir File tmpDir) throws Exception
   {
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     client = EasyMock.createMock(DruidLeaderClient.class);
@@ -207,7 +202,6 @@ public class SystemSchemaTest extends CalciteTestBase
     request = EasyMock.createMock(Request.class);
     authMapper = createAuthMapper();
 
-    final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
                                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())

@@ -64,9 +64,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       new SerializablePairLongFloat(2345300L, 4.2F)
   };
 
-  private final SerializablePairLongFloat[] null_pairs = {
-      null, null, null, null
-  };
+  private final SerializablePairLongFloat[] nullPairs = {null, null, null, null};
 
 
 
@@ -130,7 +128,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       @Override
       public Object[] getObjectVector()
       {
-        return null_pairs;
+        return nullPairs;
       }
 
       @Override
@@ -287,7 +285,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     target1.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target1.get(buf, 0);
     Assert.assertEquals(Long.MAX_VALUE, result.lhs.longValue());
-    Assert.assertNull(result.rhs);
+    Assert.assertEquals(NullHandling.defaultFloatValue(), result.rhs);
   }
 
   @Test

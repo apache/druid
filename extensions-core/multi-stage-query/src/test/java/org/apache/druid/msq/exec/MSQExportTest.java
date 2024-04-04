@@ -27,7 +27,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,7 +50,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 as dim from foo", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
@@ -81,7 +81,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select dim1 as table_dim, count(*) as table_count from foo where dim1 = 'abc' group by 1", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
@@ -106,14 +106,14 @@ public class MSQExportTest extends MSQTestBase
   }
 
   @Test
-  public void testNumberOfRowsPerFile() throws IOException
+  public void testNumberOfRowsPerFile()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
+    File exportDir = newTempFolder("export");
 
     Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);

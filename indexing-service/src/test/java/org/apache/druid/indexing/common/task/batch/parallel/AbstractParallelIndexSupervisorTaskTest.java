@@ -50,8 +50,8 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -558,7 +558,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       if (!task.isPresent()) {
         return null;
       }
-      return Futures.immediateFuture(((ParallelIndexSupervisorTask) task.get()).doGetLiveReports("full"));
+      return Futures.immediateFuture(((ParallelIndexSupervisorTask) task.get()).doGetLiveReports(true));
     }
 
     public TaskContainer getTaskContainer(String taskId)
@@ -1074,12 +1074,12 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     });
   }
 
-  public List<IngestionStatsAndErrorsTaskReportData> getIngestionReports() throws IOException
+  public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
   {
     return getReports().entrySet()
                        .stream()
                        .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
-                       .map(entry -> (IngestionStatsAndErrorsTaskReportData) entry.getValue().getPayload())
+                       .map(entry -> (IngestionStatsAndErrors) entry.getValue().getPayload())
                        .collect(Collectors.toList());
   }
 }
