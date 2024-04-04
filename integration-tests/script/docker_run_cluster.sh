@@ -41,17 +41,17 @@ fi
   if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
   then
     # Start Hadoop docker container
-    docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up -d
+    docker compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up -d
   fi
 
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
     # Start Druid cluster
     echo "Starting cluster with empty config"
-    OVERRIDE_ENV=environment-configs/empty-config docker-compose $(getComposeArgs) up -d
+    OVERRIDE_ENV=environment-configs/empty-config docker compose $(getComposeArgs) up -d
   else
     # run druid cluster with override config
     echo "Starting cluster with a config file at $DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH"
-    OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose $(getComposeArgs) up -d
+    OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker compose $(getComposeArgs) up -d
   fi
 }

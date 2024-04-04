@@ -63,7 +63,6 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
@@ -3863,13 +3862,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(queryContext)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"", ""},
-            new Object[]{"10.1", "10.1"},
-            new Object[]{"2", "2"},
-            new Object[]{"1", "1"},
-            new Object[]{"def", "def"},
-            new Object[]{"abc", "abc"}
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[]{"", ""},
+                new Object[]{"10.1", "10.1"},
+                new Object[]{"2", "2"},
+                new Object[]{"1", "1"},
+                new Object[]{"def", "def"},
+                new Object[]{"abc", "abc"}
+            ),
+            0
         )
     );
   }
@@ -3879,11 +3881,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext)
   {
-    if (isSortBasedJoin()) {
-      // Cannot handle the [l1.k = 'abc'] condition.
-      msqIncompatible();
-    }
-
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();
 
@@ -4039,7 +4036,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(in("dim1", ImmutableList.of("abc", "def"), null))
+                        .setDimFilter(in("dim1", ImmutableList.of("abc", "def")))
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(queryContext)
@@ -4136,7 +4133,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(
                             and(
-                                in("dim1", ImmutableList.of("abc", "def"), null),
+                                in("dim1", ImmutableList.of("abc", "def")),
                                 or(
                                     equality("_j0._a0", 0L, ColumnType.LONG),
                                     and(
@@ -4211,7 +4208,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(
                             and(
-                                in("dim1", ImmutableList.of("abc", "def"), null),
+                                in("dim1", ImmutableList.of("abc", "def")),
                                 isNull("_j0.a0")
                             )
                         )
@@ -5097,7 +5094,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
         .setGranularity(Granularities.ALL)
         .setInterval(querySegmentSpec(Filtration.eternity()))
-        .setDimFilter(in("dim1", Collections.singletonList("def"), null))  // provide an unoptimized IN filter
+        .setDimFilter(in("dim1", Collections.singletonList("def")))  // provide an unoptimized IN filter
         .setDimensions(
             dimensions(
                 new DefaultDimensionSpec("v0", "d0")
@@ -5407,19 +5404,19 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .filters(or(
             and(
                 equality("dim2", "D", ColumnType.STRING),
-                in("dim1", ImmutableList.of("A", "C"), null)
+                in("dim1", ImmutableList.of("A", "C"))
             ),
             and(
                 equality("dim2", "C", ColumnType.STRING),
-                in("dim1", ImmutableList.of("A", "B"), null)
+                in("dim1", ImmutableList.of("A", "B"))
             ),
             and(
                 equality("dim2", "E", ColumnType.STRING),
-                in("dim1", ImmutableList.of("C", "H"), null)
+                in("dim1", ImmutableList.of("C", "H"))
             ),
             and(
                 equality("dim2", "Q", ColumnType.STRING),
-                in("dim1", ImmutableList.of("P", "S"), null)
+                in("dim1", ImmutableList.of("P", "S"))
             ),
             and(
                 equality("dim1", "A", ColumnType.STRING),
@@ -5515,19 +5512,19 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .filters(or(
             and(
                 equality("dim2", "D", ColumnType.STRING),
-                in("dim1", ImmutableList.of("A", "C"), null)
+                in("dim1", ImmutableList.of("A", "C"))
             ),
             and(
                 equality("dim2", "C", ColumnType.STRING),
-                in("dim1", ImmutableList.of("A", "B"), null)
+                in("dim1", ImmutableList.of("A", "B"))
             ),
             and(
                 equality("dim2", "E", ColumnType.STRING),
-                in("dim1", ImmutableList.of("C", "H"), null)
+                in("dim1", ImmutableList.of("C", "H"))
             ),
             and(
                 equality("dim2", "Q", ColumnType.STRING),
-                in("dim1", ImmutableList.of("P", "S"), null)
+                in("dim1", ImmutableList.of("P", "S"))
             ),
             and(
                 equality("dim1", "1", ColumnType.STRING),
@@ -5949,11 +5946,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
                                         .setDimFilter(
                                             NullHandling.replaceWithDefault()
-                                            ? in("m1", ImmutableList.of("1", "2"), null)
-                                            : or(
-                                                equality("m1", 1.0, ColumnType.FLOAT),
-                                                equality("m1", 2.0, ColumnType.FLOAT)
-                                            )
+                                            ? in("m1", ImmutableList.of("1", "2"))
+                                            : in("m1", ColumnType.FLOAT, ImmutableList.of(1.0f, 2.0f))
                                         )
                                         .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
                                         .setAggregatorSpecs(aggregators(new LongMaxAggregatorFactory("a0", "__time")))
@@ -6000,18 +5994,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .setDimFilter(
                                             NullHandling.replaceWithDefault()
                                             ? and(
-                                                in("m1", ImmutableList.of("1", "2"), null),
-                                                in("m2", ImmutableList.of("1", "2"), null)
+                                                in("m1", ImmutableList.of("1", "2")),
+                                                in("m2", ImmutableList.of("1", "2"))
                                             )
                                             : and(
-                                                or(
-                                                    equality("m1", 1.0, ColumnType.FLOAT),
-                                                    equality("m1", 2.0, ColumnType.FLOAT)
-                                                ),
-                                                or(
-                                                    equality("m2", 1.0, ColumnType.DOUBLE),
-                                                    equality("m2", 2.0, ColumnType.DOUBLE)
-                                                )
+                                                in("m1", ColumnType.FLOAT, ImmutableList.of(1.0f, 2.0f)),
+                                                in("m2", ColumnType.DOUBLE, ImmutableList.of(1.0, 2.0))
                                             )
                                         )
                                         .setDimensions(
@@ -6301,7 +6289,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     newScanQueryBuilder()
                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                         .dataSource(CalciteTests.DATASOURCE1)
-                                        .filters(new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null))
+                                        .filters(in("dim2", ImmutableList.of("a", "b", "ab", "abc")))
                                         .legacy(false)
                                         .context(context)
                                         .columns("dim2")
@@ -6460,11 +6448,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                             .intervals(querySegmentSpec(Filtration.eternity()))
                                             .dataSource(CalciteTests.DATASOURCE1)
                                             .columns("dim2")
-                                            .filters(new InDimFilter(
-                                                "dim2",
-                                                ImmutableList.of("a", "ab", "abc", "b"),
-                                                null
-                                            ))
+                                            .filters(
+                                                in(
+                                                    "dim2",
+                                                    ImmutableList.of("a", "ab", "abc", "b")
+                                                )
+                                            )
                                             .legacy(false)
                                             .context(context)
                                             .build()
@@ -6473,12 +6462,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     "(\"dim2\" == \"j0.dim2\")",
                                     JoinType.INNER
                                 ),
-                                useDefault ?
-                                new InDimFilter("m1", ImmutableList.of("1", "4"), null) :
-                                or(
-                                    equality("m1", 1.0, ColumnType.FLOAT),
-                                    equality("m1", 4.0, ColumnType.FLOAT)
-                                )
+                                NullHandling.sqlCompatible()
+                                ? in("m1", ColumnType.FLOAT, ImmutableList.of(1.0, 4.0))
+                                : in("m1", ImmutableList.of("1", "4"))
                             ),
                             expressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
                             equality("_j0.unnest", "a", ColumnType.STRING)

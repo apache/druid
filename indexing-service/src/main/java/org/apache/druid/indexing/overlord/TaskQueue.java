@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -56,6 +58,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -69,7 +73,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -117,6 +120,7 @@ public class TaskQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
+  private final ObjectMapper passwordRedactingMapper;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -160,7 +164,8 @@ public class TaskQueue
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ObjectMapper mapper
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -175,12 +180,14 @@ public class TaskQueue
         config.getTaskCompleteHandlerNumThreads(),
         "TaskQueue-OnComplete-%d"
     );
+    this.passwordRedactingMapper = mapper.copy()
+                                         .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
   }
 
   @VisibleForTesting
-  void setActive(boolean active)
+  void setActive()
   {
-    this.active = active;
+    this.active = true;
   }
 
   /**
@@ -203,30 +210,25 @@ public class TaskQueue
                  "Shutting down forcefully as task failed to reacquire lock while becoming leader");
       }
       managerExec.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              while (true) {
+          () -> {
+            while (true) {
+              try {
+                manage();
+                break;
+              }
+              catch (InterruptedException e) {
+                log.info("Interrupted, exiting!");
+                break;
+              }
+              catch (Exception e) {
+                final long restartDelay = config.getRestartDelay().getMillis();
+                log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
                 try {
-                  manage();
-                  break;
+                  Thread.sleep(restartDelay);
                 }
-                catch (InterruptedException e) {
+                catch (InterruptedException e2) {
                   log.info("Interrupted, exiting!");
                   break;
-                }
-                catch (Exception e) {
-                  final long restartDelay = config.getRestartDelay().getMillis();
-                  log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
-                  try {
-                    Thread.sleep(restartDelay);
-                  }
-                  catch (InterruptedException e2) {
-                    log.info("Interrupted, exiting!");
-                    break;
-                  }
                 }
               }
             }
@@ -235,24 +237,19 @@ public class TaskQueue
       ScheduledExecutors.scheduleAtFixedRate(
           storageSyncExec,
           config.getStorageSyncRate(),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              try {
-                syncFromStorage();
-              }
-              catch (Exception e) {
-                if (active) {
-                  log.makeAlert(e, "Failed to sync with storage").emit();
-                }
-              }
+          () -> {
+            try {
+              syncFromStorage();
+            }
+            catch (Exception e) {
               if (active) {
-                return ScheduledExecutors.Signal.REPEAT;
-              } else {
-                return ScheduledExecutors.Signal.STOP;
+                log.makeAlert(e, "Failed to sync with storage").emit();
               }
+            }
+            if (active) {
+              return ScheduledExecutors.Signal.REPEAT;
+            } else {
+              return ScheduledExecutors.Signal.STOP;
             }
           }
       );
@@ -522,15 +519,12 @@ public class TaskQueue
       Preconditions.checkNotNull(task, "task");
       if (tasks.size() >= config.getMaxSize()) {
         throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
-                .build(
-                        StringUtils.format(
-                                "Too many tasks are in the queue (Limit = %d), " +
-                                        "(Current active tasks = %d). Retry later or increase the druid.indexer.queue.maxSize",
-                                config.getMaxSize(),
-                                tasks.size()
-                        )
-                );
+                            .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                            .build(
+                                "Task queue already contains [%d] tasks."
+                                + " Retry later or increase 'druid.indexer.queue.maxSize'[%d].",
+                                tasks.size(), config.getMaxSize()
+                            );
       }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
@@ -946,6 +940,10 @@ public class TaskQueue
     }
   }
 
+  /**
+   * Gets the current status of this task either from the {@link TaskRunner}
+   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   */
   public Optional<TaskStatus> getTaskStatus(final String taskId)
   {
     RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
@@ -970,15 +968,34 @@ public class TaskQueue
     return stats;
   }
 
+  /**
+   * Returns an optional containing the task payload after successfully redacting credentials.
+   * Returns an absent optional if there is no task payload corresponding to the taskId in memory.
+   * Throws DruidException if password could not be redacted due to serialization / deserialization failure
+   */
   public Optional<Task> getActiveTask(String id)
   {
+    Task task;
     giant.lock();
     try {
-      return Optional.fromNullable(tasks.get(id));
+      task = tasks.get(id);
     }
     finally {
       giant.unlock();
     }
+    if (task != null) {
+      try {
+        // Write and read the value using a mapper with password redaction mixin.
+        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(task), Task.class);
+      }
+      catch (JsonProcessingException e) {
+        log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Failed to serialize or deserialize task[%s].", task.getId());
+      }
+    }
+    return Optional.fromNullable(task);
   }
 
   @VisibleForTesting

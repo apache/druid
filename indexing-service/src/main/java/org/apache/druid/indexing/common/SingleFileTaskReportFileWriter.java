@@ -19,18 +19,14 @@
 
 package org.apache.druid.indexing.common;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.Map;
 
 public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
 {
@@ -45,7 +41,7 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   }
 
   @Override
-  public void write(String taskId, Map<String, TaskReport> reports)
+  public void write(String taskId, TaskReport.ReportMap reports)
   {
     try (final OutputStream outputStream = openReportOutputStream(taskId)) {
       writeReportToStream(objectMapper, outputStream, reports);
@@ -75,22 +71,9 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   public static void writeReportToStream(
       final ObjectMapper objectMapper,
       final OutputStream outputStream,
-      final Map<String, TaskReport> reports
+      final TaskReport.ReportMap reports
   ) throws Exception
   {
-    final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
-
-    try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(outputStream)) {
-      // Disable automatic JSON termination, so clients can detect truncated responses.
-      jg.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
-      jg.writeStartObject();
-
-      for (final Map.Entry<String, TaskReport> entry : reports.entrySet()) {
-        jg.writeFieldName(entry.getKey());
-        JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, entry.getValue());
-      }
-
-      jg.writeEndObject();
-    }
+    objectMapper.writeValue(outputStream, reports);
   }
 }

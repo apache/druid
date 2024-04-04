@@ -41,7 +41,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
 
 public class ControllerResource
 {
@@ -188,7 +187,7 @@ public class ControllerResource
   public Response httpGetLiveReports(@Context final HttpServletRequest req)
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    final Map<String, TaskReport> reports = controller.liveReports();
+    final TaskReport.ReportMap reports = controller.liveReports();
     if (reports == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

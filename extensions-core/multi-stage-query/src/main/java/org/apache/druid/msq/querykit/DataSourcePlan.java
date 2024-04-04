@@ -43,6 +43,7 @@ import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -88,7 +89,6 @@ public class DataSourcePlan
    * of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
-
   private static final Logger log = new Logger(DataSourcePlan.class);
 
   static {
@@ -209,7 +209,8 @@ public class DataSourcePlan
           (QueryDataSource) dataSource,
           maxWorkerCount,
           minStageNumber,
-          broadcast
+          broadcast,
+          queryContext
       );
     } else if (dataSource instanceof UnionDataSource) {
       return forUnion(
@@ -333,19 +334,15 @@ public class DataSourcePlan
   /**
    * Checks if the sortMerge algorithm can execute a particular join condition.
    *
-   * Two checks:
-   * (1) join condition on two tables "table1" and "table2" is of the form
+   * One check: join condition on two tables "table1" and "table2" is of the form
    * table1.columnA = table2.columnA && table1.columnB = table2.columnB && ....
-   *
-   * (2) join condition uses equals, not IS NOT DISTINCT FROM [sortMerge processor does not currently implement
-   * IS NOT DISTINCT FROM]
    */
   private static boolean canUseSortMergeJoin(JoinConditionAnalysis joinConditionAnalysis)
   {
     return joinConditionAnalysis
         .getEquiConditions()
         .stream()
-        .allMatch(equality -> equality.getLeftExpr().isIdentifier() && !equality.isIncludeNull());
+        .allMatch(equality -> equality.getLeftExpr().isIdentifier());
   }
 
   /**
@@ -423,15 +420,25 @@ public class DataSourcePlan
       final QueryDataSource dataSource,
       final int maxWorkerCount,
       final int minStageNumber,
-      final boolean broadcast
+      final boolean broadcast,
+      @Nullable final QueryContext parentContext
   )
   {
+    // check if parentContext has a window operator
+    final Map<String, Object> windowShuffleMap = new HashMap<>();
+    if (parentContext != null && parentContext.containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      windowShuffleMap.put(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL, parentContext.get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL));
+    }
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,
-
         // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
-        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
+        windowShuffleMap.isEmpty()
+        ? dataSource.getQuery()
+                    .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
+        : dataSource.getQuery()
+                    .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
+                    .withOverriddenContext(windowShuffleMap),
         queryKit,
         ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount),
         maxWorkerCount,
@@ -687,7 +694,8 @@ public class DataSourcePlan
         (QueryDataSource) dataSource.getLeft(),
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
-        false
+        false,
+        null
     );
     leftPlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
@@ -700,7 +708,8 @@ public class DataSourcePlan
         (QueryDataSource) dataSource.getRight(),
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
-        false
+        false,
+        null
     );
     rightPlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 

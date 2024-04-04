@@ -2456,8 +2456,8 @@ public class MSQSelectTest extends MSQTestBase
                                                .build();
 
     RowSignature resultSignature1 = RowSignature.builder()
-                                               .add("dim3", ColumnType.STRING)
-                                               .build();
+                                                .add("dim3", ColumnType.STRING)
+                                                .build();
 
     RowSignature outputSignature = RowSignature.builder()
                                                .add("d3", ColumnType.STRING)

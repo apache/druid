@@ -40,7 +40,7 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
   private ObjectMapper objectMapper;
 
   @Override
-  public void write(String taskId, Map<String, TaskReport> reports)
+  public void write(String taskId, TaskReport.ReportMap reports)
   {
     try (final OutputStream outputStream = openReportOutputStream(taskId)) {
       SingleFileTaskReportFileWriter.writeReportToStream(objectMapper, outputStream, reports);

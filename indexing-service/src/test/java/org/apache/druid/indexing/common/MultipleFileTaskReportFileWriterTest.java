@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -49,8 +48,7 @@ public class MultipleFileTaskReportFileWriterTest
     writer.setObjectMapper(mapper);
     writer.add(TASK_ID, file);
 
-    final ImmutableMap<String, TaskReport> reportsMap = ImmutableMap.of(
-        IngestionStatsAndErrorsTaskReport.REPORT_KEY,
+    final TaskReport.ReportMap reportsMap = TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(TASK_ID, null)
     );
 

@@ -25,12 +25,11 @@ import org.apache.druid.indexing.common.TaskReportFileWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
 {
   @Override
-  public void write(String id, Map<String, TaskReport> reports)
+  public void write(String id, TaskReport.ReportMap reports)
   {
   }
 

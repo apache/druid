@@ -80,6 +80,7 @@ export function dataTypeToIcon(dataType: string): IconName {
       return IconNames.SNOWFLAKE;
 
     case 'COMPLEX<QUANTILESDOUBLESSKETCH>':
+    case 'COMPLEX<APPROXIMATEHISTOGRAM>':
       return IconNames.HORIZONTAL_DISTRIBUTION;
 
     case 'COMPLEX<VARIANCE>':
