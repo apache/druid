@@ -83,19 +83,19 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
     final Map<KafkaTopicPartition, Long> newMap;
     if (!isMultiTopicPartition()) {
       // going from topicPattern to single topic
-      newMap = CollectionUtils.mapKeys(
-          getPartitionSequenceNumberMap(),
-          k -> new KafkaTopicPartition(
-              false,
-              thisTopic,
-              k.partition()
-          )
-      );
+
+      // start with existing sequence numbers which in this case will be all single topic.
+      newMap = new HashMap<>(getPartitionSequenceNumberMap());
+
+      // add all sequence numbers from other where the topic name matches this topic. Transform to single topic
+      // as in this case we will be returning a single topic based sequence map.
       newMap.putAll(that.getPartitionSequenceNumberMap().entrySet().stream()
           .filter(e -> {
             if (e.getKey().topic().isPresent()) {
               return e.getKey().topic().get().equals(thisTopic);
             } else {
+              // this branch shouldn't really be hit since other should be multi-topic here, but adding this
+              // just int case.
               return thatTopic.equals(thisTopic);
             }
           })
@@ -105,6 +105,9 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
           )));
     } else {
       // going from single topic or topicPattern to topicPattern
+
+      // start with existing sequence numbers and transform them to multit-topic keys, as the returned
+      // sequence numbers will be multi-topic based.
       newMap = CollectionUtils.mapKeys(
           getPartitionSequenceNumberMap(),
           k -> new KafkaTopicPartition(
@@ -113,6 +116,9 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
               k.partition()
           )
       );
+
+      // add all sequence numbers from other where the topic name matches the pattern of this topic regex. Transform to
+      // multi-topic as in this case we will be returning a multi-topic based sequence map.
       Pattern pattern = Pattern.compile(thisTopic);
       newMap.putAll(that.getPartitionSequenceNumberMap().entrySet().stream()
           .filter(e -> {
@@ -152,26 +158,20 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
     }
 
     final Map<KafkaTopicPartition, Long> newMap = new HashMap<>();
-    String thisTopic = getStream();
+    //String thisTopic = getStream();
     String thatTopic = otherEnd.getStream();
-    if (!isMultiTopicPartition()) {
-      // going from topicPattern to single topic
-      // Same stream, remove partitions present in "that" from "this"
 
-      for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
-        if (!otherEnd.getPartitionSequenceNumberMap().containsKey(entry.getKey())
-            && !otherEnd.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(true, entry.getKey().asTopicPartition(thisTopic).topic(), entry.getKey().partition()))) {
-          newMap.put(entry.getKey(), entry.getValue());
-        }
-      }
-    } else {
-      // going from single topic or topicPattern to topicPattern
-      for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
-        if (!otherEnd.getPartitionSequenceNumberMap().containsKey(entry.getKey())
-            && !otherEnd.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(true, entry.getKey().asTopicPartition(thisTopic).topic(), entry.getKey().partition()))
-            && !(thatTopic.equals(entry.getKey().asTopicPartition(thisTopic).topic()) && otherEnd.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(false, null, entry.getKey().partition())))) {
-          newMap.put(entry.getKey(), entry.getValue());
-        }
+
+    // remove partitions present in "that" from "this", check for exact match, multi-topic match, or single-topic match
+    for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
+      String thisTopic = entry.getKey().asTopicPartition(getStream()).topic();
+      boolean otherContainsThis = otherEnd.getPartitionSequenceNumberMap().containsKey(entry.getKey());
+      boolean otherContainsThisMultiTopic = otherEnd.getPartitionSequenceNumberMap()
+          .containsKey(new KafkaTopicPartition(true, thisTopic, entry.getKey().partition()));
+      boolean otherContainsThisSingleTopic = (thatTopic.equals(thisTopic) && otherEnd.getPartitionSequenceNumberMap()
+          .containsKey(new KafkaTopicPartition(false, null, entry.getKey().partition())));
+      if (!otherContainsThis && !otherContainsThisMultiTopic && !otherContainsThisSingleTopic) {
+        newMap.put(entry.getKey(), entry.getValue());
       }
     }
 
