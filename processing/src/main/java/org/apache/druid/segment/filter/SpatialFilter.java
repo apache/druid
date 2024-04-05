@@ -178,6 +178,17 @@ public class SpatialFilter implements Filter
     }
 
     @Override
+    public DruidObjectPredicate<Object> makeObjectPredicate()
+    {
+      return input -> {
+        if (input == null) {
+          return DruidPredicateMatch.UNKNOWN;
+        }
+        return DruidPredicateMatch.of(bound.containsObj(input));
+      };
+    }
+
+    @Override
     public DruidLongPredicate makeLongPredicate()
     {
       // SpatialFilter does not currently support longs
