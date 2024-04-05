@@ -420,7 +420,6 @@ public class KafkaDataSourceMetadataTest
   @Test
   public void testPlus()
   {
-    /*
     Assert.assertEquals(
         startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
         START1.plus(START3)
@@ -483,7 +482,6 @@ public class KafkaDataSourceMetadataTest
         START1,
         START4.plus(START1)
     );
-     */
 
     // TODO is this wrong?
     Assert.assertEquals(

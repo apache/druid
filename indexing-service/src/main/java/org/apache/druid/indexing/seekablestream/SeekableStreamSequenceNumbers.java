@@ -30,8 +30,8 @@ import java.util.Map;
 
 @JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = SeekableStreamEndSequenceNumbers.class)
 @JsonSubTypes({
-    @Type(name = "start", value = SeekableStreamStartSequenceNumbers.class),
-    @Type(name = "end", value = SeekableStreamEndSequenceNumbers.class)
+    @Type(name = SeekableStreamStartSequenceNumbers.TYPE, value = SeekableStreamStartSequenceNumbers.class),
+    @Type(name = SeekableStreamEndSequenceNumbers.TYPE, value = SeekableStreamEndSequenceNumbers.class)
 })
 public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {

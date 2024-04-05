@@ -29,9 +29,11 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.common.TopicPartition;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -51,6 +53,9 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
   @JsonProperty("partitions")
   public SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> getSeekableStreamSequenceNumbers()
   {
+    if (seekableStreamSequenceNumbers == null) {
+      return null;
+    }
     if (seekableStreamSequenceNumbers instanceof SeekableStreamStartSequenceNumbers) {
       return new KafkaSeekableStreamStartSequenceNumbers(
           seekableStreamSequenceNumbers.getStream(),
@@ -124,16 +129,10 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
     }
     final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> mergedSequenceNumbers = thisPlusOther.getSeekableStreamSequenceNumbers();
 
-    final Map<TopicPartition, Long> topicAndPartitionToSequenceNumber = mergedSequenceNumbers.getPartitionSequenceNumberMap()
-        .entrySet()
-        .stream()
-        .collect(Collectors.toMap(
-            e -> {
-              KafkaTopicPartition kafkaTopicPartition = e.getKey();
-              return kafkaTopicPartition.asTopicPartition(mergedSequenceNumbers.getStream());
-            },
-            e -> e.getValue()
-        ));
+    final Map<TopicPartition, Long> topicAndPartitionToSequenceNumber = CollectionUtils.mapKeys(
+        mergedSequenceNumbers.getPartitionSequenceNumberMap(),
+        k -> k.asTopicPartition(mergedSequenceNumbers.getStream())
+    );
 
     boolean allOtherFoundAndConsistent = otherSequenceNumbers.getPartitionSequenceNumberMap().entrySet().stream().noneMatch(
         e -> {

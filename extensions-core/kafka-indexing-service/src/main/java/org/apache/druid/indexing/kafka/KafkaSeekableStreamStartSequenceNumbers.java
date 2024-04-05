@@ -19,10 +19,12 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -32,8 +34,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@JsonTypeName(SeekableStreamStartSequenceNumbers.TYPE)
 public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>
 {
+  private static final String TYPE = "start";
   private final boolean isMultiTopicPartition;
 
   public KafkaSeekableStreamStartSequenceNumbers(
@@ -85,12 +89,14 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
     final Set<KafkaTopicPartition> newExclusivePartitions = new HashSet<>();
     if (!isMultiTopicPartition()) {
       // going from topicPattern to single topic
-      newMap = new HashMap<>(getPartitionSequenceNumberMap().entrySet()
-          .stream()
-          .collect(Collectors.toMap(
-              e -> new KafkaTopicPartition(false, thisTopic, e.getKey().partition()),
-              e -> e.getValue()
-          )));
+      newMap = CollectionUtils.mapKeys(
+          getPartitionSequenceNumberMap(),
+          k -> new KafkaTopicPartition(
+              false,
+              thisTopic,
+              k.partition()
+          )
+      );
       newMap.putAll(that.getPartitionSequenceNumberMap().entrySet().stream()
           .filter(e -> {
             if (e.getKey().topic().isPresent()) {
@@ -118,12 +124,14 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
       newExclusivePartitions.addAll(that.getExclusivePartitions());
     } else {
       // going from single topic or topicPattern to topicPattern
-      newMap = new HashMap<>(getPartitionSequenceNumberMap().entrySet()
-          .stream()
-          .collect(Collectors.toMap(
-              e -> new KafkaTopicPartition(true, e.getKey().asTopicPartition(thisTopic).topic(), e.getKey().partition()),
-              e -> e.getValue()
-          )));
+      newMap = CollectionUtils.mapKeys(
+          getPartitionSequenceNumberMap(),
+          k -> new KafkaTopicPartition(
+              true,
+              k.asTopicPartition(thisTopic).topic(),
+              k.partition()
+          )
+      );
       Pattern pattern = Pattern.compile(thisTopic);
       newMap.putAll(that.getPartitionSequenceNumberMap().entrySet().stream()
           .filter(e -> {

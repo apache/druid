@@ -47,6 +47,8 @@ import java.util.Objects;
 public class SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> implements
     SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {
+  public static final String TYPE = "end";
+
   // stream/topic
   private final String stream;
   // partitionId -> sequence number

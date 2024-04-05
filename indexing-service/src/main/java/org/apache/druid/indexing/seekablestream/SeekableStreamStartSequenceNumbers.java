@@ -42,6 +42,8 @@ import java.util.Set;
 public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> implements
     SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {
+  public static final String TYPE = "start";
+
   // stream/topic
   private final String stream;
   // partitionId -> sequence number
