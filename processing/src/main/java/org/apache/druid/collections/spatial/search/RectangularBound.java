@@ -26,7 +26,9 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 import org.apache.druid.collections.spatial.ImmutableNode;
+import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
@@ -116,6 +118,16 @@ public class RectangularBound implements Bound<float[], ImmutableFloatPoint>
     }
 
     return true;
+  }
+
+  @Override
+  public boolean containsObj(@Nullable Object input)
+  {
+    if (input instanceof String) {
+      final float[] coordinate = SpatialDimensionRowTransformer.decode((String) input);
+      return contains(coordinate);
+    }
+    return false;
   }
 
   @Override

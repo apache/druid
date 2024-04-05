@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.spatial.ImmutableNode;
 
+import javax.annotation.Nullable;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -42,6 +44,8 @@ public interface Bound<TCoordinateArray, TPoint extends ImmutableNode<TCoordinat
   boolean overlaps(ImmutableNode<TCoordinateArray> node);
 
   boolean contains(TCoordinateArray coords);
+
+  boolean containsObj(@Nullable Object input);
 
   Iterable<TPoint> filter(Iterable<TPoint> points);
 
