@@ -854,7 +854,6 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(topics.isEmpty());
     Pattern pattern = Pattern.compile(topicPattern);
     Assert.assertTrue(topics.stream().allMatch(t -> pattern.matcher(t).matches()));
-    int i = 0;
     Map<KafkaTopicPartition, Long> newOffsets = new HashMap<>();
     for (Map.Entry<Integer, Long> e : offsets.entrySet()) {
       for (String topic : topics) {
@@ -900,7 +899,6 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(topics.isEmpty());
     Pattern pattern = Pattern.compile(topicPattern);
     Assert.assertTrue(topics.stream().allMatch(t -> pattern.matcher(t).matches()));
-    int i = 0;
     Map<KafkaTopicPartition, Long> newOffsets = new HashMap<>();
     for (Map.Entry<Integer, Long> e : offsets.entrySet()) {
       for (String topic : topics) {
