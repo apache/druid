@@ -155,4 +155,64 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
 
     return new SeekableStreamStartSequenceNumbers<>(getStream(), newMap, newExclusivePartitions);
   }
+
+  @Override
+  public SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> minus(
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> other
+  )
+  {
+    if (this.getClass() != other.getClass()) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getName(),
+          other.getClass().getName()
+      );
+    }
+
+    final KafkaSeekableStreamStartSequenceNumbers otherStart =
+        (KafkaSeekableStreamStartSequenceNumbers) other;
+
+    if (!this.isMultiTopicPartition() && !otherStart.isMultiTopicPartition()) {
+      return super.minus(other);
+    }
+
+    final Map<KafkaTopicPartition, Long> newMap = new HashMap<>();
+    final Set<KafkaTopicPartition> newExclusivePartitions = new HashSet<>();
+    String thisTopic = getStream();
+    String thatTopic = otherStart.getStream();
+    if (!isMultiTopicPartition()) {
+      // going from topicPattern to single topic
+      // Same stream, remove partitions present in "that" from "this"
+
+      for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
+        if (!otherStart.getPartitionSequenceNumberMap().containsKey(entry.getKey())
+            && !otherStart.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(true, entry.getKey().asTopicPartition(thisTopic).topic(), entry.getKey().partition()))) {
+          newMap.put(entry.getKey(), entry.getValue());
+          // A partition is exclusive if it's exclusive in "this" and not in "other"'s partitionSequenceNumberMap
+          if (getExclusivePartitions().contains(entry.getKey())) {
+            newExclusivePartitions.add(entry.getKey());
+          }
+        }
+      }
+    } else {
+      // going from single topic or topicPattern to topicPattern
+      for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
+        if (!otherStart.getPartitionSequenceNumberMap().containsKey(entry.getKey())
+            && !otherStart.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(true, entry.getKey().asTopicPartition(thisTopic).topic(), entry.getKey().partition()))
+            && !(thatTopic.equals(entry.getKey().asTopicPartition(thisTopic).topic()) && otherStart.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(false, null, entry.getKey().partition())))) {
+          newMap.put(entry.getKey(), entry.getValue());
+          // A partition is exclusive if it's exclusive in "this" and not in "other"'s partitionSequenceNumberMap
+          if (getExclusivePartitions().contains(entry.getKey())) {
+            newExclusivePartitions.add(entry.getKey());
+          }
+        }
+      }
+    }
+
+    return new SeekableStreamStartSequenceNumbers<>(
+        getStream(),
+        newMap,
+        newExclusivePartitions
+    );
+  }
 }

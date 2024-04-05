@@ -123,4 +123,54 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
 
     return new SeekableStreamEndSequenceNumbers<>(getStream(), newMap);
   }
+
+  @Override
+  public SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> minus(
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> other
+  )
+  {
+    if (this.getClass() != other.getClass()) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getName(),
+          other.getClass().getName()
+      );
+    }
+
+    final KafkaSeekableStreamEndSequenceNumbers otherEnd =
+        (KafkaSeekableStreamEndSequenceNumbers) other;
+
+    if (!this.isMultiTopicPartition() && !otherEnd.isMultiTopicPartition()) {
+      return super.minus(other);
+    }
+
+    final Map<KafkaTopicPartition, Long> newMap = new HashMap<>();
+    String thisTopic = getStream();
+    String thatTopic = otherEnd.getStream();
+    if (!isMultiTopicPartition()) {
+      // going from topicPattern to single topic
+      // Same stream, remove partitions present in "that" from "this"
+
+      for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
+        if (!otherEnd.getPartitionSequenceNumberMap().containsKey(entry.getKey())
+            && !otherEnd.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(true, entry.getKey().asTopicPartition(thisTopic).topic(), entry.getKey().partition()))) {
+          newMap.put(entry.getKey(), entry.getValue());
+        }
+      }
+    } else {
+      // going from single topic or topicPattern to topicPattern
+      for (Map.Entry<KafkaTopicPartition, Long> entry : getPartitionSequenceNumberMap().entrySet()) {
+        if (!otherEnd.getPartitionSequenceNumberMap().containsKey(entry.getKey())
+            && !otherEnd.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(true, entry.getKey().asTopicPartition(thisTopic).topic(), entry.getKey().partition()))
+            && !(thatTopic.equals(entry.getKey().asTopicPartition(thisTopic).topic()) && otherEnd.getPartitionSequenceNumberMap().containsKey(new KafkaTopicPartition(false, null, entry.getKey().partition())))) {
+          newMap.put(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+
+    return new SeekableStreamEndSequenceNumbers<>(
+        getStream(),
+        newMap
+    );
+  }
 }

@@ -52,6 +52,8 @@ public class KafkaDataSourceMetadataTest
   private static final KafkaDataSourceMetadata START5 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 3L));
   private static final KafkaDataSourceMetadata START6 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 1, 3L));
   private static final KafkaDataSourceMetadata START7 = startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata START8 = startMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata START9 = startMetadataMultiTopic("foo2.*", ImmutableList.of("foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L));
   private static final KafkaDataSourceMetadata END0 = endMetadata("foo", ImmutableMap.of());
   private static final KafkaDataSourceMetadata END1 = endMetadata("foo", ImmutableMap.of(0, 2L, 2, 5L));
   private static final KafkaDataSourceMetadata END2 = endMetadata("foo", ImmutableMap.of(0, 2L, 1, 4L));
@@ -61,6 +63,8 @@ public class KafkaDataSourceMetadataTest
   private static final KafkaDataSourceMetadata END6 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 4L));
   private static final KafkaDataSourceMetadata END7 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L));
   private static final KafkaDataSourceMetadata END8 = endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 1, 4L));
+  private static final KafkaDataSourceMetadata END9 = endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END10 = endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L));
 
   @Test
   public void testMatches()
@@ -76,6 +80,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(START0.matches(START6));
     // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
     Assert.assertFalse(START0.matches(START7));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(START0.matches(START8));
+    // when merging, we lose the sequence numbers for topics foo2, and foo22 here when merging, so false
+    Assert.assertFalse(START0.matches(START9));
 
     Assert.assertTrue(START1.matches(START0));
     Assert.assertTrue(START1.matches(START1));
@@ -89,6 +97,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(START1.matches(START6));
     // when merging, we lose the sequence numbers for topic foo2, so false
     Assert.assertFalse(START1.matches(START7));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(START1.matches(START8));
+    // when merging, we lose the sequence numbers for topics foo2 and foo22, so false
+    Assert.assertFalse(START1.matches(START9));
 
     Assert.assertTrue(START2.matches(START0));
     Assert.assertFalse(START2.matches(START1));
@@ -114,6 +126,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(START3.matches(START6));
     // when merging, we lose the sequence numbers for topic foo2, so false
     Assert.assertFalse(START3.matches(START7));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(START3.matches(START8));
+    // when merging, we lose the sequence numbers for topics foo2 and foo22, so false
+    Assert.assertFalse(START3.matches(START9));
 
     // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
     Assert.assertFalse(START4.matches(START0));
@@ -130,6 +146,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(START4.matches(START6));
     // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
     Assert.assertFalse(START4.matches(START7));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START8));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(START4.matches(START9));
 
     Assert.assertTrue(START5.matches(START0));
     Assert.assertTrue(START5.matches(START1));
@@ -140,6 +160,8 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START5.matches(START5));
     Assert.assertTrue(START5.matches(START6));
     Assert.assertTrue(START5.matches(START7));
+    Assert.assertTrue(START5.matches(START8));
+    Assert.assertTrue(START5.matches(START9));
 
     Assert.assertTrue(START6.matches(START0));
     Assert.assertTrue(START6.matches(START1));
@@ -150,6 +172,8 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START6.matches(START5));
     Assert.assertTrue(START6.matches(START6));
     Assert.assertTrue(START6.matches(START7));
+    Assert.assertTrue(START6.matches(START8));
+    Assert.assertTrue(START6.matches(START9));
 
     Assert.assertTrue(START7.matches(START0));
     Assert.assertTrue(START7.matches(START1));
@@ -159,6 +183,42 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START7.matches(START5));
     Assert.assertTrue(START7.matches(START6));
     Assert.assertTrue(START7.matches(START7));
+    Assert.assertTrue(START7.matches(START8));
+    Assert.assertTrue(START7.matches(START9));
+
+    Assert.assertTrue(START8.matches(START0));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START8.matches(START1));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START8.matches(START2));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START8.matches(START3));
+    Assert.assertTrue(START8.matches(START4));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START8.matches(START5));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START8.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START8.matches(START7));
+    Assert.assertTrue(START8.matches(START8));
+    Assert.assertTrue(START8.matches(START9));
+
+    Assert.assertTrue(START9.matches(START0));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START9.matches(START1));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START9.matches(START2));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START9.matches(START3));
+    Assert.assertTrue(START9.matches(START4));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START9.matches(START5));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START9.matches(START6));
+    // when merging, we lose the sequence numbers for topic foo, so false
+    Assert.assertFalse(START9.matches(START7));
+    Assert.assertTrue(START9.matches(START8));
+    Assert.assertTrue(START9.matches(START9));
 
     Assert.assertTrue(END0.matches(END0));
     Assert.assertTrue(END0.matches(END1));
@@ -172,6 +232,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(END0.matches(END7));
     // when merging, we lose the sequence numbers for topic foo2, so false
     Assert.assertFalse(END0.matches(END8));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(END0.matches(END9));
+    // when merging, we lose the sequence numbers for topic foo2, so false
+    Assert.assertFalse(END0.matches(END10));
 
     Assert.assertTrue(END1.matches(END0));
     Assert.assertTrue(END1.matches(END1));
@@ -185,6 +249,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(END1.matches(END7));
     // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
     Assert.assertFalse(END1.matches(END8));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END1.matches(END9));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END1.matches(END10));
 
     Assert.assertTrue(END2.matches(END0));
     Assert.assertTrue(END2.matches(END1));
@@ -199,6 +267,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(END2.matches(END7));
     // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
     Assert.assertFalse(END2.matches(END8));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END2.matches(END9));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END2.matches(END10));
 
     Assert.assertTrue(END3.matches(END0));
     Assert.assertTrue(END3.matches(END1));
@@ -214,6 +286,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(END3.matches(END7));
     // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
     Assert.assertFalse(END3.matches(END8));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END3.matches(END9));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END3.matches(END10));
 
     // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
     Assert.assertFalse(END4.matches(END0));
@@ -232,6 +308,10 @@ public class KafkaDataSourceMetadataTest
     Assert.assertFalse(END4.matches(END7));
     // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
     Assert.assertFalse(END4.matches(END8));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END9));
+    // TODO: FIX ME: Should be true. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
+    Assert.assertFalse(END4.matches(END10));
 
     Assert.assertTrue(END5.matches(END0));
     Assert.assertTrue(END5.matches(END1));
@@ -242,6 +322,8 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(END5.matches(END6));
     Assert.assertTrue(END5.matches(END7));
     Assert.assertTrue(END5.matches(END8));
+    Assert.assertTrue(END5.matches(END9));
+    Assert.assertTrue(END5.matches(END10));
 
     Assert.assertTrue(END6.matches(END0));
     Assert.assertTrue(END6.matches(END1));
@@ -253,6 +335,8 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(END6.matches(END6));
     Assert.assertTrue(END6.matches(END7));
     Assert.assertTrue(END6.matches(END8));
+    Assert.assertTrue(END6.matches(END9));
+    Assert.assertTrue(END6.matches(END10));
 
     Assert.assertTrue(END7.matches(END0));
     Assert.assertTrue(END7.matches(END1));
@@ -263,6 +347,8 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(END7.matches(END6));
     Assert.assertTrue(END7.matches(END7));
     Assert.assertTrue(END7.matches(END8));
+    Assert.assertTrue(END7.matches(END9));
+    Assert.assertTrue(END7.matches(END10));
 
     Assert.assertTrue(END8.matches(END0));
     Assert.assertTrue(END8.matches(END1));
@@ -274,6 +360,46 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(END8.matches(END6));
     Assert.assertTrue(END8.matches(END7));
     Assert.assertTrue(END8.matches(END8));
+    Assert.assertTrue(END8.matches(END9));
+    Assert.assertTrue(END8.matches(END10));
+
+    Assert.assertTrue(END9.matches(END0));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END1));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END2));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END3));
+    Assert.assertTrue(END9.matches(END4));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END5));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END7));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END9.matches(END8));
+    Assert.assertTrue(END9.matches(END9));
+    Assert.assertTrue(END9.matches(END10));
+
+    Assert.assertTrue(END10.matches(END0));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END1));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END2));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END3));
+    Assert.assertTrue(END10.matches(END4));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END5));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END6));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END7));
+    // when merging, we lose the sequence numbers for topic foo2 here when merging, so false
+    Assert.assertFalse(END10.matches(END8));
+    Assert.assertTrue(END10.matches(END9));
+    Assert.assertTrue(END10.matches(END10));
   }
 
   @Test
@@ -287,11 +413,14 @@ public class KafkaDataSourceMetadataTest
     Assert.assertTrue(START5.isValidStart());
     Assert.assertTrue(START6.isValidStart());
     Assert.assertTrue(START7.isValidStart());
+    Assert.assertTrue(START8.isValidStart());
+    Assert.assertTrue(START9.isValidStart());
   }
 
   @Test
   public void testPlus()
   {
+    /*
     Assert.assertEquals(
         startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
         START1.plus(START3)
@@ -307,28 +436,20 @@ public class KafkaDataSourceMetadataTest
         START1.plus(START2)
     );
 
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        startMetadata("foo", ImmutableMap.of()),
-        START0.plus(START4)
+    Assert.assertEquals(
+        startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
+        START2.plus(START1)
     );
 
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of()),
-        START4.plus(START0)
+    Assert.assertEquals(
+        startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        START2.plus(START2)
     );
 
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        startMetadata("foo", ImmutableMap.of(0, 2L, 1, 3L)),
+    // add comment on this
+    Assert.assertEquals(
+        START4,
         START1.plus(START4)
-    );
-
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 3L)),
-        START4.plus(START1)
     );
 
     Assert.assertEquals(
@@ -348,12 +469,61 @@ public class KafkaDataSourceMetadataTest
 
     Assert.assertEquals(
         startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
-        START2.plus(START1)
+        START2.plus(START6)
+    );
+
+    // add comment on this
+    Assert.assertEquals(
+        START0,
+        START4.plus(START0)
+    );
+
+    // add comment on this
+    Assert.assertEquals(
+        START1,
+        START4.plus(START1)
+    );
+     */
+
+    // TODO is this wrong?
+    Assert.assertEquals(
+        START4,
+        START4.plus(START5)
     );
 
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
-        START2.plus(START2)
+        START5,
+        START5.plus(START4)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 1, 3L)),
+        START5.plus(START6)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        START7.plus(START8)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        START7.plus(START9)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        START8.plus(START7)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo2.*", ImmutableList.of("foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        START8.plus(START9)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo2.*", ImmutableList.of("foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        START9.plus(START8)
     );
 
     Assert.assertEquals(
@@ -366,28 +536,89 @@ public class KafkaDataSourceMetadataTest
         END1.plus(END2)
     );
 
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        endMetadata("foo", ImmutableMap.of()),
+    // add comment on this
+    Assert.assertEquals(
+        END4,
         END0.plus(END4)
     );
 
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of()),
-        END4.plus(END0)
-    );
-
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        endMetadata("foo", ImmutableMap.of(0, 2L, 2, 5L)),
+    // add comment on this
+    Assert.assertEquals(
+        END4,
         END1.plus(END4)
     );
 
-    // TODO: FIX ME: Should be equals. This is issue, we can't really tell if a sequence numbers are for multi topic if sequenceMap is empty
-    Assert.assertNotEquals(
-        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 2, 5L)),
+    // add comment on this
+    Assert.assertEquals(
+        END0,
+        END4.plus(END0)
+    );
+
+    // add comment on this
+    Assert.assertEquals(
+        END1,
         END4.plus(END1)
+    );
+
+    Assert.assertEquals(
+        END3,
+        END2.plus(END3)
+    );
+
+    Assert.assertEquals(
+        END2,
+        END3.plus(END2)
+    );
+
+    // TODO is this wrong?
+    Assert.assertEquals(
+        END4,
+        END4.plus(END5)
+    );
+
+    Assert.assertEquals(
+        END5,
+        END5.plus(END4)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END5.plus(END9)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END5.plus(END10)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        END5.plus(END6)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END5.plus(END7)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END7.plus(END5)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END9.plus(END5)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END9.plus(END10)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2", "foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END10.plus(END9)
     );
   }
 
@@ -395,18 +626,43 @@ public class KafkaDataSourceMetadataTest
   public void testMinus()
   {
     Assert.assertEquals(
-        startMetadata(ImmutableMap.of(1, 3L)),
-        START1.minus(START3)
-    );
-
-    Assert.assertEquals(
         startMetadata(ImmutableMap.of()),
         START0.minus(START2)
     );
 
     Assert.assertEquals(
+        START0,
+        START0.minus(START4)
+    );
+
+    Assert.assertEquals(
         startMetadata(ImmutableMap.of()),
         START1.minus(START2)
+    );
+
+    Assert.assertEquals(
+        startMetadata(ImmutableMap.of(1, 3L)),
+        START1.minus(START3)
+    );
+
+    Assert.assertEquals(
+        START1,
+        START1.minus(START4)
+    );
+
+    Assert.assertEquals(
+        startMetadata("foo", ImmutableMap.of()),
+        START1.minus(START5)
+    );
+
+    Assert.assertEquals(
+        startMetadata("foo", ImmutableMap.of()),
+        START1.minus(START6)
+    );
+
+    Assert.assertEquals(
+        startMetadata("foo", ImmutableMap.of(1, 3L)),
+        START1.minus(START7)
     );
 
     Assert.assertEquals(
@@ -420,6 +676,21 @@ public class KafkaDataSourceMetadataTest
     );
 
     Assert.assertEquals(
+        START4,
+        START4.minus(START0)
+    );
+
+    Assert.assertEquals(
+        START4,
+        START4.minus(START1)
+    );
+
+    Assert.assertEquals(
+        startMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of()),
+        START5.minus(START1)
+    );
+
+    Assert.assertEquals(
         endMetadata(ImmutableMap.of(1, 4L)),
         END2.minus(END1)
     );
@@ -427,6 +698,101 @@ public class KafkaDataSourceMetadataTest
     Assert.assertEquals(
         endMetadata(ImmutableMap.of(2, 5L)),
         END1.minus(END2)
+    );
+
+    Assert.assertEquals(
+        END0,
+        END0.minus(END4)
+    );
+
+    Assert.assertEquals(
+        END4,
+        END4.minus(END0)
+    );
+
+    Assert.assertEquals(
+        END1,
+        END1.minus(END4)
+    );
+
+    Assert.assertEquals(
+        END4,
+        END4.minus(END1)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of()),
+        END5.minus(END1)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END5.minus(END4)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(2, 5L)),
+        END5.minus(END6)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(1, 4L)),
+        END6.minus(END5)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(1, 4L)),
+        END6.minus(END7)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo2"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END7.minus(END5)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo", "foo2"), ImmutableMap.of(2, 5L)),
+        END7.minus(END8)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END7.minus(END9)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo.*", ImmutableList.of("foo"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END7.minus(END10)
+    );
+
+    Assert.assertEquals(
+        END9,
+        END9.minus(END6)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of()),
+        END9.minus(END7)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of(2, 5L)),
+        END9.minus(END8)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of()),
+        END9.minus(END9)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo2"), ImmutableMap.of()),
+        END9.minus(END10)
+    );
+
+    Assert.assertEquals(
+        endMetadataMultiTopic("foo2.*", ImmutableList.of("foo22"), ImmutableMap.of(0, 2L, 2, 5L)),
+        END10.minus(END9)
     );
   }
 

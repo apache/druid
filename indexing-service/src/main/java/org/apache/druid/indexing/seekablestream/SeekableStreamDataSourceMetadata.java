@@ -92,7 +92,7 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that =
         (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
 
-    return createConcreteDataSourceMetaData(seekableStreamSequenceNumbers.minus(that.seekableStreamSequenceNumbers));
+    return createConcreteDataSourceMetaData(getSeekableStreamSequenceNumbers().minus(that.getSeekableStreamSequenceNumbers()));
   }
 
   @Override
