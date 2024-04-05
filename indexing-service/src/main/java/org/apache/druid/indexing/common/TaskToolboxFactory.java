@@ -36,6 +36,7 @@ import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.CompactionToMSQ;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -116,6 +117,7 @@ public class TaskToolboxFactory
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final CompactionToMSQ compactionToMSQ;
 
   @Inject
   public TaskToolboxFactory(
@@ -158,7 +160,8 @@ public class TaskToolboxFactory
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       @AttemptId String attemptId,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      CompactionToMSQ compactionToMSQ
   )
   {
     this.segmentLoaderConfig = segmentLoadConfig;
@@ -201,6 +204,7 @@ public class TaskToolboxFactory
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.compactionToMSQ = compactionToMSQ;
   }
 
   public TaskToolbox build(Task task)
@@ -265,6 +269,7 @@ public class TaskToolboxFactory
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+        .compactionToMSQ(compactionToMSQ)
         .build();
   }
 }

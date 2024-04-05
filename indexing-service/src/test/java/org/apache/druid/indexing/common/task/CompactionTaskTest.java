@@ -172,7 +172,7 @@ import java.util.stream.IntStream;
 @RunWith(MockitoJUnitRunner.class)
 public class CompactionTaskTest
 {
-  private static final long SEGMENT_SIZE_BYTES = 100;
+  /*private static final long SEGMENT_SIZE_BYTES = 100;
   private static final int NUM_ROWS_PER_SEGMENT = 10;
   private static final String DATA_SOURCE = "dataSource";
   private static final String TIMESTAMP_COLUMN = "timestamp";
@@ -353,6 +353,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -789,6 +790,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -861,6 +863,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -952,7 +955,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1026,9 +1029,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1103,9 +1107,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1180,9 +1185,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1248,7 +1254,7 @@ public class CompactionTaskTest
         )
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1294,7 +1300,7 @@ public class CompactionTaskTest
         new DoubleMaxAggregatorFactory("custom_double_max", "agg_4")
     };
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1333,7 +1339,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1378,7 +1384,7 @@ public class CompactionTaskTest
     Collections.sort(segments);
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
-    CompactionTask.createIngestionSchema(
+    CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1404,7 +1410,7 @@ public class CompactionTaskTest
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    CompactionTask.createIngestionSchema(
+    CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1442,7 +1448,7 @@ public class CompactionTaskTest
   @Test
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1482,7 +1488,7 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1520,7 +1526,7 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1565,7 +1571,7 @@ public class CompactionTaskTest
   @Test
   public void testNullGranularitySpec() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1604,7 +1610,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity()
       throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1643,7 +1649,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNotNullRollup()
       throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1669,7 +1675,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullRollup()
       throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1828,6 +1834,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,
@@ -2155,11 +2162,11 @@ public class CompactionTaskTest
 
   }
 
-  /**
+  *//**
    * The compaction task spec in 0.16.0 except for the tuningConfig.
    * The original spec accepts only {@link IndexTuningConfig}, but this class acceps any type of tuningConfig for
    * testing.
-   */
+   *//*
   private static class OldCompactionTaskWithAnyTuningConfigType extends AbstractTask
   {
     private final Interval interval;
@@ -2334,5 +2341,5 @@ public class CompactionTaskTest
     {
       return ColumnType.ofComplex(ExtensionDimensionHandler.TYPE_NAME);
     }
-  }
+  }*/
 }

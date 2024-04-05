@@ -1020,7 +1020,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        null
     );
 
     return toolboxFactory.build(task);

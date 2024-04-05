@@ -94,8 +94,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   // read by HTTP threads processing Coordinator API calls.
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
-  private final CompactionClient compactionClient;
-
+  @Inject
+  @JsonCreator
   public CompactSegments(
       @JacksonInject CompactionSegmentSearchPolicy policy,
       @JacksonInject OverlordClient overlordClient
@@ -103,22 +103,6 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     this.policy = policy;
     this.overlordClient = overlordClient;
-    this.compactionClient = null;
-    resetCompactionSnapshot();
-  }
-
-  @Inject
-  @JsonCreator
-  public CompactSegments(
-      @JacksonInject CompactionSegmentSearchPolicy policy,
-      @JacksonInject OverlordClient overlordClient,
-      @JacksonInject CompactionClient compactionClient
-  )
-  {
-    this.policy = policy;
-    this.overlordClient = overlordClient;
-    this.compactionClient = compactionClient;
-    this.compactionClient.setOverlordClient(overlordClient);
     resetCompactionSnapshot();
   }
 
@@ -664,7 +648,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
-    final ClientCompactionTaskQuery taskPayload = new ClientCompactionTaskQuery(
+    final ClientTaskQuery taskPayload = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
         new ClientCompactionIOConfig(
@@ -678,8 +662,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         transformSpec,
         context
     );
-//    FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
-    compactionClient.submitCompactionTask(taskPayload);
+    FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
     return taskId;
   }
 }

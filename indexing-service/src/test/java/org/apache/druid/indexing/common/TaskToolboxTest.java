@@ -157,7 +157,8 @@ public class TaskToolboxTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        null
     );
   }
 

@@ -208,7 +208,7 @@ public class CoordinatorSimulationBuilder
         createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        COMPACTION_SEGMENT_SEARCH_POLICY, null
+        COMPACTION_SEGMENT_SEARCH_POLICY
     );
 
     return new SimulationImpl(coordinator, env);
