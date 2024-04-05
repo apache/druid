@@ -29,7 +29,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.DefaultTaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -158,8 +157,7 @@ public class TaskToolboxTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create(),
-        new DefaultTaskIdentitiesProvider()
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
@@ -121,6 +122,7 @@ public class TaskQueue
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
   private final ObjectMapper passwordRedactingMapper;
+  private final TaskContextEnricher taskContextEnricher;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -165,7 +167,8 @@ public class TaskQueue
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
       ServiceEmitter emitter,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      TaskContextEnricher taskContextEnricher
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -182,6 +185,7 @@ public class TaskQueue
     );
     this.passwordRedactingMapper = mapper.copy()
                                          .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.taskContextEnricher = Preconditions.checkNotNull(taskContextEnricher, "taskContextEnricher");
   }
 
   @VisibleForTesting
@@ -511,6 +515,8 @@ public class TaskQueue
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
         SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
+
+    taskContextEnricher.enrich(task);
 
     giant.lock();
 

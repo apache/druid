@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
-import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -118,8 +117,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.shuffleClient,
         bob.taskLogPusher,
         bob.attemptId,
-        bob.centralizedDatasourceSchemaConfig,
-        bob.taskIdentitiesProvider
+        bob.centralizedDatasourceSchemaConfig
     );
   }
 
@@ -164,7 +162,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-    private TaskIdentitiesProvider taskIdentitiesProvider;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -397,12 +394,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public void setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    }
-
-    public Builder setTaskIdentitiesProvider(TaskIdentitiesProvider taskIdentitiesProvider)
-    {
-      this.taskIdentitiesProvider = taskIdentitiesProvider;
-      return this;
     }
   }
 }

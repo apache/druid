@@ -823,6 +823,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -848,6 +849,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 null,
                 false,
                 0L,
+                null,
                 null,
                 null,
                 null

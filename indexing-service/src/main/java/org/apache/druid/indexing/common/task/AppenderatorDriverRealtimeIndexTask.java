@@ -625,7 +625,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 Collections.emptyMap(),
                 null,
                 null,
-                getContextValue(DruidMetrics.TAGS)
+                getContext()
             )
         )
     );

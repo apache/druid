@@ -921,7 +921,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 0L,
                 null,
                 null,
-                null
+                null,
+                getContext()
             )
         )
     );
@@ -950,7 +951,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
                 segmentsRead,
-                segmentsPublished
+                segmentsPublished,
+                getContext()
             )
         )
     );

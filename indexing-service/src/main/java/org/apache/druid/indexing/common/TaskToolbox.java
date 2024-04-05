@@ -35,7 +35,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.TaskIdentitiesProvider;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -112,7 +112,7 @@ public class TaskToolbox
   private final CachePopulatorStats cachePopulatorStats;
   private final IndexMergerV9 indexMergerV9;
   private final TaskReportFileWriter taskReportFileWriter;
-  private final TaskIdentitiesProvider taskIdentitiesProvider;
+  private final TaskContextEnricher taskIdentitiesProvider;
 
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
@@ -177,7 +177,7 @@ public class TaskToolbox
       TaskLogPusher taskLogPusher,
       String attemptId,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskIdentitiesProvider taskIdentitiesProvider
+      TaskContextEnricher taskIdentitiesProvider
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -500,7 +500,7 @@ public class TaskToolbox
     return centralizedDatasourceSchemaConfig;
   }
 
-  public TaskIdentitiesProvider getTaskIdentitiesProvider()
+  public TaskContextEnricher getTaskIdentitiesProvider()
   {
     return taskIdentitiesProvider;
   }
@@ -572,7 +572,7 @@ public class TaskToolbox
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-    private TaskIdentitiesProvider taskIdentitiesProvider;
+    private TaskContextEnricher taskIdentitiesProvider;
 
     public Builder()
     {
@@ -868,7 +868,7 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder taskIdentitiesProvider(final TaskIdentitiesProvider taskIdentitiesProvider)
+    public Builder taskIdentitiesProvider(final TaskContextEnricher taskIdentitiesProvider)
     {
       this.taskIdentitiesProvider = taskIdentitiesProvider;
       return this;

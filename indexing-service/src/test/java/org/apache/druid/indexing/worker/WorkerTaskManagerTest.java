@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
-import org.apache.druid.indexing.common.task.DefaultTaskIdentitiesProvider;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
@@ -169,8 +168,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 "1",
-                CentralizedDatasourceSchemaConfig.create(),
-                new DefaultTaskIdentitiesProvider()
+                CentralizedDatasourceSchemaConfig.create()
             ),
             taskConfig,
             location

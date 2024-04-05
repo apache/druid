@@ -1134,7 +1134,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getPartitionStats(),
                 null,
                 null,
-                task.getContextValue(DruidMetrics.TAGS)
+                task.getContext()
             )
         )
     );

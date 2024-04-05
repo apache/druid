@@ -38,6 +38,7 @@ public class IngestionStatsAndErrors
   private final Map<String, Long> recordsProcessed;
   private final Long segmentsRead;
   private final Long segmentsPublished;
+  private final Map<String, Object> taskContext;
 
   public IngestionStatsAndErrors(
       @JsonProperty("ingestionState") IngestionState ingestionState,
@@ -48,7 +49,8 @@ public class IngestionStatsAndErrors
       @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
       @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed,
       @Nullable @JsonProperty("segmentsRead") Long segmentsRead,
-      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished
+      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished,
+      @Nullable @JsonProperty("taskContext") Map<String, Object> taskContext
   )
   {
     this.ingestionState = ingestionState;
@@ -60,6 +62,7 @@ public class IngestionStatsAndErrors
     this.recordsProcessed = recordsProcessed;
     this.segmentsRead = segmentsRead;
     this.segmentsPublished = segmentsPublished;
+    this.taskContext = taskContext;
   }
 
   @JsonProperty
@@ -122,6 +125,14 @@ public class IngestionStatsAndErrors
     return segmentsPublished;
   }
 
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, Object> getTaskContext()
+  {
+    return taskContext;
+  }
+
   public static IngestionStatsAndErrors getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -148,7 +159,8 @@ public class IngestionStatsAndErrors
            Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
            Objects.equals(getRecordsProcessed(), that.getRecordsProcessed()) &&
            Objects.equals(getSegmentsRead(), that.getSegmentsRead()) &&
-           Objects.equals(getSegmentsPublished(), that.getSegmentsPublished());
+           Objects.equals(getSegmentsPublished(), that.getSegmentsPublished()) &&
+           Objects.equals(getTaskContext(), that.getTaskContext());
   }
 
   @Override
@@ -163,7 +175,8 @@ public class IngestionStatsAndErrors
         getSegmentAvailabilityWaitTimeMs(),
         getRecordsProcessed(),
         getSegmentsRead(),
-        getSegmentsPublished()
+        getSegmentsPublished(),
+        getTaskContext()
     );
   }
 
@@ -180,6 +193,7 @@ public class IngestionStatsAndErrors
            ", recordsProcessed=" + recordsProcessed +
            ", segmentsRead=" + segmentsRead +
            ", segmentsPublished=" + segmentsPublished +
+           ", taskContext=" + taskContext +
            '}';
   }
 }

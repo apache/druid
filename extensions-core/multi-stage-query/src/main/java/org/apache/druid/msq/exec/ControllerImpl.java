@@ -570,13 +570,13 @@ public class ControllerImpl implements Controller
           ),
           stagesReport,
           countersSnapshot,
-          resultsReport
+          resultsReport,
+          task.getContext()
       );
       context.writeReports(
           id(),
           TaskReport.buildTaskReports(new MSQTaskReport(
               id(),
-              task.getContextValue(DruidMetrics.TAGS),
               taskReportPayload
           ))
       );
@@ -702,7 +702,9 @@ public class ControllerImpl implements Controller
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
 
-    // propagate the controller's tags to the worker task
+    // propagate the controller's context and tags to the worker task
+    taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, task.getContext());
+    // specifically assign the 'tags' field for enhanced worker task metrics reporting
     taskContextOverridesBuilder.put(DruidMetrics.TAGS, task.getContextValue(DruidMetrics.TAGS, new HashMap()));
 
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
@@ -935,7 +937,6 @@ public class ControllerImpl implements Controller
     return TaskReport.buildTaskReports(
         new MSQTaskReport(
             id(),
-            task.getContextValue(DruidMetrics.TAGS),
             new MSQTaskReportPayload(
                 makeStatusReport(
                     TaskState.RUNNING,
@@ -954,7 +955,8 @@ public class ControllerImpl implements Controller
                     stagePartitionCountsForLiveReports
                 ),
                 makeCountersSnapshotForLiveReports(),
-                null
+                null,
+                task.getContext()
             )
         )
     );

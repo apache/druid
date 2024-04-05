@@ -19,33 +19,12 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.base.Strings;
-import org.apache.druid.query.DruidMetrics;
-
-import java.util.HashMap;
-import java.util.Map;
-
-public class DefaultTaskIdentitiesProvider implements TaskIdentitiesProvider
+public class NoopTaskContextEnricher implements TaskContextEnricher
 {
   public static final String TYPE = "default";
 
   @Override
-  public void enrichTaskTags(Task task)
+  public void enrich(Task task)
   {
-    String taskIdentifier = task.getType();
-    String groupId = task.getGroupId();
-    if (!Strings.isNullOrEmpty(groupId)) {
-      if (groupId.startsWith("coordinator-issued_compact")) {
-        taskIdentifier = "compact";
-      } else if (groupId.startsWith("coordinator-issued_kill")) {
-        taskIdentifier = "kill";
-      }
-    }
-
-    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
-    Map<String, Object> overrideTags = tags == null ? new HashMap<>() : new HashMap<>(tags);
-    overrideTags.put(TASK_IDENTIFIER, taskIdentifier);
-
-    task.addToContext(DruidMetrics.TAGS, overrideTags);
   }
 }

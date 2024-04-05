@@ -370,11 +370,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (segmentAvailabilityConfirmationPair.lhs != null && segmentAvailabilityConfirmationPair.lhs) {
       TaskReport reportRaw = indexer.getTaskReport(taskID).get("ingestionStatsAndErrors");
       IngestionStatsAndErrorsTaskReport report = (IngestionStatsAndErrorsTaskReport) reportRaw;
-      IngestionStatsAndErrors reportData = (IngestionStatsAndErrors) report.getPayload();
+      IngestionStatsAndErrors reportData = report.getPayload();
 
       Assert.assertTrue(
-          reportData.getTags() != null && !reportData.getTags().isEmpty(),
-          "Report data does not contain any task tags. Ensure that TaskIdentitiesProvider is correctly bound."
+          reportData.getTaskContext() != null && !reportData.getTaskContext().isEmpty(),
+          "Report data does not contain task context. Ensure that TaskContextEnricher is correctly bound."
       );
 
       // Confirm that the task waited longer than 0ms for the task to complete.
