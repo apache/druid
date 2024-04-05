@@ -1855,7 +1855,7 @@ public class MSQReplaceTest extends MSQTestBase
     }
     PartitionsSpec partitionsSpec;
     if (partitionDimensions.isEmpty()) {
-      partitionsSpec = new DynamicPartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null);
+      partitionsSpec = new DynamicPartitionsSpec(null, null);
 
     } else {
       partitionsSpec = new DimensionRangePartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null,
