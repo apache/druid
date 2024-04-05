@@ -33,9 +33,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.common.TopicPartition;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata>
 {
