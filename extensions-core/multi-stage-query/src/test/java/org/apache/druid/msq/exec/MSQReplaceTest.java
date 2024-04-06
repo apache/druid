@@ -879,6 +879,12 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedMSQSegmentReport(
+                         new MSQSegmentReport(
+                             DimensionRangeShardSpec.class.getSimpleName(),
+                             "Using RangeShardSpec to generate segments."
+                         )
+                     )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedSegment(expectedFooSegments())

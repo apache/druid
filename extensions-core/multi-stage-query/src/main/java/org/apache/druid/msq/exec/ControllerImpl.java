@@ -1020,6 +1020,11 @@ public class ControllerImpl implements Controller
 
     String previousSegmentId = null;
 
+    segmentReport = new MSQSegmentReport(
+        NumberedShardSpec.class.getSimpleName(),
+        "Using NumberedShardSpec to generate segments since the query is inserting rows."
+    );
+
     for (ClusterByPartition partitionBoundary : partitionBoundaries) {
       final DateTime timestamp = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
       final SegmentIdWithShardSpec allocation;
