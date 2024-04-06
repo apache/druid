@@ -61,6 +61,7 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
@@ -186,7 +187,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Nullable
   private String errorMsg;
 
-  private Map<String, TaskReport> completionReports;
+  private TaskReport.ReportMap completionReports;
 
   @JsonCreator
   public IndexTask(
@@ -319,7 +320,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @Nullable
   @JsonIgnore
-  public Map<String, TaskReport> getCompletionReports()
+  public TaskReport.ReportMap getCompletionReports()
   {
     return completionReports;
   }
@@ -414,21 +415,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-    Map<String, Object> events = getTaskCompletionUnparseableEvents();
 
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(full != null));
-
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return Response.ok(returnMap).build();
+    final TaskReport.ReportMap liveReports = buildLiveIngestionStatsReport(
+        ingestionState,
+        getTaskCompletionUnparseableEvents(),
+        doGetRowStats(full != null)
+    );
+    return Response.ok(liveReports).build();
   }
 
   @JsonProperty("spec")
@@ -540,11 +533,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private void updateAndWriteCompletionReports(TaskToolbox toolbox)
   {
-    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, null, null);
+    updateAndWriteCompletionReports(toolbox, null, null);
+  }
+
+  private void updateAndWriteCompletionReports(TaskToolbox toolbox, Long segmentsRead, Long segmentsPublished)
+  {
+    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
   }
+
 
   @Override
   protected Map<String, Object> getTaskCompletionUnparseableEvents()
@@ -1004,7 +1003,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
-        updateAndWriteCompletionReports(toolbox);
+        updateAndWriteCompletionReports(
+            toolbox,
+            // only applicable to the compaction use cases
+            inputSource instanceof DruidInputSource
+            ? (long) ((DruidInputSource) inputSource).getNumberOfSegmentsRead()
+            : null,
+            (long) published.getSegments().size()
+        );
         return TaskStatus.success(getId());
       }
     }

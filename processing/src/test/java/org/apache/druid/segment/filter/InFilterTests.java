@@ -627,25 +627,16 @@ public class InFilterTests
 
     private void assertTypedFilterMatches(DimFilter filter, List<String> expectedRows)
     {
-      // this filter only tests in sql compatible mode
-      if (NullHandling.sqlCompatible()) {
-        super.assertFilterMatches(filter, expectedRows);
-        try {
-          // make sure round trip json serde is cool
-          super.assertFilterMatches(
-              jsonMapper.readValue(jsonMapper.writeValueAsString(filter), DimFilter.class),
-              expectedRows
-          );
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      } else {
-        Throwable t = Assert.assertThrows(
-            DruidException.class,
-            () -> super.assertFilterMatches(filter, expectedRows)
+      super.assertFilterMatches(filter, expectedRows);
+      try {
+        // make sure round trip json serde is cool
+        super.assertFilterMatches(
+            jsonMapper.readValue(jsonMapper.writeValueAsString(filter), DimFilter.class),
+            expectedRows
         );
-        Assert.assertEquals("Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter", t.getMessage());
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
       }
     }
 
@@ -719,6 +710,15 @@ public class InFilterTests
     }
 
     @Test
+    public void testConvertToLegacy()
+    {
+      Assume.assumeTrue(NullHandling.replaceWithDefault());
+      TypedInFilter aFilter = new TypedInFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "c"), null, null);
+      Assert.assertTrue(aFilter.optimize(false) instanceof InDimFilter);
+      Assert.assertTrue(aFilter.toFilter() instanceof InDimFilter);
+    }
+
+    @Test
     public void testGetCacheKey()
     {
       Assume.assumeTrue(NullHandling.sqlCompatible());
@@ -786,14 +786,6 @@ public class InFilterTests
     @Test
     public void testInvalidParameters()
     {
-      if (NullHandling.replaceWithDefault()) {
-        Throwable t = Assert.assertThrows(
-            DruidException.class,
-            () -> new TypedInFilter("column", ColumnType.STRING, Collections.emptyList(), null, null).toFilter()
-        );
-        Assert.assertEquals("Invalid IN filter, typed in filter only supports SQL compatible null handling mode, set druid.generic.useDefaultValue=false to use this filter", t.getMessage());
-      }
-
       Assume.assumeTrue(NullHandling.sqlCompatible());
       Throwable t = Assert.assertThrows(
           DruidException.class,

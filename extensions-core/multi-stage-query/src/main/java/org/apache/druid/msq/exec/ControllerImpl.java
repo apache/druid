@@ -920,7 +920,7 @@ public class ControllerImpl implements Controller
 
   @Override
   @Nullable
-  public Map<String, TaskReport> liveReports()
+  public TaskReport.ReportMap liveReports()
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
