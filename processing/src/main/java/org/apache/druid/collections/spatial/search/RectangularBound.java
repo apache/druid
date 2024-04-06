@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
+ *
  */
 public class RectangularBound implements Bound<float[], ImmutableFloatPoint>
 {
@@ -125,6 +126,9 @@ public class RectangularBound implements Bound<float[], ImmutableFloatPoint>
   {
     if (input instanceof String) {
       final float[] coordinate = SpatialDimensionRowTransformer.decode((String) input);
+      if (coordinate == null) {
+        return false;
+      }
       return contains(coordinate);
     }
     return false;
