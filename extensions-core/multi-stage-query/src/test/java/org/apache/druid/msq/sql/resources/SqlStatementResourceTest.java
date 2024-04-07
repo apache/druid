@@ -102,6 +102,7 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class SqlStatementResourceTest extends MSQTestBase
 {
@@ -226,7 +227,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       new Object[]{234, "foo1", "bar1"}
   );
 
-  private final MSQTaskReport selectTaskReport = new MSQTaskReport(
+  private final Supplier<MSQTaskReport> selectTaskReport = () -> new MSQTaskReport(
       FINISHED_SELECT_MSQ_QUERY,
       new MSQTaskReportPayload(
           new MSQStatusReport(
@@ -451,7 +452,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
 
     Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
-           .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport)));
+           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
 
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
            .thenReturn(Futures.immediateFuture(new TaskStatusResponse(ERRORED_SELECT_MSQ_QUERY, new TaskStatusPlus(
