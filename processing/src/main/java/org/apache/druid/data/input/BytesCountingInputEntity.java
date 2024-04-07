@@ -57,6 +57,12 @@ public class BytesCountingInputEntity implements InputEntity
     return new BytesCountingInputStream(baseInputEntity.open(), inputStats);
   }
 
+  @Override
+  public SeekableInputStream openSeekable() throws IOException
+  {
+    return new SeekableBytesCountingInputStream(baseInputEntity.openSeekable(), inputStats);
+  }
+
   public InputEntity getBaseInputEntity()
   {
     return baseInputEntity;
@@ -68,6 +74,18 @@ public class BytesCountingInputEntity implements InputEntity
     final CleanableFile cleanableFile = baseInputEntity.fetch(temporaryDirectory, fetchBuffer);
     inputStats.incrementProcessedBytes(FileUtils.getFileSize(cleanableFile.file()));
     return cleanableFile;
+  }
+
+  @Override
+  public boolean isSeekable()
+  {
+    return baseInputEntity.isSeekable();
+  }
+
+  @Override
+  public long getSize() throws IOException
+  {
+    return baseInputEntity.getSize();
   }
 
   @Override
@@ -118,6 +136,29 @@ public class BytesCountingInputEntity implements InputEntity
       long result = in.skip(n);
       inputStats.incrementProcessedBytes(result);
       return result;
+    }
+  }
+
+  private static class SeekableBytesCountingInputStream extends DelegatingSeekableInputStream
+  {
+    private final SeekableInputStream in;
+
+    SeekableBytesCountingInputStream(SeekableInputStream in, InputStats inputStats)
+    {
+      super(new BytesCountingInputStream(in, inputStats));
+      this.in = in;
+    }
+
+    @Override
+    public long getPos() throws IOException
+    {
+      return in.getPos();
+    }
+
+    @Override
+    public void seek(long newPos) throws IOException
+    {
+      in.seek(newPos);
     }
   }
 }

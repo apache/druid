@@ -21,6 +21,7 @@ package org.apache.druid.data.input.parquet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -42,18 +43,30 @@ class BaseParquetReaderTest extends InitializedNullHandlingTest
 
   InputEntityReader createReader(String parquetFile, InputRowSchema schema, JSONPathSpec flattenSpec)
   {
-    return createReader(parquetFile, schema, flattenSpec, false);
+    return createReader(parquetFile, schema, flattenSpec, false, false);
   }
 
   InputEntityReader createReader(
       String parquetFile,
       InputRowSchema schema,
       JSONPathSpec flattenSpec,
-      boolean binaryAsString
+      boolean binaryAsString,
+      boolean projectPushdown
   )
   {
     FileEntity entity = new FileEntity(new File(parquetFile));
-    ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString, new Configuration());
+    return createReader(entity, schema, flattenSpec, binaryAsString, projectPushdown);
+  }
+
+  InputEntityReader createReader(
+      InputEntity entity,
+      InputRowSchema schema,
+      JSONPathSpec flattenSpec,
+      boolean binaryAsString,
+      boolean projectPushdown
+  )
+  {
+    ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString, projectPushdown, new Configuration());
     return parquet.createReader(schema, entity, null);
   }
 
