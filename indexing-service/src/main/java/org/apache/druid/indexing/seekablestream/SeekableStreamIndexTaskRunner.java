@@ -671,6 +671,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                   .getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
                   );
                   if (isPushRequired && !sequenceToUse.isCheckpointed()) {
+                    log.info("Hit the row limit updating sequenceToCheckpoint, SequenceToUse: [%s]", sequenceToUse);
                     sequenceToCheckpoint = sequenceToUse;
                   }
                   isPersistRequired |= addResult.isPersistRequired();
@@ -731,6 +732,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           if (System.currentTimeMillis() > nextCheckpointTime) {
             sequenceToCheckpoint = getLastSequenceMetadata();
+            log.info("Nex checkpoint time, updating sequenceToCheckpoint, SequenceToCheckpoint: [%s]", sequenceToCheckpoint);
           }
 
           if (sequenceToCheckpoint != null && stillReading) {
