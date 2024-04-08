@@ -145,7 +145,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(final DruidCoordinatorRuntimeParams params)
   {
-    if (!canDutyRun()) {
+    if (!(lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period)))) {
       log.debug(
           "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
           period,
@@ -245,17 +245,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
   }
 
-  /**
-   * <p>
-   * Calculates the interval for which segments are to be killed in a datasource.
-   * Since this method compares datetime as strings, it cannot find unused segments that are outside
-   * the range [{@link DateTimes#COMPARE_DATE_AS_STRING_MIN}, {@link DateTimes#COMPARE_DATE_AS_STRING_MAX}),
-   * such as {@link org.apache.druid.java.util.common.granularity.Granularities#ALL} partitioned segments
-   * and segments that end in {@link DateTimes#MAX}.
-   *</p><p>
-   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
-   * </p>
-   */
   @Nullable
   private Interval findIntervalForKill(
       final String dataSource,
@@ -288,11 +277,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     } else {
       return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
     }
-  }
-
-  private boolean canDutyRun()
-  {
-    return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
   private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
