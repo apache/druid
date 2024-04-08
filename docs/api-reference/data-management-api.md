@@ -206,7 +206,8 @@ Marks the state of a group of segments as unused, using an array of segment IDs 
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
-Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+Optionally, specify an array of segment versions with interval. Druid updates only the segments completely contained
+within the specified interval that match the optional list of versions; partially overlapping segments are not affected.
 
 #### URL
 
@@ -214,12 +215,13 @@ Druid only updates the segments completely contained within the specified interv
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts one of the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
-|Property|Description|Example|
-|----------|-------------|---------|
-|`interval`|ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
+|Property|Description|Required|Example|
+|----------|-------------|---------|---------|
+|`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
+|`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 
@@ -306,7 +308,8 @@ Marks the state of a group of segments as used, using an array of segment IDs or
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
-Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+Optionally, specify an array of segment versions with interval. Druid updates only the segments completely contained
+within the specified interval that match the optional list of versions; partially overlapping segments are not affected.
 
 #### URL
 
@@ -314,12 +317,13 @@ Druid only updates the segments completely contained within the specified interv
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts one of the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
-|Property|Description|Example|
-|----------|-------------|---------|
-|`interval`| ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
+|Property|Description|Required|Example|
+|----------|-------------|---------|---------|
+|`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
+|`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 

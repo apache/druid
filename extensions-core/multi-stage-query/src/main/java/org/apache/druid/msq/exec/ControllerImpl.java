@@ -167,6 +167,7 @@ import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
@@ -186,6 +187,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -914,7 +916,7 @@ public class ControllerImpl implements Controller
 
   @Override
   @Nullable
-  public Map<String, TaskReport> liveReports()
+  public TaskReport.ReportMap liveReports()
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
@@ -1201,6 +1203,7 @@ public class ControllerImpl implements Controller
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
                     .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
+                    .put(WindowOperatorQuery.class, new WindowOperatorQueryKit(context.jsonMapper()))
                     .build();
 
     return new MultiQueryKit(kitMap);
@@ -1905,7 +1908,8 @@ public class ControllerImpl implements Controller
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
                                      queryId,
                                      exportStorageProvider,
-                                     resultFormat
+                                     resultFormat,
+                                     columnMappings
                                  ))
       );
       return builder.build();
@@ -2768,7 +2772,6 @@ public class ControllerImpl implements Controller
           if (isFailOnEmptyInsertEnabled && Boolean.TRUE.equals(isShuffleStageOutputEmpty)) {
             throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
           }
-
           final ClusterByPartitions partitionBoundaries =
               queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
 

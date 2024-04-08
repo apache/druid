@@ -55,7 +55,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private final WorkerMemoryParameters workerMemoryParameters;
   private final List<ImmutableSegmentLoadInfo> loadedSegmentMetadata;
   private final Map<String, Controller> inMemoryControllers = new HashMap<>();
-  private final Map<String, Map<String, TaskReport>> reports = new HashMap<>();
+  private final Map<String, TaskReport.ReportMap> reports = new HashMap<>();
   private final Map<String, MSQControllerTask> inMemoryControllerTask = new HashMap<>();
   private final Map<String, TaskStatus> inMemoryTaskStatus = new HashMap<>();
 
@@ -171,7 +171,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
   // hooks to pull stuff out for testing
   @Nullable
-  public Map<String, TaskReport> getReportForTask(String id)
+  public TaskReport.ReportMap getReportForTask(String id)
   {
     return reports.get(id);
   }

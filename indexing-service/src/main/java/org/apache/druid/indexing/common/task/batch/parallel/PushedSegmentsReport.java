@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -41,14 +40,14 @@ public class PushedSegmentsReport implements SubTaskReport
   private final String taskId;
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
-  private final Map<String, TaskReport> taskReport;
+  private final TaskReport.ReportMap taskReport;
 
   @JsonCreator
   public PushedSegmentsReport(
       @JsonProperty("taskId") String taskId,
       @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
       @JsonProperty("segments") Set<DataSegment> newSegments,
-      @JsonProperty("taskReport") Map<String, TaskReport> taskReport
+      @JsonProperty("taskReport") TaskReport.ReportMap taskReport
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
@@ -77,7 +76,7 @@ public class PushedSegmentsReport implements SubTaskReport
   }
 
   @JsonProperty("taskReport")
-  public Map<String, TaskReport> getTaskReport()
+  public TaskReport.ReportMap getTaskReport()
   {
     return taskReport;
   }

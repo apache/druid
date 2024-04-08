@@ -28,8 +28,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 
-import java.util.Map;
-
 /**
  * Context used by multi-stage query controllers.
  *
@@ -80,5 +78,5 @@ public interface ControllerContext
   /**
    * Writes controller task report.
    */
-  void writeReports(String controllerTaskId, Map<String, TaskReport> reports);
+  void writeReports(String controllerTaskId, TaskReport.ReportMap reports);
 }

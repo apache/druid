@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -446,9 +447,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         false,
         Collections.emptyList()
     );
-    Map<String, Object> actualReports = task.doGetLiveReports("full");
-    final long processedBytes = useInputFormatApi ? 335 : 0;
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
+    TaskReport.ReportMap actualReports = task.doGetLiveReports(true);
+    TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
             new ParseExceptionReport(
@@ -464,7 +464,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1)
+        new RowIngestionMetersTotals(10, 335, 1, 1, 1)
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -497,10 +497,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     TaskContainer taskContainer = getIndexingServiceClient().getTaskContainer(task.getId());
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
-    Map<String, Object> actualReports = executedTask.doGetLiveReports("full");
+    TaskReport.ReportMap actualReports = executedTask.doGetLiveReports(true);
 
-    final long processedBytes = useInputFormatApi ? 335 : 0;
-    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1);
+    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 335, 1, 1, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(
             "{ts=2017unparseable}",
@@ -516,7 +515,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         )
     );
 
-    Map<String, Object> expectedReports;
+    TaskReport.ReportMap expectedReports;
     if (useInputFormatApi) {
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),

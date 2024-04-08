@@ -138,6 +138,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
       FrameWriterFactory frameWriterFactory,
       String rightPrefix,
       List<List<KeyColumn>> keyColumns,
+      int[] requiredNonNullKeyParts,
       JoinType joinType,
       long maxBufferedBytes
   )
@@ -148,8 +149,8 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     this.rightPrefix = rightPrefix;
     this.joinType = joinType;
     this.trackers = ImmutableList.of(
-        new Tracker(left, keyColumns.get(LEFT), maxBufferedBytes),
-        new Tracker(right, keyColumns.get(RIGHT), maxBufferedBytes)
+        new Tracker(left, keyColumns.get(LEFT), requiredNonNullKeyParts, maxBufferedBytes),
+        new Tracker(right, keyColumns.get(RIGHT), requiredNonNullKeyParts, maxBufferedBytes)
     );
     this.maxBufferedBytes = maxBufferedBytes;
   }
@@ -195,7 +196,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
 
       // Two rows match if the keys compare equal _and_ neither key has a null component. (x JOIN y ON x.a = y.a does
       // not match rows where "x.a" is null.)
-      final boolean marksMatch = markCmp == 0 && trackers.get(LEFT).hasCompletelyNonNullMark();
+      final boolean marksMatch = markCmp == 0 && trackers.get(LEFT).markHasRequiredNonNullKeyParts();
 
       // If marked keys are equal on both sides ("marksMatch"), at least one side needs to have a complete set of rows
       // for the marked key. Check if this is true, otherwise call nextAwait to read more data.
@@ -446,7 +447,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
   /**
    * Compares the marked rows of the two {@link #trackers}. This method returns 0 if both sides are null, even
    * though this is not considered a match by join semantics. Therefore, it is important to also check
-   * {@link Tracker#hasCompletelyNonNullMark()}.
+   * {@link Tracker#markHasRequiredNonNullKeyParts()}.
    *
    * @return negative if {@link #LEFT} key is earlier, positive if {@link #RIGHT} key is earlier, zero if the keys
    * are the same. Returns zero even if a key component is null, even though this is not considered a match by
@@ -549,6 +550,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     private final List<FrameHolder> holders = new ArrayList<>();
     private final ReadableInput input;
     private final List<KeyColumn> keyColumns;
+    private final int[] requiredNonNullKeyParts;
     private final long maxBytesBuffered;
 
     // markFrame and markRow are the first frame and row with the current key.
@@ -561,10 +563,16 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     // done indicates that no more data is available in the channel.
     private boolean done;
 
-    public Tracker(ReadableInput input, List<KeyColumn> keyColumns, long maxBytesBuffered)
+    public Tracker(
+        final ReadableInput input,
+        final List<KeyColumn> keyColumns,
+        final int[] requiredNonNullKeyParts,
+        final long maxBytesBuffered
+    )
     {
       this.input = input;
       this.keyColumns = keyColumns;
+      this.requiredNonNullKeyParts = requiredNonNullKeyParts;
       this.maxBytesBuffered = maxBytesBuffered;
     }
 
@@ -686,9 +694,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     /**
      * Whether this tracker has a marked row that is completely nonnull.
      */
-    public boolean hasCompletelyNonNullMark()
+    public boolean markHasRequiredNonNullKeyParts()
     {
-      return hasMark() && holders.get(markFrame).comparisonWidget.isCompletelyNonNullKey(markRow);
+      return hasMark() && holders.get(markFrame).comparisonWidget.hasNonNullKeyParts(markRow, requiredNonNullKeyParts);
     }
 
     /**

@@ -52,7 +52,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
@@ -75,10 +74,9 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -190,12 +188,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactoryWrapper joinableFactory,
       final Injector injector
-  ) throws IOException
+  )
   {
     NestedDataModule.registerHandlersAndSerde();
     final QueryableIndex index =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -211,7 +209,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix11 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -228,7 +226,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix12 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -244,7 +242,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix21 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -260,7 +258,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix22 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -276,7 +274,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexArrays =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -295,12 +293,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newTempFolder())
                     .buildMMappedIndex();
 
     final QueryableIndex indexAllTypesAuto =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -319,7 +317,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newTempFolder())
                     .buildMMappedIndex();
 
 
@@ -2893,7 +2891,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(in("v0", ImmutableList.of("1", "1.1"), null))
+                        .setDimFilter(in("v0", ImmutableList.of("1", "1.1")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3762,10 +3760,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setDimFilter(
-                            NullHandling.replaceWithDefault()
-                            ? in("v0", ImmutableSet.of("100", "200"), null)
-                            : or(equality("v0", 100L, ColumnType.LONG), equality("v0", 200L, ColumnType.LONG)
-                            )
+                            in("v0", ColumnType.LONG, ImmutableList.of(100L, 200L))
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3805,12 +3800,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setDimFilter(
-                            NullHandling.replaceWithDefault()
-                            ? in("v0", ImmutableSet.of("2.02", "3.03"), null)
-                            : or(
-                                equality("v0", 2.02, ColumnType.DOUBLE),
-                                equality("v0", 3.03, ColumnType.DOUBLE)
-                            )
+                            in("v0", ColumnType.DOUBLE, ImmutableList.of(2.02, 3.03))
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3849,7 +3839,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("300", "abcdef")))
+                        .setDimFilter(in("v0", ImmutableSet.of("300", "abcdef")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3887,7 +3877,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("hello", "1")))
+                        .setDimFilter(in("v0", ImmutableSet.of("hello", "1")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()

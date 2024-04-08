@@ -139,7 +139,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return delegate.getCombiningFactory();
+    final AggregatorFactory delegateCombiningFactory = delegate.getCombiningFactory();
+    final String myName = getName();
+
+    if (myName.equals(delegateCombiningFactory.getName())) {
+      return delegateCombiningFactory;
+    } else {
+      return delegateCombiningFactory.withName(myName);
+    }
   }
 
   @Override

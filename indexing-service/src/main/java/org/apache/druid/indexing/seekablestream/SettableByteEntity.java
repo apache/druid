@@ -37,27 +37,17 @@ import java.nio.ByteBuffer;
  * processing where binary records are arriving as a list but {@link org.apache.druid.data.input.InputEntityReader}, that
  * parses the data, expects an {@link InputStream}. This class mimics a continuous InputStream while behind the scenes,
  * binary records are being put one after the other that the InputStream consumes bytes from. One record is fully
- * consumed and only then the next record is set. This class doesn't allow reading the same data twice.
+ * consumed and only then the next record is set.
  * This class solely exists to overcome the limitations imposed by interfaces for reading and parsing data.
- *
  */
 @NotThreadSafe
 public class SettableByteEntity<T extends ByteEntity> implements InputEntity
 {
-  private final SettableByteBufferInputStream inputStream;
-  private boolean opened = false;
   private T entity;
-
-  public SettableByteEntity()
-  {
-    this.inputStream = new SettableByteBufferInputStream();
-  }
 
   public void setEntity(T entity)
   {
-    inputStream.setBuffer(entity.getBuffer());
     this.entity = entity;
-    opened = false;
   }
 
   @Nullable
@@ -72,19 +62,13 @@ public class SettableByteEntity<T extends ByteEntity> implements InputEntity
     return entity;
   }
 
-  /**
-   * This method can be called multiple times only for different data. So you can open a new input stream
-   * only after a new buffer is in use.
-   */
   @Override
   public InputStream open()
   {
-    if (opened) {
-      throw new IllegalArgumentException("Can't open the input stream on SettableByteEntity more than once");
-    }
-
-    opened = true;
-    return inputStream;
+    // Duplicate the entity buffer, because the stream will update its position.
+    final SettableByteBufferInputStream stream = new SettableByteBufferInputStream();
+    stream.setBuffer(entity.getBuffer().duplicate());
+    return stream;
   }
 
   public static final class SettableByteBufferInputStream extends InputStream

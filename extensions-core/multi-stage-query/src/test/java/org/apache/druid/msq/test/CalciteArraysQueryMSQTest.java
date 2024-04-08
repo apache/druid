@@ -42,7 +42,7 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
   {
     super.configureGuice(builder);
     builder.addModules(
-        CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+        CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
     );
   }
 

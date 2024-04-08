@@ -19,7 +19,7 @@
 import type { IconName } from '@blueprintjs/core';
 import { Card, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery } from '@druid-toolkit/query';
+import { SqlQuery, SqlTable } from '@druid-toolkit/query';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
@@ -136,7 +136,9 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           onBack={() => setContent(undefined)}
           onDone={async () => {
             const { queryString, queryContext } = content;
-            const ingestDatasource = SqlQuery.parse(queryString).getIngestTable()?.getName();
+            const ingestTable = SqlQuery.parse(queryString).getIngestTable();
+            const ingestDatasource =
+              ingestTable instanceof SqlTable ? ingestTable.getName() : undefined;
 
             if (!ingestDatasource) {
               AppToaster.show({ message: `Must have an ingest datasource`, intent: Intent.DANGER });
