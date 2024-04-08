@@ -69,11 +69,6 @@ public interface DataSourceMetadata
    */
   boolean matches(DataSourceMetadata other);
 
-  default boolean matchesOld(DataSourceMetadata old)
-  {
-    return matches(old);
-  }
-
   /**
    * Returns a copy of this instance with "other" merged in. Any conflicts should be resolved in favor of
    * information from "other".
