@@ -126,7 +126,6 @@ public class KillUnusedSegmentsTest
     overlordClient = new TestOverlordClient();
     configBuilder = new TestDruidCoordinatorConfig.Builder()
         .withCoordinatorIndexingPeriod(Duration.standardSeconds(0))
-        .withCoordinatorKillPeriod(Duration.standardSeconds(0))
         .withCoordinatorKillDurationToRetain(Duration.standardHours(36))
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillBufferPeriod(Duration.standardSeconds(1));

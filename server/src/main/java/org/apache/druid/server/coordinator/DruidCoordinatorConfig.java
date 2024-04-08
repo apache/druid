@@ -23,8 +23,6 @@ import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
-/**
- */
 public abstract class DruidCoordinatorConfig
 {
   @Config("druid.coordinator.startDelay")
@@ -47,9 +45,13 @@ public abstract class DruidCoordinatorConfig
   @Default("false")
   public abstract boolean isKillUnusedSegmentsEnabled();
 
+  /**
+   * @return the coordinator's indexing period as the default kill period.
+   */
   @Config("druid.coordinator.kill.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorKillPeriod();
+  public Duration getCoordinatorKillPeriod() {
+    return getCoordinatorIndexingPeriod();
+  }
 
   @Config("druid.coordinator.kill.durationToRetain")
   @Default("P90D")
