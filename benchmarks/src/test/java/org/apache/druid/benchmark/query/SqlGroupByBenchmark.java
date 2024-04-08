@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -87,8 +86,6 @@ import java.util.stream.Collectors;
 @Measurement(iterations = 5)
 public class SqlGroupByBenchmark
 {
-  private static final Logger log = new Logger(SqlGroupByBenchmark.class);
-
   static {
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
@@ -199,7 +196,6 @@ public class SqlGroupByBenchmark
     int rowsPerSegment = Integers.parseInt(StringUtils.replace(columnCardinalityWithUnderscores, "_", ""));
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
-    log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
 
     TransformSpec transformSpec = new TransformSpec(
         null,
