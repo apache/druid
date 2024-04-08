@@ -47,7 +47,7 @@ public class DruidCoordinatorConfigTest
   }
 
   @Test
-  public void testCoordinatorConfigWithNonDefaults()
+  public void testCoordinatorConfigWithOverrides()
   {
     final Properties props = new Properties();
     props.setProperty("druid.coordinator.startDelay", "PT1s");
