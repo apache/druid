@@ -684,7 +684,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
 
-        // TODO: Based on a function flag, either create parallel index spec OR just aggregate up dataSchemas. We should
+        // TODO(vishesh): Based on a function flag, either create parallel index spec OR just aggregate up dataSchemas. We should
         // pass a list of schemas to MSQ to have one-to-one mapping between an MSQ controller task and a schema
         dataSchemas.add(Pair.of(interval, dataSchema));
       }

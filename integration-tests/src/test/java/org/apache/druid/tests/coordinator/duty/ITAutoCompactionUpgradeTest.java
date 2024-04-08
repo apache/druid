@@ -103,6 +103,7 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
         null,
         null,
         new UserCompactionTaskIOConfig(true),
+        null,
         null
     );
     compactionResource.submitCompactionConfig(compactionConfig);

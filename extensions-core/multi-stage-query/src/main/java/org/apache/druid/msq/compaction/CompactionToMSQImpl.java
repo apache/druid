@@ -7,6 +7,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -196,13 +197,13 @@ public class CompactionToMSQImpl implements CompactionToMSQ
 
       );
 
-      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
-
       Integer rowsPerSegment = null;
+      if (compactionTask.getTuningConfig() != null){
+        PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
 
-      if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
-        rowsPerSegment = ((DimensionRangePartitionsSpec) partitionsSpec).getTargetRowsPerSegment();
-
+        if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
+          rowsPerSegment = ((DimensionRangePartitionsSpec) partitionsSpec).getTargetRowsPerSegment();
+        }
       }
 
       MSQTuningConfig msqTuningConfig = new MSQTuningConfig(

@@ -101,7 +101,27 @@ public class CoordinatorCompactionConfigsResource
             current,
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
-            useAutoScaleSlots
+            useAutoScaleSlots,
+            null
+        );
+    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
+  }
+
+  @POST
+  @Path("/engine")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response setCompactionEngine(
+      @QueryParam("engine") DataSourceCompactionConfig.Engine engine,
+      @Context HttpServletRequest req
+  )
+  {
+    UnaryOperator<CoordinatorCompactionConfig> operator =
+        current -> CoordinatorCompactionConfig.from(
+            current,
+            null,
+            null,
+            null,
+            engine
         );
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
@@ -119,6 +139,7 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+      newConfig.updateEngineAndValidate(current.getEngine());
       newConfigs.put(newConfig.getDataSource(), newConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 

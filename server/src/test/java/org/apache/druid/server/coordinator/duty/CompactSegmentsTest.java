@@ -712,6 +712,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -769,6 +770,7 @@ public class CompactSegmentsTest
             null,
             null,
             new UserCompactionTaskIOConfig(true),
+            null,
             null
         )
     );
@@ -813,6 +815,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -863,6 +866,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+            null,
             null,
             null,
             null,
@@ -927,6 +931,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -979,6 +984,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1024,6 +1030,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true),
+            null,
             null,
             null,
             null,
@@ -1133,6 +1140,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+            null,
             null,
             null,
             null,
@@ -1252,6 +1260,7 @@ public class CompactSegmentsTest
             null,
             new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
             null,
+            null,
             null
         )
     );
@@ -1297,6 +1306,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -1352,6 +1362,7 @@ public class CompactSegmentsTest
             null,
             null,
             aggregatorFactories,
+            null,
             null,
             null,
             null
@@ -1429,6 +1440,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -1520,6 +1532,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1577,6 +1590,7 @@ public class CompactSegmentsTest
             new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
             null,
             null,
+            null,
             null
         )
     );
@@ -1624,6 +1638,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -1781,7 +1796,8 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots
+                useAutoScaleSlots,
+                null
             )
         )
         .build();
@@ -1937,6 +1953,7 @@ public class CompactSegmentsTest
                   null,
                   null
               ),
+              null,
               null,
               null,
               null,

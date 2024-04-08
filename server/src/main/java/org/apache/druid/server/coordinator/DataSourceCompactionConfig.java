@@ -22,6 +22,10 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
@@ -55,6 +59,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
+  private Engine engine;
 
   @JsonCreator
   public DataSourceCompactionConfig(
@@ -69,7 +74,8 @@ public class DataSourceCompactionConfig
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
-      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
+      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
+      @JsonProperty("engine") @Nullable Engine engine
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -88,6 +94,7 @@ public class DataSourceCompactionConfig
     this.dimensionsSpec = dimensionsSpec;
     this.transformSpec = transformSpec;
     this.taskContext = taskContext;
+    this.engine = engine;
   }
 
   @JsonProperty
@@ -171,6 +178,13 @@ public class DataSourceCompactionConfig
     return taskContext;
   }
 
+  @JsonProperty
+  @Nullable
+  public Engine getEngine()
+  {
+    return engine;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -192,6 +206,7 @@ public class DataSourceCompactionConfig
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(ioConfig, that.ioConfig) &&
+           Objects.equals(engine, that.engine) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -209,9 +224,51 @@ public class DataSourceCompactionConfig
         dimensionsSpec,
         transformSpec,
         ioConfig,
-        taskContext
+        taskContext,
+        engine
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
+  }
+
+  public void updateEngineAndValidate(Engine defaultEngine)
+  {
+    boolean usingDefault = false;
+    if (engine == null) {
+      engine = defaultEngine;
+      usingDefault = true;
+    }
+    if (engine == Engine.MSQ) {
+      if (tuningConfig != null) {
+        PartitionsSpec partitionsSpec = tuningConfig.getPartitionsSpec();
+        if (partitionsSpec != null && !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
+          throw InvalidInput.exception(
+              "Invalid partition spec type[%s] for MSQ compaction engine %s. Type must be DynamicRangePartitionSpec.",
+              partitionsSpec.getClass(), usingDefault ? "set as default" : "specified in spec"
+          );
+        }
+      }
+      if (maxRowsPerSegment != null) {
+        throw InvalidInput.exception(
+            "MaxRowsPerSegment[%d] field not supported for MSQ compaction engine.",
+           maxRowsPerSegment
+        );
+      }
+    }
+  }
+
+  public enum Engine
+  {
+    NATIVE,
+    MSQ;
+
+    @JsonCreator
+    public static Engine fromString(String name)
+    {
+      if (name == null) {
+        return null;
+      }
+      return valueOf(StringUtils.toUpperCase(name));
+    }
   }
 }

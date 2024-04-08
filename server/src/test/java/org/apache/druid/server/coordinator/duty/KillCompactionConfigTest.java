@@ -192,7 +192,8 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
-        ImmutableMap.of("key", "val")
+        ImmutableMap.of("key", "val"),
+        null
     );
 
     DataSourceCompactionConfig activeDatasourceConfig = new DataSourceCompactionConfig(
@@ -207,7 +208,8 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
-        ImmutableMap.of("key", "val")
+        ImmutableMap.of("key", "val"),
+        null
     );
     CoordinatorCompactionConfig originalCurrentConfig = CoordinatorCompactionConfig.from(ImmutableList.of(inactiveDatasourceConfig, activeDatasourceConfig));
     byte[] originalCurrentConfigBytes = {1, 2, 3};
@@ -293,7 +295,8 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
-        ImmutableMap.of("key", "val")
+        ImmutableMap.of("key", "val"),
+        null
     );
 
     CoordinatorCompactionConfig originalCurrentConfig = CoordinatorCompactionConfig.from(ImmutableList.of(inactiveDatasourceConfig));
