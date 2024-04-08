@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -641,6 +642,15 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateCall(SqlCall call, SqlValidatorScope scope)
   {
+    if (call.getKind() == SqlKind.OVER) {
+      if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
+        throw buildCalciteContextException(
+            StringUtils.format(
+                "The query contains window functions; To run these window functions, specify [%s] in query context.",
+                PlannerContext.CTX_ENABLE_WINDOW_FNS),
+            call);
+      }
+    }
     if (call.getKind() == SqlKind.NULLS_FIRST) {
       SqlNode op0 = call.getOperandList().get(0);
       if (op0.getKind() == SqlKind.DESCENDING) {
