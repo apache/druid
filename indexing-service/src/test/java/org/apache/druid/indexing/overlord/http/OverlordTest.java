@@ -65,6 +65,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -247,7 +248,8 @@ public class OverlordTest
         supervisorManager,
         EasyMock.createNiceMock(OverlordDutyExecutor.class),
         new TestDruidLeaderSelector(),
-        EasyMock.createNiceMock(SegmentAllocationQueue.class)
+        EasyMock.createNiceMock(SegmentAllocationQueue.class),
+        new DefaultObjectMapper()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }

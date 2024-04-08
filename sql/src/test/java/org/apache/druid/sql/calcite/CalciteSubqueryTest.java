@@ -47,7 +47,6 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
@@ -73,7 +72,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -1357,13 +1355,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                               ColumnType.STRING
                                                           )
                                                       )
-                                                      .filters(new InDimFilter(
-                                                          "channel",
-                                                          new HashSet<>(Arrays.asList(
-                                                              "abc",
-                                                              "xyz"
-                                                          ))
-                                                      ))
+                                                      .filters(in("channel", Arrays.asList("abc", "xyz")))
                                                       .context(QUERY_CONTEXT_DEFAULT)
                                                       .build()
                             ),

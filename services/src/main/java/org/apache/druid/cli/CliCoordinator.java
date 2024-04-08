@@ -42,6 +42,7 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ConfigProvider;
@@ -465,12 +466,12 @@ public class CliCoordinator extends ServerRunnable
 
   private static class HeartbeatSupplier implements Provider<Supplier<Map<String, Object>>>
   {
-    private final DruidCoordinator coordinator;
+    private final DruidLeaderSelector leaderSelector;
 
     @Inject
-    public HeartbeatSupplier(DruidCoordinator coordinator)
+    public HeartbeatSupplier(@Coordinator DruidLeaderSelector leaderSelector)
     {
-      this.coordinator = coordinator;
+      this.leaderSelector = leaderSelector;
     }
 
     @Override
@@ -478,7 +479,7 @@ public class CliCoordinator extends ServerRunnable
     {
       return () -> {
         Map<String, Object> heartbeatTags = new HashMap<>();
-        heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
+        heartbeatTags.put("leader", leaderSelector.isLeader() ? 1 : 0);
 
         return heartbeatTags;
       };
