@@ -196,7 +196,7 @@ public class SqlGroupByBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     String columnCardinalityWithUnderscores = groupingDimension.substring(groupingDimension.lastIndexOf('-') + 1);
-    int rowsPerSegment = Integers.parseInt(columnCardinalityWithUnderscores.replaceAll("_", ""));
+    int rowsPerSegment = Integers.parseInt(StringUtils.replace(columnCardinalityWithUnderscores, "_", ""));
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
