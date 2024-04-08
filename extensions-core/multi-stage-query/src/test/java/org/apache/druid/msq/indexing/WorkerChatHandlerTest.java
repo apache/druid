@@ -53,7 +53,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.Map;
 
 public class WorkerChatHandlerTest
 {
@@ -88,7 +87,7 @@ public class WorkerChatHandlerTest
                          new TaskReportFileWriter()
                          {
                            @Override
-                           public void write(String taskId, Map<String, TaskReport> reports)
+                           public void write(String taskId, TaskReport.ReportMap reports)
                            {
 
                            }

@@ -187,7 +187,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Nullable
   private String errorMsg;
 
-  private Map<String, TaskReport> completionReports;
+  private TaskReport.ReportMap completionReports;
 
   @JsonCreator
   public IndexTask(
@@ -320,7 +320,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @Nullable
   @JsonIgnore
-  public Map<String, TaskReport> getCompletionReports()
+  public TaskReport.ReportMap getCompletionReports()
   {
     return completionReports;
   }
@@ -415,21 +415,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-    Map<String, Object> events = getTaskCompletionUnparseableEvents();
 
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(full != null));
-
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return Response.ok(returnMap).build();
+    final TaskReport.ReportMap liveReports = buildLiveIngestionStatsReport(
+        ingestionState,
+        getTaskCompletionUnparseableEvents(),
+        doGetRowStats(full != null)
+    );
+    return Response.ok(liveReports).build();
   }
 
   @JsonProperty("spec")

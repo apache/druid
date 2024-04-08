@@ -177,7 +177,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   }
 
   @Override
-  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments, Map<String, TaskReport> taskReport)
+  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments, TaskReport.ReportMap taskReport)
   {
     List<PartitionStat> partitionStats = segments.stream()
                                                         .map(segment -> toolbox.getIntermediaryDataManager().generatePartitionStat(toolbox, segment))

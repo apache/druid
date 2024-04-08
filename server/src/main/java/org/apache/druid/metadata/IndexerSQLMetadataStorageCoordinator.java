@@ -33,6 +33,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -420,41 +421,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     try {
       return connector.retryTransaction(
-          new TransactionCallback<SegmentPublishResult>()
-          {
-            @Override
-            public SegmentPublishResult inTransaction(
-                final Handle handle,
-                final TransactionStatus transactionStatus
-            ) throws Exception
-            {
-              // Set definitelyNotUpdated back to false upon retrying.
-              definitelyNotUpdated.set(false);
+          (handle, transactionStatus) -> {
+            // Set definitelyNotUpdated back to false upon retrying.
+            definitelyNotUpdated.set(false);
 
-              if (startMetadata != null) {
-                final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
-                    handle,
-                    dataSource,
-                    startMetadata,
-                    endMetadata
-                );
+            if (startMetadata != null) {
+              final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+                  handle,
+                  dataSource,
+                  startMetadata,
+                  endMetadata
+              );
 
-                if (result.isFailed()) {
-                  // Metadata was definitely not updated.
-                  transactionStatus.setRollbackOnly();
-                  definitelyNotUpdated.set(true);
+              if (result.isFailed()) {
+                // Metadata was definitely not updated.
+                transactionStatus.setRollbackOnly();
+                definitelyNotUpdated.set(true);
 
-                  if (result.canRetry()) {
-                    throw new RetryTransactionException(result.getErrorMsg());
-                  } else {
-                    throw new RuntimeException(result.getErrorMsg());
-                  }
+                if (result.canRetry()) {
+                  throw new RetryTransactionException(result.getErrorMsg());
+                } else {
+                  throw InvalidInput.exception(result.getErrorMsg());
                 }
               }
-
-              final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments);
-              return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
+
+            final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments);
+            return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -2472,17 +2465,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final boolean startMetadataMatchesExisting;
-    int startMetadataGreaterThanExisting = 0;
+    boolean startMetadataGreaterThanExisting = false;
 
     if (oldCommitMetadataFromDb == null) {
       startMetadataMatchesExisting = startMetadata.isValidStart();
-      startMetadataGreaterThanExisting = 1;
+      startMetadataGreaterThanExisting = true;
     } else {
       // Checking against the last committed metadata.
-      // If the new start sequence number is greater than the end sequence number of last commit compareTo() function will return 1,
-      // 0 in all other cases. It might be because multiple tasks are publishing the sequence at around same time.
+      // If the new start sequence number is greater than the end sequence number of the last commit,
+      // compareTo() will return 1 and 0 in all other cases. This can happen if multiple tasks are publishing the
+      // sequence around the same time.
       if (startMetadata instanceof Comparable) {
-        startMetadataGreaterThanExisting = ((Comparable) startMetadata.asStartMetadata()).compareTo(oldCommitMetadataFromDb.asStartMetadata());
+        startMetadataGreaterThanExisting = ((Comparable) startMetadata.asStartMetadata())
+                                               .compareTo(oldCommitMetadataFromDb.asStartMetadata()) > 0;
       }
 
       // Converting the last one into start metadata for checking since only the same type of metadata can be matched.
@@ -2492,25 +2487,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
     }
 
-    if (startMetadataGreaterThanExisting == 1 && !startMetadataMatchesExisting) {
-      // Offset stored in StartMetadata is Greater than the last commited metadata,
-      // Then retry multiple task might be trying to publish the segment for same partitions.
-      log.info("Failed to update the metadata Store. The new start metadata: [%s] is ahead of last commited end state: [%s].",
-          startMetadata,
-          oldCommitMetadataFromDb);
+    if (startMetadataGreaterThanExisting && !startMetadataMatchesExisting) {
+      // Offsets stored in startMetadata is greater than the last commited metadata.
       return new DataStoreMetadataUpdateResult(true, false,
-          "Failed to update the metadata Store. The new start metadata is ahead of last commited end state."
+          "The new start metadata state[%s] is ahead of the last commited"
+          + " end state[%s]. Try resetting the supervisor.", startMetadata, oldCommitMetadataFromDb
       );
     }
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
-      return new DataStoreMetadataUpdateResult(true, false, StringUtils.format(
-          "Inconsistent metadata state. This can happen if you update input topic in a spec without changing " +
-          "the supervisor name. Stored state: [%s], Target state: [%s].",
-          oldCommitMetadataFromDb,
-          startMetadata
-      ));
+      return new DataStoreMetadataUpdateResult(true, false,
+          "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor.",
+          oldCommitMetadataFromDb, startMetadata
+      );
     }
 
     // Only endOffsets should be stored in metadata store

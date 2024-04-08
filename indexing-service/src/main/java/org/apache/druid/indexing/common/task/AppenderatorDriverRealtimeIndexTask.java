@@ -609,7 +609,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
    *
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private TaskReport.ReportMap getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
