@@ -22,7 +22,6 @@ package org.apache.druid.rpc.indexing;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.JsonParserIterator;
@@ -31,7 +30,6 @@ import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -171,21 +169,8 @@ public class OverlordClientImpl implements OverlordClient
                 .jsonContent(jsonMapper, taskIds),
             new BytesFullResponseHandler()
         ),
-        holder -> {
-          final Map<String, TaskStatus> retVal =
-              JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Map<String, TaskStatus>>() { });
-          for (String taskId : ImmutableList.copyOf(retVal.keySet())) {
-            TaskStatus status = retVal.get(taskId);
-            if (TaskLocation.unknown().equals(status.getLocation())) {
-              final TaskStatusPlus taskStatusPlus = FutureUtils.getUnchecked(taskStatus(taskId), true)
-                                                               .getStatus();
-              if (taskStatusPlus != null) {
-                retVal.put(taskId, status.withLocation(taskStatusPlus.getLocation()));
-              }
-            }
-          }
-          return retVal;
-        }
+        holder ->
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Map<String, TaskStatus>>() {})
     );
   }
 
