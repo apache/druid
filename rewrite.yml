@@ -16,6 +16,8 @@
 type: specs.openrewrite.org/v1beta/recipe
 name: org.apache.druid.RewriteRules
 recipeList:
+  - org.openrewrite.apache.commons.math.UpgradeApacheCommonsMath_2_3
+  - org.openrewrite.apache.commons.collections.UpgradeApacheCommonsCollections_3_4
   - org.apache.druid.UpgradeCalciteTestsToJunit5
   - org.openrewrite.java.testing.junit5.RemoveObsoleteRunners:
       obsoleteRunners:
