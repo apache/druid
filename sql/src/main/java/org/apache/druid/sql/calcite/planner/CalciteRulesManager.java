@@ -38,6 +38,7 @@ import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
+import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -82,6 +83,10 @@ public class CalciteRulesManager
   private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
+  private static final String BLOAT_PROPERTY = "druid.sql.planner.bloat";
+  private static final int BLOAT = Integer.parseInt(
+      System.getProperty(BLOAT_PROPERTY, "100")
+  );
 
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#BASE_RULES}, minus:
@@ -100,7 +105,7 @@ public class CalciteRulesManager
       ImmutableList.of(
           CoreRules.AGGREGATE_STAR_TABLE,
           CoreRules.AGGREGATE_PROJECT_STAR_TABLE,
-          CoreRules.PROJECT_MERGE,
+          ProjectMergeRule.Config.DEFAULT.withBloat(BLOAT).toRule(),
           CoreRules.FILTER_SCAN,
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
