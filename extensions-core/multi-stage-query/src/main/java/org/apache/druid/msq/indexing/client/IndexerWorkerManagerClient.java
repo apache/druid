@@ -86,7 +86,7 @@ public class IndexerWorkerManagerClient implements WorkerManagerClient
       ).get(workerId);
 
       if (taskStatus != null
-          && TaskLocation.unknown().equals(taskStatus.getLocation())) {
+          && !TaskLocation.unknown().equals(taskStatus.getLocation())) {
         return taskStatus.getLocation();
       }
 
