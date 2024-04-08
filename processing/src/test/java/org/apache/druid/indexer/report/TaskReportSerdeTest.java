@@ -21,7 +21,6 @@ package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
@@ -139,13 +138,9 @@ public class TaskReportSerdeTest
         )
     );
 
-
-    Assert.assertEquals(expected, jsonMapper.readValue(
-        json,
-        new TypeReference<TaskReport>()
-        {
-        }
-    ));
+    TaskReport deserialized = jsonMapper.readValue(json, TaskReport.class);
+    Assert.assertEquals(expected.getTaskId(), deserialized.getTaskId());
+    Assert.assertEquals(expected, deserialized);
   }
 
   @Test
