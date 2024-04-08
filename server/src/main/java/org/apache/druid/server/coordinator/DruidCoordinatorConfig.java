@@ -49,7 +49,8 @@ public abstract class DruidCoordinatorConfig
    * @return the coordinator's indexing period as the default kill period.
    */
   @Config("druid.coordinator.kill.period")
-  public Duration getCoordinatorKillPeriod() {
+  public Duration getCoordinatorKillPeriod()
+  {
     return getCoordinatorIndexingPeriod();
   }
 
