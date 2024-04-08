@@ -172,17 +172,17 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
           @Override
           public int hashCode(Object o)
           {
-             return StructuredData.wrap(o).equalityHash();
-//            return StructuredData.wrap(o).hashCode();
+            // TODO(laksh): VET, Check if StructuredData.wrap(o).hashCode() makes sense, given that most of the objects inside
+            //  are primitives or those that have implemented .hashCode correctly
+            return StructuredData.wrap(o).equalityHash();
           }
 
           @Override
           public boolean equals(Object a, Object b)
           {
-            // .equals() implementation of structured data is not very good for our purpose. It resorts to the object
-            // equality
+            // TODO(laksh): VET, .equals() implementation of structured data is not very good for our purpose. It
+            //  resorts to the object equality
             return StructuredData.wrap(a).compareTo(StructuredData.wrap(b)) == 0;
-//            return StructuredData.wrap(a).equals(StructuredData.wrap(b));
           }
         }
     );

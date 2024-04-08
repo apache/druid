@@ -385,7 +385,7 @@ public class QueryTestRunner
     public void verify()
     {
       for (QueryResults queryResults : execStep.results()) {
-//        verifyQuery(queryResults);
+        verifyQuery(queryResults);
       }
     }
 
