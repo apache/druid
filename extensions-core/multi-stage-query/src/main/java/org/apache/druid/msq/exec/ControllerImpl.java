@@ -1775,15 +1775,7 @@ public class ControllerImpl implements Controller
     final MSQTuningConfig tuningConfig = task.getQuerySpec().getTuningConfig();
     PartitionsSpec partitionSpec;
 
-    if (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)) {
-      String partitionDimension = ((SingleDimensionShardSpec) shardSpec).getDimension();
-      partitionSpec = new SingleDimensionPartitionsSpec(
-          tuningConfig.getRowsPerSegment(),
-          null,
-          partitionDimension,
-          false
-      );
-    } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
+    if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
       List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
       partitionSpec = new DimensionRangePartitionsSpec(
           tuningConfig.getRowsPerSegment(),
@@ -1794,8 +1786,9 @@ public class ControllerImpl implements Controller
     } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
       // There is currently no way of specifying either maxRowsPerSegment or maxTotalRows for an MSQ task.
       // Hence using null for both which ends up translating to DEFAULT_MAX_ROWS_PER_SEGMENT for maxRowsPerSegment.
-      partitionSpec = new DynamicPartitionsSpec(null, null);
+      partitionSpec = new DynamicPartitionsSpec(tuningConfig.getRowsPerSegment(), Long.MAX_VALUE);
     } else {
+      // SingleDimenionShardSpec and other shard specs are never created in MSQ.
       throw new MSQException(
           UnknownFault.forMessage(
               StringUtils.format(
