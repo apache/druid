@@ -145,7 +145,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(final DruidCoordinatorRuntimeParams params)
   {
-    if (!(lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period)))) {
+    if (!canDutyRun()) {
       log.debug(
           "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
           period,
@@ -277,6 +277,11 @@ public class KillUnusedSegments implements CoordinatorDuty
     } else {
       return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
     }
+  }
+
+  private boolean canDutyRun()
+  {
+    return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
   private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
