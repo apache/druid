@@ -59,7 +59,7 @@ public class GroupByResourcesReservationPool
   }
 
   /**
-   * Reserves appropariate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map
+   * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map
    */
   public void reserve(String queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {
