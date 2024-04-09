@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
@@ -370,12 +371,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (segmentAvailabilityConfirmationPair.lhs != null && segmentAvailabilityConfirmationPair.lhs) {
       TaskReport reportRaw = indexer.getTaskReport(taskID).get("ingestionStatsAndErrors");
       IngestionStatsAndErrorsTaskReport report = (IngestionStatsAndErrorsTaskReport) reportRaw;
-      IngestionStatsAndErrors reportData = report.getPayload();
-
-      Assert.assertTrue(
-          reportData.getTaskContext() != null && !reportData.getTaskContext().isEmpty(),
-          "Report data does not contain task context. Ensure that TaskContextEnricher is correctly bound."
-      );
+      IngestionStatsAndErrors reportData = (IngestionStatsAndErrors) report.getPayload();
 
       // Confirm that the task waited longer than 0ms for the task to complete.
       Assert.assertTrue(reportData.getSegmentAvailabilityWaitTimeMs() > 0);
@@ -387,6 +383,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
             segmentAvailabilityConfirmationPair.rhs
         );
       }
+
+      TaskContextReport taskContextReport = (TaskContextReport) indexer.getTaskReport(taskID).get(TaskContextReport.REPORT_KEY);
+
+      Assert.assertTrue(!taskContextReport.getPayload().isEmpty());
     }
 
     // IT*ParallelIndexTest do a second round of ingestion to replace segements in an existing

@@ -63,6 +63,7 @@ import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
@@ -570,15 +571,14 @@ public class ControllerImpl implements Controller
           ),
           stagesReport,
           countersSnapshot,
-          resultsReport,
-          task.getContext()
+          resultsReport
       );
       context.writeReports(
           id(),
-          TaskReport.buildTaskReports(new MSQTaskReport(
-              id(),
-              taskReportPayload
-          ))
+          TaskReport.buildTaskReports(
+              new MSQTaskReport(id(), taskReportPayload),
+              new TaskContextReport(id(), task.getContext())
+          )
       );
     }
     catch (Throwable e) {
@@ -705,7 +705,7 @@ public class ControllerImpl implements Controller
     // propagate the controller's context and tags to the worker task
     taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, task.getContext());
     // specifically assign the 'tags' field for enhanced worker task metrics reporting
-    taskContextOverridesBuilder.put(DruidMetrics.TAGS, task.getContextValue(DruidMetrics.TAGS, new HashMap()));
+    taskContextOverridesBuilder.put(DruidMetrics.TAGS, task.getContextValue(DruidMetrics.TAGS, new HashMap<>()));
 
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
@@ -955,8 +955,7 @@ public class ControllerImpl implements Controller
                     stagePartitionCountsForLiveReports
                 ),
                 makeCountersSnapshotForLiveReports(),
-                null,
-                task.getContext()
+                null
             )
         )
     );

@@ -22,7 +22,7 @@ package org.apache.druid.tests.indexer;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -170,7 +170,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      Map<String, IngestionStatsAndErrorsTaskReport> reports = indexer.getTaskReport(taskId);
+      Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
 
       Assert.assertEquals(2,
@@ -268,7 +268,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       }
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      Map<String, IngestionStatsAndErrorsTaskReport> reports = indexer.getTaskReport(taskId);
+      Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
     }
   }

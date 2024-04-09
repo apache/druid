@@ -516,7 +516,7 @@ public class TaskQueue
         SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
 
-    taskContextEnricher.enrich(task);
+    taskContextEnricher.enrichContext(task);
 
     giant.lock();
 

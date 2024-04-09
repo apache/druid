@@ -34,6 +34,7 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
@@ -921,10 +922,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 0L,
                 null,
                 null,
-                null,
-                getContext()
+                null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 
@@ -951,10 +952,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
                 segmentsRead,
-                segmentsPublished,
-                getContext()
+                segmentsPublished
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

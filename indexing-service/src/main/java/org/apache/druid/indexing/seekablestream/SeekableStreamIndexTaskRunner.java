@@ -54,6 +54,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -1132,10 +1133,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 handoffWaitMs,
                 getPartitionStats(),
                 null,
-                null,
-                task.getContext()
+                null
             )
-        )
+        ),
+        new TaskContextReport(task.getId(), task.getContext())
     );
   }
 

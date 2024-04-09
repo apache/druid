@@ -38,5 +38,5 @@ public interface TaskContextEnricher
    *             supplement existing context entries or introduce new ones, thereby refining the
    *             task's narrative and operational details.
    */
-  void enrich(Task task);
+  void enrichContext(Task task);
 }

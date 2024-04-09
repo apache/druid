@@ -77,7 +77,7 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(0, 3),
         ImmutableMap.of(0, 15)
-    ), counterSnapshots, null, null);
+    ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
         payload,
@@ -116,7 +116,7 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
         ImmutableMap.of(0, 4)
-    ), counterSnapshots, null, null);
+    ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
         payload,
@@ -156,7 +156,7 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
         ImmutableMap.of(0, 21)
-    ), counterSnapshots, null, null);
+    ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages =
         SqlStatementResourceHelper.populatePageList(payload, DurableStorageMSQDestination.instance());
@@ -194,7 +194,7 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
         ImmutableMap.of(0, 21)
-    ), counterSnapshots, null, null);
+    ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
         payload,
@@ -233,7 +233,7 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
         ImmutableMap.of(0, 13)
-    ), counterSnapshots, null, null);
+    ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
         payload,
@@ -275,7 +275,6 @@ public class SqlStatementResourceHelperTest
             ImmutableMap.of(0, 1)
         ),
         counterSnapshots,
-        null,
         null
     );
 
@@ -312,7 +311,6 @@ public class SqlStatementResourceHelperTest
             ImmutableMap.of(0, 1)
         ),
         counterSnapshots,
-        null,
         null
     );
 
@@ -351,7 +349,6 @@ public class SqlStatementResourceHelperTest
             ImmutableMap.of(0, 1)
         ),
         counterSnapshots,
-        null,
         null
     );
 

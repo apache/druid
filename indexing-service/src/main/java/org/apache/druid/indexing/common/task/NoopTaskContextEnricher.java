@@ -21,10 +21,10 @@ package org.apache.druid.indexing.common.task;
 
 public class NoopTaskContextEnricher implements TaskContextEnricher
 {
-  public static final String TYPE = "default";
+  public static final String TYPE = "noop";
 
   @Override
-  public void enrich(Task task)
+  public void enrichContext(Task task)
   {
   }
 }

@@ -298,8 +298,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                   Sequences.simple(
                       RESULT_ROWS)),
               null
-          ),
-          null
+          )
       )
   );
 
@@ -325,7 +324,6 @@ public class SqlStatementResourceTest extends MSQTestBase
               ImmutableMap.of()
           ),
           new CounterSnapshotsTree(),
-          null,
           null
       )
   );

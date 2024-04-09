@@ -45,6 +45,7 @@ import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -623,10 +624,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 0L,
                 Collections.emptyMap(),
                 null,
-                null,
-                getContext()
+                null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

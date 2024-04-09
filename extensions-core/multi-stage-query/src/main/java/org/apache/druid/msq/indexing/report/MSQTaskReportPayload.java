@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 
 public class MSQTaskReportPayload
 {
@@ -39,23 +38,19 @@ public class MSQTaskReportPayload
 
   @Nullable
   private final MSQResultsReport results;
-  @Nullable
-  private final Map<String, Object> taskContext;
 
   @JsonCreator
   public MSQTaskReportPayload(
       @JsonProperty("status") MSQStatusReport status,
       @JsonProperty("stages") @Nullable MSQStagesReport stages,
       @JsonProperty("counters") @Nullable CounterSnapshotsTree counters,
-      @JsonProperty("results") @Nullable MSQResultsReport results,
-      @JsonProperty("taskContext") @Nullable final Map<String, Object> taskContext
+      @JsonProperty("results") @Nullable MSQResultsReport results
   )
   {
     this.status = status;
     this.stages = stages;
     this.counters = counters;
     this.results = results;
-    this.taskContext = taskContext;
   }
 
   @JsonProperty
@@ -86,13 +81,5 @@ public class MSQTaskReportPayload
   public MSQResultsReport getResults()
   {
     return results;
-  }
-
-  @JsonProperty
-  @Nullable
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<String, Object> getTaskContext()
-  {
-    return taskContext;
   }
 }
