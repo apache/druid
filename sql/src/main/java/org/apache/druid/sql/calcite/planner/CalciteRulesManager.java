@@ -100,6 +100,10 @@ public class CalciteRulesManager
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
    * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
    * this rule could create a lot of non-useful plans.
+   *
+   * {@link CoreRules#PROJECT_MERGE} includes configurable bloat parameter, as a workaround for Calcite exception
+   * (there are not enough rules to produce a node with desired properties) thrown while running complex sql-queries with
+   * big amount of subqueries. `druid.sql.planner.bloat` should be set in broker's `jvm.config` file.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
