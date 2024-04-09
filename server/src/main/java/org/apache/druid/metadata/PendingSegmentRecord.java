@@ -37,23 +37,23 @@ public class PendingSegmentRecord
   private final SegmentIdWithShardSpec id;
   private final String sequenceName;
   private final String sequencePrevId;
-  private final String parentId;
-  private final String taskGroup;
+  private final String upgradedFromSegmentId;
+  private final String taskAllocatorId;
 
   @JsonCreator
   public PendingSegmentRecord(
       @JsonProperty("id") SegmentIdWithShardSpec id,
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("sequencePrevId") String sequencePrevId,
-      @JsonProperty("parentId") @Nullable String parentId,
-      @JsonProperty("taskGroup") @Nullable String taskGroup
+      @JsonProperty("upgradedFromSegmentId") @Nullable String upgradedFromSegmentId,
+      @JsonProperty("taskAllocatorId") @Nullable String taskAllocatorId
   )
   {
     this.id = id;
     this.sequenceName = sequenceName;
     this.sequencePrevId = sequencePrevId;
-    this.parentId = parentId;
-    this.taskGroup = taskGroup;
+    this.upgradedFromSegmentId = upgradedFromSegmentId;
+    this.taskAllocatorId = taskAllocatorId;
   }
 
   @JsonProperty
@@ -76,16 +76,16 @@ public class PendingSegmentRecord
 
   @Nullable
   @JsonProperty
-  public String getParentId()
+  public String getUpgradedFromSegmentId()
   {
-    return parentId;
+    return upgradedFromSegmentId;
   }
 
   @Nullable
   @JsonProperty
-  public String getTaskGroup()
+  public String getTaskAllocatorId()
   {
-    return taskGroup;
+    return taskAllocatorId;
   }
 
   @SuppressWarnings("UnstableApiUsage")
@@ -119,8 +119,8 @@ public class PendingSegmentRecord
           jsonMapper.readValue(payload, SegmentIdWithShardSpec.class),
           resultSet.getString("sequence_name"),
           resultSet.getString("sequence_prev_id"),
-          resultSet.getString("parent_id"),
-          resultSet.getString("task_group")
+          resultSet.getString("upgraded_from_segment_id"),
+          resultSet.getString("task_allocator_id")
       );
     }
     catch (Exception e) {

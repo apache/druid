@@ -102,12 +102,6 @@ public interface Task
   String getGroupId();
 
   /**
-   * Unique string used by an appending task (or its sub-tasks and replicas) to allocate pending segments
-   * and identify pending segments allocated to it.
-   */
-  String getPendingSegmentGroupId();
-
-  /**
    * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
    * be used for task scheduling, cluster resource management, etc.
    *

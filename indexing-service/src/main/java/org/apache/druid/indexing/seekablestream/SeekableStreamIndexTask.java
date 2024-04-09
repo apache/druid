@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -61,7 +62,7 @@ import java.util.Map;
 
 
 public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
-    extends AbstractTask implements ChatHandler
+    extends AbstractTask implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);

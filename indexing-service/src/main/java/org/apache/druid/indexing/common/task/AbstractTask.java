@@ -279,12 +279,6 @@ public abstract class AbstractTask implements Task
     return groupId;
   }
 
-  @Override
-  public String getPendingSegmentGroupId()
-  {
-    throw new UnsupportedOperationException();
-  }
-
   @JsonProperty("resource")
   @Override
   public TaskResource getTaskResource()

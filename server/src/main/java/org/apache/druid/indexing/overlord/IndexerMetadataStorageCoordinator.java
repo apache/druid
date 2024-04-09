@@ -239,7 +239,7 @@ public interface IndexerMetadataStorageCoordinator
    *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
-   * @param taskGroup               The task group with which the pending segment is associated
+   * @param taskAllocatorId         The task allocator id with which the pending segment is associated
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
   SegmentIdWithShardSpec allocatePendingSegment(
@@ -250,7 +250,7 @@ public interface IndexerMetadataStorageCoordinator
       PartialShardSpec partialShardSpec,
       String maxVersion,
       boolean skipSegmentLineageCheck,
-      String taskGroup
+      String taskAllocatorId
   );
 
   /**
@@ -324,12 +324,12 @@ public interface IndexerMetadataStorageCoordinator
    *                                   must be committed in a single transaction.
    * @param appendSegmentToReplaceLock Map from append segment to the currently
    *                                   active REPLACE lock (if any) covering it
-   * @param taskGroup                  taskGroup of the task committing the appended segments
+   * @param taskAllocatorId            allocator id of the task committing the segments to be appended
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
-      String taskGroup
+      String taskAllocatorId
   );
 
   /**
@@ -486,5 +486,10 @@ public interface IndexerMetadataStorageCoordinator
    */
   int deletePendingSegmentsForTaskGroup(String taskGroup);
 
+  /**
+   * Fetches all the pending segments present in the metadata store for a given datasource
+   * @param datasource datasource to be queried
+   * @return List of pending segment records
+   */
   List<PendingSegmentRecord> getAllPendingSegments(String datasource);
 }

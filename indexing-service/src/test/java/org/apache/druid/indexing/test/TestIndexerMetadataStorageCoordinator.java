@@ -232,7 +232,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       PartialShardSpec partialShardSpec,
       String maxVersion,
       boolean skipSegmentLineageCheck,
-      String taskGroup
+      String taskAllocatorId
   )
   {
     return new SegmentIdWithShardSpec(

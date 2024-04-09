@@ -158,11 +158,11 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     ));
     Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments = new HashMap<>();
     pendingSegments.forEach(pendingSegment -> {
-      if (pendingSegment.getParentId() != null
-          && !pendingSegment.getParentId().equals(pendingSegment.getId().asSegmentId().toString())) {
+      if (pendingSegment.getUpgradedFromSegmentId() != null
+          && !pendingSegment.getUpgradedFromSegmentId().equals(pendingSegment.getId().asSegmentId().toString())) {
         upgradedPendingSegments.put(
             pendingSegment.getId(),
-            pendingSegmentIdMap.get(pendingSegment.getParentId())
+            pendingSegmentIdMap.get(pendingSegment.getUpgradedFromSegmentId())
         );
       }
     });

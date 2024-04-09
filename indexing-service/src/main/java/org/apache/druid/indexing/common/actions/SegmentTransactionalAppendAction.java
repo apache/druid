@@ -26,6 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -132,11 +133,12 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
 
     final CriticalAction.Action<SegmentPublishResult> publishAction;
+    final String pendingSegmentGroupId = ((PendingSegmentAllocatingTask) task).getPendingSegmentGroupId();
     if (startMetadata == null) {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
           segmentToReplaceLock,
-          task.getPendingSegmentGroupId()
+          pendingSegmentGroupId
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
@@ -144,7 +146,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           segmentToReplaceLock,
           startMetadata,
           endMetadata,
-          task.getPendingSegmentGroupId()
+          pendingSegmentGroupId
       );
     }
 
