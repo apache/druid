@@ -1593,9 +1593,7 @@ public class RowBasedGrouperHelper
 
     private class GenericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
-      final int keyBufferPosition;
       final BufferComparator bufferComparator;
-      final ColumnType columnType;
       final String columnTypeName;
 
       final List<Object> dictionary;
@@ -1607,9 +1605,7 @@ public class RowBasedGrouperHelper
       )
       {
         super(keyBufferPosition);
-        this.keyBufferPosition = keyBufferPosition;
         validateColumnType(columnType);
-        this.columnType = columnType;
         this.columnTypeName = columnType.asTypeString();
         this.dictionary = genericDictionaries.computeIfAbsent(
             columnTypeName,

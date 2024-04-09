@@ -19,11 +19,6 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
-
 /**
  * Implementation of {@link KeyMappingGroupByColumnSelectorStrategy} that relies on a prebuilt dictionary to map the
  * dimension to the dictionaryId. It is more like a helper class, that handles the different ways that dictionaries can be
@@ -32,16 +27,4 @@ import org.apache.druid.segment.column.ColumnType;
  */
 public class PrebuiltDictionaryGroupByColumnSelectorStrategy
 {
-  /**
-   * Create the strategy for the provided column type
-   */
-  public static GroupByColumnSelectorStrategy forType(
-      final ColumnType columnType,
-      final ColumnValueSelector columnValueSelector,
-      final ColumnCapabilities columnCapabilities
-  )
-  {
-    throw DruidException.defensive("Only string columns expose prebuilt dictionaries, and they should be "
-                                   + "handled separately");
-  }
 }

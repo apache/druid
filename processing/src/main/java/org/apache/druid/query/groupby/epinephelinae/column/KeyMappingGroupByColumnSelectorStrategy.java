@@ -33,10 +33,10 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.nio.ByteBuffer;
 
 /**
- * Strategy for grouping dimensions which can have variable-width objects. Materializing such objects on the buffer
+ * Strategy for grouping single value dimensions which can have variable-width objects. Materializing such objects on the buffer
  * require an additional step of mapping them to an integer index. The integer index can be materialized on the buffer within
  * a fixed width, and is often backed by a dictionary representing the actual dimension object. It is used for arrays,
- * strings, and complex types.
+ * and complex types.
  * <p>
  * The visibility of the class is limited, and the callers must use one of the two variants of the mapping strategy:
  * 1. {@link PrebuiltDictionaryGroupByColumnSelectorStrategy}
@@ -51,24 +51,18 @@ import java.nio.ByteBuffer;
  * and therefore nulls (-1) would be adjacent to nulls (represented by the lowest non-negative dictionary id), and would get
  * grouped in the later merge stages.
  * <p>
- * It only handles single value dimensions, i.e. all types except for strings. Strings are handled by the implementations
+ * It only handles single value dimensions, i.e. every type except for strings. Strings are handled by the implementations
  * of {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
  * <p>
  * It only handles non-primitive types, because numeric primitives are handled by the {@link FixedWidthGroupByColumnSelectorStrategy}
  * and the string primitives are handled by the {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
  *
- * @param <DimensionType>>      Class of the dimension
- * @param <DimensionHolderType> Class of the "dimension holder". For single-value dimensions, the holder's type and the
- *                              holder's object are equivalent to the dimension. For multi-value dimensions (only strings),
- *                              the holder's type and the object are different, where the type would be {@link org.apache.druid.segment.data.IndexedInts}
- *                              representing all the values in the multi-valued string, while the dimension type would be
- *                              String
+ * @param <DimensionType>>     Class of the dimension
  * @see DimensionToIdConverter encoding logic for converting value to dictionary
  * @see IdToDimensionConverter decoding logic for converting back dictionary to value
  */
 @NotThreadSafe
-class KeyMappingGroupByColumnSelectorStrategy<DimensionType>
-    implements GroupByColumnSelectorStrategy
+class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByColumnSelectorStrategy
 {
   /**
    * Converts the dimension to equivalent dictionaryId.
