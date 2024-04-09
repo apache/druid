@@ -28,7 +28,7 @@ import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteIngestionDmlTest;
@@ -36,8 +36,8 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 
@@ -48,9 +48,8 @@ import static org.junit.Assert.fail;
  */
 public class CatalogIngestionTest extends CalciteIngestionDmlTest
 {
-  @ClassRule
-  public static final TestDerbyConnector.DerbyConnectorRule DERBY_CONNECTION_RULE =
-      new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final DerbyConnectorRule5 DERBY_CONNECTION_RULE = new DerbyConnectorRule5();
 
   /**
    * Signature for the foo datasource after applying catalog metadata.

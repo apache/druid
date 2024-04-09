@@ -17,12 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.Map;
 
 public class ServletResourceUtils
@@ -48,5 +52,13 @@ public class ServletResourceUtils
   public static Map<String, String> jsonize(String msgFormat, Object... args)
   {
     return ImmutableMap.of("error", StringUtils.nonStrictFormat(msgFormat, args));
+  }
+
+  public static Response buildErrorResponseFrom(DruidException e)
+  {
+    return Response.status(e.getStatusCode())
+                   .type(MediaType.APPLICATION_JSON_TYPE)
+                   .entity(new ErrorResponse(e))
+                   .build();
   }
 }

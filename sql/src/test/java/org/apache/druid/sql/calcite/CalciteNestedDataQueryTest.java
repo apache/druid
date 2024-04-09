@@ -75,10 +75,9 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -190,12 +189,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactoryWrapper joinableFactory,
       final Injector injector
-  ) throws IOException
+  )
   {
     NestedDataModule.registerHandlersAndSerde();
     final QueryableIndex index =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -211,7 +210,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix11 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -228,7 +227,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix12 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -244,7 +243,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix21 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -260,7 +259,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix22 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -276,7 +275,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexArrays =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -295,12 +294,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newTempFolder())
                     .buildMMappedIndex();
 
     final QueryableIndex indexAllTypesAuto =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -319,7 +318,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newTempFolder())
                     .buildMMappedIndex();
 
 
@@ -6617,6 +6616,46 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 new Object[]{"[null,{\"x\":2}]"},
                 new Object[]{"[{\"x\":3},{\"x\":4}]"}
             )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.ofArray(ColumnType.NESTED_DATA))
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testJsonQueryArrayNullArray()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$.') FROM druid.arrays where arrayObject is null limit 1")
+        .queryContext(QUERY_CONTEXT_DEFAULT)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ARRAYS)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .virtualColumns(
+                          expressionVirtualColumn(
+                              "v0",
+                              "null",
+                              ColumnType.ofArray(ColumnType.NESTED_DATA)
+                          )
+                      )
+                      .filters(isNull("arrayObject"))
+                      .columns("v0")
+                      .limit(1)
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            NullHandling.replaceWithDefault() ?
+            ImmutableList.of(new Object[]{null}) : ImmutableList.of()
         )
         .expectedSignature(
             RowSignature.builder()

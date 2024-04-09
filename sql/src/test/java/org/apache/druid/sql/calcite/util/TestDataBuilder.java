@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -832,6 +833,30 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
+    final QueryableIndex arraysIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "9"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(
+            new IncrementalIndexSchema.Builder()
+                .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                .withMetrics(
+                    new CountAggregatorFactory("cnt")
+                )
+                .withRollup(false)
+                .build()
+        )
+        .inputSource(
+            ResourceInputSource.of(
+                NestedDataTestUtils.class.getClassLoader(),
+                NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+            )
+        )
+        .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "9-input"))
+        .buildMMappedIndex();
+
     return SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
         conglomerate,
@@ -946,6 +971,15 @@ public class TestDataBuilder
                  .size(0)
                  .build(),
       makeWikipediaIndexWithAggregation(tmpDir)
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                   .version("1")
+                   .interval(arraysIndex.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        arraysIndex
     );
   }
 
