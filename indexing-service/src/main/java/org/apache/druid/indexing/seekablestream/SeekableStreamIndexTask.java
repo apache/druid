@@ -270,7 +270,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  public String getPendingSegmentGroup()
+  public String getPendingSegmentGroupId()
   {
     return getTaskResource().getAvailabilityGroup();
   }

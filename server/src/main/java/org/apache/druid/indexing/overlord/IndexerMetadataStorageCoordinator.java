@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.metadata.PendingSegment;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -239,7 +239,7 @@ public interface IndexerMetadataStorageCoordinator
    *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
-   * @param taskGroup
+   * @param taskGroup               The task group with which the pending segment is associated
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
   SegmentIdWithShardSpec allocatePendingSegment(
@@ -324,6 +324,7 @@ public interface IndexerMetadataStorageCoordinator
    *                                   must be committed in a single transaction.
    * @param appendSegmentToReplaceLock Map from append segment to the currently
    *                                   active REPLACE lock (if any) covering it
+   * @param taskGroup                  taskGroup of the task committing the appended segments
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
@@ -478,7 +479,12 @@ public interface IndexerMetadataStorageCoordinator
    */
   int deleteUpgradeSegmentsForTask(String taskId);
 
+  /**
+   * Delete pending segment for a give task group after all the tasks belonging to it have completed.
+   * @param taskGroup task group
+   * @return number of pending segments deleted from the metadata store
+   */
   int deletePendingSegmentsForTaskGroup(String taskGroup);
 
-  List<PendingSegment> getAllPendingSegments(String datasource);
+  List<PendingSegmentRecord> getAllPendingSegments(String datasource);
 }

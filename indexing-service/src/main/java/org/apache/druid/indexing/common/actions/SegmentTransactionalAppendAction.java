@@ -136,7 +136,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
           segmentToReplaceLock,
-          task.getPendingSegmentGroup()
+          task.getPendingSegmentGroupId()
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
@@ -144,7 +144,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           segmentToReplaceLock,
           startMetadata,
           endMetadata,
-          task.getPendingSegmentGroup()
+          task.getPendingSegmentGroupId()
       );
     }
 

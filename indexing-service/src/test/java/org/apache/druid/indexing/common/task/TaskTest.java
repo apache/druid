@@ -48,7 +48,7 @@ public class TaskTest
     }
 
     @Override
-    public String getPendingSegmentGroup()
+    public String getPendingSegmentGroupId()
     {
       return null;
     }

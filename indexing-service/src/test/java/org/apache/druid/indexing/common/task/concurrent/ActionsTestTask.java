@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.concurrent;
 
 import com.google.common.collect.Sets;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -53,8 +52,6 @@ public class ActionsTestTask extends CommandQueueTask
 {
   private final TaskActionClient client;
   private final AtomicInteger sequenceId = new AtomicInteger(0);
-  private final Object lock = new Object();
-  @GuardedBy("lock")
   private final Map<SegmentId, SegmentId> announcedSegmentsToParentSegments = new HashMap<>();
 
   public ActionsTestTask(String datasource, String groupId, TaskActionClientFactory factory)
@@ -87,9 +84,7 @@ public class ActionsTestTask extends CommandQueueTask
 
   public Map<SegmentId, SegmentId> getAnnouncedSegmentsToParentSegments()
   {
-    synchronized (lock) {
-      return announcedSegmentsToParentSegments;
-    }
+    return announcedSegmentsToParentSegments;
   }
 
   public SegmentPublishResult commitAppendSegments(DataSegment... segments)
@@ -97,10 +92,8 @@ public class ActionsTestTask extends CommandQueueTask
     SegmentPublishResult publishResult = runAction(
         SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments))
     );
-    synchronized (lock) {
-      for (DataSegment segment : publishResult.getSegments()) {
-        announcedSegmentsToParentSegments.remove(segment.getId());
-      }
+    for (DataSegment segment : publishResult.getSegments()) {
+      announcedSegmentsToParentSegments.remove(segment.getId());
     }
     return publishResult;
   }
@@ -121,9 +114,7 @@ public class ActionsTestTask extends CommandQueueTask
             TaskLockType.APPEND
         )
     );
-    synchronized (lock) {
-      announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId());
-    }
+    announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId());
     return pendingSegment;
   }
 

@@ -30,7 +30,7 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.PendingSegment;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -126,7 +126,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     // failure to upgrade pending segments does not affect success of the commit
     if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
       try {
-        tryUpgradeOverlappingPendingSegments(task, toolbox);
+        registerUpgradedPendingSegmentsOnSupervisor(task, toolbox);
       }
       catch (Exception e) {
         log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
@@ -137,9 +137,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   }
 
   /**
-   * Tries to upgrade any pending segments that overlap with the committed segments.
+   * Registers upgraded pending segments on the active supervisor, if any
    */
-  private void tryUpgradeOverlappingPendingSegments(Task task, TaskActionToolbox toolbox)
+  private void registerUpgradedPendingSegmentsOnSupervisor(Task task, TaskActionToolbox toolbox)
   {
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
@@ -149,7 +149,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return;
     }
 
-    List<PendingSegment> pendingSegments
+    List<PendingSegmentRecord> pendingSegments
         = toolbox.getIndexerMetadataStorageCoordinator().getAllPendingSegments(task.getDataSource());
     Map<String, SegmentIdWithShardSpec> pendingSegmentIdMap = new HashMap<>();
     pendingSegments.forEach(pendingSegment -> pendingSegmentIdMap.put(
@@ -168,12 +168,11 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     });
 
     upgradedPendingSegments.forEach(
-        (newId, oldId) -> toolbox.getSupervisorManager()
-                                 .registerNewVersionOfPendingSegmentOnSupervisor(
-                                     activeSupervisorIdWithAppendLock.get(),
-                                     oldId,
-                                     newId
-                                 )
+        (newId, oldId) -> supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
+            activeSupervisorIdWithAppendLock.get(),
+            oldId,
+            newId
+        )
     );
   }
 

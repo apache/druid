@@ -125,9 +125,8 @@ public class MSQWorkerTask extends AbstractTask
     return ImmutableSet.of();
   }
 
-  @JsonIgnore
   @Override
-  public String getPendingSegmentGroup()
+  public String getPendingSegmentGroupId()
   {
     return getControllerTaskId();
   }

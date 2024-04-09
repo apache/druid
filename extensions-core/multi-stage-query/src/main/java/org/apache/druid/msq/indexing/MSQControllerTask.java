@@ -156,9 +156,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     return ImmutableSet.of();
   }
 
-  @JsonIgnore
   @Override
-  public String getPendingSegmentGroup()
+  public String getPendingSegmentGroupId()
   {
     return getId();
   }

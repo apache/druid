@@ -330,7 +330,7 @@ public class SupervisorManager
       return true;
     }
     catch (Exception e) {
-      log.error(e, "PendingSegment[%s] mapping update request to version[%s] on Supervisor[%s] failed",
+      log.error(e, "PendingSegmentRecord[%s] mapping update request to version[%s] on Supervisor[%s] failed",
                 basePendingSegment.asSegmentId(), newSegmentVersion.getVersion(), supervisorId);
     }
     return false;

@@ -133,7 +133,7 @@ public class CommandQueueTask extends AbstractTask
   private <V> V waitForCommandToFinish(Command<V> command)
   {
     try {
-      return command.value.get(1000, TimeUnit.SECONDS);
+      return command.value.get(10, TimeUnit.SECONDS);
     }
     catch (Exception e) {
       throw new ISE(e, "Error waiting for command on task[%s] to finish", getId());
@@ -141,7 +141,7 @@ public class CommandQueueTask extends AbstractTask
   }
 
   @Override
-  public String getPendingSegmentGroup()
+  public String getPendingSegmentGroupId()
   {
     return getId();
   }

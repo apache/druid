@@ -105,7 +105,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
    */
   private static final String SEGMENT_V0 = DateTimes.EPOCH.toString();
 
-  private static final Interval YEAR_23 = Intervals.of("2023/2024");
   private static final Interval JAN_23 = Intervals.of("2023-01/2023-02");
   private static final Interval FIRST_OF_JAN_23 = Intervals.of("2023-01-01/2023-01-02");
 
@@ -160,7 +159,8 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
         taskRunner,
         taskActionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper()
     );
     runningTasks.clear();
     taskQueue.start();

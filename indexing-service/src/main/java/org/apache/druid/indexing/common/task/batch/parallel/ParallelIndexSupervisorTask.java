@@ -476,6 +476,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
   }
 
+  @Override
+  public String getPendingSegmentGroupId()
+  {
+    if (getIngestionMode() == IngestionMode.APPEND) {
+      return getGroupId();
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
   @Nullable
   @Override
   public Granularity getSegmentGranularity()

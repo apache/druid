@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -105,7 +106,7 @@ public class TaskLockbox
 
   // Stores map of pending task group of tasks to the set of their ids.
   // Useful for task replicas. Clean up pending segments only when the set is empty.
-  // this map should be accessed under the giant lock.
+  @GuardedBy("giant")
   private final HashMap<String, Set<String>> activePendingTaskGroupToTaskIds = new HashMap<>();
 
   @Inject
@@ -220,8 +221,8 @@ public class TaskLockbox
       }
       activePendingTaskGroupToTaskIds.clear();
       for (Task task : storedActiveTasks) {
-        if (activeTasks.contains(task.getId()) && task.getPendingSegmentGroup() != null) {
-          activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroup(), s -> new HashSet<>())
+        if (activeTasks.contains(task.getId()) && task.getPendingSegmentGroupId() != null) {
+          activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroupId(), s -> new HashSet<>())
                                          .add(task.getId());
         }
       }
@@ -423,7 +424,7 @@ public class TaskLockbox
                   newSegmentId
               );
             }
-            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion(), task.getPendingSegmentGroup());
+            newSegmentId = allocateSegmentId(lockRequestForNewSegment, posseToUse.getTaskLock().getVersion(), task.getPendingSegmentGroupId());
           }
         }
         return LockResult.ok(posseToUse.getTaskLock(), newSegmentId);
@@ -1172,8 +1173,8 @@ public class TaskLockbox
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
       activeTasks.add(task.getId());
-      if (task.getPendingSegmentGroup() != null) {
-        activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroup(), s -> new HashSet<>())
+      if (task.getPendingSegmentGroupId() != null) {
+        activePendingTaskGroupToTaskIds.computeIfAbsent(task.getPendingSegmentGroupId(), s -> new HashSet<>())
                                        .add(task.getId());
       }
     }
@@ -1201,18 +1202,18 @@ public class TaskLockbox
               task.getId()
           );
         }
-        final String pendingSegmentGroup = task.getPendingSegmentGroup();
+        final String pendingSegmentGroup = task.getPendingSegmentGroupId();
         if (pendingSegmentGroup != null && activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
           final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
           idsInSameGroup.remove(task.getId());
           if (idsInSameGroup.isEmpty()) {
             if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.APPEND)) {
               final int pendingSegmentsDeleted
-                  = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(task.getPendingSegmentGroup());
+                  = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(task.getPendingSegmentGroupId());
               log.info(
                   "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
                   pendingSegmentsDeleted,
-                  task.getPendingSegmentGroup()
+                  task.getPendingSegmentGroupId()
               );
             }
             activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
@@ -1807,7 +1808,7 @@ public class TaskLockbox
             acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
             action.getPartialShardSpec(),
             null,
-            task.getPendingSegmentGroup()
+            task.getPendingSegmentGroupId()
         );
       }
 

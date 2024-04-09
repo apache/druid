@@ -237,6 +237,16 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   }
 
   @Override
+  public String getPendingSegmentGroupId()
+  {
+    if (getIngestionMode() == IngestionMode.APPEND) {
+      return getGroupId();
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  @Override
   public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     try {

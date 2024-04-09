@@ -32,7 +32,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.sql.ResultSet;
 
-public class PendingSegment
+public class PendingSegmentRecord
 {
   private final SegmentIdWithShardSpec id;
   private final String sequenceName;
@@ -41,7 +41,7 @@ public class PendingSegment
   private final String taskGroup;
 
   @JsonCreator
-  public PendingSegment(
+  public PendingSegmentRecord(
       @JsonProperty("id") SegmentIdWithShardSpec id,
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("sequencePrevId") String sequencePrevId,
@@ -74,12 +74,14 @@ public class PendingSegment
     return sequencePrevId;
   }
 
+  @Nullable
   @JsonProperty
   public String getParentId()
   {
     return parentId;
   }
 
+  @Nullable
   @JsonProperty
   public String getTaskGroup()
   {
@@ -109,11 +111,11 @@ public class PendingSegment
     return BaseEncoding.base16().encode(hasher.hash().asBytes());
   }
 
-  public static PendingSegment fromResultSet(ResultSet resultSet, ObjectMapper jsonMapper)
+  public static PendingSegmentRecord fromResultSet(ResultSet resultSet, ObjectMapper jsonMapper)
   {
     try {
       final byte[] payload = resultSet.getBytes("payload");
-      return new PendingSegment(
+      return new PendingSegmentRecord(
           jsonMapper.readValue(payload, SegmentIdWithShardSpec.class),
           resultSet.getString("sequence_name"),
           resultSet.getString("sequence_prev_id"),
