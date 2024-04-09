@@ -42,6 +42,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.InvalidFieldFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
@@ -111,6 +112,7 @@ public class MSQIndexingModule implements DruidModule
       InsertLockPreemptedFault.class,
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,
+      InvalidFieldFault.class,
       InvalidNullByteFault.class,
       NotEnoughTemporaryStorageFault.class,
       NotEnoughMemoryFault.class,
