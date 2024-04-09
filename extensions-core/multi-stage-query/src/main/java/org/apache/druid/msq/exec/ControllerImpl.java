@@ -20,6 +20,7 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -41,6 +42,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -63,6 +65,9 @@ import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -77,6 +82,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -192,6 +198,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -199,6 +206,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -208,6 +216,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -231,6 +240,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -242,6 +252,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -1732,10 +1743,112 @@ public class ControllerImpl implements Controller
 
       //noinspection unchecked
       @SuppressWarnings("unchecked")
-      final Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
+      Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
+
+      boolean storeCompactionState = QueryContext.of(task.getQuerySpec().getQuery().getContext())
+                                                 .getBoolean(
+                                                     Tasks.STORE_COMPACTION_STATE_KEY,
+                                                     Tasks.DEFAULT_STORE_COMPACTION_STATE
+                                                 );
+
+      if (!segments.isEmpty() && storeCompactionState) {
+        DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
+        if (!destination.isReplaceTimeChunks()) {
+          // Store compaction state only for replace queries.
+          log.warn(
+              "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
+              queryDef.getQueryId()
+          );
+        } else {
+          DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
+              .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
+
+          ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
+
+          Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = addCompactionStateToSegments(
+              task(),
+              context.jsonMapper(),
+              dataSchema,
+              shardSpec,
+              queryDef.getQueryId()
+          );
+          segments = compactionStateAnnotateFunction.apply(segments);
+        }
+      }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments);
     }
+  }
+
+  private static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
+      MSQControllerTask task,
+      ObjectMapper jsonMapper,
+      DataSchema dataSchema,
+      ShardSpec shardSpec,
+      String queryId
+  )
+  {
+    final MSQTuningConfig tuningConfig = task.getQuerySpec().getTuningConfig();
+    PartitionsSpec partitionSpec;
+
+    if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
+      List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+      partitionSpec = new DimensionRangePartitionsSpec(
+          tuningConfig.getRowsPerSegment(),
+          null,
+          partitionDimensions,
+          false
+      );
+    } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
+      // MSQ tasks don't use maxTotalRows. Hence using LONG.MAX_VALUE.
+      partitionSpec = new DynamicPartitionsSpec(tuningConfig.getRowsPerSegment(), Long.MAX_VALUE);
+    } else {
+      // SingleDimenionShardSpec and other shard specs are never created in MSQ.
+      throw new MSQException(
+          UnknownFault.forMessage(
+              StringUtils.format(
+                  "Query[%s] cannot store compaction state in segments as shard spec of unsupported type[%s].",
+                  queryId,
+                  shardSpec.getType()
+              )));
+    }
+
+    Granularity segmentGranularity = ((DataSourceMSQDestination) task.getQuerySpec().getDestination())
+        .getSegmentGranularity();
+
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
+        segmentGranularity,
+        dataSchema.getGranularitySpec().getQueryGranularity(),
+        dataSchema.getGranularitySpec().isRollup(),
+        dataSchema.getGranularitySpec().inputIntervals()
+    );
+
+    DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
+    Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                                        ? null
+                                        : new ClientCompactionTaskTransformSpec(
+                                            dataSchema.getTransformSpec().getFilter()
+                                        ).asMap(jsonMapper);
+    List<Object> metricsSpec = dataSchema.getAggregators() == null
+                               ? null
+                               : jsonMapper.convertValue(
+                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
+                                   {
+                                   });
+
+
+    IndexSpec indexSpec = tuningConfig.getIndexSpec();
+
+    log.info("Query[%s] storing compaction state in segments.", queryId);
+
+    return CompactionState.addCompactionStateToSegments(
+        partitionSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec.asMap(jsonMapper),
+        granularitySpec.asMap(jsonMapper)
+    );
   }
 
   /**
@@ -1798,7 +1911,9 @@ public class ControllerImpl implements Controller
       }
     } else {
       shuffleSpecFactory = querySpec.getDestination()
-                                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()));
+                                    .getShuffleSpecFactory(
+                                        MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
+                                    );
       queryToPlan = querySpec.getQuery();
     }
 
@@ -1900,9 +2015,11 @@ public class ControllerImpl implements Controller
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build("Found files at provided export destination[%s]. Export is only allowed to "
-                                     + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
-                                     exportStorageProvider.getBasePath());
+                              .build(
+                                  "Found files at provided export destination[%s]. Export is only allowed to "
+                                  + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
+                                  exportStorageProvider.getBasePath()
+                              );
         }
       }
       catch (IOException e) {
@@ -1932,7 +2049,6 @@ public class ControllerImpl implements Controller
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
   }
-
 
 
   private static DataSchema generateDataSchema(
@@ -2389,7 +2505,9 @@ public class ControllerImpl implements Controller
       workerStatsMap = taskLauncher.getWorkerStats();
     }
 
-    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null
+                                                              ? null
+                                                              : segmentLoadWaiter.status();
 
     return new MSQStatusReport(
         taskState,
