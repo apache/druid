@@ -46,9 +46,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                     .columns("dim1", "v0")
                     .context(QUERY_CONTEXT_DEFAULT)
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .virtualColumns(
-                        expressionVirtualColumn("v0", "null", null)
-                    )
+                    .virtualColumns(expressionVirtualColumn("v0", "null", ColumnType.STRING))
                     .legacy(false)
                     .build(),
                 Druids.newScanQueryBuilder()
