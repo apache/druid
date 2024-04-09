@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -40,6 +41,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -67,6 +69,7 @@ import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
+import org.apache.druid.segment.index.semantic.ValueSetIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nonnull;
@@ -74,7 +77,9 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
@@ -195,6 +200,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(ValueIndexes.class)) {
       return (T) new DoubleValueIndexes();
+    } else if (clazz.equals(ValueSetIndexes.class)) {
+      return (T) new DoubleValueSetIndexes();
     } else if (clazz.equals(StringValueSetIndexes.class)) {
       return (T) new DoubleStringValueSetIndexes();
     } else if (clazz.equals(NumericRangeIndexes.class)) {
@@ -255,6 +262,73 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
           return bitmapResultFactory.wrapDimensionValue(getBitmap(id));
         }
       };
+    }
+  }
+
+  private final class DoubleValueSetIndexes implements ValueSetIndexes
+  {
+    final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+
+    @Nullable
+    @Override
+    public BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType)
+    {
+      if (sortedValues.isEmpty()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
+      final boolean matchNull = sortedValues.get(0) == null;
+      final Supplier<ImmutableBitmap> unknownsIndex = () -> {
+        if (!matchNull && dictionary.get(0) == null) {
+          return valueIndexes.get(0);
+        }
+        return null;
+      };
+
+      // values are doubles and ordered in double order
+      if (matchValueType.is(ValueType.DOUBLE)) {
+        final List<Double> tailSet;
+        final List<Double> baseSet = (List<Double>) sortedValues;
+
+        if (sortedValues.size() >= ValueSetIndexes.SIZE_WORTH_CHECKING_MIN) {
+          final double minValueInColumn = dictionary.get(0) == null ? dictionary.get(1) : dictionary.get(0);
+          final int position = Collections.binarySearch(
+              sortedValues,
+              minValueInColumn,
+              matchValueType.getNullableStrategy()
+          );
+
+          tailSet = baseSet.subList(position >= 0 ? position : -(position + 1), baseSet.size());
+        } else {
+          tailSet = baseSet;
+        }
+        if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+          return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
+              bitmapFactory,
+              ColumnType.DOUBLE.getNullableStrategy(),
+              tailSet,
+              dictionary,
+              valueIndexes,
+              unknownsIndex
+          );
+        }
+        // fall through to sorted value iteration
+        return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
+            bitmapFactory,
+            tailSet,
+            dictionary,
+            valueIndexes,
+            unknownsIndex
+        );
+      } else {
+        // values in set are not sorted in double order, transform them on the fly and iterate them all
+        return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
+            bitmapFactory,
+            Iterables.transform(sortedValues, DimensionHandlerUtils::convertObjectToDouble),
+            dictionary,
+            valueIndexes,
+            unknownsIndex
+        );
+      }
     }
   }
 

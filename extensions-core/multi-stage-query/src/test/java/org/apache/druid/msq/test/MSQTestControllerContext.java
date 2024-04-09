@@ -88,7 +88,7 @@ public class MSQTestControllerContext implements ControllerContext
   private final ServiceEmitter emitter = new NoopServiceEmitter();
 
   private Controller controller;
-  private Map<String, TaskReport> report = null;
+  private TaskReport.ReportMap report = null;
   private final WorkerMemoryParameters workerMemoryParameters;
 
   public MSQTestControllerContext(
@@ -273,14 +273,14 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public void writeReports(String controllerTaskId, Map<String, TaskReport> taskReport)
+  public void writeReports(String controllerTaskId, TaskReport.ReportMap taskReport)
   {
     if (controller != null && controller.id().equals(controllerTaskId)) {
       report = taskReport;
     }
   }
 
-  public Map<String, TaskReport> getAllReports()
+  public TaskReport.ReportMap getAllReports()
   {
     return report;
   }
