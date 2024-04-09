@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class TaskContextReport implements TaskReport
 {
@@ -60,5 +61,24 @@ public class TaskContextReport implements TaskReport
   public Map<String, Object> getPayload()
   {
     return taskContext;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskContextReport that = (TaskContextReport) o;
+    return Objects.equals(taskId, that.taskId) && Objects.equals(taskContext, that.taskContext);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(taskId, taskContext);
   }
 }

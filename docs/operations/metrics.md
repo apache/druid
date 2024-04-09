@@ -196,9 +196,8 @@ task's `IOConfig` as follows:
 |`false`|`false`|`REPLACE_LEGACY`. The default for JSON-based batch ingestion. |
 |`false`|`true`|`REPLACE`|
 
-The `tags` dimension enhances metrics, task reports, and the Peon service/heartbeat metric associated with ingestion tasks. These tags are derived from both the ingestion specification—when the `tags` field is specified within the task's context—and system-generated sources. The tags field within a task's `context` should be a map with string keys and object values, facilitating the inclusion of custom metadata. However, tags can also be automatically generated and added by the system, providing a comprehensive set of metadata for monitoring and analysis purposes.
-
-To further customize and enrich task metadata, developers can implement the `TaskContextEnricher` interface. By implementing custom logic within this interface, additional context fields can be introduced. This capability allows for enhanced observability and management of tasks, as these additional context fields can offer deeper insights into task execution, performance, and outcomes.
+The `tags` dimension is reported only for metrics emitted from ingestion tasks whose ingest spec specifies the `tags`
+field in the `context` field of the ingestion spec. `tags` is expected to be a map of string to object.
 
 ### Ingestion metrics for Kafka
 
@@ -379,7 +378,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource` on the Peon |1|
+| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource`, `tags` on the Peon |1|
 
 ### Historical
 
