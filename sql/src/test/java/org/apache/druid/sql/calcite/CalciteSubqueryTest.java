@@ -1074,7 +1074,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueFloatAgg(String testName, Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT count(*) FROM foo where m1 <= (select min(m1) + 4 from foo)",
@@ -1133,7 +1132,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueDoubleAgg(String testName, Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT count(*) FROM foo where m1 >= (select max(m1) - 3.5 from foo)",
@@ -1192,7 +1190,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueLongAgg(String testName, Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT count(*) FROM wikipedia where __time >= (select max(__time) - INTERVAL '10' MINUTE from wikipedia)",
@@ -1254,7 +1251,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueStringAgg(String testName, Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 1 OFFSET 6)",
@@ -1317,7 +1313,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueStringMultipleRowsAgg(String testName, Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQueryThrows(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 2 OFFSET 6)",
@@ -1330,7 +1325,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueEmptyInnerAgg(String testName, Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT distinct countryName FROM wikipedia where countryName = ( select countryName from wikipedia where channel in ('abc', 'xyz'))",

@@ -3359,7 +3359,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testGroupByOverGroupByOverInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "with abc as\n"
@@ -4876,7 +4875,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize JOIN operator.
     cannotVectorize();
-    skipVectorize();
     testQuery(
         "SELECT dim1, dim2, COUNT(*) FROM druid.foo\n"
         + "WHERE dim1 = 'xxx' OR dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 LIKE '%bc')\n"
