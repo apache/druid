@@ -46,7 +46,7 @@ public abstract class DruidCoordinatorConfig
   public abstract boolean isKillUnusedSegmentsEnabled();
 
   /**
-   * @return the coordinator's kill period duration. If the config isn't explicitly set,
+   * @return The period at which the coordinator cleans up unused segments. If the config isn't explicitly set,
    * it defaults to the coordinator's indexing period.
    */
   @Config("druid.coordinator.kill.period")
