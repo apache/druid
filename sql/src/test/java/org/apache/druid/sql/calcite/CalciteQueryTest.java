@@ -6111,6 +6111,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNullType()
   {
+    // Cannot vectorize due to null constant expression.
     cannotVectorize();
     testQuery(
         "SELECT NULL as nullcol, COUNT(*) FROM druid.foo GROUP BY 1",
@@ -6126,7 +6127,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 6L}
+            new Object[]{null, 6L}
         )
     );
   }
@@ -6134,6 +6135,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByNullType()
   {
+    // Cannot vectorize due to null constant expression.
     cannotVectorize();
     testQuery(
         // Order on subquery, since the native engine doesn't currently support ordering when selecting directly
@@ -6172,7 +6174,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", NullHandling.defaultStringValue()}
+            new Object[]{"", null}
         )
     );
   }
@@ -6180,7 +6182,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOrderByNullType()
   {
-    // Cannot vectorize due to
+    // Cannot vectorize due to null constant expression.
     cannotVectorize();
 
     testQuery(
@@ -6197,7 +6199,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 6L}
+            new Object[]{null, 6L}
         )
     );
   }
