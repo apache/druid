@@ -1782,8 +1782,7 @@ public class ControllerImpl implements Controller
           false
       );
     } else if (Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
-      // There is currently no way of specifying either maxRowsPerSegment or maxTotalRows for an MSQ task.
-      // Hence using null for both which ends up translating to DEFAULT_MAX_ROWS_PER_SEGMENT for maxRowsPerSegment.
+      // MSQ tasks don't use maxTotalRows. Hence using LONG.MAX_VALUE.
       partitionSpec = new DynamicPartitionsSpec(tuningConfig.getRowsPerSegment(), Long.MAX_VALUE);
     } else {
       // SingleDimenionShardSpec and other shard specs are never created in MSQ.
