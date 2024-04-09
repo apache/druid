@@ -45,6 +45,10 @@ public class TaskLogAutoCleanerConfig
   @JsonProperty
   private final long durationToRetain;
 
+  /**
+   * Config for Task logs auto-cleaner.
+   * All time-related parameters should be in milliseconds.
+   */
   @JsonCreator
   public TaskLogAutoCleanerConfig(
       @JsonProperty("enabled") boolean enabled,

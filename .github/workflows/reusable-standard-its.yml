@@ -60,17 +60,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: setup java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.runtime_jdk }}
           distribution: 'zulu'
 
       - name: Restore Maven repository
         id: maven-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}

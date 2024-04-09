@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -96,6 +97,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -113,6 +115,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Supplier;
@@ -499,7 +502,9 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
-      for (ParallelIndexSupervisorTask eachSpec : indexTaskSpecs) {
+      final TaskReport.ReportMap completionReports = new TaskReport.ReportMap();
+      for (int i = 0; i < indexTaskSpecs.size(); i++) {
+        ParallelIndexSupervisorTask eachSpec = indexTaskSpecs.get(i);
         final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         if (!currentSubTaskHolder.setTask(eachSpec)) {
           String errMsg = "Task was asked to stop. Finish as failed.";
@@ -514,6 +519,13 @@ public class CompactionTask extends AbstractBatchIndexTask
               failCnt++;
               log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
             }
+
+            String reportKeySuffix = "_" + i;
+            Optional.ofNullable(eachSpec.getCompletionReports()).ifPresent(
+                reports -> completionReports.putAll(
+                    CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)
+                )
+            );
           } else {
             failCnt++;
             log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
@@ -528,6 +540,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       String msg = StringUtils.format("Ran [%d] specs, [%d] succeeded, [%d] failed",
                                       totalNumSpecs, totalNumSpecs - failCnt, failCnt
       );
+
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
       log.info(msg);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId(), msg);
     }
@@ -542,7 +556,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         getTaskResource(),
         ingestionSpec,
         baseSequenceName,
-        createContextForSubtask()
+        createContextForSubtask(),
+        true
     );
   }
 
@@ -1206,10 +1221,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
         partitionsSpec = new DynamicPartitionsSpec(
             dynamicPartitionsSpec.getMaxRowsPerSegment(),
-            // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
-            // If this is set to something too small, compactionTask can generate small segments
-            // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-            dynamicPartitionsSpec.getMaxTotalRowsOr(Long.MAX_VALUE)
+            dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS)
         );
       }
       return newTuningConfig.withPartitionsSpec(partitionsSpec);

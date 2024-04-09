@@ -475,20 +475,17 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
       final int computedNumParallelTasks = Math.max(computedOptimalParallelism, 1);
 
-      LOG.debug(
-          "Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
-          + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
-          + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
-          computedNumParallelTasks,
-          parallelism,
-          getPool().getActiveThreadCount(),
-          runningThreadCount,
-          submissionCount,
-          getPool().getQueuedTaskCount(),
-          getPool().getParallelism(),
-          getPool().getPoolSize(),
-          getPool().getStealCount()
-      );
+      if (LOG.isDebugEnabled()) {
+        ForkJoinPool pool = getPool();
+        LOG.debug(
+            "Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
+                + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
+                + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
+            computedNumParallelTasks, parallelism,
+            pool.getActiveThreadCount(), runningThreadCount, submissionCount, pool.getQueuedTaskCount(),
+            pool.getParallelism(), pool.getPoolSize(), pool.getStealCount()
+        );
+      }
 
       return computedNumParallelTasks;
     }

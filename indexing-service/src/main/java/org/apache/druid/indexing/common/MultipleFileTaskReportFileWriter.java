@@ -37,7 +37,7 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
   private ObjectMapper objectMapper;
 
   @Override
-  public void write(String taskId, Map<String, TaskReport> reports)
+  public void write(String taskId, TaskReport.ReportMap reports)
   {
     final File reportsFile = taskReportFiles.get(taskId);
     if (reportsFile == null) {

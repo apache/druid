@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.sql.destination.TableDestination;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,14 +64,14 @@ public class ExplainAttributesTest
   {
     ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
-        new TableDestination("foo"),
+        "foo",
         Granularities.DAY,
         null,
         null
     );
     final String expectedAttributes = "{"
                                       + "\"statementType\":\"INSERT\","
-                                      + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
+                                      + "\"targetDataSource\":\"foo\","
                                       + "\"partitionedBy\":\"DAY\""
                                       + "}";
     Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
@@ -83,14 +82,14 @@ public class ExplainAttributesTest
   {
     ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
-        new TableDestination("foo"),
+        "foo",
         Granularities.ALL,
         null,
         null
     );
     final String expectedAttributes = "{"
                                       + "\"statementType\":\"INSERT\","
-                                      + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
+                                      + "\"targetDataSource\":\"foo\","
                                       + "\"partitionedBy\":{\"type\":\"all\"}"
                                       + "}";
     Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
@@ -101,33 +100,33 @@ public class ExplainAttributesTest
   {
     ExplainAttributes replaceAttributes1 = new ExplainAttributes(
         "REPLACE",
-        new TableDestination("foo"),
+        "foo",
         Granularities.HOUR,
         null,
         "ALL"
     );
     final String expectedAttributes1 = "{"
-        + "\"statementType\":\"REPLACE\","
-        + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
-        + "\"partitionedBy\":\"HOUR\","
-        + "\"replaceTimeChunks\":\"ALL\""
-        + "}";
+                                       + "\"statementType\":\"REPLACE\","
+                                       + "\"targetDataSource\":\"foo\","
+                                       + "\"partitionedBy\":\"HOUR\","
+                                       + "\"replaceTimeChunks\":\"ALL\""
+                                       + "}";
     Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
 
 
     ExplainAttributes replaceAttributes2 = new ExplainAttributes(
         "REPLACE",
-        new TableDestination("foo"),
+        "foo",
         Granularities.HOUR,
         null,
         "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
     );
     final String expectedAttributes2 = "{"
-                                      + "\"statementType\":\"REPLACE\","
-                                      + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
-                                      + "\"partitionedBy\":\"HOUR\","
-                                      + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
-                                      + "}";
+                                       + "\"statementType\":\"REPLACE\","
+                                       + "\"targetDataSource\":\"foo\","
+                                       + "\"partitionedBy\":\"HOUR\","
+                                       + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
+                                       + "}";
     Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
   }
 
@@ -136,14 +135,14 @@ public class ExplainAttributesTest
   {
     ExplainAttributes replaceAttributes1 = new ExplainAttributes(
         "REPLACE",
-        new TableDestination("foo"),
+        "foo",
         Granularities.HOUR,
         Arrays.asList("foo", "CEIL(`f2`)"),
         "ALL"
     );
     final String expectedAttributes1 = "{"
                                        + "\"statementType\":\"REPLACE\","
-                                       + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
+                                       + "\"targetDataSource\":\"foo\","
                                        + "\"partitionedBy\":\"HOUR\","
                                        + "\"clusteredBy\":[\"foo\",\"CEIL(`f2`)\"],"
                                        + "\"replaceTimeChunks\":\"ALL\""
@@ -153,14 +152,14 @@ public class ExplainAttributesTest
 
     ExplainAttributes replaceAttributes2 = new ExplainAttributes(
         "REPLACE",
-        new TableDestination("foo"),
+        "foo",
         Granularities.HOUR,
         Arrays.asList("foo", "boo"),
         "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
     );
     final String expectedAttributes2 = "{"
                                        + "\"statementType\":\"REPLACE\","
-                                       + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
+                                       + "\"targetDataSource\":\"foo\","
                                        + "\"partitionedBy\":\"HOUR\","
                                        + "\"clusteredBy\":[\"foo\",\"boo\"],"
                                        + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""

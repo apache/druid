@@ -36,7 +36,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests of MSQ with functions from the "druid-datasketches" extension.

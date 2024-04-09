@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -52,6 +53,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "killTaskId",
         "datasource",
         Intervals.of("2020-01-01/P1D"),
+        null,
         false,
         99,
         5,
@@ -62,6 +64,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getId(), fromJson.getId());
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
+    Assert.assertNull(taskQuery.getVersions());
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
     Assert.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
@@ -75,6 +78,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
             "killTaskId",
             "datasource",
             Intervals.of("2020-01-01/P1D"),
+            null,
             true,
             null,
             null,
@@ -85,6 +89,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getId(), fromJson.getId());
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
+    Assert.assertNull(taskQuery.getVersions());
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(100, fromJson.getBatchSize());
     Assert.assertNull(taskQuery.getLimit());
@@ -99,6 +104,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "datasource",
         Intervals.of("2020-01-01/P1D"),
         null,
+        null,
         true,
         99,
         null,
@@ -112,10 +118,11 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.getId(), taskQuery.getId());
     Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
     Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
+    Assert.assertNull(taskQuery.getVersions());
     Assert.assertEquals(task.isMarkAsUnused(), taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
-    Assert.assertNull(task.getLimit());
-    Assert.assertNull(task.getMaxUsedStatusLastUpdatedTime());
+    Assert.assertNull(taskQuery.getLimit());
+    Assert.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -125,6 +132,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         null,
         "datasource",
         Intervals.of("2020-01-01/P1D"),
+        ImmutableList.of("v1", "v2"),
         null,
         null,
         99,
@@ -139,6 +147,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.getId(), taskQuery.getId());
     Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
     Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
+    Assert.assertEquals(task.getVersions(), taskQuery.getVersions());
     Assert.assertNull(taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
     Assert.assertEquals(task.getLimit(), taskQuery.getLimit());

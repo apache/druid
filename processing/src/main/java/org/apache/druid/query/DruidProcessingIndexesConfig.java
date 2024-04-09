@@ -31,37 +31,24 @@ public class DruidProcessingIndexesConfig
   @JsonProperty
   private final double skipValueRangeIndexScale;
 
-  @JsonProperty
-  private final double skipValuePredicateIndexScale;
-
   @JsonCreator
   public DruidProcessingIndexesConfig(
-      @JsonProperty("skipValueRangeIndexScale") @Nullable Double skipValueRangeIndexScale,
-      @JsonProperty("skipValuePredicateIndexScale") @Nullable Double skipValuePredicateIndexScale
+      @JsonProperty("skipValueRangeIndexScale") @Nullable Double skipValueRangeIndexScale
   )
   {
     this.skipValueRangeIndexScale = Configs.valueOrDefault(
         skipValueRangeIndexScale,
         ColumnConfig.DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE
     );
-    this.skipValuePredicateIndexScale = Configs.valueOrDefault(
-        skipValuePredicateIndexScale,
-        ColumnConfig.DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE
-    );
   }
 
   public DruidProcessingIndexesConfig()
   {
-    this(null, null);
+    this(null);
   }
 
   public double getSkipValueRangeIndexScale()
   {
     return skipValueRangeIndexScale;
-  }
-
-  public double getSkipValuePredicateIndexScale()
-  {
-    return skipValuePredicateIndexScale;
   }
 }

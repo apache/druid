@@ -6,18 +6,18 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
   className="execution-details-pane"
   onActivateTab={[Function]}
   tabs={
-    Array [
-      Object {
+    [
+      {
         "icon": "many-to-one",
         "id": "general",
         "label": "General",
       },
-      Object {
+      {
         "icon": "application",
         "id": "sql",
         "label": "SQL query",
       },
-      Object {
+      {
         "icon": "cog",
         "id": "native",
         "label": "Native query",
@@ -25,12 +25,12 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
       false,
       undefined,
       undefined,
-      Object {
+      {
         "icon": "error",
         "id": "error",
         "label": "Error",
       },
-      Object {
+      {
         "icon": "warning-sign",
         "id": "warnings",
         "label": "Warnings",
@@ -48,49 +48,49 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     <Memo(ExecutionErrorPane)
       execution={
         Execution {
-          "_payload": Object {
-            "payload": Object {
-              "context": Object {
+          "_payload": {
+            "payload": {
+              "context": {
                 "forceTimeChunkLock": true,
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm-blank-lines",
               "groupId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
-              "nativeTypeNames": Array [
+              "nativeTypeNames": [
                 "LONG",
                 "STRING",
               ],
-              "resource": Object {
+              "resource": {
                 "availabilityGroup": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "requiredCapacity": 1,
               },
-              "spec": Object {
+              "spec": {
                 "assignmentStrategy": "max",
-                "columnMappings": Array [
-                  Object {
+                "columnMappings": [
+                  {
                     "outputColumn": "__time",
                     "queryColumn": "v0",
                   },
-                  Object {
+                  {
                     "outputColumn": "agent_type",
                     "queryColumn": "agent_type",
                   },
                 ],
-                "destination": Object {
+                "destination": {
                   "dataSource": "kttm-blank-lines",
-                  "replaceTimeChunks": Array [
+                  "replaceTimeChunks": [
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                   ],
                   "segmentGranularity": "DAY",
                   "type": "dataSource",
                 },
-                "query": Object {
-                  "columns": Array [
+                "query": {
+                  "columns": [
                     "agent_type",
                     "v0",
                   ],
-                  "context": Object {
+                  "context": {
                     "__resultFormat": "array",
                     "__user": "allowAll",
                     "executionMode": "async",
@@ -100,42 +100,42 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                     "maxNumTasks": 2,
                     "maxParseExceptions": 2,
                     "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                    "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                    "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                    "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                    "sqlInsertSegmentGranularity": ""DAY"",
                     "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                     "sqlReplaceTimeChunks": "all",
                     "waitUntilSegmentsLoad": true,
                   },
-                  "dataSource": Object {
-                    "inputFormat": Object {
+                  "dataSource": {
+                    "inputFormat": {
                       "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
                       "useJsonNodeReader": false,
                     },
-                    "inputSource": Object {
+                    "inputSource": {
                       "type": "http",
-                      "uris": Array [
+                      "uris": [
                         "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                       ],
                     },
-                    "signature": Array [
-                      Object {
+                    "signature": [
+                      {
                         "name": "timestamp",
                         "type": "STRING",
                       },
-                      Object {
+                      {
                         "name": "agent_type",
                         "type": "STRING",
                       },
                     ],
                     "type": "external",
                   },
-                  "granularity": Object {
+                  "granularity": {
                     "type": "all",
                   },
-                  "intervals": Object {
-                    "intervals": Array [
+                  "intervals": {
+                    "intervals": [
                       "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                     ],
                     "type": "intervals",
@@ -143,33 +143,33 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                   "legacy": false,
                   "queryType": "scan",
                   "resultFormat": "compactedList",
-                  "virtualColumns": Array [
-                    Object {
-                      "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                  "virtualColumns": [
+                    {
+                      "expression": "timestamp_parse("timestamp",null,'UTC')",
                       "name": "v0",
                       "outputType": "LONG",
                       "type": "expression",
                     },
                   ],
                 },
-                "tuningConfig": Object {
+                "tuningConfig": {
                   "maxNumWorkers": 1,
                   "maxRowsInMemory": 100000,
                   "rowsPerSegment": 3000000,
                 },
               },
-              "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+              "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
-              "sqlQueryContext": Object {
+              "sqlQueryContext": {
                 "__resultFormat": "array",
                 "executionMode": "async",
                 "finalizeAggregations": false,
@@ -177,17 +177,17 @@ PARTITIONED BY DAY",
                 "maxNumTasks": 2,
                 "maxParseExceptions": 2,
                 "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                "sqlInsertSegmentGranularity": ""DAY"",
                 "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "sqlReplaceTimeChunks": "all",
                 "waitUntilSegmentsLoad": true,
               },
-              "sqlResultsContext": Object {
+              "sqlResultsContext": {
                 "serializeComplexValues": true,
                 "stringifyArrays": true,
                 "timeZone": "UTC",
               },
-              "sqlTypeNames": Array [
+              "sqlTypeNames": [
                 "TIMESTAMP",
                 "VARCHAR",
               ],
@@ -196,9 +196,9 @@ PARTITIONED BY DAY",
             "task": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
           },
           "capacityInfo": undefined,
-          "destination": Object {
+          "destination": {
             "dataSource": "kttm-blank-lines",
-            "replaceTimeChunks": Array [
+            "replaceTimeChunks": [
               "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
             ],
             "segmentGranularity": "DAY",
@@ -207,8 +207,8 @@ PARTITIONED BY DAY",
           "destinationPages": undefined,
           "duration": 4483,
           "engine": "sql-msq-task",
-          "error": Object {
-            "error": Object {
+          "error": {
+            "error": {
               "errorCode": "TooManyWarnings",
               "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
               "maxWarnings": 2,
@@ -218,12 +218,12 @@ PARTITIONED BY DAY",
             "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
           "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
-          "nativeQuery": Object {
-            "columns": Array [
+          "nativeQuery": {
+            "columns": [
               "agent_type",
               "v0",
             ],
-            "context": Object {
+            "context": {
               "__resultFormat": "array",
               "__user": "allowAll",
               "executionMode": "async",
@@ -233,42 +233,42 @@ PARTITIONED BY DAY",
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
               "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-              "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-              "sqlInsertSegmentGranularity": "\\"DAY\\"",
+              "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+              "sqlInsertSegmentGranularity": ""DAY"",
               "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "sqlReplaceTimeChunks": "all",
               "waitUntilSegmentsLoad": true,
             },
-            "dataSource": Object {
-              "inputFormat": Object {
+            "dataSource": {
+              "inputFormat": {
                 "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
                 "useJsonNodeReader": false,
               },
-              "inputSource": Object {
+              "inputSource": {
                 "type": "http",
-                "uris": Array [
+                "uris": [
                   "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                 ],
               },
-              "signature": Array [
-                Object {
+              "signature": [
+                {
                   "name": "timestamp",
                   "type": "STRING",
                 },
-                Object {
+                {
                   "name": "agent_type",
                   "type": "STRING",
                 },
               ],
               "type": "external",
             },
-            "granularity": Object {
+            "granularity": {
               "type": "all",
             },
-            "intervals": Object {
-              "intervals": Array [
+            "intervals": {
+              "intervals": [
                 "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
               ],
               "type": "intervals",
@@ -276,16 +276,16 @@ PARTITIONED BY DAY",
             "legacy": false,
             "queryType": "scan",
             "resultFormat": "compactedList",
-            "virtualColumns": Array [
-              Object {
-                "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+            "virtualColumns": [
+              {
+                "expression": "timestamp_parse("timestamp",null,'UTC')",
                 "name": "v0",
                 "outputType": "LONG",
                 "type": "expression",
               },
             ],
           },
-          "queryContext": Object {
+          "queryContext": {
             "__resultFormat": "array",
             "executionMode": "async",
             "finalizeAggregations": false,
@@ -296,51 +296,51 @@ PARTITIONED BY DAY",
           },
           "result": undefined,
           "segmentStatus": undefined,
-          "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+          "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
           "stages": Stages {
-            "counters": Object {
-              "0": Object {
-                "0": Object {
-                  "input0": Object {
-                    "bytes": Array [
+            "counters": {
+              "0": {
+                "0": {
+                  "input0": {
+                    "bytes": [
                       7658,
                     ],
-                    "files": Array [
+                    "files": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
-                    "totalFiles": Array [
+                    "totalFiles": [
                       1,
                     ],
                     "type": "channel",
                   },
-                  "output": Object {
-                    "bytes": Array [
+                  "output": {
+                    "bytes": [
                       712,
                     ],
-                    "frames": Array [
+                    "frames": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
                     "type": "channel",
                   },
-                  "sortProgress": Object {
-                    "levelToMergedBatches": Object {},
-                    "levelToTotalBatches": Object {
+                  "sortProgress": {
+                    "levelToMergedBatches": {},
+                    "levelToTotalBatches": {
                       "0": 1,
                       "1": 1,
                       "2": -1,
@@ -350,37 +350,37 @@ PARTITIONED BY DAY",
                     "totalMergingLevels": 3,
                     "type": "sortProgress",
                   },
-                  "warnings": Object {
+                  "warnings": {
                     "CannotParseExternalData": 3,
                     "type": "warnings",
                   },
                 },
               },
             },
-            "stages": Array [
-              Object {
-                "definition": Object {
+            "stages": [
+              {
+                "definition": {
                   "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_0",
-                  "input": Array [
-                    Object {
-                      "inputFormat": Object {
+                  "input": [
+                    {
+                      "inputFormat": {
                         "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
                         "useJsonNodeReader": false,
                       },
-                      "inputSource": Object {
+                      "inputSource": {
                         "type": "http",
-                        "uris": Array [
+                        "uris": [
                           "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                         ],
                       },
-                      "signature": Array [
-                        Object {
+                      "signature": [
+                        {
                           "name": "timestamp",
                           "type": "STRING",
                         },
-                        Object {
+                        {
                           "name": "agent_type",
                           "type": "STRING",
                         },
@@ -389,13 +389,13 @@ PARTITIONED BY DAY",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "query": Object {
-                      "columns": Array [
+                  "processor": {
+                    "query": {
+                      "columns": [
                         "agent_type",
                         "v0",
                       ],
-                      "context": Object {
+                      "context": {
                         "__resultFormat": "array",
                         "__timeColumn": "v0",
                         "__user": "allowAll",
@@ -406,42 +406,42 @@ PARTITIONED BY DAY",
                         "maxNumTasks": 2,
                         "maxParseExceptions": 2,
                         "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                        "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                        "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                        "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                        "sqlInsertSegmentGranularity": ""DAY"",
                         "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                         "sqlReplaceTimeChunks": "all",
                         "waitUntilSegmentsLoad": true,
                       },
-                      "dataSource": Object {
-                        "inputFormat": Object {
+                      "dataSource": {
+                        "inputFormat": {
                           "assumeNewlineDelimited": false,
                           "keepNullColumns": false,
                           "type": "json",
                           "useJsonNodeReader": false,
                         },
-                        "inputSource": Object {
+                        "inputSource": {
                           "type": "http",
-                          "uris": Array [
+                          "uris": [
                             "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                           ],
                         },
-                        "signature": Array [
-                          Object {
+                        "signature": [
+                          {
                             "name": "timestamp",
                             "type": "STRING",
                           },
-                          Object {
+                          {
                             "name": "agent_type",
                             "type": "STRING",
                           },
                         ],
                         "type": "external",
                       },
-                      "granularity": Object {
+                      "granularity": {
                         "type": "all",
                       },
-                      "intervals": Object {
-                        "intervals": Array [
+                      "intervals": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
                         "type": "intervals",
@@ -449,9 +449,9 @@ PARTITIONED BY DAY",
                       "legacy": false,
                       "queryType": "scan",
                       "resultFormat": "compactedList",
-                      "virtualColumns": Array [
-                        Object {
-                          "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                      "virtualColumns": [
+                        {
+                          "expression": "timestamp_parse("timestamp",null,'UTC')",
                           "name": "v0",
                           "outputType": "LONG",
                           "type": "expression",
@@ -461,15 +461,15 @@ PARTITIONED BY DAY",
                     "type": "scan",
                   },
                   "shuffleCheckHasMultipleValues": true,
-                  "shuffleSpec": Object {
-                    "clusterBy": Object {
+                  "shuffleSpec": {
+                    "clusterBy": {
                       "bucketByCount": 1,
-                      "columns": Array [
-                        Object {
+                      "columns": [
+                        {
                           "columnName": "__bucket",
                           "order": "ASCENDING",
                         },
-                        Object {
+                        {
                           "columnName": "__boost",
                           "order": "ASCENDING",
                         },
@@ -478,20 +478,20 @@ PARTITIONED BY DAY",
                     "targetSize": 3000000,
                     "type": "targetSize",
                   },
-                  "signature": Array [
-                    Object {
+                  "signature": [
+                    {
                       "name": "__bucket",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "__boost",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "agent_type",
                       "type": "STRING",
                     },
-                    Object {
+                    {
                       "name": "v0",
                       "type": "LONG",
                     },
@@ -504,35 +504,35 @@ PARTITIONED BY DAY",
                 "startTime": "2024-01-23T19:56:44.857Z",
                 "workerCount": 1,
               },
-              Object {
-                "definition": Object {
+              {
+                "definition": {
                   "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_1",
-                  "input": Array [
-                    Object {
+                  "input": [
+                    {
                       "stage": 0,
                       "type": "stage",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "columnMappings": Array [
-                      Object {
+                  "processor": {
+                    "columnMappings": [
+                      {
                         "outputColumn": "__time",
                         "queryColumn": "v0",
                       },
-                      Object {
+                      {
                         "outputColumn": "agent_type",
                         "queryColumn": "agent_type",
                       },
                     ],
-                    "dataSchema": Object {
+                    "dataSchema": {
                       "dataSource": "kttm-blank-lines",
-                      "dimensionsSpec": Object {
-                        "dimensionExclusions": Array [
+                      "dimensionsSpec": {
+                        "dimensionExclusions": [
                           "__time",
                         ],
-                        "dimensions": Array [
-                          Object {
+                        "dimensions": [
+                          {
                             "createBitmapIndex": true,
                             "multiValueHandling": "SORTED_ARRAY",
                             "name": "agent_type",
@@ -542,35 +542,35 @@ PARTITIONED BY DAY",
                         "includeAllDimensions": false,
                         "useSchemaDiscovery": false,
                       },
-                      "granularitySpec": Object {
-                        "intervals": Array [
+                      "granularitySpec": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
-                        "queryGranularity": Object {
+                        "queryGranularity": {
                           "type": "none",
                         },
                         "rollup": false,
                         "type": "arbitrary",
                       },
-                      "metricsSpec": Array [],
-                      "timestampSpec": Object {
+                      "metricsSpec": [],
+                      "timestampSpec": {
                         "column": "__time",
                         "format": "millis",
                         "missingValue": null,
                       },
-                      "transformSpec": Object {
+                      "transformSpec": {
                         "filter": null,
-                        "transforms": Array [],
+                        "transforms": [],
                       },
                     },
-                    "tuningConfig": Object {
+                    "tuningConfig": {
                       "maxNumWorkers": 1,
                       "maxRowsInMemory": 100000,
                       "rowsPerSegment": 3000000,
                     },
                     "type": "segmentGenerator",
                   },
-                  "signature": Array [],
+                  "signature": [],
                 },
                 "stageNumber": 1,
               },
@@ -578,13 +578,13 @@ PARTITIONED BY DAY",
           },
           "startTime": 2024-01-23T19:56:44.633Z,
           "status": "FAILED",
-          "usageInfo": Object {
+          "usageInfo": {
             "pendingTasks": 0,
             "runningTasks": 1,
           },
-          "warnings": Array [
-            Object {
-              "error": Object {
+          "warnings": [
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
               },
@@ -615,7 +615,7 @@ PARTITIONED BY DAY",
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
 	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
 	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
@@ -630,8 +630,8 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
               "stageNumber": 0,
               "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
-            Object {
-              "error": Object {
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
               },
@@ -662,7 +662,7 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
 	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
 	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
@@ -684,49 +684,49 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
     <Memo(ExecutionStagesPane)
       execution={
         Execution {
-          "_payload": Object {
-            "payload": Object {
-              "context": Object {
+          "_payload": {
+            "payload": {
+              "context": {
                 "forceTimeChunkLock": true,
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm-blank-lines",
               "groupId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
-              "nativeTypeNames": Array [
+              "nativeTypeNames": [
                 "LONG",
                 "STRING",
               ],
-              "resource": Object {
+              "resource": {
                 "availabilityGroup": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "requiredCapacity": 1,
               },
-              "spec": Object {
+              "spec": {
                 "assignmentStrategy": "max",
-                "columnMappings": Array [
-                  Object {
+                "columnMappings": [
+                  {
                     "outputColumn": "__time",
                     "queryColumn": "v0",
                   },
-                  Object {
+                  {
                     "outputColumn": "agent_type",
                     "queryColumn": "agent_type",
                   },
                 ],
-                "destination": Object {
+                "destination": {
                   "dataSource": "kttm-blank-lines",
-                  "replaceTimeChunks": Array [
+                  "replaceTimeChunks": [
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                   ],
                   "segmentGranularity": "DAY",
                   "type": "dataSource",
                 },
-                "query": Object {
-                  "columns": Array [
+                "query": {
+                  "columns": [
                     "agent_type",
                     "v0",
                   ],
-                  "context": Object {
+                  "context": {
                     "__resultFormat": "array",
                     "__user": "allowAll",
                     "executionMode": "async",
@@ -736,42 +736,42 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                     "maxNumTasks": 2,
                     "maxParseExceptions": 2,
                     "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                    "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                    "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                    "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                    "sqlInsertSegmentGranularity": ""DAY"",
                     "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                     "sqlReplaceTimeChunks": "all",
                     "waitUntilSegmentsLoad": true,
                   },
-                  "dataSource": Object {
-                    "inputFormat": Object {
+                  "dataSource": {
+                    "inputFormat": {
                       "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
                       "useJsonNodeReader": false,
                     },
-                    "inputSource": Object {
+                    "inputSource": {
                       "type": "http",
-                      "uris": Array [
+                      "uris": [
                         "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                       ],
                     },
-                    "signature": Array [
-                      Object {
+                    "signature": [
+                      {
                         "name": "timestamp",
                         "type": "STRING",
                       },
-                      Object {
+                      {
                         "name": "agent_type",
                         "type": "STRING",
                       },
                     ],
                     "type": "external",
                   },
-                  "granularity": Object {
+                  "granularity": {
                     "type": "all",
                   },
-                  "intervals": Object {
-                    "intervals": Array [
+                  "intervals": {
+                    "intervals": [
                       "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                     ],
                     "type": "intervals",
@@ -779,33 +779,33 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                   "legacy": false,
                   "queryType": "scan",
                   "resultFormat": "compactedList",
-                  "virtualColumns": Array [
-                    Object {
-                      "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                  "virtualColumns": [
+                    {
+                      "expression": "timestamp_parse("timestamp",null,'UTC')",
                       "name": "v0",
                       "outputType": "LONG",
                       "type": "expression",
                     },
                   ],
                 },
-                "tuningConfig": Object {
+                "tuningConfig": {
                   "maxNumWorkers": 1,
                   "maxRowsInMemory": 100000,
                   "rowsPerSegment": 3000000,
                 },
               },
-              "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+              "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
-              "sqlQueryContext": Object {
+              "sqlQueryContext": {
                 "__resultFormat": "array",
                 "executionMode": "async",
                 "finalizeAggregations": false,
@@ -813,17 +813,17 @@ PARTITIONED BY DAY",
                 "maxNumTasks": 2,
                 "maxParseExceptions": 2,
                 "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                "sqlInsertSegmentGranularity": ""DAY"",
                 "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "sqlReplaceTimeChunks": "all",
                 "waitUntilSegmentsLoad": true,
               },
-              "sqlResultsContext": Object {
+              "sqlResultsContext": {
                 "serializeComplexValues": true,
                 "stringifyArrays": true,
                 "timeZone": "UTC",
               },
-              "sqlTypeNames": Array [
+              "sqlTypeNames": [
                 "TIMESTAMP",
                 "VARCHAR",
               ],
@@ -832,9 +832,9 @@ PARTITIONED BY DAY",
             "task": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
           },
           "capacityInfo": undefined,
-          "destination": Object {
+          "destination": {
             "dataSource": "kttm-blank-lines",
-            "replaceTimeChunks": Array [
+            "replaceTimeChunks": [
               "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
             ],
             "segmentGranularity": "DAY",
@@ -843,8 +843,8 @@ PARTITIONED BY DAY",
           "destinationPages": undefined,
           "duration": 4483,
           "engine": "sql-msq-task",
-          "error": Object {
-            "error": Object {
+          "error": {
+            "error": {
               "errorCode": "TooManyWarnings",
               "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
               "maxWarnings": 2,
@@ -854,12 +854,12 @@ PARTITIONED BY DAY",
             "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
           "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
-          "nativeQuery": Object {
-            "columns": Array [
+          "nativeQuery": {
+            "columns": [
               "agent_type",
               "v0",
             ],
-            "context": Object {
+            "context": {
               "__resultFormat": "array",
               "__user": "allowAll",
               "executionMode": "async",
@@ -869,42 +869,42 @@ PARTITIONED BY DAY",
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
               "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-              "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-              "sqlInsertSegmentGranularity": "\\"DAY\\"",
+              "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+              "sqlInsertSegmentGranularity": ""DAY"",
               "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "sqlReplaceTimeChunks": "all",
               "waitUntilSegmentsLoad": true,
             },
-            "dataSource": Object {
-              "inputFormat": Object {
+            "dataSource": {
+              "inputFormat": {
                 "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
                 "useJsonNodeReader": false,
               },
-              "inputSource": Object {
+              "inputSource": {
                 "type": "http",
-                "uris": Array [
+                "uris": [
                   "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                 ],
               },
-              "signature": Array [
-                Object {
+              "signature": [
+                {
                   "name": "timestamp",
                   "type": "STRING",
                 },
-                Object {
+                {
                   "name": "agent_type",
                   "type": "STRING",
                 },
               ],
               "type": "external",
             },
-            "granularity": Object {
+            "granularity": {
               "type": "all",
             },
-            "intervals": Object {
-              "intervals": Array [
+            "intervals": {
+              "intervals": [
                 "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
               ],
               "type": "intervals",
@@ -912,16 +912,16 @@ PARTITIONED BY DAY",
             "legacy": false,
             "queryType": "scan",
             "resultFormat": "compactedList",
-            "virtualColumns": Array [
-              Object {
-                "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+            "virtualColumns": [
+              {
+                "expression": "timestamp_parse("timestamp",null,'UTC')",
                 "name": "v0",
                 "outputType": "LONG",
                 "type": "expression",
               },
             ],
           },
-          "queryContext": Object {
+          "queryContext": {
             "__resultFormat": "array",
             "executionMode": "async",
             "finalizeAggregations": false,
@@ -932,51 +932,51 @@ PARTITIONED BY DAY",
           },
           "result": undefined,
           "segmentStatus": undefined,
-          "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+          "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
           "stages": Stages {
-            "counters": Object {
-              "0": Object {
-                "0": Object {
-                  "input0": Object {
-                    "bytes": Array [
+            "counters": {
+              "0": {
+                "0": {
+                  "input0": {
+                    "bytes": [
                       7658,
                     ],
-                    "files": Array [
+                    "files": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
-                    "totalFiles": Array [
+                    "totalFiles": [
                       1,
                     ],
                     "type": "channel",
                   },
-                  "output": Object {
-                    "bytes": Array [
+                  "output": {
+                    "bytes": [
                       712,
                     ],
-                    "frames": Array [
+                    "frames": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
                     "type": "channel",
                   },
-                  "sortProgress": Object {
-                    "levelToMergedBatches": Object {},
-                    "levelToTotalBatches": Object {
+                  "sortProgress": {
+                    "levelToMergedBatches": {},
+                    "levelToTotalBatches": {
                       "0": 1,
                       "1": 1,
                       "2": -1,
@@ -986,37 +986,37 @@ PARTITIONED BY DAY",
                     "totalMergingLevels": 3,
                     "type": "sortProgress",
                   },
-                  "warnings": Object {
+                  "warnings": {
                     "CannotParseExternalData": 3,
                     "type": "warnings",
                   },
                 },
               },
             },
-            "stages": Array [
-              Object {
-                "definition": Object {
+            "stages": [
+              {
+                "definition": {
                   "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_0",
-                  "input": Array [
-                    Object {
-                      "inputFormat": Object {
+                  "input": [
+                    {
+                      "inputFormat": {
                         "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
                         "useJsonNodeReader": false,
                       },
-                      "inputSource": Object {
+                      "inputSource": {
                         "type": "http",
-                        "uris": Array [
+                        "uris": [
                           "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                         ],
                       },
-                      "signature": Array [
-                        Object {
+                      "signature": [
+                        {
                           "name": "timestamp",
                           "type": "STRING",
                         },
-                        Object {
+                        {
                           "name": "agent_type",
                           "type": "STRING",
                         },
@@ -1025,13 +1025,13 @@ PARTITIONED BY DAY",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "query": Object {
-                      "columns": Array [
+                  "processor": {
+                    "query": {
+                      "columns": [
                         "agent_type",
                         "v0",
                       ],
-                      "context": Object {
+                      "context": {
                         "__resultFormat": "array",
                         "__timeColumn": "v0",
                         "__user": "allowAll",
@@ -1042,42 +1042,42 @@ PARTITIONED BY DAY",
                         "maxNumTasks": 2,
                         "maxParseExceptions": 2,
                         "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                        "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                        "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                        "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                        "sqlInsertSegmentGranularity": ""DAY"",
                         "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                         "sqlReplaceTimeChunks": "all",
                         "waitUntilSegmentsLoad": true,
                       },
-                      "dataSource": Object {
-                        "inputFormat": Object {
+                      "dataSource": {
+                        "inputFormat": {
                           "assumeNewlineDelimited": false,
                           "keepNullColumns": false,
                           "type": "json",
                           "useJsonNodeReader": false,
                         },
-                        "inputSource": Object {
+                        "inputSource": {
                           "type": "http",
-                          "uris": Array [
+                          "uris": [
                             "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                           ],
                         },
-                        "signature": Array [
-                          Object {
+                        "signature": [
+                          {
                             "name": "timestamp",
                             "type": "STRING",
                           },
-                          Object {
+                          {
                             "name": "agent_type",
                             "type": "STRING",
                           },
                         ],
                         "type": "external",
                       },
-                      "granularity": Object {
+                      "granularity": {
                         "type": "all",
                       },
-                      "intervals": Object {
-                        "intervals": Array [
+                      "intervals": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
                         "type": "intervals",
@@ -1085,9 +1085,9 @@ PARTITIONED BY DAY",
                       "legacy": false,
                       "queryType": "scan",
                       "resultFormat": "compactedList",
-                      "virtualColumns": Array [
-                        Object {
-                          "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                      "virtualColumns": [
+                        {
+                          "expression": "timestamp_parse("timestamp",null,'UTC')",
                           "name": "v0",
                           "outputType": "LONG",
                           "type": "expression",
@@ -1097,15 +1097,15 @@ PARTITIONED BY DAY",
                     "type": "scan",
                   },
                   "shuffleCheckHasMultipleValues": true,
-                  "shuffleSpec": Object {
-                    "clusterBy": Object {
+                  "shuffleSpec": {
+                    "clusterBy": {
                       "bucketByCount": 1,
-                      "columns": Array [
-                        Object {
+                      "columns": [
+                        {
                           "columnName": "__bucket",
                           "order": "ASCENDING",
                         },
-                        Object {
+                        {
                           "columnName": "__boost",
                           "order": "ASCENDING",
                         },
@@ -1114,20 +1114,20 @@ PARTITIONED BY DAY",
                     "targetSize": 3000000,
                     "type": "targetSize",
                   },
-                  "signature": Array [
-                    Object {
+                  "signature": [
+                    {
                       "name": "__bucket",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "__boost",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "agent_type",
                       "type": "STRING",
                     },
-                    Object {
+                    {
                       "name": "v0",
                       "type": "LONG",
                     },
@@ -1140,35 +1140,35 @@ PARTITIONED BY DAY",
                 "startTime": "2024-01-23T19:56:44.857Z",
                 "workerCount": 1,
               },
-              Object {
-                "definition": Object {
+              {
+                "definition": {
                   "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_1",
-                  "input": Array [
-                    Object {
+                  "input": [
+                    {
                       "stage": 0,
                       "type": "stage",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "columnMappings": Array [
-                      Object {
+                  "processor": {
+                    "columnMappings": [
+                      {
                         "outputColumn": "__time",
                         "queryColumn": "v0",
                       },
-                      Object {
+                      {
                         "outputColumn": "agent_type",
                         "queryColumn": "agent_type",
                       },
                     ],
-                    "dataSchema": Object {
+                    "dataSchema": {
                       "dataSource": "kttm-blank-lines",
-                      "dimensionsSpec": Object {
-                        "dimensionExclusions": Array [
+                      "dimensionsSpec": {
+                        "dimensionExclusions": [
                           "__time",
                         ],
-                        "dimensions": Array [
-                          Object {
+                        "dimensions": [
+                          {
                             "createBitmapIndex": true,
                             "multiValueHandling": "SORTED_ARRAY",
                             "name": "agent_type",
@@ -1178,35 +1178,35 @@ PARTITIONED BY DAY",
                         "includeAllDimensions": false,
                         "useSchemaDiscovery": false,
                       },
-                      "granularitySpec": Object {
-                        "intervals": Array [
+                      "granularitySpec": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
-                        "queryGranularity": Object {
+                        "queryGranularity": {
                           "type": "none",
                         },
                         "rollup": false,
                         "type": "arbitrary",
                       },
-                      "metricsSpec": Array [],
-                      "timestampSpec": Object {
+                      "metricsSpec": [],
+                      "timestampSpec": {
                         "column": "__time",
                         "format": "millis",
                         "missingValue": null,
                       },
-                      "transformSpec": Object {
+                      "transformSpec": {
                         "filter": null,
-                        "transforms": Array [],
+                        "transforms": [],
                       },
                     },
-                    "tuningConfig": Object {
+                    "tuningConfig": {
                       "maxNumWorkers": 1,
                       "maxRowsInMemory": 100000,
                       "rowsPerSegment": 3000000,
                     },
                     "type": "segmentGenerator",
                   },
-                  "signature": Array [],
+                  "signature": [],
                 },
                 "stageNumber": 1,
               },
@@ -1214,13 +1214,13 @@ PARTITIONED BY DAY",
           },
           "startTime": 2024-01-23T19:56:44.633Z,
           "status": "FAILED",
-          "usageInfo": Object {
+          "usageInfo": {
             "pendingTasks": 0,
             "runningTasks": 1,
           },
-          "warnings": Array [
-            Object {
-              "error": Object {
+          "warnings": [
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
               },
@@ -1251,7 +1251,7 @@ PARTITIONED BY DAY",
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
 	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
 	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
@@ -1266,8 +1266,8 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
               "stageNumber": 0,
               "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
-            Object {
-              "error": Object {
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
               },
@@ -1298,7 +1298,7 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
 	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
 	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
@@ -1330,18 +1330,18 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
   className="execution-details-pane"
   onActivateTab={[Function]}
   tabs={
-    Array [
-      Object {
+    [
+      {
         "icon": "many-to-one",
         "id": "general",
         "label": "General",
       },
-      Object {
+      {
         "icon": "application",
         "id": "sql",
         "label": "SQL query",
       },
-      Object {
+      {
         "icon": "cog",
         "id": "native",
         "label": "Native query",
@@ -1349,12 +1349,12 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
       false,
       undefined,
       undefined,
-      Object {
+      {
         "icon": "error",
         "id": "error",
         "label": "Error",
       },
-      Object {
+      {
         "icon": "warning-sign",
         "id": "warnings",
         "label": "Warnings",
@@ -1365,49 +1365,49 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
   <Memo(ExecutionWarningsPane)
     execution={
       Execution {
-        "_payload": Object {
-          "payload": Object {
-            "context": Object {
+        "_payload": {
+          "payload": {
+            "context": {
               "forceTimeChunkLock": true,
               "useLineageBasedSegmentAllocation": true,
             },
             "dataSource": "kttm-blank-lines",
             "groupId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
             "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
-            "nativeTypeNames": Array [
+            "nativeTypeNames": [
               "LONG",
               "STRING",
             ],
-            "resource": Object {
+            "resource": {
               "availabilityGroup": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "requiredCapacity": 1,
             },
-            "spec": Object {
+            "spec": {
               "assignmentStrategy": "max",
-              "columnMappings": Array [
-                Object {
+              "columnMappings": [
+                {
                   "outputColumn": "__time",
                   "queryColumn": "v0",
                 },
-                Object {
+                {
                   "outputColumn": "agent_type",
                   "queryColumn": "agent_type",
                 },
               ],
-              "destination": Object {
+              "destination": {
                 "dataSource": "kttm-blank-lines",
-                "replaceTimeChunks": Array [
+                "replaceTimeChunks": [
                   "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                 ],
                 "segmentGranularity": "DAY",
                 "type": "dataSource",
               },
-              "query": Object {
-                "columns": Array [
+              "query": {
+                "columns": [
                   "agent_type",
                   "v0",
                 ],
-                "context": Object {
+                "context": {
                   "__resultFormat": "array",
                   "__user": "allowAll",
                   "executionMode": "async",
@@ -1417,42 +1417,42 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
                   "maxNumTasks": 2,
                   "maxParseExceptions": 2,
                   "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                  "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                  "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                  "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                  "sqlInsertSegmentGranularity": ""DAY"",
                   "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                   "sqlReplaceTimeChunks": "all",
                   "waitUntilSegmentsLoad": true,
                 },
-                "dataSource": Object {
-                  "inputFormat": Object {
+                "dataSource": {
+                  "inputFormat": {
                     "assumeNewlineDelimited": false,
                     "keepNullColumns": false,
                     "type": "json",
                     "useJsonNodeReader": false,
                   },
-                  "inputSource": Object {
+                  "inputSource": {
                     "type": "http",
-                    "uris": Array [
+                    "uris": [
                       "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                     ],
                   },
-                  "signature": Array [
-                    Object {
+                  "signature": [
+                    {
                       "name": "timestamp",
                       "type": "STRING",
                     },
-                    Object {
+                    {
                       "name": "agent_type",
                       "type": "STRING",
                     },
                   ],
                   "type": "external",
                 },
-                "granularity": Object {
+                "granularity": {
                   "type": "all",
                 },
-                "intervals": Object {
-                  "intervals": Array [
+                "intervals": {
+                  "intervals": [
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                   ],
                   "type": "intervals",
@@ -1460,33 +1460,33 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
                 "legacy": false,
                 "queryType": "scan",
                 "resultFormat": "compactedList",
-                "virtualColumns": Array [
-                  Object {
-                    "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                "virtualColumns": [
+                  {
+                    "expression": "timestamp_parse("timestamp",null,'UTC')",
                     "name": "v0",
                     "outputType": "LONG",
                     "type": "expression",
                   },
                 ],
               },
-              "tuningConfig": Object {
+              "tuningConfig": {
                 "maxNumWorkers": 1,
                 "maxRowsInMemory": 100000,
                 "rowsPerSegment": 3000000,
               },
             },
-            "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+            "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
-            "sqlQueryContext": Object {
+            "sqlQueryContext": {
               "__resultFormat": "array",
               "executionMode": "async",
               "finalizeAggregations": false,
@@ -1494,17 +1494,17 @@ PARTITIONED BY DAY",
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
               "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-              "sqlInsertSegmentGranularity": "\\"DAY\\"",
+              "sqlInsertSegmentGranularity": ""DAY"",
               "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "sqlReplaceTimeChunks": "all",
               "waitUntilSegmentsLoad": true,
             },
-            "sqlResultsContext": Object {
+            "sqlResultsContext": {
               "serializeComplexValues": true,
               "stringifyArrays": true,
               "timeZone": "UTC",
             },
-            "sqlTypeNames": Array [
+            "sqlTypeNames": [
               "TIMESTAMP",
               "VARCHAR",
             ],
@@ -1513,9 +1513,9 @@ PARTITIONED BY DAY",
           "task": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
         },
         "capacityInfo": undefined,
-        "destination": Object {
+        "destination": {
           "dataSource": "kttm-blank-lines",
-          "replaceTimeChunks": Array [
+          "replaceTimeChunks": [
             "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
           ],
           "segmentGranularity": "DAY",
@@ -1524,8 +1524,8 @@ PARTITIONED BY DAY",
         "destinationPages": undefined,
         "duration": 4483,
         "engine": "sql-msq-task",
-        "error": Object {
-          "error": Object {
+        "error": {
+          "error": {
             "errorCode": "TooManyWarnings",
             "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
             "maxWarnings": 2,
@@ -1535,12 +1535,12 @@ PARTITIONED BY DAY",
           "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
         },
         "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
-        "nativeQuery": Object {
-          "columns": Array [
+        "nativeQuery": {
+          "columns": [
             "agent_type",
             "v0",
           ],
-          "context": Object {
+          "context": {
             "__resultFormat": "array",
             "__user": "allowAll",
             "executionMode": "async",
@@ -1550,42 +1550,42 @@ PARTITIONED BY DAY",
             "maxNumTasks": 2,
             "maxParseExceptions": 2,
             "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-            "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-            "sqlInsertSegmentGranularity": "\\"DAY\\"",
+            "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+            "sqlInsertSegmentGranularity": ""DAY"",
             "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
             "sqlReplaceTimeChunks": "all",
             "waitUntilSegmentsLoad": true,
           },
-          "dataSource": Object {
-            "inputFormat": Object {
+          "dataSource": {
+            "inputFormat": {
               "assumeNewlineDelimited": false,
               "keepNullColumns": false,
               "type": "json",
               "useJsonNodeReader": false,
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
               ],
             },
-            "signature": Array [
-              Object {
+            "signature": [
+              {
                 "name": "timestamp",
                 "type": "STRING",
               },
-              Object {
+              {
                 "name": "agent_type",
                 "type": "STRING",
               },
             ],
             "type": "external",
           },
-          "granularity": Object {
+          "granularity": {
             "type": "all",
           },
-          "intervals": Object {
-            "intervals": Array [
+          "intervals": {
+            "intervals": [
               "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
             ],
             "type": "intervals",
@@ -1593,16 +1593,16 @@ PARTITIONED BY DAY",
           "legacy": false,
           "queryType": "scan",
           "resultFormat": "compactedList",
-          "virtualColumns": Array [
-            Object {
-              "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+          "virtualColumns": [
+            {
+              "expression": "timestamp_parse("timestamp",null,'UTC')",
               "name": "v0",
               "outputType": "LONG",
               "type": "expression",
             },
           ],
         },
-        "queryContext": Object {
+        "queryContext": {
           "__resultFormat": "array",
           "executionMode": "async",
           "finalizeAggregations": false,
@@ -1613,51 +1613,51 @@ PARTITIONED BY DAY",
         },
         "result": undefined,
         "segmentStatus": undefined,
-        "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+        "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
         "stages": Stages {
-          "counters": Object {
-            "0": Object {
-              "0": Object {
-                "input0": Object {
-                  "bytes": Array [
+          "counters": {
+            "0": {
+              "0": {
+                "input0": {
+                  "bytes": [
                     7658,
                   ],
-                  "files": Array [
+                  "files": [
                     1,
                   ],
-                  "rows": Array [
+                  "rows": [
                     10,
                   ],
-                  "totalFiles": Array [
+                  "totalFiles": [
                     1,
                   ],
                   "type": "channel",
                 },
-                "output": Object {
-                  "bytes": Array [
+                "output": {
+                  "bytes": [
                     712,
                   ],
-                  "frames": Array [
+                  "frames": [
                     1,
                   ],
-                  "rows": Array [
+                  "rows": [
                     10,
                   ],
                   "type": "channel",
                 },
-                "sortProgress": Object {
-                  "levelToMergedBatches": Object {},
-                  "levelToTotalBatches": Object {
+                "sortProgress": {
+                  "levelToMergedBatches": {},
+                  "levelToTotalBatches": {
                     "0": 1,
                     "1": 1,
                     "2": -1,
@@ -1667,37 +1667,37 @@ PARTITIONED BY DAY",
                   "totalMergingLevels": 3,
                   "type": "sortProgress",
                 },
-                "warnings": Object {
+                "warnings": {
                   "CannotParseExternalData": 3,
                   "type": "warnings",
                 },
               },
             },
           },
-          "stages": Array [
-            Object {
-              "definition": Object {
+          "stages": [
+            {
+              "definition": {
                 "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_0",
-                "input": Array [
-                  Object {
-                    "inputFormat": Object {
+                "input": [
+                  {
+                    "inputFormat": {
                       "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
                       "useJsonNodeReader": false,
                     },
-                    "inputSource": Object {
+                    "inputSource": {
                       "type": "http",
-                      "uris": Array [
+                      "uris": [
                         "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                       ],
                     },
-                    "signature": Array [
-                      Object {
+                    "signature": [
+                      {
                         "name": "timestamp",
                         "type": "STRING",
                       },
-                      Object {
+                      {
                         "name": "agent_type",
                         "type": "STRING",
                       },
@@ -1706,13 +1706,13 @@ PARTITIONED BY DAY",
                   },
                 ],
                 "maxWorkerCount": 1,
-                "processor": Object {
-                  "query": Object {
-                    "columns": Array [
+                "processor": {
+                  "query": {
+                    "columns": [
                       "agent_type",
                       "v0",
                     ],
-                    "context": Object {
+                    "context": {
                       "__resultFormat": "array",
                       "__timeColumn": "v0",
                       "__user": "allowAll",
@@ -1723,42 +1723,42 @@ PARTITIONED BY DAY",
                       "maxNumTasks": 2,
                       "maxParseExceptions": 2,
                       "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
-                      "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                      "sqlInsertSegmentGranularity": "\\"DAY\\"",
+                      "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                      "sqlInsertSegmentGranularity": ""DAY"",
                       "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                       "sqlReplaceTimeChunks": "all",
                       "waitUntilSegmentsLoad": true,
                     },
-                    "dataSource": Object {
-                      "inputFormat": Object {
+                    "dataSource": {
+                      "inputFormat": {
                         "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
                         "useJsonNodeReader": false,
                       },
-                      "inputSource": Object {
+                      "inputSource": {
                         "type": "http",
-                        "uris": Array [
+                        "uris": [
                           "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                         ],
                       },
-                      "signature": Array [
-                        Object {
+                      "signature": [
+                        {
                           "name": "timestamp",
                           "type": "STRING",
                         },
-                        Object {
+                        {
                           "name": "agent_type",
                           "type": "STRING",
                         },
                       ],
                       "type": "external",
                     },
-                    "granularity": Object {
+                    "granularity": {
                       "type": "all",
                     },
-                    "intervals": Object {
-                      "intervals": Array [
+                    "intervals": {
+                      "intervals": [
                         "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                       ],
                       "type": "intervals",
@@ -1766,9 +1766,9 @@ PARTITIONED BY DAY",
                     "legacy": false,
                     "queryType": "scan",
                     "resultFormat": "compactedList",
-                    "virtualColumns": Array [
-                      Object {
-                        "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                    "virtualColumns": [
+                      {
+                        "expression": "timestamp_parse("timestamp",null,'UTC')",
                         "name": "v0",
                         "outputType": "LONG",
                         "type": "expression",
@@ -1778,15 +1778,15 @@ PARTITIONED BY DAY",
                   "type": "scan",
                 },
                 "shuffleCheckHasMultipleValues": true,
-                "shuffleSpec": Object {
-                  "clusterBy": Object {
+                "shuffleSpec": {
+                  "clusterBy": {
                     "bucketByCount": 1,
-                    "columns": Array [
-                      Object {
+                    "columns": [
+                      {
                         "columnName": "__bucket",
                         "order": "ASCENDING",
                       },
-                      Object {
+                      {
                         "columnName": "__boost",
                         "order": "ASCENDING",
                       },
@@ -1795,20 +1795,20 @@ PARTITIONED BY DAY",
                   "targetSize": 3000000,
                   "type": "targetSize",
                 },
-                "signature": Array [
-                  Object {
+                "signature": [
+                  {
                     "name": "__bucket",
                     "type": "LONG",
                   },
-                  Object {
+                  {
                     "name": "__boost",
                     "type": "LONG",
                   },
-                  Object {
+                  {
                     "name": "agent_type",
                     "type": "STRING",
                   },
-                  Object {
+                  {
                     "name": "v0",
                     "type": "LONG",
                   },
@@ -1821,35 +1821,35 @@ PARTITIONED BY DAY",
               "startTime": "2024-01-23T19:56:44.857Z",
               "workerCount": 1,
             },
-            Object {
-              "definition": Object {
+            {
+              "definition": {
                 "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_1",
-                "input": Array [
-                  Object {
+                "input": [
+                  {
                     "stage": 0,
                     "type": "stage",
                   },
                 ],
                 "maxWorkerCount": 1,
-                "processor": Object {
-                  "columnMappings": Array [
-                    Object {
+                "processor": {
+                  "columnMappings": [
+                    {
                       "outputColumn": "__time",
                       "queryColumn": "v0",
                     },
-                    Object {
+                    {
                       "outputColumn": "agent_type",
                       "queryColumn": "agent_type",
                     },
                   ],
-                  "dataSchema": Object {
+                  "dataSchema": {
                     "dataSource": "kttm-blank-lines",
-                    "dimensionsSpec": Object {
-                      "dimensionExclusions": Array [
+                    "dimensionsSpec": {
+                      "dimensionExclusions": [
                         "__time",
                       ],
-                      "dimensions": Array [
-                        Object {
+                      "dimensions": [
+                        {
                           "createBitmapIndex": true,
                           "multiValueHandling": "SORTED_ARRAY",
                           "name": "agent_type",
@@ -1859,35 +1859,35 @@ PARTITIONED BY DAY",
                       "includeAllDimensions": false,
                       "useSchemaDiscovery": false,
                     },
-                    "granularitySpec": Object {
-                      "intervals": Array [
+                    "granularitySpec": {
+                      "intervals": [
                         "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                       ],
-                      "queryGranularity": Object {
+                      "queryGranularity": {
                         "type": "none",
                       },
                       "rollup": false,
                       "type": "arbitrary",
                     },
-                    "metricsSpec": Array [],
-                    "timestampSpec": Object {
+                    "metricsSpec": [],
+                    "timestampSpec": {
                       "column": "__time",
                       "format": "millis",
                       "missingValue": null,
                     },
-                    "transformSpec": Object {
+                    "transformSpec": {
                       "filter": null,
-                      "transforms": Array [],
+                      "transforms": [],
                     },
                   },
-                  "tuningConfig": Object {
+                  "tuningConfig": {
                     "maxNumWorkers": 1,
                     "maxRowsInMemory": 100000,
                     "rowsPerSegment": 3000000,
                   },
                   "type": "segmentGenerator",
                 },
-                "signature": Array [],
+                "signature": [],
               },
               "stageNumber": 1,
             },
@@ -1895,13 +1895,13 @@ PARTITIONED BY DAY",
         },
         "startTime": 2024-01-23T19:56:44.633Z,
         "status": "FAILED",
-        "usageInfo": Object {
+        "usageInfo": {
           "pendingTasks": 0,
           "runningTasks": 1,
         },
-        "warnings": Array [
-          Object {
-            "error": Object {
+        "warnings": [
+          {
+            "error": {
               "errorCode": "CannotParseExternalData",
               "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
             },
@@ -1932,7 +1932,7 @@ PARTITIONED BY DAY",
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
 	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
 	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
@@ -1947,8 +1947,8 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
             "stageNumber": 0,
             "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
-          Object {
-            "error": Object {
+          {
+            "error": {
               "errorCode": "CannotParseExternalData",
               "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
             },
@@ -1979,7 +1979,7 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
 	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
 	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)

@@ -41,7 +41,7 @@ public class TableDestination implements IngestDestination
   }
 
   @Override
-  public String getType()
+  public String getDestinationName()
   {
     return tableName;
   }

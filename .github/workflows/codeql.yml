@@ -6,14 +6,12 @@ on:
       - '**/*.md'
       - 'dev/**'
       - 'docs/**'
-      - 'helm/**'
     branches: [ 'master', '0.6.x', '0.7.x', '0.7.1.x', '0.7.2.x', '0.8.0', '0.8.1', '0.8.2', '0.8.3', '0.9.0', '0.9.1' ]
   pull_request:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
       - 'docs/**'
-      - 'helm/**'
     # The branches below must be a subset of the branches above
     branches: [ 'master' ]
   schedule:
@@ -37,9 +35,9 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - uses: actions/setup-java@v3
+    - uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '8'

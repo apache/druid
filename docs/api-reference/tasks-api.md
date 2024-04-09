@@ -894,20 +894,20 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
   ```json
   {
-    'task': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-    'status': {
-      'id': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-      'groupId': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-      'type': 'query_controller',
-      'createdTime': '2023-06-22T22:11:28.367Z',
-      'queueInsertionTime': '1970-01-01T00:00:00.000Z',
-      'statusCode': 'RUNNING',
-      'status': 'RUNNING',
-      'runnerStatusCode': 'RUNNING',
-      'duration': -1,
-      'location': {'host': 'localhost', 'port': 8100, 'tlsPort': -1},
-      'dataSource': 'wikipedia_api',
-      'errorMsg': None
+    "task": "query-223549f8-b993-4483-b028-1b0d54713cad",
+    "status": {
+      "id": "query-223549f8-b993-4483-b028-1b0d54713cad",
+      "groupId": "query-223549f8-b993-4483-b028-1b0d54713cad",
+      "type": "query_controller",
+      "createdTime": "2023-06-22T22:11:28.367Z",
+      "queueInsertionTime": "1970-01-01T00:00:00.000Z",
+      "statusCode": "RUNNING",
+      "status": "RUNNING",
+      "runnerStatusCode": "RUNNING",
+      "duration": -1,
+      "location": {"host": "localhost", "port": 8100, "tlsPort": -1},
+      "dataSource": "wikipedia_api",
+      "errorMsg": null
     }
   }
   ```
@@ -1429,7 +1429,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
   ```json
   {
-    'task': 'query-577a83dd-a14e-4380-bd01-c942b781236b'
+    "task": "query-577a83dd-a14e-4380-bd01-c942b781236b"
   }
   ```
 

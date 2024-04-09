@@ -31,6 +31,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -43,6 +44,9 @@ import java.util.stream.Collectors;
 
 public class GoogleStorage
 {
+  private static final Logger log = new Logger(GoogleStorage.class);
+  private static final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
+
   /**
    * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
    * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
@@ -54,16 +58,32 @@ public class GoogleStorage
    */
   private final Supplier<Storage> storage;
 
-  private final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
-
   public GoogleStorage(final Supplier<Storage> storage)
   {
     this.storage = storage;
   }
 
-  public void insert(final String bucket, final String path, AbstractInputStreamContent mediaContent) throws IOException
+  /**
+   * Upload an object. From {@link Storage#createFrom(BlobInfo, InputStream, int, Storage.BlobWriteOption...)},
+   * "larger buffer sizes might improve the upload performance but require more memory."
+   *
+   * @param bucket       target bucket
+   * @param path         target path
+   * @param mediaContent content to upload
+   * @param bufferSize   size of upload buffer, or null to use the upstream default (15 MB as of this writing)
+   */
+  public void insert(
+      final String bucket,
+      final String path,
+      final AbstractInputStreamContent mediaContent,
+      @Nullable final Integer bufferSize
+  ) throws IOException
   {
-    storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream());
+    if (bufferSize == null) {
+      storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream());
+    } else {
+      storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream(), bufferSize);
+    }
   }
 
   public InputStream getInputStream(final String bucket, final String path) throws IOException
@@ -131,39 +151,52 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
     if (blob == null) {
-      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
+      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path[%s].", bucket, path);
     }
     return new GoogleStorageObjectMetadata(
         blob.getBucket(),
         blob.getName(),
         blob.getSize(),
         blob.getUpdateTimeOffsetDateTime()
-            .toEpochSecond()
+            .toEpochSecond() * 1000
     );
   }
 
-  public void delete(final String bucket, final String path) throws IOException
+
+  /**
+   * Deletes an object in a bucket on the specified path
+   *
+   * A false response from GCS delete API is indicative of file not found. Any other error is raised as a StorageException
+   * and should be explicitly handled.
+   * Ref: <a href="https://github.com/googleapis/java-storage/blob/v2.29.1/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java">HttpStorageRpc.java</a>
+   *
+   * @param bucket GCS bucket
+   * @param path   Object path
+   */
+  public void delete(final String bucket, final String path)
   {
     if (!storage.get().delete(bucket, path)) {
-      throw new IOE(
-          "Failed deleting google cloud storage object [bucket: %s path: %s]",
-          bucket,
-          path
-      );
+      log.debug("Google cloud storage object to be deleted not found in bucket [%s] and path [%s].", bucket, path);
     }
   }
 
   /**
    * Deletes a list of objects in a bucket
+   * A false response from GCS delete API is indicative of file not found. Any other error is raised as a StorageException
+   * and should be explicitly handled.
+   * Ref: <a href="https://github.com/googleapis/java-storage/blob/v2.29.1/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java">HttpStorageRpc.java</a>
    *
    * @param bucket GCS bucket
    * @param paths  Iterable for absolute paths of objects to be deleted inside the bucket
    */
-  public void batchDelete(final String bucket, final Iterable<String> paths) throws IOException
+  public void batchDelete(final String bucket, final Iterable<String> paths)
   {
-    List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
+    final List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
     if (statuses.contains(false)) {
-      throw new IOE("Failed deleting google cloud storage object(s)");
+      log.debug(
+          "Google cloud storage object(s) to be deleted not found in bucket [%s].",
+          bucket
+      );
     }
   }
 
@@ -177,18 +210,30 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
     if (blob == null) {
-      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
+      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path [%s].", bucket, path);
     }
     return blob.getSize();
   }
 
+  /**
+   * Return the etag for an object. This is a value that changes whenever the object's data or metadata changes and is
+   * typically but not always the MD5 hash of the object. Ref:
+   * <a href="https://cloud.google.com/storage/docs/hashes-etags#etags">ETags</a>
+   *
+   * @param bucket
+   * @param path
+   *
+   * @return
+   *
+   * @throws IOException
+   */
   public String version(final String bucket, final String path) throws IOException
   {
-    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
+    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.ETAG));
     if (blob == null) {
-      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
+      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and path [%s].", bucket, path);
     }
-    return blob.getGeneratedId();
+    return blob.getEtag();
   }
 
   /***
@@ -223,7 +268,7 @@ public class GoogleStorage
     Page<Blob> blobPage = storage.get().list(bucket, options.toArray(new Storage.BlobListOption[0]));
 
     if (blobPage == null) {
-      throw new IOE("Failed fetching google cloud storage object [bucket: %s, prefix: %s]", bucket, prefix);
+      throw new IOE("Failed to fetch google cloud storage object from bucket [%s] and prefix [%s].", bucket, prefix);
     }
 
 
@@ -234,7 +279,7 @@ public class GoogleStorage
                     blob.getName(),
                     blob.getSize(),
                     blob.getUpdateTimeOffsetDateTime()
-                        .toEpochSecond()
+                        .toEpochSecond() * 1000
                 ))
                 .collect(Collectors.toList());
 
@@ -247,6 +292,5 @@ public class GoogleStorage
   {
     BlobId blobId = BlobId.of(bucket, path);
     return BlobInfo.newBuilder(blobId).build();
-
   }
 }

@@ -37,7 +37,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -46,7 +45,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 
-@RunWith(Enclosed.class)
 public class QueryableIndexStorageAdapterTest
 {
   @RunWith(Parameterized.class)

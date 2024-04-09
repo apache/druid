@@ -42,6 +42,5 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 |`druid.azure.protocol`|the protocol to use|http or https|https|
 |`druid.azure.maxTries`|Number of tries before canceling an Azure operation.| |3|
 |`druid.azure.maxListingLength`|maximum number of input files matching a given prefix to retrieve at a time| |1024|
-|`druid.azure.endpointSuffix`|The endpoint suffix to use. Override the default value to connect to [Azure Government](https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-get-started-connect-to-storage#getting-started-with-storage-api).|Examples: `core.windows.net`, `core.usgovcloudapi.net`|`core.windows.net`|
-
+|`druid.azure.storageAccountEndpointSuffix`| The endpoint suffix to use. Use this config instead of `druid.azure.endpointSuffix`. Override the default value to connect to [Azure Government](https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-get-started-connect-to-storage#getting-started-with-storage-api). This config supports storage accounts enabled for [AzureDNSZone](https://learn.microsoft.com/en-us/azure/dns/dns-getstarted-portal). Note: do not include the storage account name prefix in this config value. | Examples: `ABCD1234.blob.storage.azure.net`, `blob.core.usgovcloudapi.net`| `blob.core.windows.net`|
 See [Azure Services](http://azure.microsoft.com/en-us/pricing/free-trial/) for more information.

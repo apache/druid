@@ -122,7 +122,8 @@ export class ConsoleApplication extends React.PureComponent<
 
         return await Capabilities.detectCapacity(capabilities);
       },
-      onStateChange: ({ data, loading }) => {
+      onStateChange: ({ data, loading, error }) => {
+        console.error('There was an error retrieving the capabilities', error);
         this.setState({
           capabilities: data || Capabilities.FULL,
           capabilitiesLoading: loading,

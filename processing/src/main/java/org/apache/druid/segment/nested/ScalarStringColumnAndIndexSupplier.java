@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
@@ -49,8 +48,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      ColumnBuilder columnBuilder
   )
   {
     final byte version = bb.get();
@@ -92,17 +90,11 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
             bitmapSerdeFactory.getObjectStrategy(),
             columnBuilder.getFileMapper()
         );
-        final int size;
-        try (ColumnarInts throwAway = ints.get()) {
-          size = throwAway.size();
-        }
         return new ScalarStringColumnAndIndexSupplier(
             dictionarySupplier,
             ints,
             valueIndexes,
-            bitmapSerdeFactory,
-            columnConfig,
-            size
+            bitmapSerdeFactory
         );
       }
       catch (IOException ex) {
@@ -122,9 +114,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier,
       Supplier<ColumnarInts> encodedColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
-      BitmapSerdeFactory serdeFactory,
-      ColumnConfig columnConfig,
-      int numRows
+      BitmapSerdeFactory serdeFactory
   )
   {
     this.dictionarySupplier = dictionarySupplier;
@@ -134,9 +124,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         serdeFactory.getBitmapFactory(),
         dictionarySupplier,
         valueIndexes,
-        null,
-        columnConfig,
-        numRows
+        null
     );
   }
 

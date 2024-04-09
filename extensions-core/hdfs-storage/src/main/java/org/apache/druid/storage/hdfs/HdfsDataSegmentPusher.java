@@ -23,11 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
@@ -113,7 +115,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         uniquePrefix
     );
 
-    return pushToFilePath(inDir, segment, outIndexFilePathSuffix);
+    return pushToFilePathWithRetry(inDir, segment, outIndexFilePathSuffix);
   }
 
   @Override
@@ -125,10 +127,28 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         storageDirSuffix.replace(':', '_'),
         segment.getShardSpec().getPartitionNum()
     );
-    
-    return pushToFilePath(inDir, segment, outIndexFilePath);
+
+    return pushToFilePathWithRetry(inDir, segment, outIndexFilePath);
   }
-  
+
+  private DataSegment pushToFilePathWithRetry(File inDir, DataSegment segment, String outIndexFilePath)
+      throws IOException
+  {
+    // Retry any HDFS errors that occur, up to 5 times.
+    try {
+      return RetryUtils.retry(
+          () -> pushToFilePath(inDir, segment, outIndexFilePath),
+          exception -> exception instanceof Exception,
+          5
+      );
+    }
+    catch (Exception e) {
+      Throwables.throwIfInstanceOf(e, IOException.class);
+      Throwables.throwIfInstanceOf(e, RuntimeException.class);
+      throw new RuntimeException(e);
+    }
+  }
+
   private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
   {
     log.debug(

@@ -23,14 +23,15 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.junit.rules.ExternalResource;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,50 +51,41 @@ public @interface SqlTestFrameworkConfig
 
   ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
 
+
+
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class ClassRule extends ExternalResource
+  class Rule implements AfterAllCallback, BeforeEachCallback
   {
-
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
-
-    public MethodRule methodRule(BaseCalciteQueryTest testHost)
-    {
-      return new MethodRule(this, testHost);
-    }
+    private SqlTestFrameworkConfig config;
+    private QueryComponentSupplier testHost;
+    private Method method;
 
     @Override
-    protected void after()
+    public void afterAll(ExtensionContext context)
     {
       for (ConfigurationInstance f : configMap.values()) {
         f.close();
       }
       configMap.clear();
     }
-  }
 
-  /**
-   * @see {@link SqlTestFrameworkConfig}
-   */
-  class MethodRule extends ExternalResource
-  {
-    private SqlTestFrameworkConfig config;
-    private ClassRule classRule;
-    private QueryComponentSupplier testHost;
-    private Description description;
-
-    public MethodRule(ClassRule classRule, QueryComponentSupplier testHost)
+    @Override
+    public void beforeEach(ExtensionContext context)
     {
-      this.classRule = classRule;
-      this.testHost = testHost;
+      testHost = (QueryComponentSupplier) context.getTestInstance().get();
+      method = context.getTestMethod().get();
+      setConfig(method.getAnnotation(SqlTestFrameworkConfig.class));
+
     }
 
     @SqlTestFrameworkConfig
     public SqlTestFrameworkConfig defaultConfig()
     {
       try {
-        SqlTestFrameworkConfig annotation = MethodRule.class
+        SqlTestFrameworkConfig annotation = getClass()
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
         return annotation;
@@ -103,15 +95,12 @@ public @interface SqlTestFrameworkConfig
       }
     }
 
-    @Override
-    public Statement apply(Statement base, Description description)
+    public void setConfig(SqlTestFrameworkConfig annotation)
     {
-      this.description = description;
-      config = description.getAnnotation(SqlTestFrameworkConfig.class);
+      config = annotation;
       if (config == null) {
         config = defaultConfig();
       }
-      return base;
     }
 
     public SqlTestFramework get()
@@ -119,26 +108,24 @@ public @interface SqlTestFrameworkConfig
       return getConfigurationInstance().framework;
     }
 
-    public Description getDescription()
+    public <T extends Annotation> T getAnnotation(Class<T> annotationType)
     {
-      return description;
+      return method.getAnnotation(annotationType);
     }
 
     private ConfigurationInstance getConfigurationInstance()
     {
-      return classRule.configMap.computeIfAbsent(config, this::buildConfiguration);
+      return configMap.computeIfAbsent(config, this::buildConfiguration);
     }
 
     ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
     {
       return new ConfigurationInstance(config, testHost);
     }
-
   }
 
   class ConfigurationInstance
   {
-
     public SqlTestFramework framework;
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
@@ -156,5 +143,4 @@ public @interface SqlTestFrameworkConfig
       framework.close();
     }
   }
-
 }

@@ -46,6 +46,7 @@ public class ClientKillUnusedSegmentsTaskQueryTest
         "killTaskId",
         DATA_SOURCE,
         INTERVAL,
+        null,
         true,
         BATCH_SIZE,
         LIMIT,

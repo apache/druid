@@ -98,8 +98,13 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap)
   {
     WrappedImmutableConciseBitmap other = (WrappedImmutableConciseBitmap) otherBitmap;
-    ImmutableConciseSet unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableConciseBitmap(ImmutableConciseSet.intersection(bitmap, unwrappedOtherBitmap));
+    return new WrappedImmutableConciseBitmap(ImmutableConciseSet.intersection(bitmap, other.bitmap));
   }
 
+  @Override
+  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
+  {
+    WrappedImmutableConciseBitmap other = (WrappedImmutableConciseBitmap) otherBitmap;
+    return new WrappedImmutableConciseBitmap(ImmutableConciseSet.union(bitmap, other.bitmap));
+  }
 }

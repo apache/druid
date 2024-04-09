@@ -92,9 +92,9 @@ public class LdapUserPrincipal implements Principal
     return lastVerified.get();
   }
 
-  public boolean hasSameCredentials(char[] password)
+  public boolean hasSameCredentials(char[] password, PasswordHashGenerator hashGenerator)
   {
-    byte[] recalculatedHash = PasswordHashGenerator.computePasswordHash(
+    byte[] recalculatedHash = hashGenerator.getOrComputePasswordHash(
         password,
         this.credentials.getSalt(),
         this.credentials.getIterations()

@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Factory class for generating BlobServiceClient objects.
+ * Factory class for generating BlobServiceClient objects used for deep storage.
  */
 public class AzureClientFactory
 {
