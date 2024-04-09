@@ -83,7 +83,18 @@ public class TaskReportQueryListenerTest
     listener.onResultsComplete();
     listener.onQueryComplete(
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, Collections.emptyList(), null, 0, new HashMap<>(), 1, 2, null),
+            new MSQStatusReport(
+                TaskState.SUCCESS,
+                null,
+                Collections.emptyList(),
+                null,
+                0,
+                new HashMap<>(),
+                1,
+                2,
+                null,
+                null
+            ),
             MSQStagesReport.create(
                 MSQTaskReportTest.QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -138,7 +149,18 @@ public class TaskReportQueryListenerTest
     Assert.assertFalse(listener.onResultRow(new Object[]{"foo"}));
     listener.onQueryComplete(
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, Collections.emptyList(), null, 0, new HashMap<>(), 1, 2, null),
+            new MSQStatusReport(
+                TaskState.SUCCESS,
+                null,
+                Collections.emptyList(),
+                null,
+                0,
+                new HashMap<>(),
+                1,
+                2,
+                null,
+                null
+            ),
             MSQStagesReport.create(
                 MSQTaskReportTest.QUERY_DEFINITION,
                 ImmutableMap.of(),
