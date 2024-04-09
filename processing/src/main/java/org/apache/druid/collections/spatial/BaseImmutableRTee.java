@@ -17,35 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.server.http;
+package org.apache.druid.collections.spatial;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.collections.spatial.search.Bound;
 
-/**
- */
-public class SegmentToDrop
+public interface BaseImmutableRTee
 {
-  private final String fromServer;
-  private final String segmentName;
-
-  @JsonCreator
-  public SegmentToDrop(
-      @JsonProperty("from") String fromServer,
-      @JsonProperty("segmentName") String segmentName
-  )
-  {
-    this.fromServer = fromServer;
-    this.segmentName = segmentName;
-  }
-
-  public String getFromServer()
-  {
-    return fromServer;
-  }
-
-  public String getSegmentName()
-  {
-    return segmentName;
-  }
+  Iterable<ImmutableBitmap> search(Bound bound);
 }

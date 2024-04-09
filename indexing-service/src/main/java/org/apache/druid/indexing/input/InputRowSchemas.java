@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.input;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -69,8 +68,7 @@ public class InputRowSchemas
    *
    * @see InputRowSchema#getColumnsFilter()
    */
-  @VisibleForTesting
-  static ColumnsFilter createColumnsFilter(
+  public static ColumnsFilter createColumnsFilter(
       final TimestampSpec timestampSpec,
       final DimensionsSpec dimensionsSpec,
       final TransformSpec transformSpec,

@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -383,17 +384,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
           1,
-          (int) derbyConnector.getDBI().<Integer>withHandle(
-              handle -> {
-                String request = StringUtils.format(
-                    "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
-                    derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
-                );
-                return handle.createStatement(request)
-                             .bind("id", segment.getId().toString())
-                             .bind("used_status_last_updated", usedStatusLastUpdatedTime.toString()
-                ).execute();
-              }
+          derbyConnectorRule.segments().update(
+              "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",
+              usedStatusLastUpdatedTime.toString(),
+              segment.getId().toString()
           )
       );
     }
@@ -942,7 +936,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."), result1);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last commited"
+                + " end state[null]. Try resetting the supervisor."
+            ).toString()),
+        result1
+    );
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -963,10 +964,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
-        "happen if you update input topic in a spec without changing the supervisor name. " +
-        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
-        "Target state: [ObjectMetadata{theObject=null}]."), result2);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}]"
+                + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor."
+            ).toString()
+        ),
+        result2
+    );
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -1033,10 +1039,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
-        "happen if you update input topic in a spec without changing the supervisor name. " +
-        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
-        "Target state: [ObjectMetadata{theObject={foo=qux}}]."), result2);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}] and "
+                + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor."
+            ).toString()),
+        result2
+    );
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());

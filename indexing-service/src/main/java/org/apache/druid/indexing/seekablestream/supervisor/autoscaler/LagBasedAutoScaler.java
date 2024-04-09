@@ -27,6 +27,9 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,11 +48,17 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   private final SupervisorSpec spec;
   private final SeekableStreamSupervisor supervisor;
   private final LagBasedAutoScalerConfig lagBasedAutoScalerConfig;
+  private final ServiceEmitter emitter;
+  private final ServiceMetricEvent.Builder metricBuilder;
 
   private static final ReentrantLock LOCK = new ReentrantLock(true);
 
-  public LagBasedAutoScaler(SeekableStreamSupervisor supervisor, String dataSource,
-      LagBasedAutoScalerConfig autoScalerConfig, SupervisorSpec spec
+  public LagBasedAutoScaler(
+      SeekableStreamSupervisor supervisor,
+      String dataSource,
+      LagBasedAutoScalerConfig autoScalerConfig,
+      SupervisorSpec spec,
+      ServiceEmitter emitter
   )
   {
     this.lagBasedAutoScalerConfig = autoScalerConfig;
@@ -62,6 +71,10 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Computation-%d");
     this.spec = spec;
     this.supervisor = supervisor;
+    this.emitter = emitter;
+    metricBuilder = ServiceMetricEvent.builder()
+                                      .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                      .setDimension(DruidMetrics.STREAM, this.supervisor.getIoConfig().getStream());
   }
 
   @Override
@@ -93,7 +106,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     allocationExec.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(scaleAction),
+        supervisor.buildDynamicAllocationTask(scaleAction, emitter),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis() + lagBasedAutoScalerConfig
             .getLagCollectionRangeMillis(),
         lagBasedAutoScalerConfig.getScaleActionPeriodMillis(),
@@ -214,6 +227,12 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         log.warn("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
             dataSource
         );
+        emitter.emit(metricBuilder
+                         .setDimension(
+                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
+                             "Already at max task count"
+                         )
+                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
         return -1;
       } else {
         desiredActiveTaskCount = Math.min(taskCount, actualTaskCountMax);
@@ -228,6 +247,12 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         log.warn("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource [%s].",
             dataSource
         );
+        emitter.emit(metricBuilder
+                         .setDimension(
+                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
+                             "Already at min task count"
+                         )
+                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
         return -1;
       } else {
         desiredActiveTaskCount = Math.max(taskCount, lagBasedAutoScalerConfig.getTaskCountMin());

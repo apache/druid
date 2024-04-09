@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -85,7 +86,8 @@ import java.util.List;
  */
 public class Windowing
 {
-  private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
+  @VisibleForTesting
+  public static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
       .put("LAG", (agg) ->
           new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))

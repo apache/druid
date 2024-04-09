@@ -21,6 +21,7 @@
 1M
 100MiB
 32-bit
+4MiB
 500MiB
 64-bit
 ACL
@@ -239,6 +240,7 @@ TopN
 TopNs
 UI
 UIs
+UPSERT
 URI
 URIs
 uris
@@ -570,6 +572,7 @@ useFilterCNF
 useJqSyntax
 useJsonNodeReader
 useSSL
+upsert
 uptime
 uris
 urls
@@ -2162,6 +2165,9 @@ jackson-jq
 missingValue
 skipBytesInMemoryOverheadCheck
 spatialDimensions
+radiusUnit
+euclidean
+kilometers
 useFieldDiscovery
 4CPU
 cityName

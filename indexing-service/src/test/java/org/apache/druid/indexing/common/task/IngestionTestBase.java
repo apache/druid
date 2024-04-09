@@ -36,8 +36,11 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -62,7 +65,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -98,6 +100,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
@@ -115,6 +118,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
   private File baseDir;
+  protected File reportsFile;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
@@ -140,6 +144,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
+    reportsFile = temporaryFolder.newFile();
   }
 
   @After
@@ -158,7 +163,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return new TestLocalTaskActionClient(task);
   }
 
-  public void prepareTaskForLocking(Task task) throws EntryExistsException
+  public void prepareTaskForLocking(Task task)
   {
     lockbox.add(task);
     taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -264,9 +269,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   /**
    * Converts ParseSpec to InputFormat for indexing tests. To be used until {@link FirehoseFactory}
    * & {@link InputRowParser} is deprecated and removed.
-   *
-   * @param parseSpec
-   * @return
    */
   public static InputFormat createInputFormatFromParseSpec(ParseSpec parseSpec)
   {
@@ -502,5 +504,19 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+  }
+
+  public TaskReport.ReportMap getReports() throws IOException
+  {
+    return objectMapper.readValue(reportsFile, TaskReport.ReportMap.class);
+  }
+
+  public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
+  {
+    return getReports().entrySet()
+                       .stream()
+                       .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+                       .map(entry -> (IngestionStatsAndErrors) entry.getValue().getPayload())
+                       .collect(Collectors.toList());
   }
 }
