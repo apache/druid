@@ -105,6 +105,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -861,6 +862,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected MSQSegmentReport expectedSegmentReport = null;
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
@@ -946,6 +948,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
     {
       this.expectedMSQFaultClass = expectedMSQFaultClass;
+      return asBuilder();
+    }
+
+    public Builder setExpectedMSQSegmentReport(MSQSegmentReport expectedSegmentReport)
+    {
+      this.expectedSegmentReport = expectedSegmentReport;
       return asBuilder();
     }
 
@@ -1239,6 +1247,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
         if (expectedTuningConfig != null) {
           assertTuningConfig(expectedTuningConfig, foundSpec.getTuningConfig());
+        }
+        if (expectedSegmentReport != null) {
+          Assert.assertEquals(expectedSegmentReport, reportPayload.getStatus().getSegmentReport());
         }
         if (expectedDestinationIntervals != null) {
           Assert.assertNotNull(foundSpec);
