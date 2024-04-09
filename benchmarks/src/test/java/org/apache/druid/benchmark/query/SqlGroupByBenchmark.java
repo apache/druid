@@ -58,7 +58,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.logging.log4j.core.util.Integers;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -193,7 +192,7 @@ public class SqlGroupByBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     String columnCardinalityWithUnderscores = groupingDimension.substring(groupingDimension.lastIndexOf('-') + 1);
-    int rowsPerSegment = Integers.parseInt(StringUtils.replace(columnCardinalityWithUnderscores, "_", ""));
+    int rowsPerSegment = Integer.parseInt(StringUtils.replace(columnCardinalityWithUnderscores, "_", ""));
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
 
