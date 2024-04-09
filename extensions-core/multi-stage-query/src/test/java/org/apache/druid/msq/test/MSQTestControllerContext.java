@@ -302,7 +302,7 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
+  public InputSpecSlicer newTableInputSpecSlicer()
   {
     return new TableInputSpecSlicer(
         coordinatorClient,

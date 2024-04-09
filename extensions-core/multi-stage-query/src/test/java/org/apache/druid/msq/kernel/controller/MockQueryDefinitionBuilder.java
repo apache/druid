@@ -164,7 +164,7 @@ public class MockQueryDefinitionBuilder
           break;
       }
 
-      if (shuffleKind != shuffleSpec.kind()) {
+      if (shuffleSpec == null || shuffleKind != shuffleSpec.kind()) {
         throw new ISE("Oops, created an incorrect shuffleSpec[%s] for kind[%s]", shuffleSpec, shuffleKind);
       }
     }

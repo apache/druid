@@ -144,7 +144,7 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
+  public InputSpecSlicer newTableInputSpecSlicer()
   {
     final SegmentSource includeSegmentSource =
         MultiStageQueryContext.getSegmentSources(task.getQuerySpec().getQuery().context());

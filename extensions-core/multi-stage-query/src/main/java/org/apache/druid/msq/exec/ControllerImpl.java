@@ -36,8 +36,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -60,7 +58,6 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -380,7 +377,7 @@ public class ControllerImpl implements Controller
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory =
-          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
+          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer());
 
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
           new RunQueryUntilDone(
@@ -2496,7 +2493,7 @@ public class ControllerImpl implements Controller
                 if (workOrderSet == null
                     || workOrderSet.size() == 0
                     || !workOrderSet.remove(stageWorkOrders.getValue().get(workerNumber))) {
-                  throw new ISE("Worker[%d] orders not found", workerNumber);
+                  throw new ISE("Worker[%s] with number[%d] orders not found", workerId, workerNumber);
                 }
                 if (workOrderSet.size() == 0) {
                   return null;
