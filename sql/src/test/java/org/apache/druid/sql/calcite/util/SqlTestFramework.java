@@ -570,6 +570,7 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
+        .addModule(binder -> binder.bind(Closer.class).toInstance(resourceCloser))
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())

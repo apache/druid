@@ -17,28 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import net.hydromatic.quidem.Quidem.ConnectionFactory;
+import net.hydromatic.quidem.Quidem.PropertyHandler;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.Properties;
 
-@ExtendWith(NotYetSupportedProcessor.class)
-public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
+public class DruidQuidemConnectionFactory implements ConnectionFactory, PropertyHandler
 {
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
+  private Properties props = new Properties();
 
-  @Override
-  protected QueryTestBuilder testBuilder()
+  public DruidQuidemConnectionFactory()
   {
-    return decoupledExtension.testBuilder();
+    // ensure driver loaded
+    new DruidAvaticaTestDriver();
   }
 
-  @Test
-  public void validateTestClass()
+  @Override
+  public Connection connect(String name, boolean reference) throws Exception
   {
-    // technical testcase needed by the extension temporarily
+    if (name.startsWith("druidtest://")) {
+      return DriverManager.getConnection(name, props);
+    }
+    throw new RuntimeException("unknown connection '" + name + "'");
+  }
+
+  @Override
+  public void onSet(String key, Object value)
+  {
+    props.setProperty(key, value.toString());
   }
 }

@@ -17,28 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import java.io.File;
 
-@ExtendWith(NotYetSupportedProcessor.class)
-public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
+public class SqlQuidemTest extends DruidQuidemTestBase
 {
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
-
-  @Override
-  protected QueryTestBuilder testBuilder()
+  public SqlQuidemTest()
   {
-    return decoupledExtension.testBuilder();
+    super();
   }
 
-  @Test
-  public void validateTestClass()
+  @Override
+  protected File getTestRoot()
   {
-    // technical testcase needed by the extension temporarily
+    return ProjectPathUtils.getPathFromProjectRoot("sql/src/test/quidem/" + getClass().getName());
   }
 }
