@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { dedupe } from '@druid-toolkit/query';
+import { dedupe, F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -186,7 +186,7 @@ export async function postToSampler(
   sampleSpec: SampleSpec,
   forStr: string,
 ): Promise<SampleResponse> {
-  sampleSpec = fixSamplerTypes(sampleSpec);
+  sampleSpec = fixSamplerLookups(fixSamplerTypes(sampleSpec));
 
   let sampleResp: any;
   try {
@@ -621,4 +621,68 @@ export async function sampleForSchema(
   };
 
   return postToSampler(applyCache(sampleSpec, cacheRows), 'schema');
+}
+
+function fixSamplerLookups(sampleSpec: SampleSpec): SampleSpec {
+  const transforms: Transform[] | undefined = deepGet(
+    sampleSpec,
+    'spec.dataSchema.transformSpec.transforms',
+  );
+  if (!Array.isArray(transforms)) return sampleSpec;
+
+  return deepSet(
+    sampleSpec,
+    'spec.dataSchema.transformSpec.transforms',
+    transforms.map(transform => {
+      const { expression } = transform;
+      if (typeof expression !== 'string') return transform;
+      return { ...transform, expression: changeLookupInExpressionsSampling(expression) };
+    }),
+  );
+}
+
+/**
+ * Lookups do not work in the sampler because they are not loaded in the Overlord
+ * to prevent the user from getting an error like "Unknown lookup [lookup name]" we
+ * change the lookup expression to a placeholder
+ *
+ * lookup("x", 'lookup_name') => concat('lookup_name', '[', "x", '] -- This is a placeholder, lookups are not supported in sampling')
+ * lookup("x", 'lookup_name', 'replaceValue') => nvl(concat('lookup_name', '[', "x", '] -- This is a placeholder, lookups are not supported in sampling'), 'replaceValue')
+ */
+export function changeLookupInExpressionsSampling(druidExpression: string): string {
+  if (!druidExpression.includes('lookup')) return druidExpression;
+
+  // The Druid expressions are very close to SQL so try parsing them as SQL, if it parses then this is a more robust way to apply this transformation
+  const parsedDruidExpression = SqlExpression.maybeParse(druidExpression);
+  if (parsedDruidExpression) {
+    return String(
+      parsedDruidExpression.walk(ex => {
+        if (ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'LOOKUP') {
+          if (ex.numArgs() < 2 || ex.numArgs() > 3) return SqlExpression.parse('null');
+          const concat = F(
+            'concat',
+            ex.getArg(1),
+            '[',
+            ex.getArg(0),
+            '] -- This is a placeholder, lookups are not supported in sampling',
+          );
+
+          const replaceMissingValueWith = ex.getArg(2);
+          if (!replaceMissingValueWith) return concat;
+          return F('nvl', concat, replaceMissingValueWith);
+        }
+        return ex;
+      }),
+    );
+  }
+
+  // If we can not parse the expression as SQL then bash it with a regexp
+  return druidExpression.replace(/lookup\s*\(([^)]+)\)/g, (_, argString: string) => {
+    const args = argString.trim().split(/\s*,\s*/);
+    if (args.length < 2 || args.length > 3) return 'null';
+    const concat = `concat(${args[1]},'[',${args[0]},'] -- This is a placeholder, lookups are not supported in sampling')`;
+    const replaceMissingValueWith = args[2];
+    if (!replaceMissingValueWith) return concat;
+    return `nvl(${concat},${replaceMissingValueWith})`;
+  });
 }
