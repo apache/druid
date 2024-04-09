@@ -59,6 +59,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -3005,6 +3006,20 @@ public class ControllerImpl implements Controller
                                   .value(inbf.getValue())
                                   .position(inbf.getPosition())
                                   .build(),
+          task.getQuerySpec().getColumnMappings()
+      );
+    } else if (workerErrorReport.getFault() instanceof InvalidFieldException) {
+      InvalidFieldException ife = (InvalidFieldException) workerErrorReport.getFault();
+      return MSQErrorReport.fromException(
+          workerErrorReport.getTaskId(),
+          workerErrorReport.getHost(),
+          workerErrorReport.getStageNumber(),
+          InvalidFieldException.builder()
+                               .source(ife.getSource())
+                               .rowNumber(ife.getRowNumber())
+                               .column(ife.getColumn())
+                               .errorMsg(ife.getErrorMsg())
+                               .build(),
           task.getQuerySpec().getColumnMappings()
       );
     } else {
