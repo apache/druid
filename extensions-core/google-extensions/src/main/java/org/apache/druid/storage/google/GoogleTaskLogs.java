@@ -39,6 +39,12 @@ public class GoogleTaskLogs implements TaskLogs
 {
   private static final Logger LOG = new Logger(GoogleTaskLogs.class);
 
+  /**
+   * Use 1MB upload buffer, rather than the default of 15 MB in the API client. Mainly because MMs may upload logs
+   * in parallel, and typically have small heaps. The default-sized 15 MB buffers add up quickly.
+   */
+  static final int UPLOAD_BUFFER_SIZE = 1024 * 1024;
+
   private final GoogleTaskLogsConfig config;
   private final GoogleStorage storage;
   private final GoogleInputDataConfig inputDataConfig;
@@ -92,7 +98,7 @@ public class GoogleTaskLogs implements TaskLogs
       try {
         RetryUtils.retry(
             (RetryUtils.Task<Void>) () -> {
-              storage.insert(config.getBucket(), taskKey, mediaContent);
+              storage.insert(config.getBucket(), taskKey, mediaContent, UPLOAD_BUFFER_SIZE);
               return null;
             },
             GoogleUtils::isRetryable,
