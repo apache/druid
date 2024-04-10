@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -119,6 +118,7 @@ import org.junit.rules.TestName;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -128,6 +128,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -327,10 +328,19 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     private volatile Future<TaskStatus> statusFuture;
     @MonotonicNonNull
     private volatile TestLocalTaskActionClient actionClient;
+    private final CountDownLatch taskFinishLatch;
 
-    private TaskContainer(Task task)
+    private TaskContainer(Task task, CountDownLatch taskFinishLatch)
     {
       this.task = task;
+      this.taskFinishLatch = taskFinishLatch;
+    }
+
+    private void letTaskFinish()
+    {
+      if (taskFinishLatch.getCount() > 0) {
+        taskFinishLatch.countDown();
+      }
     }
 
     public Task getTask()
@@ -356,6 +366,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
     private final ScheduledExecutorService taskKiller = Execs.scheduledSingleThreaded("simple-threading-task-killer");
     private final Set<String> killedSubtaskSpecs = new HashSet<>();
+    private volatile boolean useTaskFinishLatches = false;
+    private final List<CountDownLatch> allTaskLatches = new ArrayList<>();
 
     SimpleThreadingTaskRunner(String threadNameBase)
     {
@@ -390,12 +402,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       service.shutdownNow();
       taskKiller.shutdownNow();
-    }
-
-    public String run(Task task)
-    {
-      runTask(task);
-      return task.getId();
     }
 
     private TaskStatus runAndWait(Task task)
@@ -439,9 +445,29 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return tasks.get(taskId);
     }
 
+    private void setUseTaskFinishLatches(boolean useLatches)
+    {
+      this.useTaskFinishLatches = useLatches;
+      if (!useLatches) {
+        countDownAllTaskLatches();
+      }
+    }
+
+    private void countDownAllTaskLatches()
+    {
+      allTaskLatches.forEach(latch -> {
+        if (latch.getCount() > 0) {
+          latch.countDown();
+        }
+      });
+    }
+
     private Future<TaskStatus> runTask(Task task)
     {
-      final TaskContainer taskContainer = new TaskContainer(task);
+      final CountDownLatch taskFinishLatch = useTaskFinishLatches ? new CountDownLatch(1) : new CountDownLatch(0);
+      allTaskLatches.add(taskFinishLatch);
+
+      final TaskContainer taskContainer = new TaskContainer(task, taskFinishLatch);
       if (tasks.put(task.getId(), taskContainer) != null) {
         throw new ISE("Duplicate task ID[%s]", task.getId());
       }
@@ -457,7 +483,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
               taskContainer.setActionClient(actionClient);
               if (task.isReady(toolbox.getTaskActionClient())) {
-                return task.run(toolbox);
+                TaskStatus status = task.run(toolbox);
+                taskFinishLatch.await();
+                return status;
               } else {
                 getTaskStorage().setStatus(TaskStatus.failure(task.getId(), "Dummy task status failure for testing"));
                 throw new ISE("task[%s] is not ready", task.getId());
@@ -472,7 +500,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       taskContainer.setStatusFuture(statusFuture);
       final ListenableFuture<TaskStatus> cleanupFuture = Futures.transform(
           statusFuture,
-          (Function<TaskStatus, TaskStatus>) status -> {
+          status -> {
             shutdownTask(task);
             return status;
           },
@@ -481,15 +509,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return cleanupFuture;
     }
 
-    @Nullable
-    public String cancel(String taskId)
+    private void cancel(String taskId)
     {
       final TaskContainer taskContainer = tasks.remove(taskId);
       if (taskContainer != null && taskContainer.statusFuture != null) {
         taskContainer.statusFuture.cancel(true);
-        return taskId;
-      } else {
-        return null;
       }
     }
 
@@ -542,7 +566,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
       final Task task = (Task) taskObject;
-      taskRunner.run(injectIfNeeded(task));
+      taskRunner.runTask(injectIfNeeded(task));
       return Futures.immediateFuture(null);
     }
 
@@ -564,6 +588,16 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public TaskContainer getTaskContainer(String taskId)
     {
       return taskRunner.getTaskContainer(taskId);
+    }
+
+    public void keepTasksRunning()
+    {
+      taskRunner.setUseTaskFinishLatches(true);
+    }
+
+    public void allowTasksToFinish()
+    {
+      taskRunner.setUseTaskFinishLatches(false);
     }
 
     public TaskStatus runAndWait(Task task)

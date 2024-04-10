@@ -28,6 +28,9 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -333,6 +336,38 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   {
     // Ingest all data.
     testRunAndOverwrite(Intervals.of("2017-12/P1M"), Granularities.DAY);
+  }
+
+  @Test
+  public void testGetRunningTaskReports() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2017-12/P1M"),
+        Granularities.DAY,
+        false,
+        true
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    task.addToContext(DISABLE_TASK_INJECT_CONTEXT_KEY, true);
+
+    // Keep tasks running until finish is triggered
+    getIndexingServiceClient().keepTasksRunning();
+    getIndexingServiceClient().runTask(task.getId(), task);
+
+    // Allow enough time for sub-tasks to be in running state
+    Thread.sleep(2000);
+
+    // Fetch and verify live reports
+    TaskReport.ReportMap reportMap = task.doGetLiveReports(true);
+    IngestionStatsAndErrors statsAndErrors = ((IngestionStatsAndErrorsTaskReport)
+        reportMap.get("ingestionStatsAndErrors")).getPayload();
+    Map<String, Object> rowStats = statsAndErrors.getRowStats();
+    Assert.assertTrue(rowStats.containsKey("totals"));
+
+    getIndexingServiceClient().allowTasksToFinish();
+
+    TaskStatus taskStatus = getIndexingServiceClient().waitToFinish(task, 2, TimeUnit.MINUTES);
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   @Test
