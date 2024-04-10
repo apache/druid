@@ -1,0 +1,112 @@
+!set useApproximateCountDistinct true
+!set outputformat mysql
+!use druidtest://?numMergeBuffers=3
+
+
+SELECT
+  TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1H', NULL, 'Etc/UTC') AS "__time",
+  COUNT(DISTINCT CASE WHEN t.comment is not null AND t."user" != 'crash' THEN isNew END) AS A,
+  COUNT(DISTINCT isNew) AS B,
+    SAFE_DIVIDE(COUNT(DISTINCT CASE WHEN t.comment is not null AND t."user" != 'crash' THEN isNew END),
+  COUNT(DISTINCT isNew)) as C
+FROM wikipedia AS t
+WHERE
+  cityName = 'New York'
+GROUP BY 1;
++---------------------+---+---+---+
+| __time              | A | B | C |
++---------------------+---+---+---+
+| 2015-09-12 02:00:00 | 1 | 1 | 1 |
+| 2015-09-12 03:00:00 | 1 | 1 | 1 |
+| 2015-09-12 04:00:00 | 1 | 1 | 1 |
+| 2015-09-12 05:00:00 | 1 | 1 | 1 |
+| 2015-09-12 14:00:00 | 1 | 1 | 1 |
+| 2015-09-12 16:00:00 | 1 | 1 | 1 |
+| 2015-09-12 20:00:00 | 1 | 1 | 1 |
+| 2015-09-12 22:00:00 | 1 | 1 | 1 |
++---------------------+---+---+---+
+(8 rows)
+
+!ok
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "wikipedia"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "equals",
+    "column" : "cityName",
+    "matchValueType" : "STRING",
+    "matchValue" : "New York"
+  },
+  "granularity" : {
+    "type" : "period",
+    "period" : "PT1H",
+    "timeZone" : "Etc/UTC",
+    "origin" : null
+  },
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "cardinality",
+      "name" : "a0",
+      "fields" : [ {
+        "type" : "default",
+        "dimension" : "isNew",
+        "outputName" : "isNew",
+        "outputType" : "STRING"
+      } ],
+      "byRow" : false,
+      "round" : true
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "equals",
+          "column" : "user",
+          "matchValueType" : "STRING",
+          "matchValue" : "crash"
+        }
+      }, {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "comment"
+        }
+      } ]
+    },
+    "name" : "a0"
+  }, {
+    "type" : "cardinality",
+    "name" : "a1",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "isNew",
+      "outputName" : "isNew",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "safe_divide(\"a0\",\"a1\")",
+    "outputType" : "LONG"
+  } ]
+}
+!nativePlan
+LogicalProject(__time=[$0], A=[$1], B=[$2], C=[SAFE_DIVIDE($1, $2)])
+  LogicalAggregate(group=[{0}], A=[COUNT(DISTINCT $1)], B=[COUNT(DISTINCT $2)])
+    LogicalProject(__time=[TIME_FLOOR($0, 'PT1H', null:TIMESTAMP(3), 'Etc/UTC')], $f1=[CASE(AND(IS NOT NULL($3), <>($16, 'crash')), $8, null:VARCHAR)], isNew=[$8])
+      LogicalFilter(condition=[=($2, 'New York')])
+        LogicalTableScan(table=[[druid, wikipedia]])
+
+!convertedPlan
