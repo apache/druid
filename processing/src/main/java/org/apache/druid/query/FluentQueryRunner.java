@@ -90,6 +90,11 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
     return from(postProcessing != null ? postProcessing.postProcess(baseRunner) : baseRunner);
   }
 
+  /**
+   * Delegates to {@link QueryToolChest#mergeResults(QueryRunner, boolean)}.
+   * 
+   * @see QueryToolChest#mergeResults(QueryRunner, boolean) 
+   */
   public FluentQueryRunner<T> mergeResults(boolean willMergeRunner)
   {
     return from(toolChest.mergeResults(baseRunner, willMergeRunner));

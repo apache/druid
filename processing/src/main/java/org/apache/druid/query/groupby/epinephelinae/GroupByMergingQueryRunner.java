@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryWatcher;
@@ -313,7 +314,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 
   private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(GroupByQuery query, int numBuffers)
   {
-    String queryResourceId = query.context().getQueryResourceId();
+    QueryResourceId queryResourceId = query.context().getQueryResourceId();
     GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
       throw DruidException.defensive(

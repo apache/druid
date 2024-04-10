@@ -59,6 +59,7 @@ import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SubqueryQueryRunner;
@@ -174,7 +175,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   )
   {
     // Reserve the group by resources (merge buffers) required for executing the query
-    final String queryResourceId = query.context().getQueryResourceId();
+    final QueryResourceId queryResourceId = query.context().getQueryResourceId();
     groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
 
     final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);

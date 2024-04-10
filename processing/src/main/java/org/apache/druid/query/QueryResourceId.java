@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.query;
 
 import java.util.Objects;
 
@@ -41,7 +41,7 @@ import java.util.Objects;
  * <p>
  * The queryId is assigned to the query, and populated in the query context at the time it hits the queryable server. In Druid,
  * there are three queryable servers (classes are not linkable from this method):
- * 1. {@link ClientQuerySegmentWalker} - For brokers
+ * 1. {@link org.apache.druid.server.ClientQuerySegmentWalker} - For brokers
  * 2. {@link org.apache.druid.server.coordination.ServerManager} - For historicals
  * 3. {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} - For peons & indexer's tasks
  * <p>
@@ -52,8 +52,31 @@ import java.util.Objects;
  * Note: Historicals and Peons could have used the same query id allotted by the brokers, however they assign their own because:
  * 1. The user can directly choose to query the data server (while debugging etc.)
  * 2. UNIONs are treated as multiple separate queries when the broker sends them to the historicals. Therefore, we
- *    require a unique id for each part of the union, and hence we need to reassign the resource id to the query's part,
- *    or else they'll end up sharing the same resource id, as mentioned before
+ * require a unique id for each part of the union, and hence we need to reassign the resource id to the query's part,
+ * or else they'll end up sharing the same resource id, as mentioned before
+ * <p>
+ * Notable places where QueryResourceId is used:
+ * <p>
+ * 1. {@link org.apache.druid.query.groupby.GroupByResourcesReservationPool} Primary user of the query resource id.
+ * <p>
+ * 2. {@link org.apache.druid.server.ClientQuerySegmentWalker} Allocates the query resource id on the brokers
+ * <p>
+ * 3. {@link org.apache.druid.server.coordination.ServerManager} Allocates the query resource id on the historicals
+ * <p>
+ * 4. {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} Allocates the query resource id on the peons
+ * (MMs) and indexers
+ * <p>
+ * 5. {@link org.apache.druid.server.ResourceIdPopulatingQueryRunner} Populates the query resource id. ({@link org.apache.druid.server.ClientQuerySegmentWalker}
+ * allocates the query resource id directly, since it also does a bunch of transforms to the query)
+ * <p>
+ * 6. {@link org.apache.druid.query.groupby.GroupByQueryQueryToolChest} Allocates, and associates one of the global resources,
+ * merge buffers, with the query's resource id. It also cleans it up, once the query is completed. Apart from that,
+ * it is also a consumer of the merge buffers it allocates.
+ * <p>
+ * 7. {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner} One of the consumer of the merge buffers,
+ * allocated at the beginning of the query
+ *
+ * @see org.apache.druid.query.groupby.GroupByResourcesReservationPool
  */
 public class QueryResourceId
 {

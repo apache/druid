@@ -75,7 +75,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -185,7 +184,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getSqlQueryId()
     ));
 
-    newQuery = populateResourceId(newQuery);
+    newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(newQuery);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
@@ -262,7 +261,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // Inlining isn't done for segments-based queries, but we still globalify the table datasources if possible
     Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
 
-    freeTradeQuery = populateResourceId(freeTradeQuery);
+    freeTradeQuery = ResourceIdPopulatingQueryRunner.populateResourceId(freeTradeQuery);
 
     if (canRunQueryUsingClusterWalker(query)) {
       return new QuerySwappingQueryRunner<>(
@@ -846,17 +845,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         QueryContexts.MAX_SUBQUERY_BYTES_KEY,
         QueryContexts.MAX_SUBQUERY_ROWS_KEY
     );
-  }
-
-  /**
-   * Assigns a random resource id to the given query
-   */
-  public static <T> Query<T> populateResourceId(Query<T> query)
-  {
-    return query.withOverriddenContext(Collections.singletonMap(
-        QueryContexts.QUERY_RESOURCE_ID,
-        UUID.randomUUID().toString()
-    ));
   }
 
 }

@@ -20,12 +20,17 @@
 package org.apache.druid.server;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
 
+import java.util.Collections;
+import java.util.UUID;
+
 /**
- * Populates {@link org.apache.druid.query.QueryContexts#QUERY_RESOURCE_ID} in the query context
+ * Populates {@link QueryContexts#QUERY_RESOURCE_ID} in the query context
  */
 public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
 {
@@ -36,6 +41,17 @@ public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
     this.baseRunner = baseRunner;
   }
 
+  /**
+   * Assigns a random resource id to the given query
+   */
+  public static <T> Query<T> populateResourceId(Query<T> query)
+  {
+    return query.withOverriddenContext(Collections.singletonMap(
+        QueryContexts.QUERY_RESOURCE_ID,
+        UUID.randomUUID().toString()
+    ));
+  }
+
   @Override
   public Sequence<T> run(
       final QueryPlus<T> queryPlus,
@@ -44,7 +60,7 @@ public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
   {
     return baseRunner.run(
         queryPlus.withQuery(
-            ClientQuerySegmentWalker.populateResourceId(queryPlus.getQuery())
+            populateResourceId(queryPlus.getQuery())
         ),
         responseContext
     );
