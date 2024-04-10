@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.TestHelper;
@@ -31,9 +30,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-/**
- *
- */
 public class CoordinatorDynamicConfigTest
 {
   private static final int EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
@@ -651,22 +647,6 @@ public class CoordinatorDynamicConfigTest
             null
         ).build(current)
     );
-  }
-
-  private void assertThatDeserializationFailsWithMessage(String json, String message)
-  {
-    JsonMappingException e = Assert.assertThrows(
-        JsonMappingException.class,
-        () -> mapper.readValue(
-            mapper.writeValueAsString(
-                mapper.readValue(json, CoordinatorDynamicConfig.class)
-            ),
-            CoordinatorDynamicConfig.class
-        )
-    );
-    Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
-    IllegalArgumentException cause = (IllegalArgumentException) e.getCause();
-    Assert.assertEquals(message, cause.getMessage());
   }
 
   @Test
