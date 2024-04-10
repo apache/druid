@@ -5138,6 +5138,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           )
       );
     }
+    //FIXME case was removed
     testQuery(
         "SELECT "
         + "SUM(case dim1 when 'abc' then cnt end), "
@@ -5164,6 +5165,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // FIXME: CASE WAS removed earlier
   @Test
   public void testCaseFilteredAggregationWithGroupBy()
   {
@@ -8731,6 +8733,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     msqIncompatible();
+    // FIXME case was removed
     cannotVectorize();
     skipVectorize();
     testQuery(
