@@ -520,10 +520,10 @@ public class KillUnusedSegmentsTest
   @Test
   public void testDefaultKillTaskSlotStats()
   {
-    initDuty();
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -534,11 +534,11 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats1()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -549,11 +549,11 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats2()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -564,11 +564,11 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats3()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(0);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -579,11 +579,11 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats4()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.1);
     dynamicConfigBuilder.withMaxKillTaskSlots(3);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
