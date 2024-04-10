@@ -1,5 +1,7 @@
-!use druidtest://?numMergeBuffers=3
+!set plannerStrategy DECOUPLED
+!set debug true
 !set outputformat mysql
+!use druidtest://?numMergeBuffers=3
 
 SELECT
           cnt,
@@ -65,6 +67,11 @@ GROUP BY cnt;
   }
 }
 !nativePlan
+DruidProject(cnt=[$0], EXPR$1=[+($1, $2)], druid=[logical])
+  DruidAggregate(group=[{0}], agg#0=[COUNT() FILTER $1], agg#1=[SUM($0)], druid=[logical])
+    DruidProject(cnt=[$4], $f2=[IS TRUE(<>($1, '1'))], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
 !druidPlan
 LogicalProject(cnt=[$0], EXPR$1=[+($1, $2)])
   LogicalAggregate(group=[{0}], agg#0=[SUM($1)], agg#1=[SUM($0)])
