@@ -742,9 +742,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             fireDepartmentMetrics.markProcessingDone();
           }
 
-          if (System.currentTimeMillis() > nextCheckpointTime) {
-            SequenceMetadata<PartitionIdType, SequenceOffsetType> lastSequenceMetadata = getLastSequenceMetadata();
-            sequenceToCheckpoint = lastSequenceMetadata.isCheckpointed() ? null : lastSequenceMetadata;
+          if (System.currentTimeMillis() > nextCheckpointTime && !getLastSequenceMetadata().isCheckpointed()) {
+            sequenceToCheckpoint = getLastSequenceMetadata();
           }
 
           if (sequenceToCheckpoint != null && stillReading) {
