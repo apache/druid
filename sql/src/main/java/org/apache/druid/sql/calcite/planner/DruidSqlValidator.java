@@ -40,21 +40,29 @@ import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.util.IdPair;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
+import org.apache.calcite.sql.validate.OrderByScope;
 import org.apache.calcite.sql.validate.SqlNonNullableAccessors;
 import org.apache.calcite.sql.validate.SqlValidatorException;
+import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.calcite.sql.validate.ValidatorShim;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
+import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts;
@@ -68,9 +76,13 @@ import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -88,6 +100,39 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   public static final String CTX_ROWS_PER_SEGMENT = "msqRowsPerSegment";
 
   private final PlannerContext plannerContext;
+
+  // This part is a bit sad. By the time we get here, the validator will have created
+  // the ORDER BY namespace if we had a real ORDER BY. We have to "catch up" and do the
+  // work that registerQuery() should have done. That's kind of OK. But, the orderScopes
+  // variable is private, so we have to play dirty tricks to get at it.
+  //
+  // Warning: this may no longer work if Java forbids access to private fields in a
+  // future release.
+  private static final Field CLAUSE_SCOPES_FIELD;
+  private static final Object ORDER_CLAUSE;
+
+  static {
+    try {
+      CLAUSE_SCOPES_FIELD = FieldUtils.getDeclaredField(
+          SqlValidatorImpl.class,
+          "clauseScopes",
+          true
+      );
+    }
+    catch (RuntimeException e) {
+      throw new ISE(e, "SqlValidatorImpl.clauseScopes is not accessible");
+    }
+
+    try {
+      Class<?> innerClass = Class.forName("org.apache.calcite.sql.validate.SqlValidatorImpl$Clause");
+      Method method = innerClass.getMethod("valueOf", Class.class, String.class);
+      method.setAccessible(true);
+      ORDER_CLAUSE = method.invoke(null, innerClass, "ORDER");
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Could not construct ORDER clause instance.");
+    }
+  }
 
   protected DruidSqlValidator(
       SqlOperatorTable opTab,
@@ -231,6 +276,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     // The source must be a SELECT
     final SqlNode source = insert.getSource();
 
+    // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+    final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
+    rewriteClusteringToOrderBy(source, ingestNode, catalogClustering);
+
     // Validate the source statement.
     // Because of the non-standard Druid semantics, we can't define the target type: we don't know
     // the target columns yet, and we can't infer types when they must come from the SELECT.
@@ -350,6 +399,42 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   }
 
   /**
+   * Clustering is a kind of ordering. We push the CLUSTERED BY clause into the source query as
+   * an ORDER BY clause. In an ideal world, clustering would be outside of SELECT: it is an operation
+   * applied after the data is selected. For now, we push it into the SELECT, then MSQ pulls it back
+   * out. This is unfortunate as errors will be attributed to ORDER BY, which the user did not
+   * actually specify (it is an error to do so.) However, with the current hybrid structure, it is
+   * not possible to add the ORDER by later: doing so requires access to the order by namespace
+   * which is not visible to subclasses.
+   */
+  private void rewriteClusteringToOrderBy(SqlNode source, DruidSqlIngest ingestNode, @Nullable SqlNodeList catalogClustering)
+  {
+    SqlNodeList clusteredBy = ingestNode.getClusteredBy();
+    if (clusteredBy == null || clusteredBy.getList().isEmpty()) {
+      if (catalogClustering == null || catalogClustering.getList().isEmpty()) {
+        return;
+      }
+      clusteredBy = catalogClustering;
+    }
+    while (source instanceof SqlWith) {
+      source = ((SqlWith) source).getOperandList().get(1);
+    }
+    final SqlSelect select = (SqlSelect) source;
+
+    select.setOrderBy(clusteredBy);
+    final OrderByScope orderScope = ValidatorShim.newOrderByScope(scopes.get(select), clusteredBy, select);
+    try {
+      @SuppressWarnings("unchecked")
+      final Map<IdPair<SqlSelect, Object>, Object> orderScopes =
+          (Map<IdPair<SqlSelect, Object>, Object>) CLAUSE_SCOPES_FIELD.get(this);
+      orderScopes.put(IdPair.of(select, ORDER_CLAUSE), orderScope);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "scopes is not accessible");
+    }
+  }
+
+  /**
    * Gets the effective PARTITIONED BY granularity. Resolves the granularity from the granularity specified on the
    * ingest node, and on the table metadata as stored in catalog, if any. Mismatches between the 2 granularities are
    * allowed if both are specified. The granularity specified on the ingest node is taken to be the effective
@@ -395,6 +480,39 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
 
     return effectiveGranularity;
+  }
+
+  private String statementArticle(final String operationName)
+  {
+    return "INSERT".equals(operationName) ? "an" : "a";
+  }
+
+  @Nullable
+  private SqlNodeList convertCatalogClustering(final DatasourceFacade tableMetadata)
+  {
+    if (tableMetadata == null) {
+      return null;
+    }
+    final List<ClusterKeySpec> keyCols = tableMetadata.clusterKeys();
+    if (CollectionUtils.isNullOrEmpty(keyCols)) {
+      return null;
+    }
+    final SqlNodeList keyNodes = new SqlNodeList(SqlParserPos.ZERO);
+    for (ClusterKeySpec keyCol : keyCols) {
+      final SqlIdentifier colIdent = new SqlIdentifier(
+          Collections.singletonList(keyCol.expr()),
+          null, SqlParserPos.ZERO,
+          Collections.singletonList(SqlParserPos.ZERO)
+      );
+      final SqlNode keyNode;
+      if (keyCol.desc()) {
+        keyNode = SqlStdOperatorTable.DESC.createCall(SqlParserPos.ZERO, colIdent);
+      } else {
+        keyNode = colIdent;
+      }
+      keyNodes.add(keyNode);
+    }
+    return keyNodes;
   }
 
   /**
