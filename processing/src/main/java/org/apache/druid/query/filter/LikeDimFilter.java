@@ -297,40 +297,53 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         return DruidPredicateMatch.UNKNOWN;
       }
 
-      int offset = 0;
-      LikePattern suffix = null;
-      Iterator<LikePattern> iterator = pattern.iterator();
+      int suffixOffset = val.length();
+      int suffixIndex = pattern.size();
 
-      while (iterator.hasNext()) {
-        LikePattern part = iterator.next();
+      // Check for suffixes anchored to the end of the string, e.g., a%b_d_
+      // (We can't eagerly match the b_d_ portion, since that leads to false negatives: abcdexyzbcde)
+      // Note: In the case of a trailing %, the anchored suffix is an empty string.
+      while (suffixIndex > 0) {
+        --suffixIndex;
 
-        if (!iterator.hasNext()) {
-          suffix = part;
-          break;
+        LikePattern suffix = pattern.get(suffixIndex);
+
+        if (!val.regionMatches(suffixOffset - suffix.clause.length(), suffix.clause, 0, suffix.clause.length())) {
+          return DruidPredicateMatch.FALSE;
         }
 
-        offset = part.advance(val, offset);
+        suffixOffset = suffixOffset - suffix.clause.length() - suffix.leadingLength;
 
-        if (offset == -1) {
+        if (suffixOffset < 0) {
+          return DruidPredicateMatch.FALSE;
+        }
+
+        if (suffix.patternType == LikePattern.PatternType.CONTAINS) {
+          if (suffixIndex == 0) {
+            // %some_suffix
+            return DruidPredicateMatch.TRUE;
+          }
+          // Encountered a %, so the next pattern part is no longer anchored to the end of string.
+          break;
+        }
+      }
+
+      if (suffixIndex == 0) {
+        // No prefix remains: check we consumed the whole string.
+        return DruidPredicateMatch.of(suffixOffset == 0);
+      }
+
+      int offset = 0;
+
+      for (int i = 0; i < suffixIndex; ++i) {
+        offset = pattern.get(i).advance(val, offset);
+
+        if (offset == -1 || offset > suffixOffset) {
           return DruidPredicateMatch.FALSE;
         }
       }
 
-      if (suffix == null) {
-        return DruidPredicateMatch.of(offset == val.length());
-      }
-
-      switch (suffix.patternType) {
-        case STARTS_WITH:
-          return DruidPredicateMatch.of(suffix.advance(val, offset) == val.length());
-        case CONTAINS:
-          // Check that required suffix is at the *end* of the string, e.g., %x
-          offset += suffix.leadingLength;
-          return DruidPredicateMatch.of(offset <= val.length() && val.substring(offset).endsWith(suffix.clause));
-        default:
-          // It should be impossible to get here.
-          throw new IllegalStateException("Unknown pattern type: " + suffix.patternType);
-      }
+      return DruidPredicateMatch.TRUE;
     }
 
     /**

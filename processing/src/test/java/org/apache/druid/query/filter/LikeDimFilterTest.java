@@ -185,7 +185,9 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     assertMatch("a\nb", "a\nb", DruidPredicateMatch.TRUE);
     assertMatch("a\nb", "a\nc", DruidPredicateMatch.FALSE);
     assertMatch("This is a test", "This is a test", DruidPredicateMatch.TRUE);
+    assertMatch("This is a test", "this is a test", DruidPredicateMatch.FALSE);
     assertMatch("This is a test", "This is a tes", DruidPredicateMatch.FALSE);
+    assertMatch("This is a test", "his is a test", DruidPredicateMatch.FALSE);
     assertMatch("This \\%is a\\_test", "This %is a_test", DruidPredicateMatch.TRUE);
     assertMatch("This \\%is a\\_test", "This \\%is a_test", DruidPredicateMatch.FALSE);
   }
@@ -275,6 +277,34 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     assertMatch("%jkl_", "ijklmn", DruidPredicateMatch.FALSE);
     assertMatch("%jkl_", "hijklm", DruidPredicateMatch.TRUE);
     assertMatch("%jkl_", "hijklmn", DruidPredicateMatch.FALSE);
+  }
+
+  @Test
+  public void testPatternSuffixWithManyParts()
+  {
+    assertMatch("%ba_", "foo bar", DruidPredicateMatch.TRUE);
+    assertMatch("%ba_", "foo bar daz", DruidPredicateMatch.FALSE);
+    assertMatch("%ba_%", "foo bar baz", DruidPredicateMatch.TRUE);
+    assertMatch("a%b_d_", "abcde", DruidPredicateMatch.TRUE);
+    assertMatch("a%b_d_", "abcdexyzbcde", DruidPredicateMatch.TRUE);
+    assertMatch("%b_d_", "abcde", DruidPredicateMatch.TRUE);
+    assertMatch("%b_d_", "abcdexyzbcde", DruidPredicateMatch.TRUE);
+    assertMatch("%b_d_", "abcdexyzbcdef", DruidPredicateMatch.FALSE);
+    assertMatch("%b_d_", "abcdexyzbcd", DruidPredicateMatch.FALSE);
+    assertMatch("%z%_b_d_", "abcdexyzabcde", DruidPredicateMatch.TRUE);
+    assertMatch("%z%_b_d_", "abcdexyzbcde", DruidPredicateMatch.FALSE);
+    assertMatch("%z%_b_d_", "abcdexybcde", DruidPredicateMatch.FALSE);
+    assertMatch("%z%_b_d_", "abcdexbcde", DruidPredicateMatch.FALSE);
+  }
+
+  @Test
+  public void testPatternNoWildcards()
+  {
+    assertMatch("a_c_e_", "abcdef", DruidPredicateMatch.TRUE);
+    assertMatch("a_c_e_", "abcde", DruidPredicateMatch.FALSE);
+    assertMatch("x_c_e_", "abcdef", DruidPredicateMatch.FALSE);
+    assertMatch("xa_c_e_", "abcdef", DruidPredicateMatch.FALSE);
+    assertMatch("a_c_e_x", "abcde", DruidPredicateMatch.FALSE);
   }
 
   private void assertCompilation(String pattern, String expected)

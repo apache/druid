@@ -106,6 +106,19 @@ public class LikeFilterBenchmark
       null
   ).toFilter();
 
+  private static final Filter REGEX_SUFFIX = new RegexDimFilter(
+      "foo",
+      ".*50$",
+      null
+  ).toFilter();
+
+  private static final Filter LIKE_SUFFIX = new LikeDimFilter(
+      "foo",
+      "%50",
+      null,
+      null
+  ).toFilter();
+
   private static final Filter LIKE_CONTAINS = new LikeDimFilter(
       "foo",
       "%50%",
@@ -212,6 +225,24 @@ public class LikeFilterBenchmark
   public void matchRegexPrefix(Blackhole blackhole)
   {
     final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_PREFIX, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void matchLikeSuffix(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_SUFFIX, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void matchRegexSuffix(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_SUFFIX, selector);
     blackhole.consume(bitmapIndex);
   }
 
