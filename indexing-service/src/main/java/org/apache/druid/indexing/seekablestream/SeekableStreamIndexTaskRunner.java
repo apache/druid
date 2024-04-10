@@ -671,7 +671,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                   .getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
                   );
                   if (isPushRequired && !sequenceToUse.isCheckpointed()) {
-                    log.info("Hit the row limit updating sequenceToCheckpoint, SequenceToUse: [%s]", sequenceToUse);
+                    log.info("Hit the row limit updating sequenceToCheckpoint, SequenceToUse: [%s], rowInSegment: [%s], maxTotalRows: [%s]", sequenceToUse, addResult.getNumRowsInSegment(), addResult.getTotalNumRowsInAppenderator());
                     sequenceToCheckpoint = sequenceToUse;
                   }
                   isPersistRequired |= addResult.isPersistRequired();
