@@ -336,13 +336,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       this.taskFinishLatch = taskFinishLatch;
     }
 
-    private void letTaskFinish()
-    {
-      if (taskFinishLatch.getCount() > 0) {
-        taskFinishLatch.countDown();
-      }
-    }
-
     public Task getTask()
     {
       return task;
