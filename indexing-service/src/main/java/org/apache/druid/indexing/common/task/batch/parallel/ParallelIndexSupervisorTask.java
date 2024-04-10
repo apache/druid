@@ -481,11 +481,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public String getPendingSegmentGroupId()
   {
-    if (getIngestionMode() == IngestionMode.APPEND) {
-      return getGroupId();
-    } else {
-      throw new UnsupportedOperationException();
-    }
+    return getGroupId();
   }
 
   @Nullable
