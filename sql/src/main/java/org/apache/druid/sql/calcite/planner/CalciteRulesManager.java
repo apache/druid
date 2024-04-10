@@ -85,7 +85,7 @@ public class CalciteRulesManager
   );
   private static final String BLOAT_PROPERTY = "druid.sql.planner.bloat";
   private static final int BLOAT = Integer.parseInt(
-      System.getProperty(BLOAT_PROPERTY, "100")
+      System.getProperty(BLOAT_PROPERTY, "1000")
   );
 
   /**
