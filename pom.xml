@@ -88,7 +88,7 @@
              default_config.fmpp
              sql/src/main/codegen/includes/*
           -->
-        <calcite.version>1.35.0</calcite.version>
+        <calcite.version>1.36.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
