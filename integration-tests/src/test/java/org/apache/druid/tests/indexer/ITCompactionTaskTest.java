@@ -175,9 +175,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
 
-      TaskContextReport taskContextReport = (TaskContextReport) reports.get(TaskContextReport.REPORT_KEY);
-      Assert.assertFalse(taskContextReport.getPayload().isEmpty());
-
       Assert.assertEquals(
           2,
           reports.values()

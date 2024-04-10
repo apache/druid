@@ -19,12 +19,15 @@
 
 package org.apache.druid.indexing.common.task;
 
+import org.apache.druid.guice.annotations.UnstableApi;
+
 /**
  * The TaskContextEnricher interface enhances Druid tasks by appending contextual information.
  * By infusing tasks with additional context, it aims to improve aspects of task management,
  * monitoring, and analysis. This contextual information aids in clarifying the intent and
  * specifics of tasks within metrics and reporting systems.
  */
+@UnstableApi
 public interface TaskContextEnricher
 {
   /**
