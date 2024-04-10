@@ -22,6 +22,8 @@ package org.apache.druid.tests.indexer;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -173,17 +175,24 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
 
-      Assert.assertEquals(2,
-                          reports.values()
-                                 .stream()
-                                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsPublished())
-                                 .sum()
+      TaskContextReport taskContextReport = (TaskContextReport) reports.get(TaskContextReport.REPORT_KEY);
+      Assert.assertFalse(taskContextReport.getPayload().isEmpty());
+
+      Assert.assertEquals(
+          2,
+          reports.values()
+                 .stream()
+                 .filter(r -> r instanceof IngestionStatsAndErrorsTaskReport)
+                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsPublished())
+                 .sum()
       );
-      Assert.assertEquals(4,
-                          reports.values()
-                                 .stream()
-                                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsRead())
-                                 .sum()
+      Assert.assertEquals(
+          4,
+          reports.values()
+                 .stream()
+                 .filter(r -> r instanceof IngestionStatsAndErrorsTaskReport)
+                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsRead())
+                 .sum()
       );
     }
   }

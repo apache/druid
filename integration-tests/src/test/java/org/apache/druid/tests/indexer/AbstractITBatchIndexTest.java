@@ -384,9 +384,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         );
       }
 
-      TaskContextReport taskContextReport = (TaskContextReport) indexer.getTaskReport(taskID).get(TaskContextReport.REPORT_KEY);
+      TaskContextReport taskContextReport =
+          (TaskContextReport) indexer.getTaskReport(taskID).get(TaskContextReport.REPORT_KEY);
 
-      Assert.assertTrue(!taskContextReport.getPayload().isEmpty());
+      Assert.assertFalse(taskContextReport.getPayload().isEmpty());
     }
 
     // IT*ParallelIndexTest do a second round of ingestion to replace segements in an existing
