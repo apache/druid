@@ -148,6 +148,35 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
+
+  @Test
+  public void testREQ8027()
+  {
+    testBuilder()
+        .sql("with v as (\n"
+            + "  select cityName, count(1) as cnt from wikipedia\n"
+            + "    where cityName in ('New York') \n"
+            + " group by 1\n"
+            + "  order by 1 asc\n"
+            + "),\n"
+            + "e as (\n"
+            + "  select cityName, count(1) as cnt from wikipedia\n"
+            + "  group by 1\n"
+            + "  order by 1 asc\n"
+            + ")\n"
+            + "select v.cityName,v.cnt,e.cityName,e.cnt from v inner join e on (e.cityName = v.cityName)"
+            + "  group by 1,2,3,4"
+            + "  order by 1 desc"
+            + "\n"
+            + "")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"New York", 13L, "New York", 13L}
+            )
+        )
+        .run();
+  }
+
   @Test
   public void testInformationSchemaSchemata()
   {
