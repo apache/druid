@@ -118,7 +118,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @Deprecated
-public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements ChatHandler
+public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
+    implements ChatHandler, PendingSegmentAllocatingTask
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
@@ -256,6 +257,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
+  }
+
+  @Override
+  public String getPendingSegmentGroupId()
+  {
+    return getGroupId();
   }
 
   @Override
