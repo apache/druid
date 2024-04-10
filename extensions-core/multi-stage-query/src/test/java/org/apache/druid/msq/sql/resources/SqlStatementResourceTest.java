@@ -239,6 +239,7 @@ public class SqlStatementResourceTest extends MSQTestBase
               new HashMap<>(),
               1,
               2,
+              null,
               null
           ),
           MSQStagesReport.create(
@@ -306,6 +307,7 @@ public class SqlStatementResourceTest extends MSQTestBase
               new HashMap<>(),
               1,
               2,
+              null,
               null
           ),
           MSQStagesReport.create(
