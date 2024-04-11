@@ -6195,6 +6195,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setVirtualColumns(expressionVirtualColumn("v0", "null", ColumnType.STRING))
                 .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                 .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setLimitSpec(
+                    queryFramework().engine().featureAvailable(EngineFeature.GROUPBY_IMPLICITLY_SORTS)
+                    ? NoopLimitSpec.instance()
+                    : new DefaultLimitSpec(
+                        ImmutableList.of(
+                            new OrderByColumnSpec(
+                                "d0",
+                                Direction.ASCENDING,
+                                StringComparators.NATURAL
+                            )
+                        ),
+                        Integer.MAX_VALUE
+                    )
+                )
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),

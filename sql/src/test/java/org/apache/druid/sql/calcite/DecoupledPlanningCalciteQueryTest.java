@@ -26,7 +26,6 @@ import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -69,7 +68,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Test
-  @Disabled("Unhandled Query Planning Failure")
+  @NotYetSupported(NotYetSupported.Modes.NOT_ENOUGH_RULES)
   public void testOrderByNullType()
   {
     super.testOrderByNullType();
