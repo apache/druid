@@ -15,7 +15,7 @@ jobs:
       #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
       #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-
       #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-
-      - run:
+#      - run:
 #          name: Fetch plugins and dependencies
 #          command: mvn -B -V -T2C -U -P ci-helpers,ci-build,generate-assembly-jar de.qaware.maven:go-offline-maven-plugin:resolve-dependencies -Dmaven.javadoc.skip=true
       #      - save_cache:
