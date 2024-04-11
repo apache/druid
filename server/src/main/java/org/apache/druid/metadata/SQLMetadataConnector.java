@@ -368,7 +368,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  PRIMARY KEY (id),\n"
                 + "  FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
                 + ")",
-                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemaTable()
+                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemasTable()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
@@ -586,7 +586,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected void alterSegmentTableSchemaPersistenceEnabled()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    final String schemaTableName = tablesConfigSupplier.get().getSegmentSchemaTable();
+    final String schemaTableName = tablesConfigSupplier.get().getSegmentSchemasTable();
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "varchar(255)");
@@ -1013,14 +1013,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  datasource VARCHAR(255) NOT NULL,\n"
                 + "  fingerprint VARCHAR(255) NOT NULL,\n"
                 + "  payload %3$s NOT NULL,\n"
-                + "  PRIMARY KEY (id)\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (id),\n"
+                + "  UNIQUE (datasource, fingerprint) \n"
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
-            StringUtils.format("CREATE INDEX idx_%1$s_created_date ON %1$s(created_date)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(datasource, fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
         )
     );
   }
@@ -1029,7 +1033,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createSegmentSchemaTable()
   {
     if (config.get().isCreateTables() && centralizedDatasourceSchemaConfig.isEnabled()) {
-      createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemaTable());
+      createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemasTable());
     }
   }
 

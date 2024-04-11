@@ -65,7 +65,8 @@ public class SegmentSchemaBackFillQueueTest
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
-        derbyConnector
+        derbyConnector,
+        new FingerprintGenerator(mapper)
     );
 
     SegmentSchemaTestUtils segmentSchemaTestUtils =
@@ -84,7 +85,6 @@ public class SegmentSchemaBackFillQueueTest
             segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
-            fingerprintGenerator,
             new NoopServiceEmitter(),
             config
         ) {

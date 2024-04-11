@@ -94,14 +94,15 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
     derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
 
+    fingerprintGenerator = new FingerprintGenerator(mapper);
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
-        derbyConnector
+        derbyConnector,
+        fingerprintGenerator
     );
 
     segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
-    fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(false);
@@ -112,7 +113,6 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
             segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
-            fingerprintGenerator,
             new NoopServiceEmitter(),
             config
         );

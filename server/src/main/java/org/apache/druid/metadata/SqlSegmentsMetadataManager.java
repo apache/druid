@@ -53,6 +53,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -224,7 +225,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   /**
    * Last schema id polled from the DB.
    * It is updated after each poll in {@code doPollSegmentAndSchema}.
-   * The schema cleanup duty {@link org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemas} can reset it.
+   * The schema cleanup duty {@link KillUnreferencedSegmentSchemaDuty} can reset it.
    */
   private final AtomicReference<Long> latestSchemaId = new AtomicReference<>(null);
 
@@ -1180,6 +1181,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     Long lastSchemaIdPrePoll = latestSchemaId.get();
     if (lastSchemaIdPrePoll == null) {
+      log.info("Executing full schema refresh.");
       schemaPollQuery = StringUtils.format("SELECT id, payload FROM %s", getSegmentSchemaTable());
     } else {
       schemaPollQuery = StringUtils.format(
@@ -1198,6 +1200,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       public Object inTransaction(Handle handle, TransactionStatus status)
       {
         return handle.createQuery(finalSchemaPollQuery)
+                     .setFetchSize(connector.getStreamingFetchSize())
                      .map(new ResultSetMapper<Void>()
                      {
                        @Override
@@ -1316,7 +1319,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private String getSegmentSchemaTable()
   {
-    return dbTables.get().getSegmentSchemaTable();
+    return dbTables.get().getSegmentSchemasTable();
   }
 
   @Override

@@ -60,7 +60,8 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
-        connector
+        connector,
+        new FingerprintGenerator(jsonMapper)
     );
 
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
@@ -109,7 +110,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     SegmentSchemaMetadata schemaMetadata2 = new SegmentSchemaMetadata(payload2, 40L);
     list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
 
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(list);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list);
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);

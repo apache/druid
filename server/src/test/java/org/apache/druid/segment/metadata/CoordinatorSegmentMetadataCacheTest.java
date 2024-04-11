@@ -1469,7 +1469,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
-            fingerprintGenerator,
             new NoopServiceEmitter(),
             config
         );
@@ -1511,7 +1510,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     SegmentSchemaTestUtils segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     segmentSchemaTestUtils.insertUsedSegments(segmentsToPersist, Collections.emptyMap());
 
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(pluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(DATASOURCE1, pluses);
 
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
 
@@ -1520,7 +1519,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                 "select s1.id, s1.dataSource, s1.schema_id, s1.num_rows, s2.payload "
                 + "from %1$s as s1 inner join %2$s as s2 on s1.schema_id = s2.id",
                 tablesConfig.getSegmentsTable(),
-                tablesConfig.getSegmentSchemaTable()
+                tablesConfig.getSegmentSchemasTable()
             ))
             .map((int index, ResultSet r, StatementContext ctx) -> {
               try {
@@ -1598,7 +1597,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
           "select s2.payload "
           + "from %1$s as s1 inner join %2$s as s2 on s1.schema_id = s2.id where s1.id = '%3$s'",
           tablesConfig.getSegmentsTable(),
-          tablesConfig.getSegmentSchemaTable(),
+          tablesConfig.getSegmentSchemasTable(),
           segment3.getId().toString()
             ))
             .map((int index, ResultSet r, StatementContext ctx) -> {

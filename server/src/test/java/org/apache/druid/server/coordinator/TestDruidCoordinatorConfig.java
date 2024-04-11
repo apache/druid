@@ -283,6 +283,24 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isSegmentSchemaKillEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  public Duration getCoordinatorSegmentSchemaKillPeriod()
+  {
+    return null;
+  }
+
+  @Override
+  public Duration getCoordinatorSegmentSchemaKillDurationToRetain()
+  {
+    return null;
+  }
+
+  @Override
   public Duration getCoordinatorKillBufferPeriod()
   {
     return coordinatorKillBufferPeriod;

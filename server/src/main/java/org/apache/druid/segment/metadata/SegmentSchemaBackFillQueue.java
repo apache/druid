@@ -35,6 +35,7 @@ import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingDeque;
@@ -57,7 +58,6 @@ public class SegmentSchemaBackFillQueue
 
   private final SegmentSchemaManager segmentSchemaManager;
   private final SegmentSchemaCache segmentSchemaCache;
-  private final FingerprintGenerator fingerprintGenerator;
   private final ServiceEmitter emitter;
   private final CentralizedDatasourceSchemaConfig config;
   private ScheduledExecutorService executor;
@@ -68,14 +68,12 @@ public class SegmentSchemaBackFillQueue
       SegmentSchemaManager segmentSchemaManager,
       ScheduledExecutorFactory scheduledExecutorFactory,
       SegmentSchemaCache segmentSchemaCache,
-      FingerprintGenerator fingerprintGenerator,
       ServiceEmitter emitter,
       CentralizedDatasourceSchemaConfig config
   )
   {
     this.segmentSchemaManager = segmentSchemaManager;
     this.segmentSchemaCache = segmentSchemaCache;
-    this.fingerprintGenerator = fingerprintGenerator;
     this.emitter = emitter;
     this.config = config;
     this.executionPeriod = config.getBackFillPeriod();
@@ -114,10 +112,12 @@ public class SegmentSchemaBackFillQueue
   {
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
     SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, numRows);
-    queue.add(new SegmentSchemaMetadataPlus(
-        segmentId,
-        fingerprintGenerator.generateFingerprint(schemaMetadata.getSchemaPayload()),
-        schemaMetadata)
+    queue.add(
+        new SegmentSchemaMetadataPlus(
+            segmentId,
+            segmentSchemaManager.generateSchemaPayloadFingerprint(schemaMetadata.getSchemaPayload()),
+            schemaMetadata
+        )
     );
   }
 
@@ -136,25 +136,30 @@ public class SegmentSchemaBackFillQueue
 
     int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
 
-    List<SegmentSchemaMetadataPlus> polled = new ArrayList<>();
-
+    Map<String, List<SegmentSchemaMetadataPlus>> polled = new HashMap<>();
     for (int i = 0; i < itemsToProcess; i++) {
       SegmentSchemaMetadataPlus item = queue.poll();
       if (item != null) {
-        polled.add(item);
+        polled.computeIfAbsent(item.getSegmentId().getDataSource(), value -> new ArrayList<>()).add(item);
       }
     }
 
-    try {
-      segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(polled);
-      // Mark the segments as published in the cache.
-      for (SegmentSchemaMetadataPlus plus : polled) {
-        segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());
+    for (Map.Entry<String, List<SegmentSchemaMetadataPlus>> entry : polled.entrySet()) {
+      try {
+        segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(entry.getKey(), entry.getValue());
+        // Mark the segments as published in the cache.
+        for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
+          segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());
+        }
+        emitter.emit(
+            ServiceMetricEvent.builder()
+                                       .setDimension("dataSource", entry.getKey())
+                                       .setMetric("metadatacache/backfill/count", polled.size())
+        );
       }
-      emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/backfill/count", polled.size()));
-    }
-    catch (Exception e) {
-      log.error(e, "Exception persisting schema and updating segments table.");
+      catch (Exception e) {
+        log.error(e, "Exception persisting schema and updating segments table.");
+      }
     }
   }
 }

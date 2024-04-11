@@ -2015,13 +2015,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       if (publishSchema()
           && minimalSegmentSchemas != null
           && minimalSegmentSchemas.isNonEmpty()) {
+        String dataSource = segments.stream().iterator().next().getDataSource();
         schemaPresent = true;
         log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
-        segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
+        segmentSchemaManager.persistSegmentSchema(handle, dataSource, minimalSegmentSchemas.getSchemaPayloadMap());
 
         // fetch schemaId
         fingerprintSchemaIdMap =
-            segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
+            segmentSchemaManager.schemaIdFetchBatch(handle, dataSource, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
         log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
       }
@@ -2242,13 +2243,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       log.info("Task schema publish is disabled.");
     }
     if (publishSchema() && minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
+      String dataSource = segments.iterator().next().getDataSource();
       schemaPresent = true;
       log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
-      segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
+      segmentSchemaManager.persistSegmentSchema(handle, dataSource, minimalSegmentSchemas.getSchemaPayloadMap());
 
       // fetch schemaId
       fingerprintSchemaIdMap =
-          segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
+          segmentSchemaManager.schemaIdFetchBatch(handle, dataSource, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
       log.info("Fingerprint schema map is [%s].", fingerprintSchemaIdMap);
     }

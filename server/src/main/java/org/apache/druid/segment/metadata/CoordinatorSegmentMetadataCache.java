@@ -74,6 +74,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @ManageLifecycle
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
+
+  // TODO add case to handle the case when schema goes missing for an existing segment
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
 
   private final SegmentMetadataCacheConfig config;

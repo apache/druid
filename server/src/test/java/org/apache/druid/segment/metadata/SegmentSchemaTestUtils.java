@@ -132,15 +132,19 @@ public class SegmentSchemaTestUtils
     }
   }
 
-  public Map<String, Long> insertSegmentSchema(Map<String, SchemaPayload> schemaPayloadMap)
+  public Map<String, Long> insertSegmentSchema(
+      String dataSource,
+      Map<String, SchemaPayload> schemaPayloadMap,
+      Set<String> usedFingerprints
+  )
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemaTable();
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemasTable();
     derbyConnector.retryWithHandle(
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
-                  "INSERT INTO %1$s (fingerprint, created_date, payload) "
-                  + "VALUES (:fingerprint, :created_date, :payload)",
+                  "INSERT INTO %1$s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
+                  + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
                   table
               )
           );
@@ -148,10 +152,14 @@ public class SegmentSchemaTestUtils
           for (Map.Entry<String, SchemaPayload> entry : schemaPayloadMap.entrySet()) {
             String fingerprint = entry.getKey();
             SchemaPayload payload = entry.getValue();
+            String now = DateTimes.nowUtc().toString();
             preparedBatch.add()
+                         .bind("created_date", now)
+                         .bind("datasource", dataSource)
                          .bind("fingerprint", fingerprint)
-                         .bind("created_date", DateTimes.nowUtc().toString())
-                         .bind("payload", mapper.writeValueAsBytes(payload));
+                         .bind("payload", mapper.writeValueAsBytes(payload))
+                         .bind("used", usedFingerprints.contains(fingerprint))
+                         .bind("used_status_last_updated", now);
           }
 
           final int[] affectedRows = preparedBatch.execute();
@@ -188,10 +196,10 @@ public class SegmentSchemaTestUtils
     // schemaId -> schema details
     Map<Long, SegmentSchemaRepresentation> schemaRepresentationMap = new HashMap<>();
 
-    final String schemaTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemaTable();
+    final String schemaTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemasTable();
 
     derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id, fingerprint, payload, created_date FROM "
+        handle -> handle.createQuery("SELECT id, fingerprint, payload, created_date, used FROM "
                                      + schemaTable)
                         .map(((index, r, ctx) ->
                             schemaRepresentationMap.put(
@@ -203,7 +211,8 @@ public class SegmentSchemaTestUtils
                                         r.getBytes(3),
                                         SchemaPayload.class
                                     ),
-                                    r.getString(4)
+                                    r.getString(4),
+                                    r.getBoolean(5)
                                 )
                             )))
                         .list());
@@ -220,20 +229,23 @@ public class SegmentSchemaTestUtils
 
       SegmentSchemaRepresentation schemaRepresentation = schemaRepresentationMap.get(segmentStats.get(id).lhs);
       Assert.assertEquals(schemaPayload, schemaRepresentation.getSchemaPayload());
+      Assert.assertTrue(schemaRepresentation.isUsed());
     }
   }
 
   public static class SegmentSchemaRepresentation
   {
-    String fingerprint;
-    SchemaPayload schemaPayload;
-    String createdDate;
+    private final String fingerprint;
+    private final SchemaPayload schemaPayload;
+    private final String createdDate;
+    private final boolean used;
 
-    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate)
+    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used)
     {
       this.fingerprint = fingerprint;
       this.schemaPayload = schemaPayload;
       this.createdDate = createdDate;
+      this.used = used;
     }
 
     public String getFingerprint()
@@ -249,6 +261,11 @@ public class SegmentSchemaTestUtils
     public String getCreatedDate()
     {
       return createdDate;
+    }
+
+    public boolean isUsed()
+    {
+      return used;
     }
   }
 }

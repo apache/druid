@@ -163,4 +163,15 @@ public abstract class DruidCoordinatorConfig
     return 1;
   }
 
+  @Config("druid.coordinator.kill.segmentSchema.on")
+  @Default("true")
+  public abstract boolean isSegmentSchemaKillEnabled();
+
+  @Config("druid.coordinator.kill.segmentSchema.period")
+  @Default("PT1H")
+  public abstract Duration getCoordinatorSegmentSchemaKillPeriod();
+
+  @Config("druid.coordinator.kill.segmentSchema.durationToRetain")
+  @Default("PT6H")
+  public abstract Duration getCoordinatorSegmentSchemaKillDurationToRetain();
 }

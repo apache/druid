@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -37,11 +36,9 @@ import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Update;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,9 +76,9 @@ public class SegmentSchemaManagerTest
     derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
 
-    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
-    segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     fingerprintGenerator = new FingerprintGenerator(mapper);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector, fingerprintGenerator);
+    segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
   }
 
   @Test
@@ -126,7 +123,7 @@ public class SegmentSchemaManagerTest
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
 
@@ -159,7 +156,7 @@ public class SegmentSchemaManagerTest
         );
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(newSegment), Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(Collections.singletonList(plus));
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", Collections.singletonList(plus));
 
     segmentIdSchemaMap.clear();
     segmentIdSchemaMap.put(newSegment.getId().toString(), Pair.of(schemaPayloadIntegerPair.lhs, 500));
@@ -168,10 +165,9 @@ public class SegmentSchemaManagerTest
   }
 
   @Test
-  public void testCleanUpUnreferencedSchema()
+  public void testPersistAndUpdateSegmentsTable_unusedExistingSegment()
   {
     final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
-    Random random = new Random(5);
 
     Set<DataSegment> segments = new HashSet<>();
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
@@ -191,11 +187,12 @@ public class SegmentSchemaManagerTest
 
       segments.add(segment);
 
-      int randomNum = random.nextInt();
-      RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
+      RowSignature rowSignature = RowSignature.builder().add("c" + i, ColumnType.FLOAT).build();
+      Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
+      aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
 
-      SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) randomNum);
+      SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
+      SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) i);
       SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
           new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
@@ -203,31 +200,29 @@ public class SegmentSchemaManagerTest
               schemaMetadata
           );
       schemaMetadataPluses.add(plus);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, i));
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
+
+    final Set<String> unusedFingerprints = new HashSet<>();
+    final Map<String, SchemaPayload> schemaPayloadMapToPersist = new HashMap<>();
+
+    // persist the schema
+    for (int i = 1; i <= 6; i++) {
+      SegmentSchemaManager.SegmentSchemaMetadataPlus plus = schemaMetadataPluses.get(i);
+      schemaPayloadMapToPersist.put(plus.getFingerprint(), plus.getSegmentSchemaMetadata().getSchemaPayload());
+
+      if (i <= 3) {
+        unusedFingerprints.add(plus.getFingerprint());
+      }
+    }
+
+    segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMapToPersist, unusedFingerprints);
+
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
-
-    derbyConnector.retryWithHandle(handle -> {
-      Update deleteStatement = handle.createStatement(StringUtils.format("DELETE FROM %s", tablesConfig.getSegmentsTable()));
-      deleteStatement.execute();
-      return true;
-    });
-
-    segmentSchemaManager.cleanUpUnreferencedSchema();
-
-    List<Long> ids = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(StringUtils.format(
-                            "SELECT id from %s",
-                            tablesConfig.getSegmentSchemaTable()
-                        ))
-                        .mapTo(Long.class)
-                        .list());
-
-    Assert.assertTrue(ids.isEmpty());
   }
 
   private CentralizedDatasourceSchemaConfig getEnabledConfig()

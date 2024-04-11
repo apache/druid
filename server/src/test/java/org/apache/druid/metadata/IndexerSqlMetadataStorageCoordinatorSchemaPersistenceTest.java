@@ -47,6 +47,7 @@ import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -76,8 +77,8 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
 
-    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     fingerprintGenerator = new FingerprintGenerator(mapper);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector, fingerprintGenerator);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
@@ -312,7 +313,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
     }
 
     derbyConnector.retryWithHandle(handle -> {
-      segmentSchemaManager.persistSegmentSchema(handle, schemaPayloadMapToPerist);
+      segmentSchemaManager.persistSegmentSchema(handle, "fooDataSource", schemaPayloadMapToPerist);
       return null;
     });
 
@@ -378,7 +379,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends I
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
 
-    Map<String, Long> fingerprintSchemaMap = segmentSchemaTestUtils.insertSegmentSchema(schemaPayloadMap);
+    Map<String, Long> fingerprintSchemaMap = segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMap, Collections.emptySet());
 
     for (Map.Entry<String, Pair<SchemaPayload, Integer>> entry : segmentIdSchemaMap.entrySet()) {
       String segmentId = entry.getKey();

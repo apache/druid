@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -128,7 +129,8 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerCo
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
-        connector
+        connector,
+        new FingerprintGenerator(jsonMapper)
     );
 
     final TestDerbyConnector connector = derbyConnectorRule.getConnector();

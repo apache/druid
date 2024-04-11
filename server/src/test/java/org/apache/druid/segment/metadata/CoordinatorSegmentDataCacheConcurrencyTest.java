@@ -131,7 +131,6 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
             null,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
-            fingerprintGenerator,
             new NoopServiceEmitter(),
             config
         );
