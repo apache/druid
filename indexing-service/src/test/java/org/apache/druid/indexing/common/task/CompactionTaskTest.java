@@ -98,6 +98,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -418,6 +419,8 @@ public class CompactionTaskTest
         taskCreatedWithGranularitySpec.getSegmentGranularity(),
         taskCreatedWithSegmentGranularity.getSegmentGranularity()
     );
+
+    Assert.assertEquals(LookupLoadingMode.NONE, taskCreatedWithGranularitySpec.loadLookups());
   }
 
   @Test
@@ -621,6 +624,7 @@ public class CompactionTaskTest
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
     final CompactionTask fromJson = OBJECT_MAPPER.readValue(bytes, CompactionTask.class);
     assertEquals(task, fromJson);
+    Assert.assertEquals(LookupLoadingMode.NONE, task.loadLookups());
   }
 
   @Test

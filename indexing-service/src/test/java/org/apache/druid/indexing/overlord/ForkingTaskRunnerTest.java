@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -38,6 +39,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -534,6 +536,79 @@ public class ForkingTaskRunnerTest
     Task task = NoopTask.create();
     forkingTaskRunner.run(task);
     Assert.assertTrue(forkingTaskRunner.restore().isEmpty());
+  }
+
+  @Test
+  public void testTaskRunDoesntPassLoadLookupsArgument() throws Exception
+  {
+    verifyTaskRunLoadLookupsArgument(LookupLoadingMode.ALL);
+  }
+
+  @Test
+  public void testTaskRunPassLoadLookupsArgument() throws Exception
+  {
+    verifyTaskRunLoadLookupsArgument(LookupLoadingMode.NONE);
+  }
+
+  private void verifyTaskRunLoadLookupsArgument(LookupLoadingMode lookupLoadingMode) throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Task task = new NoopTask(null, null, null, 0, 0, null) {
+      @Override
+      public LookupLoadingMode loadLookups()
+      {
+        return lookupLoadingMode;
+      }
+    };
+    File file = temporaryFolder.newFolder();
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .setBaseTaskDir(file.toString())
+        .build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        taskConfig,
+        workerConfig,
+        new Properties(),
+        new NoopTaskLogs(),
+        mapper,
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new StartupLoggingConfig(),
+        TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+      {
+        if (lookupLoadingMode == LookupLoadingMode.NONE) {
+          Assert.assertTrue(command.containsAll(ImmutableSet.of("--loadLookups", LookupLoadingMode.NONE.name())));
+        } else {
+          Assert.assertFalse(command.contains("--loadLookups"));
+          Assert.assertFalse(command.contains(LookupLoadingMode.NONE.name()));
+        }
+        for (String param : command) {
+          if (param.endsWith(task.getId())) {
+            // pickStorageSlot should pick the same slot as what ForkingTaskRunner already picked
+            final String basePath = getTracker().pickStorageSlot(task.getId()).getDirectory().getAbsolutePath();
+            File resultFile = Paths.get(basePath, task.getId(), "attempt", "1", "status.json").toFile();
+            mapper.writeValue(resultFile, TaskStatus.success(task.getId()));
+            break;
+          }
+        }
+
+        return makeTestProcessHolder(logFile, taskLocation);
+      }
+
+      @Override
+      int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      {
+        return 0;
+      }
+    };
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    final TaskStatus status = forkingTaskRunner.run(task).get();
+    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
   }
 
   public static TaskConfigBuilder makeDefaultTaskConfigBuilder()

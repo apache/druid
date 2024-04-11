@@ -77,6 +77,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
@@ -1522,5 +1523,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           getNumPersistThreads()
       );
     }
+  }
+
+  @Override
+  public LookupLoadingMode loadLookups()
+  {
+    return LookupLoadingMode.NONE;
   }
 }

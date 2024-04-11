@@ -107,7 +107,9 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierConfig;
 import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -184,6 +186,13 @@ public class CliPeon extends GuiceRunnable
    */
   @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
   public String loadBroadcastSegments = "false";
+
+
+  /**
+   * --loadLookups controls mode of loading lookups. Currently supporting 2 modes ALL and NONE
+   */
+  @Option(name = "--loadLookups", title = "loadLookups", description = "Mode for loading lookups ALL, NONE")
+  public LookupLoadingMode loadLookups = LookupLoadingMode.ALL;
 
   @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
   public String taskId = "";
@@ -363,7 +372,7 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new ChatHandlerServerModule(properties),
-        new LookupModule()
+        resolveLookupModule()
     );
   }
 
@@ -554,6 +563,32 @@ public class CliPeon extends GuiceRunnable
     );
     shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
     shuffleClientBiddy.addBinding("deepstore").to(DeepStorageShuffleClient.class).in(LazySingleton.class);
+  }
+
+
+  /**
+   * Resolves which lookup module to use in current process.
+   * <p>
+   * There are two modes of loading lookups:
+   * <ol>
+   * <li>loadLookups = ALL. The method returns a {@link LookupModule} which loads all lookups on startup.</li>
+   * <li>loadLookups = NONE. The method returns a {@link LookupSerdeModule} which does not load any lookup but can still parse queries that employ lookups.</p>
+   * </ol>
+   *
+   * @return Lookup module to use for this process based on loadLookups argument.
+   */
+  Module resolveLookupModule()
+  {
+    switch (loadLookups) {
+      case NONE:
+        log.info("loadLookups mode is [%s], no lookups will be loaded.", loadLookups);
+        return new LookupSerdeModule();
+      case ALL:
+        log.info("loadLookups mode is [%s], lookups will be loaded.", loadLookups);
+        return new LookupModule();
+      default:
+        throw new IllegalArgumentException("loadLookups mode " + loadLookups + " is not supported yet");
+    }
   }
 
   public class BroadcastSegmentLoadingModule implements Module

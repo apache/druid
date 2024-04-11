@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
@@ -58,6 +59,9 @@ public class LookupSerdeModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, LookupModule.PROPERTY_BASE, LookupConfig.class);
+    // Even though LookupSerdeModule will be used for processes that are not loading lookups, we need to bind LookupNodeService,
+    // so that TaskToolboxFactory and TaskToolbox will get their dependency. Binding it won't load lookups.
+    binder.bind(LookupNodeService.class).toInstance(new LookupNodeService(LookupListeningAnnouncerConfig.DEFAULT_TIER));
     binder.bind(LookupExtractorFactoryContainerProvider.class).to(NoopLookupExtractorFactoryContainerProvider.class);
     ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
   }

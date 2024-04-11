@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
@@ -61,6 +62,7 @@ import org.apache.druid.k8s.overlord.common.KubernetesExecutor;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -79,6 +81,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -270,6 +273,82 @@ class K8sTaskAdapterTest
             .get(0).split(" ")).collect(Collectors.toSet())
             .containsAll(ImmutableList.of("--taskId", task.getId()))
     );
+  }
+
+  @Test
+  public void fromTask_doesnt_pass_loadLookups_Argument() throws IOException
+  {
+    verify_fromTask_loadLookups_Argument(LookupLoadingMode.ALL);
+  }
+
+  @Test
+  public void fromTask_passes_loadLookups_Argument() throws IOException
+  {
+    verify_fromTask_loadLookups_Argument(LookupLoadingMode.NONE);
+  }
+
+  private void verify_fromTask_loadLookups_Argument(LookupLoadingMode taskLookupLoadingMode) throws IOException
+  {
+    final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
+    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+      {
+        return (T) new Pod()
+        {
+          @Override
+          public PodSpec getSpec()
+          {
+            return podSpec;
+          }
+        };
+      }
+    };
+
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                  .withNamespace("test")
+                                                                  .build();
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+    Task task = new NoopTask(
+        "id",
+        "id",
+        "datasource",
+        0,
+        0,
+        ImmutableMap.of("context", RandomStringUtils.randomAlphanumeric((int) DruidK8sConstants.MAX_ENV_VARIABLE_KBS * 20))
+    ) {
+      @Override
+      public LookupLoadingMode loadLookups()
+      {
+        return taskLookupLoadingMode;
+      }
+    };
+
+    Job job = adapter.fromTask(task);
+    //Verify that --loadLookups NONE should be passed
+    Set<String> arguments = Arrays.stream(job.getSpec()
+                                             .getTemplate()
+                                             .getSpec()
+                                             .getContainers()
+                                             .get(0)
+                                             .getArgs()
+                                             .get(0).split(" ")).collect(Collectors.toSet());
+
+    if (taskLookupLoadingMode == LookupLoadingMode.NONE) {
+      Assert.assertTrue(arguments.containsAll(ImmutableSet.of("--loadLookups", LookupLoadingMode.NONE.name())));
+    } else {
+      Assert.assertFalse(arguments.containsAll(ImmutableSet.of("--loadLookups", LookupLoadingMode.NONE.name())));
+    }
   }
 
   @Test

@@ -22,6 +22,9 @@ package org.apache.druid.cli;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.query.lookup.LookupLoadingMode;
+import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,6 +74,25 @@ public class CliPeonTest
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
+  }
+
+  @Test
+  public void testResolveLookupModule() throws IOException
+  {
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    FakeCliPeon peon = new FakeCliPeon(file.getParent(), "k8sAndWorker");
+    Assert.assertTrue(peon.resolveLookupModule() instanceof LookupModule);
+  }
+
+  @Test
+  public void testResolveSerdeLookupModule() throws IOException
+  {
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    FakeCliPeon peon = new FakeCliPeon(file.getParent(), "k8sAndWorker");
+    peon.loadLookups = LookupLoadingMode.NONE;
+    Assert.assertTrue(peon.resolveLookupModule() instanceof LookupSerdeModule);
   }
 
   private static class FakeCliPeon extends CliPeon

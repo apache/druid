@@ -58,6 +58,7 @@ import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -448,6 +449,11 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     if (task.supportsQueries()) {
       command.add("--loadBroadcastSegments");
       command.add("true");
+    }
+
+    if (task.loadLookups() != LookupLoadingMode.ALL) {
+      command.add("--loadLookups");
+      command.add(task.loadLookups().name());
     }
 
     command.add("--taskId");

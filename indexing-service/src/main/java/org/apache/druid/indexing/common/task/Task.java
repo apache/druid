@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -330,5 +331,17 @@ public interface Task
         taskInfo.getDataSource(),
         taskInfo.getTask().getMetadata()
     );
+  }
+
+  /**
+   * Permits to control how the task loads lookups
+   * <p>Specifically, can be used to disable lookups loading</p>
+   * <p>by default the task is loading lookups</p>
+   *
+   * @return lookups loading mode that the task is using
+   */
+  default LookupLoadingMode loadLookups()
+  {
+    return LookupLoadingMode.ALL;
   }
 }

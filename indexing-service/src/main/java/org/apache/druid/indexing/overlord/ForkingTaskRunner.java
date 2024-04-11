@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.lookup.LookupLoadingMode;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
@@ -377,6 +378,11 @@ public class ForkingTaskRunner
                         if (task.supportsQueries()) {
                           command.add("--loadBroadcastSegments");
                           command.add("true");
+                        }
+
+                        if (task.loadLookups() != LookupLoadingMode.ALL) {
+                          command.add("--loadLookups");
+                          command.add(task.loadLookups().name());
                         }
 
                         if (!taskFile.exists()) {
