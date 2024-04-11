@@ -318,10 +318,11 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         currentValue,
         0
     );
-    Aggregator combiningAgg = aggFactory.getCombiningFactory().factorize(combiningFactory);
 
-    combiningAgg.aggregate();
-    return aggFactory.finalizeComputation(combiningAgg.get());
+    try (Aggregator combiningAgg = aggFactory.getCombiningFactory().factorize(combiningFactory)) {
+      combiningAgg.aggregate();
+      return aggFactory.finalizeComputation(combiningAgg.get());
+    }
   }
 
   /**
@@ -720,6 +721,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     for (; nextIndex < windowSize; ++nextIndex) {
       for (int i = 0; i < aggFactories.length; ++i) {
         results[i][resultStorageIndex] = aggFactories[i].finalizeComputation(aggregators[i][nextIndex].get());
+        aggregators[i][nextIndex].close();
         aggregators[i][nextIndex] = null;
       }
       ++resultStorageIndex;
