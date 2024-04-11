@@ -1,0 +1,57 @@
+version: 2.1
+
+jobs:
+  build_docker_image:
+    docker:
+      - image: cimg/openjdk:8.0
+    resource_class: large
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      #      - restore_cache:
+      #          keys:
+      #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
+      #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-
+      #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-
+      - run:
+          name: Fetch plugins and dependencies
+          command: mvn -B -V -T2C -U -P ci-helpers,ci-build,generate-assembly-jar de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
+      #      - save_cache:
+      #          paths:
+      #            - ~/.m2
+      #          key: maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
+      #      - run:
+      #          name: Provision JFrog Artifactory maven repo
+      #          command: |
+      #            mkdir -p ~/.m2
+      #            eval "echo \"$(<~/repo/.circleci/settings.xml)\"" 2> /dev/null 1>~/.m2/settings.xml
+      - run:
+          name: Build
+          command: mvn clean package -DskipTests -Pdist
+      #      - run:
+      #          name: Test
+      #          command: mvn test
+      - run:
+          name: Build Image
+          command: |
+            docker login ${DOCKER_REGISTRY} \
+            --username ${JFROG_DEPLOY_USER} \
+            --password ${JFROG_DEPLOY_PW}
+            DOCKER_REPO=${DOCKER_REGISTRY}/conviva-druid
+            DOCKER_TAG=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+            if ! docker pull ${DOCKER_REPO}:${DOCKER_TAG} &> /dev/null; then
+                DOCKER_BUILDKIT=1 docker build --no-cache \
+                    -t ${DOCKER_REPO}:${DOCKER_TAG} \
+                    -f distribution/docker/Dockerfile --build-arg BUILD_FROM_SOURCE=false .
+                docker push --all-tags ${DOCKER_REPO}
+            else
+                echo "[INFO] Skipping, Docker image already exists: ${DOCKER_REPO}:${DOCKER_TAG}"
+            fi
+
+workflows:
+  druid-build:
+    jobs:
+      - build_docker_image:
+          context: 'conviva_deploy'
