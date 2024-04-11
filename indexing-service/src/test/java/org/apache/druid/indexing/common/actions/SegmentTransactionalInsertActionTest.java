@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -154,7 +155,12 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."),
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "The new start metadata state[ObjectMetadata{theObject=[1]}] is ahead of the last commited end"
+                + " state[null]. Try resetting the supervisor."
+            ).toString()
+        ),
         result
     );
   }

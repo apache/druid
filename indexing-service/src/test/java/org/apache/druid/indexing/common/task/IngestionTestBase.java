@@ -36,8 +36,11 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -79,6 +82,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -103,6 +107,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
@@ -122,6 +127,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private File baseDir;
   private SegmentSchemaManager segmentSchemaManager;
   private SegmentSchemaCache segmentSchemaCache;
+  protected File reportsFile;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
@@ -138,7 +144,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         objectMapper,
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        new FingerprintGenerator(objectMapper)
     );
 
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
@@ -159,6 +166,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
+    reportsFile = temporaryFolder.newFile();
   }
 
   @After
@@ -286,9 +294,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   /**
    * Converts ParseSpec to InputFormat for indexing tests. To be used until {@link FirehoseFactory}
    * & {@link InputRowParser} is deprecated and removed.
-   *
-   * @param parseSpec
-   * @return
    */
   public static InputFormat createInputFormatFromParseSpec(ParseSpec parseSpec)
   {
@@ -550,8 +555,24 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         continue;
       }
       nonTombstoneSegments++;
-      Assert.assertTrue(segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+      Assert.assertTrue(segmentAndSchemas.getMinimalSegmentSchemas()
+                                         .getSegmentStatsMap()
+                                         .containsKey(segment.getId().toString()));
     }
     Assert.assertEquals(nonTombstoneSegments, segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+  }
+
+  public TaskReport.ReportMap getReports() throws IOException
+  {
+    return objectMapper.readValue(reportsFile, TaskReport.ReportMap.class);
+  }
+
+  public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
+  {
+    return getReports().entrySet()
+                       .stream()
+                       .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+                       .map(entry -> (IngestionStatsAndErrors) entry.getValue().getPayload())
+                       .collect(Collectors.toList());
   }
 }

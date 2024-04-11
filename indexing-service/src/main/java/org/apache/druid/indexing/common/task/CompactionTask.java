@@ -502,7 +502,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
-      Map<String, TaskReport> completionReports = new HashMap<>();
+      final TaskReport.ReportMap completionReports = new TaskReport.ReportMap();
       for (int i = 0; i < indexTaskSpecs.size(); i++) {
         ParallelIndexSupervisorTask eachSpec = indexTaskSpecs.get(i);
         final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
@@ -521,9 +521,11 @@ public class CompactionTask extends AbstractBatchIndexTask
             }
 
             String reportKeySuffix = "_" + i;
-            Optional.ofNullable(eachSpec.getCompletionReports())
-                    .ifPresent(reports -> completionReports.putAll(
-                        CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)));
+            Optional.ofNullable(eachSpec.getCompletionReports()).ifPresent(
+                reports -> completionReports.putAll(
+                    CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)
+                )
+            );
           } else {
             failCnt++;
             log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
@@ -1219,10 +1221,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
         partitionsSpec = new DynamicPartitionsSpec(
             dynamicPartitionsSpec.getMaxRowsPerSegment(),
-            // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
-            // If this is set to something too small, compactionTask can generate small segments
-            // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-            dynamicPartitionsSpec.getMaxTotalRowsOr(Long.MAX_VALUE)
+            dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS)
         );
       }
       return newTuningConfig.withPartitionsSpec(partitionsSpec);

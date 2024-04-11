@@ -24,7 +24,7 @@ import { ColumnPicker } from '../../../column-picker/column-picker';
 import type { Dataset } from '../../../utils';
 
 interface PartialPattern {
-  anchor: 'currentTimestamp' | 'maxDataTime';
+  anchor: 'timestamp' | 'maxDataTime';
   rangeDuration: string;
   alignType?: 'floor' | 'ceil';
   alignDuration?: string;
@@ -86,7 +86,7 @@ const GROUPS: GroupedNamedPartialPatterns[] = [
       {
         name: 'Hour',
         partialPattern: {
-          anchor: 'currentTimestamp',
+          anchor: 'timestamp',
           alignType: 'ceil',
           alignDuration: 'PT1H',
           rangeDuration: 'PT1H',
@@ -95,7 +95,7 @@ const GROUPS: GroupedNamedPartialPatterns[] = [
       {
         name: 'Day',
         partialPattern: {
-          anchor: 'currentTimestamp',
+          anchor: 'timestamp',
           alignType: 'ceil',
           alignDuration: 'P1D',
           rangeDuration: 'P1D',
@@ -104,7 +104,7 @@ const GROUPS: GroupedNamedPartialPatterns[] = [
       {
         name: 'Week',
         partialPattern: {
-          anchor: 'currentTimestamp',
+          anchor: 'timestamp',
           alignType: 'ceil',
           alignDuration: 'P1W',
           rangeDuration: 'P1W',
@@ -118,7 +118,7 @@ const GROUPS: GroupedNamedPartialPatterns[] = [
       {
         name: 'Hour',
         partialPattern: {
-          anchor: 'currentTimestamp',
+          anchor: 'timestamp',
           alignType: 'floor',
           alignDuration: 'PT1H',
           rangeDuration: 'PT1H',
@@ -127,7 +127,7 @@ const GROUPS: GroupedNamedPartialPatterns[] = [
       {
         name: 'Day',
         partialPattern: {
-          anchor: 'currentTimestamp',
+          anchor: 'timestamp',
           alignType: 'floor',
           alignDuration: 'P1D',
           rangeDuration: 'P1D',
@@ -136,7 +136,7 @@ const GROUPS: GroupedNamedPartialPatterns[] = [
       {
         name: 'Week',
         partialPattern: {
-          anchor: 'currentTimestamp',
+          anchor: 'timestamp',
           alignType: 'floor',
           alignDuration: 'P1W',
           rangeDuration: 'P1W',
@@ -182,6 +182,8 @@ export const TimeRelativeFilterControl = React.memo(function TimeRelativeFilterC
                   negated,
                   column,
                   ...partialPattern,
+                  startBound: '[',
+                  endBound: ')',
                 });
               }}
             />

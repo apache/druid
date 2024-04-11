@@ -29,15 +29,16 @@ import './execution-timer-panel.scss';
 
 export interface ExecutionTimerPanelProps {
   execution: Execution | undefined;
+  startTime: Date | undefined;
   onCancel(): void;
 }
 
 export const ExecutionTimerPanel = React.memo(function ExecutionTimerPanel(
   props: ExecutionTimerPanelProps,
 ) {
-  const { execution, onCancel } = props;
+  const { execution, startTime, onCancel } = props;
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [mountTime] = useState(Date.now());
+  const [mountTime] = useState(startTime?.valueOf() ?? Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   useInterval(() => {
