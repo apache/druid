@@ -1249,7 +1249,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.107.Final
+version: 4.1.108.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1922,7 +1922,7 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.8.3
+version: 3.8.4
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
