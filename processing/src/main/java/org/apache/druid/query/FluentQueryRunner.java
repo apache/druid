@@ -93,7 +93,7 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
   /**
    * Delegates to {@link QueryToolChest#mergeResults(QueryRunner, boolean)}.
    * 
-   * @see QueryToolChest#mergeResults(QueryRunner, boolean) 
+   * @see QueryToolChest#mergeResults(QueryRunner, boolean)
    */
   public FluentQueryRunner<T> mergeResults(boolean willMergeRunner)
   {

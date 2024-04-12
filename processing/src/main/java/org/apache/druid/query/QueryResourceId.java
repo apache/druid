@@ -19,9 +19,14 @@
 
 package org.apache.druid.query;
 
+import com.google.common.base.Preconditions;
+
 import java.util.Objects;
 
 /**
+ * Wrapper class on the queryResourceId string. The object must be addressable on an associative map, therefore it must implement
+ * equals and hashCode.
+ * <p>
  * Query's resource id is used to allocate the resources, and identify the resources allocated to a query in a global pool.
  * Queries USUALLY do not share any resources - each query is assigned its own thread, and buffer pool. However, some resources
  * are shared globally - the GroupBy query's merge buffers being a prime example of those (and the primary utiliser of the
@@ -84,12 +89,7 @@ public class QueryResourceId
 
   public QueryResourceId(String queryResourceId)
   {
-    this.queryResourceId = queryResourceId;
-  }
-
-  public String asString()
-  {
-    return queryResourceId;
+    this.queryResourceId = Preconditions.checkNotNull(queryResourceId, "queryResourceId must be present");
   }
 
   @Override
