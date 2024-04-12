@@ -34,6 +34,7 @@ import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -76,7 +77,7 @@ public class TaskLockBoxConcurrencyTest
         )
     );
 
-    segmentSchemaManager = new SegmentSchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector, new FingerprintGenerator(objectMapper));
     lockbox = new TaskLockbox(
         taskStorage,
         new IndexerSQLMetadataStorageCoordinator(

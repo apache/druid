@@ -53,6 +53,7 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -113,7 +114,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
-        derbyConnector
+        derbyConnector,
+        new FingerprintGenerator(jsonMapper)
     );
 
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
