@@ -50,7 +50,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
       ObjectStrategy<T> objectStrategy,
       TypeSignature<?> signature,
       boolean groupable,
-      final Hash.Strategy<T> hashStrategy
+      @Nullable final Hash.Strategy<T> hashStrategy
   )
   {
     this.objectStrategy = objectStrategy;
