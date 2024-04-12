@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
@@ -499,6 +500,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
             segmentAvailabilityConfirmationPair.rhs
         );
       }
+
+      TaskContextReport taskContextReport = (TaskContextReport) indexer.getTaskReport(taskID).get(TaskContextReport.REPORT_KEY);
+
+      Assert.assertFalse(taskContextReport.getPayload().isEmpty());
     }
 
     // IT*ParallelIndexTest do a second round of ingestion to replace segments in an existing

@@ -69,6 +69,7 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
@@ -190,6 +191,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -589,7 +591,10 @@ public class ControllerImpl implements Controller
       );
       context.writeReports(
           id(),
-          TaskReport.buildTaskReports(new MSQTaskReport(id(), taskReportPayload))
+          TaskReport.buildTaskReports(
+              new MSQTaskReport(id(), taskReportPayload),
+              new TaskContextReport(id(), task.getContext())
+          )
       );
     }
     catch (Throwable e) {
@@ -712,6 +717,14 @@ public class ControllerImpl implements Controller
         MultiStageQueryContext.CTX_IS_REINDEX,
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
+
+    // propagate the controller's context and tags to the worker task
+    taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, task.getContext());
+    // specifically assign the 'tags' field for enhanced worker task metrics reporting
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+    if (tags != null) {
+      taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
+    }
 
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
