@@ -1204,32 +1204,37 @@ public class TaskLockbox
     try {
       try {
         log.info("Removing task[%s] from activeTasks", task.getId());
-        unlockAll(task);
-        if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.REPLACE)) {
-          final int upgradeSegmentsDeleted = metadataStorageCoordinator.deleteUpgradeSegmentsForTask(task.getId());
-          log.info(
-              "Deleted [%d] entries from upgradeSegments table for task[%s] with REPLACE locks.",
-              upgradeSegmentsDeleted,
-              task.getId()
-          );
-        }
-        if (task instanceof PendingSegmentAllocatingTask) {
-          final String pendingSegmentGroup = ((PendingSegmentAllocatingTask) task).getPendingSegmentGroupId();
-          if (activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
-            final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
-            idsInSameGroup.remove(task.getId());
-            if (idsInSameGroup.isEmpty()) {
-              final int pendingSegmentsDeleted
-                  = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(pendingSegmentGroup);
-              log.info(
-                  "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
-                  pendingSegmentsDeleted,
-                  pendingSegmentGroup
-              );
+        try {
+          if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.REPLACE)) {
+            final int upgradeSegmentsDeleted = metadataStorageCoordinator.deleteUpgradeSegmentsForTask(task.getId());
+            log.info(
+                "Deleted [%d] entries from upgradeSegments table for task[%s] with REPLACE locks.",
+                upgradeSegmentsDeleted,
+                task.getId()
+            );
+          }
+          if (task instanceof PendingSegmentAllocatingTask) {
+            final String pendingSegmentGroup = ((PendingSegmentAllocatingTask) task).getPendingSegmentGroupId();
+            if (activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
+              final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
+              idsInSameGroup.remove(task.getId());
+              if (idsInSameGroup.isEmpty()) {
+                final int pendingSegmentsDeleted
+                    = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(pendingSegmentGroup);
+                log.info(
+                    "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
+                    pendingSegmentsDeleted,
+                    pendingSegmentGroup
+                );
+              }
+              activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
             }
-            activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
           }
         }
+        catch (Exception e) {
+          log.warn(e, "Failure cleaning up upgradeSegments or pendingSegments tables.");
+        }
+        unlockAll(task);
       }
       finally {
         activeTasks.remove(task.getId());
