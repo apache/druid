@@ -16,23 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.druid.msq.statistics.serde;
 
-package org.apache.druid.msq.statistics;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.KeyCollectorSnapshot;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
+import java.nio.ByteBuffer;
 
 /**
- * Marker interface for deserialization.
+ * Serializes a {@link ClusterByStatisticsSnapshot} into a byte[].
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "collectorType")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DelegateOrMinKeyCollectorSnapshot.TYPE, value = DelegateOrMinKeyCollectorSnapshot.class),
-    @JsonSubTypes.Type(name = QuantilesSketchKeyCollectorSnapshot.TYPE, value = QuantilesSketchKeyCollectorSnapshot.class),
-    @JsonSubTypes.Type(name = DistinctKeySnapshot.TYPE, value = DistinctKeySnapshot.class),
-})
-public interface KeyCollectorSnapshot
+public abstract class KeyCollectorSnapshotSerializer
 {
-  KeyCollectorSnapshotSerializer getSerializer();
+  protected abstract byte getType();
+
+  protected abstract byte[] serializeKeyCollector(KeyCollectorSnapshot collectorSnapshot);
+
+  public byte[] serialize(KeyCollectorSnapshot collectorSnapshot)
+  {
+    byte type = getType();
+    byte[] value = serializeKeyCollector(collectorSnapshot);
+
+    return ByteBuffer.allocate(1 + value.length)
+                     .put(type)
+                     .put(value)
+                     .array();
+  }
 }

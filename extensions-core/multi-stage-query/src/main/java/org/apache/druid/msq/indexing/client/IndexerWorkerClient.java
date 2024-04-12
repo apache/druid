@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
@@ -113,20 +112,16 @@ public class IndexerWorkerClient implements WorkerClient
   )
   {
     String path = StringUtils.format(
-        "/keyStatistics/%s/%d",
+        "/keyStatistics/%s/%d?sketchEncoding=%s",
         StringUtils.urlEncode(queryId),
-        stageNumber
+        stageNumber,
+        WorkerChatHandler.SketchEncoding.OCTET_STREAM
     );
 
-    return FutureUtils.transform(
-        getClient(workerTaskId).asyncRequest(
+    return getClient(workerTaskId).asyncRequest(
             new RequestBuilder(HttpMethod.POST, path),
-            new BytesFullResponseHandler()
-        ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>()
-        {
-        })
-    );
+            new SketchResponseHandler(jsonMapper)
+        );
   }
 
   @Override
@@ -138,20 +133,16 @@ public class IndexerWorkerClient implements WorkerClient
   )
   {
     String path = StringUtils.format(
-        "/keyStatisticsForTimeChunk/%s/%d/%d",
+        "/keyStatisticsForTimeChunk/%s/%d/%d?sketchEncoding=%s",
         StringUtils.urlEncode(queryId),
         stageNumber,
-        timeChunk
+        timeChunk,
+        WorkerChatHandler.SketchEncoding.OCTET_STREAM
     );
 
-    return FutureUtils.transform(
-        getClient(workerTaskId).asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path),
-            new BytesFullResponseHandler()
-        ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>()
-        {
-        })
+    return getClient(workerTaskId).asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path),
+        new SketchResponseHandler(jsonMapper)
     );
   }
 
@@ -213,7 +204,7 @@ public class IndexerWorkerClient implements WorkerClient
             new RequestBuilder(HttpMethod.GET, "/counters"),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<CounterSnapshotsTree>()
+        holder -> holder.deserialize(jsonMapper, new TypeReference<CounterSnapshotsTree>()
         {
         })
     );
@@ -306,21 +297,6 @@ public class IndexerWorkerClient implements WorkerClient
             return Pair.of(client, locator);
           }
       ).lhs;
-    }
-  }
-
-  /**
-   * Deserialize a {@link BytesFullResponseHolder} as JSON.
-   * <p>
-   * It would be reasonable to move this to {@link BytesFullResponseHolder} itself, or some shared utility class.
-   */
-  private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final TypeReference<T> typeReference)
-  {
-    try {
-      return jsonMapper.readValue(bytesHolder.getContent(), typeReference);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
     }
   }
 }

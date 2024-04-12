@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.statistics;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -37,6 +36,7 @@ import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.statistics.serde.ClusterByStatisticsSnapshotSerde;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -48,7 +48,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -625,6 +628,82 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
         ClusterByStatisticsCollectorImpl.create(clusterBy, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
   }
 
+//  @Test
+//  public void testSerializeDelegate()
+//  {
+//    QuantilesSketchKeyCollectorSnapshot quantileSnapshot = new QuantilesSketchKeyCollectorSnapshot("sketchString", 100);
+//    DelegateOrMinKeyCollectorSnapshot<QuantilesSketchKeyCollectorSnapshot> snapshot = new DelegateOrMinKeyCollectorSnapshot<>(quantileSnapshot, null);
+//    KeyCollectorSnapshotSerializer serializer = snapshot.getSerializer();
+//
+//    byte[] bytes = serializer.serialize(snapshot);
+//
+//    Assert.assertEquals(snapshot, KeyCollectorSnapshotDeserializer.deserialize(ByteBuffer.wrap(bytes)));
+//  }
+//
+//  @Test
+//  public void testSerializeMin()
+//  {
+//    DelegateOrMinKeyCollectorSnapshot<QuantilesSketchKeyCollectorSnapshot> snapshot = new DelegateOrMinKeyCollectorSnapshot<>(null, RowKey.wrap(StringUtils.toUtf8("ABC")));
+//    KeyCollectorSnapshotSerializer serializer = snapshot.getSerializer();
+//
+//    byte[] bytes = serializer.serialize(snapshot);
+//
+//    Assert.assertEquals(snapshot, KeyCollectorSnapshotDeserializer.deserialize(ByteBuffer.wrap(bytes)));
+//  }
+//
+//  @Test
+//  public void testSerializeBytes()
+//  {
+//    DistinctKeySnapshot snapshot = new DistinctKeySnapshot(
+//        ImmutableList.of(
+//            new SerializablePair(RowKey.wrap(StringUtils.toUtf8("A")), 5L)
+//        ), 5);
+//    KeyCollectorSnapshotSerializer serializer = snapshot.getSerializer();
+//
+//    byte[] bytes = serializer.serialize(snapshot);
+//
+//    DistinctKeySnapshot deserialize = (DistinctKeySnapshot) KeyCollectorSnapshotDeserializer.deserialize(ByteBuffer.wrap(bytes));
+//    Assert.assertEquals(snapshot.getSpaceReductionFactor(), deserialize.getSpaceReductionFactor());
+//    Assert.assertEquals(snapshot.getKeys(), deserialize.getKeys());
+//  }
+//
+//  @Test
+//  public void testSerializeBytess()
+//  {
+//    QuantilesSketchKeyCollectorSnapshot snapshot = new QuantilesSketchKeyCollectorSnapshot("sketchString", 100);
+//    KeyCollectorSnapshotSerializer serializer = snapshot.getSerializer();
+//
+//    byte[] bytes = serializer.serialize(snapshot);
+//
+//    Assert.assertEquals(snapshot, KeyCollectorSnapshotDeserializer.deserialize(ByteBuffer.wrap(bytes)));
+//  }
+//
+//  @Test
+//  public void test() throws IOException
+//  {
+//    ClusterByStatisticsCollectorImpl clusterByStatisticsCollector = makeCollector(ClusterByStatisticsCollectorImplTest.CLUSTER_BY_XY_BUCKET_BY_X, false);
+//
+//    final Object[] key = new Object[2];
+//    key[0] = (long) (1);
+//    key[1] = (long) 2;
+//
+//    clusterByStatisticsCollector.add(ClusterByStatisticsCollectorImplTest.createKey(CLUSTER_BY_XY_BUCKET_BY_X, key), 1);
+//    ClusterByStatisticsSnapshot snapshot = clusterByStatisticsCollector.snapshot();
+//    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//    ClusterByStatisticsSnapshotSerde.serialize(outputStream, snapshot);
+//    byte[] serialize = outputStream.toByteArray();
+//
+//    ClusterByStatisticsSnapshot deserialize = ClusterByStatisticsSnapshotSerde.deserialize(serialize);
+//    Assert.assertEquals(
+//        snapshot.getBuckets().get(1L).getKeyCollectorSnapshot(),
+//        deserialize.getBuckets().get(1L).getKeyCollectorSnapshot()
+//    );
+//    Assert.assertEquals(
+//        snapshot.getBuckets().get(1L).getKeyCollectorSnapshot(),
+//        deserialize.getBuckets().get(1L).getKeyCollectorSnapshot()
+//    );
+//  }
+
   private static void verifyPartitions(
       final String testName,
       final ClusterBy clusterBy,
@@ -948,6 +1027,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final ClusterByStatisticsCollector collector
   )
   {
+    // Verify jackson serialization
     try {
       final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
       final ClusterByStatisticsSnapshot snapshot = collector.snapshot();
@@ -957,8 +1037,15 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       );
 
       Assert.assertEquals(StringUtils.format("%s: snapshot is serializable", testName), snapshot, snapshot2);
+
+      // Verify octet stream serialization
+      ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+      ClusterByStatisticsSnapshotSerde.serialize(byteArrayOutputStream, snapshot);
+
+      final ClusterByStatisticsSnapshot snapshot3 = ClusterByStatisticsSnapshotSerde.deserialize(ByteBuffer.wrap(byteArrayOutputStream.toByteArray()));
+      Assert.assertEquals(StringUtils.format("%s: snapshot is serializable", testName), snapshot, snapshot3);
     }
-    catch (JsonProcessingException e) {
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

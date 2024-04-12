@@ -139,6 +139,15 @@ public class KeyCollectorTestUtils
     );
   }
 
+//  static void testSerde(KeyCollectorSnapshot keyCollectorSnapshot)
+//  {
+//    KeyCollectorSnapshotSerializer serializer = keyCollectorSnapshot.getSerializer();
+//    byte[] serialize = serializer.serialize(keyCollectorSnapshot);
+//
+//    KeyCollectorSnapshot deserialize = KeyCollectorSnapshotDeserializer.deserialize(ByteBuffer.wrap(serialize));
+//    Assert.assertEquals(keyCollectorSnapshot, deserialize);
+//  }
+
   static void verifyCollector(
       final KeyCollector<?> collector,
       final ClusterBy clusterBy,
