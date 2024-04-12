@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.msq.statistics.serde;
 
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
