@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.metadata;
 
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
@@ -40,12 +40,12 @@ public class SegmentSchemaCacheTest
     SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
-    SegmentSchemaMetadata expected = new SegmentSchemaMetadata(new SchemaPayload(rowSignature), 20L);
+    SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
     cache.addRealtimeSegmentSchema(id, rowSignature, 20);
 
     Assert.assertTrue(cache.isSchemaCached(id));
-    Optional<SegmentSchemaMetadata> schema = cache.getSchemaForSegment(id);
+    Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
 
     Assert.assertEquals(expected, schema.get());
@@ -60,12 +60,12 @@ public class SegmentSchemaCacheTest
     SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
-    SegmentSchemaMetadata expected = new SegmentSchemaMetadata(new SchemaPayload(rowSignature), 20L);
+    SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
     cache.addInTransitSMQResult(id, rowSignature, 20);
 
     Assert.assertTrue(cache.isSchemaCached(id));
-    Optional<SegmentSchemaMetadata> schema = cache.getSchemaForSegment(id);
+    Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
@@ -88,7 +88,7 @@ public class SegmentSchemaCacheTest
     SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
-    SegmentSchemaMetadata expected = new SegmentSchemaMetadata(new SchemaPayload(rowSignature), 20L);
+    SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
     cache.addFinalizedSegmentSchema(0L, new SchemaPayload(rowSignature));
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
@@ -96,7 +96,7 @@ public class SegmentSchemaCacheTest
     cache.updateFinalizedSegmentStatsReference(segmentStats);
 
     Assert.assertTrue(cache.isSchemaCached(id));
-    Optional<SegmentSchemaMetadata> schema = cache.getSchemaForSegment(id);
+    Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
 
     Assert.assertEquals(expected, schema.get());

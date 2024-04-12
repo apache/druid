@@ -49,8 +49,8 @@ import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StagePartition;
+import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -75,7 +75,7 @@ import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
 public class SegmentGeneratorFrameProcessorFactory
-    implements FrameProcessorFactory<SegmentAndSchemas, SegmentAndSchemas, List<SegmentIdWithShardSpec>>
+    implements FrameProcessorFactory<DataSegmentWithSchemas, DataSegmentWithSchemas, List<SegmentIdWithShardSpec>>
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
@@ -123,7 +123,7 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @Override
-  public ProcessorsAndChannels<SegmentAndSchemas, SegmentAndSchemas> makeProcessors(
+  public ProcessorsAndChannels<DataSegmentWithSchemas, DataSegmentWithSchemas> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -139,7 +139,7 @@ public class SegmentGeneratorFrameProcessorFactory
     if (extra == null || extra.isEmpty()) {
       return new ProcessorsAndChannels<>(
           ProcessorManagers.of(Sequences.<SegmentGeneratorFrameProcessor>empty())
-                           .withAccumulation(new SegmentAndSchemas(), (acc, segment) -> acc),
+                           .withAccumulation(new DataSegmentWithSchemas(), (acc, segment) -> acc),
           OutputChannels.none()
       );
     }
@@ -220,7 +220,7 @@ public class SegmentGeneratorFrameProcessorFactory
     return new ProcessorsAndChannels<>(
         ProcessorManagers.of(workers)
                          .withAccumulation(
-                             new SegmentAndSchemas(),
+                             new DataSegmentWithSchemas(),
                              (acc, segment) -> {
                                if (segment != null) {
                                  acc.merge(segment);
@@ -234,14 +234,14 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @Override
-  public TypeReference<SegmentAndSchemas> getResultTypeReference()
+  public TypeReference<DataSegmentWithSchemas> getResultTypeReference()
   {
-    return new TypeReference<SegmentAndSchemas>() {};
+    return new TypeReference<DataSegmentWithSchemas>() {};
   }
 
   @Nullable
   @Override
-  public SegmentAndSchemas mergeAccumulatedResult(SegmentAndSchemas accumulated, SegmentAndSchemas otherAccumulated)
+  public DataSegmentWithSchemas mergeAccumulatedResult(DataSegmentWithSchemas accumulated, DataSegmentWithSchemas otherAccumulated)
   {
     accumulated.merge(otherAccumulated);
     return accumulated;

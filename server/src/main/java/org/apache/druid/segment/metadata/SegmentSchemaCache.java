@@ -24,9 +24,9 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
@@ -74,13 +74,13 @@ public class SegmentSchemaCache
    * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
    * The mapping is removed when the segment is either removed or marked as finalized.
    */
-  private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
 
   /**
    * If the segment schema is fetched via SMQ, subsequently it is added here.
    * The mapping is removed when the schema information is backfilled in the DB.
    */
-  private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> inTransitSMQResults = new ConcurrentHashMap<>();
 
   private final ServiceEmitter emitter;
 
@@ -97,7 +97,7 @@ public class SegmentSchemaCache
    * These results would get lost after clearing this map.
    * But, it should be fine since the schema could be retrieved if needed using SMQ, also the schema would be available in the next poll.
    */
-  private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
   public void setInitialized()
   {
@@ -150,12 +150,12 @@ public class SegmentSchemaCache
 
   public void addRealtimeSegmentSchema(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
-    realtimeSegmentSchemaMap.put(segmentId, new SegmentSchemaMetadata(new SchemaPayload(rowSignature), numRows));
+    realtimeSegmentSchemaMap.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
   }
 
   public void addInTransitSMQResult(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
-    inTransitSMQResults.put(segmentId, new SegmentSchemaMetadata(new SchemaPayload(rowSignature), numRows));
+    inTransitSMQResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
   }
 
   /**
@@ -181,7 +181,7 @@ public class SegmentSchemaCache
     inTransitSMQPublishedResults.clear();
   }
 
-  public Optional<SegmentSchemaMetadata> getSchemaForSegment(SegmentId segmentId)
+  public Optional<SchemaPayloadPlus> getSchemaForSegment(SegmentId segmentId)
   {
     // We first look up the schema in the realtime map. This ensures that during handoff
     // there is no window where segment schema is missing from the cache.
@@ -219,7 +219,7 @@ public class SegmentSchemaCache
 
       if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {
         return Optional.of(
-            new SegmentSchemaMetadata(
+            new SchemaPayloadPlus(
                 finalizedSegmentSchema.get(schemaId),
                 segmentStats.getNumRows() == null ? 0 : segmentStats.getNumRows()
             )

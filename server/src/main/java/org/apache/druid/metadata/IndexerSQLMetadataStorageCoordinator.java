@@ -49,8 +49,8 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -494,7 +494,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               }
             }
 
-            final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments, minimalSegmentSchemas);
+            final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments,
+                                                                             minimalSegmentSchemas
+            );
             return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
           },
           3,
@@ -528,7 +530,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask);
 
             return SegmentPublishResult.ok(
-                insertSegments(handle, segmentsToInsert, minimalSegmentSchemas, appendAfterReplaceSegmentMetadata, Collections.emptyMap())
+                insertSegments(handle, segmentsToInsert,
+                               minimalSegmentSchemas, appendAfterReplaceSegmentMetadata, Collections.emptyMap())
             );
           },
           3,
@@ -1362,7 +1365,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
 
             insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
-            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert, minimalSegmentSchemas, Collections.emptySet(), newVersionSegmentToParent));
+            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert,
+                                                          minimalSegmentSchemas, Collections.emptySet(), newVersionSegmentToParent));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -2393,17 +2397,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyList();
     }
 
-    return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                   .retrieveSegmentsById(datasource, segmentIds, publishSchema())
-                                   .stream()
-                                   .map(plus ->
-                                            new DataSegmentWithSchemaInformation(
-                                                plus.getDataSegment(),
-                                                plus.getSchemaId(),
-                                                plus.getNumRows()
-                                            )
-                                   )
-                                   .collect(Collectors.toList());
+    if (publishSchema()) {
+      return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                     .retrieveSegmentsWithSchemaById(datasource, segmentIds)
+                                     .stream()
+                                     .map(plus ->
+                                              new DataSegmentWithSchemaInformation(
+                                                  plus.getDataSegment(),
+                                                  plus.getSchemaId(),
+                                                  plus.getNumRows()
+                                              )
+                                     )
+                                     .collect(Collectors.toList());
+    } else {
+      return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                     .retrieveSegmentsById(datasource, segmentIds)
+                                     .stream()
+                                     .map(plus ->
+                                              new DataSegmentWithSchemaInformation(
+                                                  plus.getDataSegment(),
+                                                  plus.getSchemaId(),
+                                                  plus.getNumRows()
+                                              )
+                                     )
+                                     .collect(Collectors.toList());
+    }
   }
 
   private String buildSqlToInsertSegments()

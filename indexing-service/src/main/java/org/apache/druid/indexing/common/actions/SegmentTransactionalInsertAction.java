@@ -33,8 +33,8 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -78,7 +78,9 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, minimalSegmentSchemas);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null,
+                                                minimalSegmentSchemas
+    );
   }
 
   public static SegmentTransactionalInsertAction appendAction(

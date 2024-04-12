@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 
 import java.util.Set;
 

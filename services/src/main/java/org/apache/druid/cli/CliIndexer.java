@@ -172,7 +172,7 @@ public class CliIndexer extends ServerRunnable
                       ));
             }
 
-            JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
+            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
 
             CliPeon.configureIntermediaryData(binder);
             CliPeon.bindTaskConfigAndClients(binder);

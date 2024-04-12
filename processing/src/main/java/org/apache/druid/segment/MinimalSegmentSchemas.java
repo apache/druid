@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

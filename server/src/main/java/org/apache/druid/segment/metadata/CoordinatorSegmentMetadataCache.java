@@ -29,14 +29,15 @@ import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -156,7 +157,15 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     );
   }
 
+  @LifecycleStart
+  @Override
+  public void start() throws InterruptedException
+  {
+    // noop, refresh is started only on leader node
+  }
+
   @LifecycleStop
+  @Override
   public void stop()
   {
     callbackExec.shutdownNow();
@@ -276,7 +285,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
     for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
       for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
-        Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
+        Optional<SchemaPayloadPlus> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
         AvailableSegmentMetadata copied = entry.getValue();
         if (metadata.isPresent()) {
           copied = AvailableSegmentMetadata.from(entry.getValue())
@@ -300,7 +309,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       return null;
     }
     AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataInfo.get(datasource).get(segmentId);
-    Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
+    Optional<SchemaPayloadPlus> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
     if (metadata.isPresent()) {
       availableSegmentMetadata = AvailableSegmentMetadata.from(availableSegmentMetadata)
                                        .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
@@ -405,7 +414,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (SegmentId segmentId : segmentsMap.keySet()) {
-        Optional<SegmentSchemaMetadata> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
+        Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
         if (optionalSchema.isPresent()) {
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
           for (String column : rowSignature.getColumnNames()) {
@@ -476,7 +485,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                       log.makeAlert("Schema update [%s] for unknown segment [%s]", segmentSchema, segmentId).emit();
                     } else {
                       // We know this segment.
-                      Optional<SegmentSchemaMetadata> schemaMetadata = segmentSchemaCache.getSchemaForSegment(segmentId);
+                      Optional<SchemaPayloadPlus> schemaMetadata = segmentSchemaCache.getSchemaForSegment(segmentId);
 
                       Optional<RowSignature> rowSignature =
                           mergeOrCreateRowSignature(

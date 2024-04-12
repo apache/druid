@@ -22,6 +22,8 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,7 +31,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Collections;
 
-public class SegmentSchemaMetadataTest
+public class SchemaPayloadPlusTest
 {
 
   static {
@@ -44,11 +46,11 @@ public class SegmentSchemaMetadataTest
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory("billy", "nilly", null, 20);
     SchemaPayload payload = new SchemaPayload(rowSignature, Collections.singletonMap("twosum", factory));
 
-    SegmentSchemaMetadata metadata = new SegmentSchemaMetadata(payload, 20L);
+    SchemaPayloadPlus metadata = new SchemaPayloadPlus(payload, 20L);
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();
     byte[] bytes = mapper.writeValueAsBytes(metadata);
-    SegmentSchemaMetadata deserialized = mapper.readValue(bytes, SegmentSchemaMetadata.class);
+    SchemaPayloadPlus deserialized = mapper.readValue(bytes, SchemaPayloadPlus.class);
 
     Assert.assertEquals(metadata, deserialized);
   }

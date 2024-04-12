@@ -23,10 +23,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +35,7 @@ import java.util.Map;
 
 public class TaskSegmentSchemaUtil
 {
-  public static SegmentSchemaMetadata getSegmentSchema(File segmentFile, IndexIO indexIO) throws IOException
+  public static SchemaPayloadPlus getSegmentSchema(File segmentFile, IndexIO indexIO) throws IOException
   {
     final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
@@ -48,6 +48,6 @@ public class TaskSegmentSchemaUtil
         aggregatorFactoryMap.put(aggregatorFactory.getName(), aggregatorFactory);
       }
     }
-    return new SegmentSchemaMetadata(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
+    return new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
   }
 }

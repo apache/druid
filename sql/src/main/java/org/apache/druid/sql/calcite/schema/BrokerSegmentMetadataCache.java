@@ -155,9 +155,10 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   @LifecycleStart
+  @Override
   public void start() throws InterruptedException
   {
-    log.info("%s starting cache initialization.", getClass().getSimpleName());
+    log.info("Initializing cache.");
     cacheExec.submit(this::cacheExecLoop);
     if (config.isAwaitInitializationOnStart()) {
       awaitInitialization();
@@ -165,6 +166,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   @LifecycleStop
+  @Override
   public void stop()
   {
     cacheExec.shutdownNow();
@@ -228,7 +230,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       } else {
         dataSourcesNeedingRebuild.clear();
       }
-      log.debug("DatasourcesNeedingRebuild is [%s]", dataSourcesNeedingRebuild);
+      log.debug("DatasourcesNeedingRebuild are [%s]", dataSourcesNeedingRebuild);
     }
 
     // Rebuild the datasources.
@@ -248,7 +250,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   protected void removeSegmentAction(SegmentId segmentId)
   {
-    // noop
+    // noop, no additional action needed when segment is removed.
   }
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)

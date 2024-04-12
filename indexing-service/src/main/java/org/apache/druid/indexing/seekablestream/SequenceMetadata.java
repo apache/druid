@@ -36,8 +36,8 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 
@@ -419,8 +419,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         );
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
-                 ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata, minimalSegmentSchemas)
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata, minimalSegmentSchemas);
+                 ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata,
+                                                                           minimalSegmentSchemas
+        )
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata,
+                                                                 minimalSegmentSchemas
+                 );
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, minimalSegmentSchemas)

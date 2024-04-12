@@ -43,13 +43,13 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
+import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
-import org.apache.druid.segment.column.SegmentAndSchemas;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -192,7 +192,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
     FileUtils.mkdirp(persistDir);
 
-    final SegmentAndSchemas segmentAndSchemas = mergeAndPushSegments(
+    final DataSegmentWithSchemas dataSegmentWithSchemas = mergeAndPushSegments(
         toolbox,
         getDataSchema(),
         getTuningConfig(),
@@ -205,9 +205,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         new PushedSegmentsReport(
             getId(),
             Collections.emptySet(),
-            segmentAndSchemas.getSegments(),
+            dataSegmentWithSchemas.getSegments(),
             new TaskReport.ReportMap(),
-            segmentAndSchemas.getMinimalSegmentSchemas()
+            dataSegmentWithSchemas.getMinimalSegmentSchemas()
         )
     );
 
@@ -252,7 +252,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
    */
   abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int bucketId);
 
-  private SegmentAndSchemas mergeAndPushSegments(
+  private DataSegmentWithSchemas mergeAndPushSegments(
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
@@ -316,13 +316,13 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         pushedSegments.add(segment);
 
         if (centralizedDatasourceSchemaConfig.isEnabled()) {
-          SegmentSchemaMetadata segmentSchemaMetadata =
+          SchemaPayloadPlus schemaPayloadPlus =
               TaskSegmentSchemaUtil.getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO());
           minimalSegmentSchemas.addSchema(
               segment.getId().toString(),
-              fingerprintGenerator.generateFingerprint(segmentSchemaMetadata.getSchemaPayload()),
-              segmentSchemaMetadata.getNumRows(),
-              segmentSchemaMetadata.getSchemaPayload()
+              fingerprintGenerator.generateFingerprint(schemaPayloadPlus.getSchemaPayload()),
+              schemaPayloadPlus.getNumRows(),
+              schemaPayloadPlus.getSchemaPayload()
           );
         }
 
@@ -341,7 +341,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       LOG.info("SegmentSchema for the pushed segments is [%s]", minimalSegmentSchemas);
     }
-    return new SegmentAndSchemas(pushedSegments, minimalSegmentSchemas);
+    return new DataSegmentWithSchemas(pushedSegments, minimalSegmentSchemas);
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(

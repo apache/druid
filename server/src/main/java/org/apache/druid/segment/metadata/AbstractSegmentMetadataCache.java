@@ -115,9 +115,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
 
-
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
-
 
   // For awaitInitialization.
   private final CountDownLatch initialized = new CountDownLatch(1);
@@ -336,6 +334,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       log.info("Metadata refresh stopped.");
     }
   }
+
+  public abstract void start() throws InterruptedException;
+
+  public abstract void stop();
 
   private void setInitializedAndReportInitTime(Stopwatch stopwatch)
   {

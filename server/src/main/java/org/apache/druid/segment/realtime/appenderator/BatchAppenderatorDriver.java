@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;

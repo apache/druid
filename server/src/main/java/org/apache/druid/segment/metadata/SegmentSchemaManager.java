@@ -33,8 +33,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.timeline.SegmentId;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -439,22 +439,22 @@ public class SegmentSchemaManager
   }
 
   /**
-   * Wrapper over {@link SegmentSchemaMetadata} class to include segmentId and fingerprint information.
+   * Wrapper over {@link SchemaPayloadPlus} class to include segmentId and fingerprint information.
    */
   public static class SegmentSchemaMetadataPlus
   {
     private final SegmentId segmentId;
     private final String fingerprint;
-    private final SegmentSchemaMetadata segmentSchemaMetadata;
+    private final SchemaPayloadPlus schemaPayloadPlus;
 
     public SegmentSchemaMetadataPlus(
         SegmentId segmentId,
         String fingerprint,
-        SegmentSchemaMetadata segmentSchemaMetadata
+        SchemaPayloadPlus schemaPayloadPlus
     )
     {
       this.segmentId = segmentId;
-      this.segmentSchemaMetadata = segmentSchemaMetadata;
+      this.schemaPayloadPlus = schemaPayloadPlus;
       this.fingerprint = fingerprint;
     }
 
@@ -463,9 +463,9 @@ public class SegmentSchemaManager
       return segmentId;
     }
 
-    public SegmentSchemaMetadata getSegmentSchemaMetadata()
+    public SchemaPayloadPlus getSegmentSchemaMetadata()
     {
-      return segmentSchemaMetadata;
+      return schemaPayloadPlus;
     }
 
     public String getFingerprint()
@@ -479,7 +479,7 @@ public class SegmentSchemaManager
       return "SegmentSchemaMetadataPlus{" +
              "segmentId='" + segmentId + '\'' +
              ", fingerprint='" + fingerprint + '\'' +
-             ", segmentSchemaMetadata=" + segmentSchemaMetadata +
+             ", segmentSchemaMetadata=" + schemaPayloadPlus +
              '}';
     }
   }

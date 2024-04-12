@@ -158,7 +158,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = "druid.centralizedDatasourceSchema.enabled";
+  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -499,7 +499,7 @@ public class CliCoordinator extends ServerRunnable
       JsonConfigProvider.bind(binder, "druid.coordinator.query.default", DefaultQueryConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.query.retryPolicy", RetryQueryRunnerConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
-      JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
+      JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
 
       MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
       toolChests.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryQueryToolChest.class);

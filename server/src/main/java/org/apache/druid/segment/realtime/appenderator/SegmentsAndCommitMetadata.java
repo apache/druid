@@ -20,8 +20,8 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;

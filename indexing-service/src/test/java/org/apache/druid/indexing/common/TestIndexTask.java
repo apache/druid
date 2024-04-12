@@ -34,7 +34,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.timeline.DataSegment;
 

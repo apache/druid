@@ -20,7 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;

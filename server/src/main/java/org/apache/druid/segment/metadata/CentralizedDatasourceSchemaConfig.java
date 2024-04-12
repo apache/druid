@@ -27,6 +27,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class CentralizedDatasourceSchemaConfig
 {
+  public static final String PROPERTY_PREFIX = "druid.centralizedDatasourceSchema";
+
   @JsonProperty
   private boolean enabled = false;
   @JsonProperty

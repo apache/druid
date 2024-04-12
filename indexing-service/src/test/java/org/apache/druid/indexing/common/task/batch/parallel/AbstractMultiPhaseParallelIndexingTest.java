@@ -48,9 +48,9 @@ import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -108,7 +108,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return useInputFormatApi;
   }
 
-  SegmentAndSchemas runTestTask(
+  DataSegmentWithSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -137,7 +137,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     );
   }
 
-  SegmentAndSchemas runTestTask(
+  DataSegmentWithSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -176,7 +176,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
-  SegmentAndSchemas runTask(Task task, TaskState expectedTaskStatus)
+  DataSegmentWithSchemas runTask(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
     return getIndexingServiceClient().getSegmentAndSchemas(task);

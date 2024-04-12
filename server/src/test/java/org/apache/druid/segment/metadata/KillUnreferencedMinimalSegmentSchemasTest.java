@@ -28,11 +28,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-public class KillUnreferencedSegmentSchemasTest
+public class KillUnreferencedMinimalSegmentSchemasTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
@@ -89,7 +89,7 @@ public class KillUnreferencedSegmentSchemasTest
     RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-    SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) 1);
+    SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, (long) 1);
 
     DataSegment segment1 = new DataSegment(
         "foo",

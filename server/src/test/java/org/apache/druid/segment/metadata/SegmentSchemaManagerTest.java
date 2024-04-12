@@ -29,11 +29,11 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Before;
@@ -111,7 +111,7 @@ public class SegmentSchemaManagerTest
       aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
-      SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) randomNum);
+      SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, (long) randomNum);
       SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
           new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
@@ -143,8 +143,8 @@ public class SegmentSchemaManagerTest
         100
     );
 
-    SegmentSchemaMetadata schemaMetadata =
-        new SegmentSchemaMetadata(
+    SchemaPayloadPlus schemaMetadata =
+        new SchemaPayloadPlus(
             schemaPayloadIntegerPair.lhs,
             500L
         );
@@ -192,7 +192,7 @@ public class SegmentSchemaManagerTest
       aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
-      SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) i);
+      SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, (long) i);
       SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
           new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),

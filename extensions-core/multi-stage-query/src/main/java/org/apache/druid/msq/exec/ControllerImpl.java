@@ -197,13 +197,13 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SegmentAndSchemas;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -1494,11 +1494,11 @@ public class ControllerImpl implements Controller
    * Publish the list of segments. Additionally, if {@link DataSourceMSQDestination#isReplaceTimeChunks()},
    * also drop all other segments within the replacement intervals.
    */
-  private void publishAllSegments(final SegmentAndSchemas segmentAndSchemas) throws IOException
+  private void publishAllSegments(final DataSegmentWithSchemas dataSegmentWithSchemas) throws IOException
   {
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segmentAndSchemas.getSegments());
+    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(dataSegmentWithSchemas.getSegments());
     int numTombstones = 0;
     final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
         QueryContext.of(task.getQuerySpec().getQuery().getContext()),
@@ -1506,7 +1506,7 @@ public class ControllerImpl implements Controller
     );
 
     if (destination.isReplaceTimeChunks()) {
-      final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segmentAndSchemas.getSegments(), "segments"));
+      final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(dataSegmentWithSchemas.getSegments(), "segments"));
 
       if (!intervalsToDrop.isEmpty()) {
         TombstoneHelper tombstoneHelper = new TombstoneHelper(context.taskActionClient());
@@ -1550,24 +1550,24 @@ public class ControllerImpl implements Controller
         }
         performSegmentPublish(
             context.taskActionClient(),
-            createOverwriteAction(taskLockType, segmentsWithTombstones, segmentAndSchemas.getMinimalSegmentSchemas())
+            createOverwriteAction(taskLockType, segmentsWithTombstones, dataSegmentWithSchemas.getMinimalSegmentSchemas())
         );
       }
-    } else if (!segmentAndSchemas.getSegments().isEmpty()) {
+    } else if (!dataSegmentWithSchemas.getSegments().isEmpty()) {
       if (MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context())) {
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
             task.getId(),
             task.getDataSource(),
-            segmentAndSchemas.getSegments(),
+            dataSegmentWithSchemas.getSegments(),
             true
         );
       }
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
-          createAppendAction(segmentAndSchemas.getSegments(), taskLockType, segmentAndSchemas.getMinimalSegmentSchemas())
+          createAppendAction(dataSegmentWithSchemas.getSegments(), taskLockType, dataSegmentWithSchemas.getMinimalSegmentSchemas())
       );
     }
 
@@ -1755,9 +1755,9 @@ public class ControllerImpl implements Controller
 
       //noinspection unchecked
       @SuppressWarnings("unchecked")
-      SegmentAndSchemas segmentAndSchemas = (SegmentAndSchemas) queryKernel.getResultObjectForStage(finalStageId);
+      DataSegmentWithSchemas dataSegmentWithSchemas = (DataSegmentWithSchemas) queryKernel.getResultObjectForStage(finalStageId);
 
-      Set<DataSegment> segments = segmentAndSchemas.getSegments();
+      Set<DataSegment> segments = dataSegmentWithSchemas.getSegments();
       boolean storeCompactionState = QueryContext.of(task.getQuerySpec().getQuery().getContext())
                                                  .getBoolean(
                                                      Tasks.STORE_COMPACTION_STATE_KEY,
@@ -1791,11 +1791,11 @@ public class ControllerImpl implements Controller
       log.info(
           "Query [%s] publishing %d segments and [%d] schemas.",
           queryDef.getQueryId(),
-          segmentAndSchemas.getSegments().size(),
-          segmentAndSchemas.getMinimalSegmentSchemas().size()
+          dataSegmentWithSchemas.getSegments().size(),
+          dataSegmentWithSchemas.getMinimalSegmentSchemas().size()
       );
-      segmentAndSchemas = new SegmentAndSchemas(segments, segmentAndSchemas.getMinimalSegmentSchemas());
-      publishAllSegments(segmentAndSchemas);
+      dataSegmentWithSchemas = new DataSegmentWithSchemas(segments, dataSegmentWithSchemas.getMinimalSegmentSchemas());
+      publishAllSegments(dataSegmentWithSchemas);
     }
   }
 

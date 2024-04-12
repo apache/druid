@@ -27,9 +27,9 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.SegmentSchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.timeline.SegmentId;
 
@@ -111,7 +111,7 @@ public class SegmentSchemaBackFillQueue
   )
   {
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
-    SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, numRows);
+    SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, numRows);
     queue.add(
         new SegmentSchemaMetadataPlus(
             segmentId,

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,19 +29,19 @@ import java.util.Set;
 /**
  * Encapsulates segment metadata and corresponding schema.
  */
-public class SegmentAndSchemas
+public class DataSegmentWithSchemas
 {
   private final Set<DataSegment> segments;
   private final MinimalSegmentSchemas minimalSegmentSchemas;
 
-  public SegmentAndSchemas()
+  public DataSegmentWithSchemas()
   {
     this.segments = new HashSet<>();
     this.minimalSegmentSchemas = new MinimalSegmentSchemas();
   }
 
   @JsonCreator
-  public SegmentAndSchemas(
+  public DataSegmentWithSchemas(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("minimalSegmentSchemas") MinimalSegmentSchemas minimalSegmentSchemas
   )
@@ -62,7 +62,7 @@ public class SegmentAndSchemas
     return minimalSegmentSchemas;
   }
 
-  public SegmentAndSchemas merge(SegmentAndSchemas other)
+  public DataSegmentWithSchemas merge(DataSegmentWithSchemas other)
   {
     segments.addAll(other.getSegments());
     minimalSegmentSchemas.merge(other.getMinimalSegmentSchemas());

@@ -31,8 +31,8 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 

@@ -244,8 +244,7 @@ public class SqlSegmentsMetadataQuery
 
   public List<DataSegmentPlus> retrieveSegmentsById(
       String datasource,
-      Set<String> segmentIds,
-      boolean includeSchemaInfo
+      Set<String> segmentIds
   )
   {
     final List<List<String>> partitionedSegmentIds
@@ -253,7 +252,22 @@ public class SqlSegmentsMetadataQuery
 
     final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
     for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, includeSchemaInfo));
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, false));
+    }
+    return fetchedSegments;
+  }
+
+  public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
+      String datasource,
+      Set<String> segmentIds
+  )
+  {
+    final List<List<String>> partitionedSegmentIds
+        = Lists.partition(new ArrayList<>(segmentIds), 100);
+
+    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    for (List<String> partition : partitionedSegmentIds) {
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, true));
     }
     return fetchedSegments;
   }

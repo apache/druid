@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -103,11 +103,11 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(jsonMapper);
     SchemaPayload payload1 = new SchemaPayload(
         RowSignature.builder().add("c1", ColumnType.FLOAT).build());
-    SegmentSchemaMetadata schemaMetadata1 = new SegmentSchemaMetadata(payload1, 20L);
+    SchemaPayloadPlus schemaMetadata1 = new SchemaPayloadPlus(payload1, 20L);
     list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), fingerprintGenerator.generateFingerprint(payload1), schemaMetadata1));
     SchemaPayload payload2 = new SchemaPayload(
         RowSignature.builder().add("c2", ColumnType.FLOAT).build());
-    SegmentSchemaMetadata schemaMetadata2 = new SegmentSchemaMetadata(payload2, 40L);
+    SchemaPayloadPlus schemaMetadata2 = new SchemaPayloadPlus(payload2, 40L);
     list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list);

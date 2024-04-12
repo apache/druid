@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment;
 
 import org.apache.druid.timeline.DataSegment;
 
@@ -26,21 +26,21 @@ import javax.annotation.Nullable;
 /**
  * Wrapper class for segment and schema.
  */
-public class SegmentAndSchema
+public class DataSegmentWithSchema
 {
   @Nullable
   private final DataSegment dataSegment;
 
   @Nullable
-  private final SegmentSchemaMetadata segmentSchemaMetadata;
+  private final SchemaPayloadPlus schemaPayloadPlus;
 
-  public SegmentAndSchema(
+  public DataSegmentWithSchema(
       @Nullable DataSegment dataSegment,
-      @Nullable SegmentSchemaMetadata segmentSchemaMetadata
+      @Nullable SchemaPayloadPlus schemaPayloadPlus
   )
   {
     this.dataSegment = dataSegment;
-    this.segmentSchemaMetadata = segmentSchemaMetadata;
+    this.schemaPayloadPlus = schemaPayloadPlus;
   }
 
   @Nullable
@@ -50,8 +50,8 @@ public class SegmentAndSchema
   }
 
   @Nullable
-  public SegmentSchemaMetadata getSegmentSchemaMetadata()
+  public SchemaPayloadPlus getSegmentSchemaMetadata()
   {
-    return segmentSchemaMetadata;
+    return schemaPayloadPlus;
   }
 }

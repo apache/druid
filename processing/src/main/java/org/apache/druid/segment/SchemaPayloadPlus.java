@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,13 +27,13 @@ import java.util.Objects;
 /**
  * Wrapper over {@link SchemaPayload} to include {@code numRows} information.
  */
-public class SegmentSchemaMetadata
+public class SchemaPayloadPlus
 {
   private final SchemaPayload schemaPayload;
   private final Long numRows;
 
   @JsonCreator
-  public SegmentSchemaMetadata(
+  public SchemaPayloadPlus(
       @JsonProperty("schemaPayload") SchemaPayload schemaPayload,
       @JsonProperty("numRows") Long numRows
   )
@@ -63,7 +63,7 @@ public class SegmentSchemaMetadata
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SegmentSchemaMetadata that = (SegmentSchemaMetadata) o;
+    SchemaPayloadPlus that = (SchemaPayloadPlus) o;
     return Objects.equals(schemaPayload, that.schemaPayload)
            && Objects.equals(numRows, that.numRows);
   }

@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
-import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
