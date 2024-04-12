@@ -89,6 +89,14 @@ An example output is shown below:
       "errorMsg": null
     },
     "type": "ingestionStatsAndErrors"
+  },
+  "taskContext": {
+    "type": "taskContext",
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "forceTimeChunkLock": true,
+      "useLineageBasedSegmentAllocation": true
+    }
   }
 }
 ```

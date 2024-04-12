@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
@@ -96,7 +97,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
-      final ObjectMapper mapper
+      final ObjectMapper mapper,
+      final TaskContextEnricher taskContextEnricher
   )
   {
     this.supervisorManager = supervisorManager;
@@ -128,7 +130,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
               taskActionClientFactory,
               taskLockbox,
               emitter,
-              mapper
+              mapper,
+              taskContextEnricher
           );
 
           // Sensible order to start stuff:
