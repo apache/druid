@@ -29,7 +29,7 @@ jobs:
       #            eval "echo \"$(<~/repo/.circleci/settings.xml)\"" 2> /dev/null 1>~/.m2/settings.xml
       - run:
           name: Build
-          command: mvn clean package -DskipTests -Pdist
+          command: mvn clean package -DskipTests #-Pdist
       #      - run:
       #          name: Test
       #          command: mvn test
