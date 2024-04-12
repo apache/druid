@@ -107,6 +107,17 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
 
 ### Timeseries query
 
+#### Druid SQL
+
+```SQL
+SELECT 
+  DATE_TRUNC('day', __time),
+  VARIANCE("index_var") AS index_var
+FROM "testing"
+WHERE TIME_IN_INTERVAL(__time, '2013-03-01/2016-03-20')
+GROUP BY 1
+```
+
 #### Native Query
 ```json
 {
@@ -141,6 +152,10 @@ GROUP BY
 ```
 
 ### TopN query
+
+#### Druid SQL
+
+There is no equivalent SQL for this query.
 
 #### Native Query
 
@@ -178,6 +193,17 @@ There is no equivalent SQL for this query.
 ```
 
 ### GroupBy query
+
+#### Druid SQL
+
+```SQL
+SELECT
+  alias,
+  VARIANCE("index") AS index_var
+FROM "testing"
+WHERE TIME_IN_INTERVAL(__time, '2016-03-06/2016-03-07')
+GROUP BY alias
+```
 
 #### Native Query
 
