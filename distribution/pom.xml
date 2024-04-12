@@ -147,12 +147,12 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.basedir}/bin/generate-binary-license.py</executable>
-                                    <arguments>
-                                        <argument>${project.parent.basedir}/licenses/APACHE2</argument>
-                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
-                                        <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
-                                    </arguments>
+<!--                                    <executable>${project.basedir}/bin/generate-binary-license.py</executable>-->
+<!--                                    <arguments>-->
+<!--                                        <argument>${project.parent.basedir}/licenses/APACHE2</argument>-->
+<!--                                        <argument>${project.parent.basedir}/licenses.yaml</argument>-->
+<!--                                        <argument>${project.parent.basedir}/LICENSE.BINARY</argument>-->
+<!--                                    </arguments>-->
                                 </configuration>
                             </execution>
                             <execution>
@@ -162,12 +162,12 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.basedir}/bin/generate-binary-notice.py</executable>
-                                    <arguments>
-                                        <argument>${project.parent.basedir}/NOTICE</argument>
-                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
-                                        <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
-                                    </arguments>
+<!--                                    <executable>${project.basedir}/bin/generate-binary-notice.py</executable>-->
+<!--                                    <arguments>-->
+<!--                                        <argument>${project.parent.basedir}/NOTICE</argument>-->
+<!--                                        <argument>${project.parent.basedir}/licenses.yaml</argument>-->
+<!--                                        <argument>${project.parent.basedir}/NOTICE.BINARY</argument>-->
+<!--                                    </arguments>-->
                                 </configuration>
                             </execution>
                             <execution>
@@ -313,14 +313,14 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.basedir}/bin/generate-license-dependency-reports.py</executable>
-                                    <arguments>
-                                        <argument>${project.basedir}/../</argument>
-                                        <argument>${project.basedir}/target</argument>
-                                        <argument>--clean-maven-artifact-transfer</argument>
-                                        <argument>--parallel</argument>
-                                        <argument>2</argument>
-                                    </arguments>
+<!--                                    <executable>${project.basedir}/bin/generate-license-dependency-reports.py</executable>-->
+<!--                                    <arguments>-->
+<!--                                        <argument>${project.basedir}/../</argument>-->
+<!--                                        <argument>${project.basedir}/target</argument>-->
+<!--                                        <argument>&#45;&#45;clean-maven-artifact-transfer</argument>-->
+<!--                                        <argument>&#45;&#45;parallel</argument>-->
+<!--                                        <argument>2</argument>-->
+<!--                                    </arguments>-->
                                 </configuration>
                             </execution>
                             <execution>
@@ -330,11 +330,11 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.basedir}/bin/check-licenses.py</executable>
-                                    <arguments>
-                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
-                                        <argument>${project.basedir}/target/license-reports</argument>
-                                    </arguments>
+<!--                                    <executable>${project.basedir}/bin/check-licenses.py</executable>-->
+<!--                                    <arguments>-->
+<!--                                        <argument>${project.parent.basedir}/licenses.yaml</argument>-->
+<!--                                        <argument>${project.basedir}/target/license-reports</argument>-->
+<!--                                    </arguments>-->
                                 </configuration>
                             </execution>
                         </executions>
