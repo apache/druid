@@ -41,7 +41,7 @@ public class DecoupledPlanningCalciteUnionQueryTest extends CalciteUnionQueryTes
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    PlannerComponentSupplier componentSupplier = this;
+    PlannerComponentSupplier componentSupplier = basePlannerComponentSupplier;
     CalciteTestConfig testConfig = new CalciteTestConfig(CONTEXT_OVERRIDES)
     {
       @Override

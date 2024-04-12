@@ -114,6 +114,7 @@ import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.entity.PageInformation;
+import org.apache.druid.msq.test.MSQTestBase.MSQBaseComponentSupplier;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -179,6 +180,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -204,6 +206,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -252,6 +255,7 @@ import static org.mockito.Mockito.mock;
  * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
+@SqlTestFramework.SqlTestFrameWorkModule(MSQBaseComponentSupplier.class)
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
@@ -339,36 +343,44 @@ public class MSQTestBase extends BaseCalciteQueryTest
       )
   );
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
+    public MSQBaseComponentSupplier(File temporaryFolder)
+    {
+      super(temporaryFolder);
+    }
 
-    builder
-        .addModule(new HllSketchModule())
-        .addModule(new DruidModule()
-        {
-          // Small subset of MsqSqlModule
-          @Override
-          public void configure(Binder binder)
-          {
-            // We want this module to bring InputSourceModule along for the ride.
-            binder.install(new InputSourceModule());
-            binder.install(new NestedDataModule());
-            NestedDataModule.registerHandlersAndSerde();
-            SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-            SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-            SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-            SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-          }
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
 
-          @Override
-          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+      builder
+          .addModule(new HllSketchModule())
+          .addModule(new DruidModule()
           {
-            // We want this module to bring input sources along for the ride.
-            return new InputSourceModule().getJacksonModules();
-          }
-        });
+            // Small subset of MsqSqlModule
+            @Override
+            public void configure(Binder binder)
+            {
+              // We want this module to bring InputSourceModule along for the ride.
+              binder.install(new InputSourceModule());
+              binder.install(new NestedDataModule());
+              NestedDataModule.registerHandlersAndSerde();
+              SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+            }
+
+            @Override
+            public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+            {
+              // We want this module to bring input sources along for the ride.
+              return new InputSourceModule().getJacksonModules();
+            }
+          });
+    }
   }
 
   @AfterEach

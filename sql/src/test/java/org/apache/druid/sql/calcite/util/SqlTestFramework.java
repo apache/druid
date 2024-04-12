@@ -34,6 +34,7 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -69,6 +70,10 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -118,6 +123,16 @@ import java.util.Set;
  */
 public class SqlTestFramework
 {
+  /**
+   * Declares which {@link QueryComponentSupplier} must be used for the class.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.TYPE})
+  public @interface SqlTestFrameWorkModule
+  {
+    Class<? extends QueryComponentSupplier> value();
+  }
+
   /**
    * Interface to provide various framework components. Extend to customize,
    * use {@link StandardComponentSupplier} for the "standard" components.
@@ -215,6 +230,18 @@ public class SqlTestFramework
     public void configureGuice(DruidInjectorBuilder builder)
     {
     }
+
+
+    public File newTempFolder()
+    {
+      return newTempFolder(null);
+    }
+
+    public File newTempFolder(String prefix)
+    {
+      return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), prefix);
+    }
+
 
     @Override
     public QueryRunnerFactoryConglomerate createCongolmerate(
