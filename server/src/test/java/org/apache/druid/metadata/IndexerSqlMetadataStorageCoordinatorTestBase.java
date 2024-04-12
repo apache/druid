@@ -66,7 +66,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class IndexerSqlMetadataStorageCoordinatorCommon
+public class IndexerSqlMetadataStorageCoordinatorTestBase
 {
   protected static final int MAX_SQL_MEATADATA_RETRY_FOR_TEST = 2;
 

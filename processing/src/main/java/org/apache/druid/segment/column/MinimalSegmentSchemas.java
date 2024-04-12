@@ -32,42 +32,42 @@ import java.util.Objects;
 public class MinimalSegmentSchemas
 {
   // Mapping of segmentId to segment level information like schema fingerprint and numRows.
-  private final Map<String, SegmentStats> segmentStatsMap;
+  private final Map<String, SegmentStats> segmentIdToMetadataMap;
 
   // Mapping of schema fingerprint to payload.
-  private final Map<String, SchemaPayload> schemaPayloadMap;
+  private final Map<String, SchemaPayload> schemaFingerprintToPayloadMap;
 
   @JsonCreator
   public MinimalSegmentSchemas(
-      @JsonProperty("segmentStatsMap") Map<String, SegmentStats> segmentStatsMap,
-      @JsonProperty("schemaPayloadMap") Map<String, SchemaPayload> schemaPayloadMap
+      @JsonProperty("segmentIdToMetadataMap") Map<String, SegmentStats> segmentIdToMetadataMap,
+      @JsonProperty("schemaFingerprintToPayloadMap") Map<String, SchemaPayload> schemaFingerprintToPayloadMap
   )
   {
-    this.segmentStatsMap = segmentStatsMap;
-    this.schemaPayloadMap = schemaPayloadMap;
+    this.segmentIdToMetadataMap = segmentIdToMetadataMap;
+    this.schemaFingerprintToPayloadMap = schemaFingerprintToPayloadMap;
   }
 
   public MinimalSegmentSchemas()
   {
-    this.segmentStatsMap = new HashMap<>();
-    this.schemaPayloadMap = new HashMap<>();
+    this.segmentIdToMetadataMap = new HashMap<>();
+    this.schemaFingerprintToPayloadMap = new HashMap<>();
   }
 
   @JsonProperty
-  public Map<String, SegmentStats> getSegmentStatsMap()
+  public Map<String, SegmentStats> getSegmentIdToMetadataMap()
   {
-    return segmentStatsMap;
+    return segmentIdToMetadataMap;
   }
 
   @JsonProperty
-  public Map<String, SchemaPayload> getSchemaPayloadMap()
+  public Map<String, SchemaPayload> getSchemaFingerprintToPayloadMap()
   {
-    return schemaPayloadMap;
+    return schemaFingerprintToPayloadMap;
   }
 
   public boolean isNonEmpty()
   {
-    return segmentStatsMap.size() > 0;
+    return segmentIdToMetadataMap.size() > 0;
   }
 
   /**
@@ -80,8 +80,8 @@ public class MinimalSegmentSchemas
       SchemaPayload schemaPayload
   )
   {
-    segmentStatsMap.put(segmentId, new SegmentStats(numRows, fingerprint));
-    schemaPayloadMap.put(fingerprint, schemaPayload);
+    segmentIdToMetadataMap.put(segmentId, new SegmentStats(numRows, fingerprint));
+    schemaFingerprintToPayloadMap.put(fingerprint, schemaPayload);
   }
 
   /**
@@ -89,13 +89,13 @@ public class MinimalSegmentSchemas
    */
   public void merge(MinimalSegmentSchemas other)
   {
-    this.segmentStatsMap.putAll(other.getSegmentStatsMap());
-    this.schemaPayloadMap.putAll(other.getSchemaPayloadMap());
+    this.segmentIdToMetadataMap.putAll(other.getSegmentIdToMetadataMap());
+    this.schemaFingerprintToPayloadMap.putAll(other.getSchemaFingerprintToPayloadMap());
   }
 
   public int size()
   {
-    return schemaPayloadMap.size();
+    return schemaFingerprintToPayloadMap.size();
   }
 
   @Override
@@ -108,22 +108,22 @@ public class MinimalSegmentSchemas
       return false;
     }
     MinimalSegmentSchemas that = (MinimalSegmentSchemas) o;
-    return Objects.equals(segmentStatsMap, that.segmentStatsMap)
-           && Objects.equals(schemaPayloadMap, that.schemaPayloadMap);
+    return Objects.equals(segmentIdToMetadataMap, that.segmentIdToMetadataMap)
+           && Objects.equals(schemaFingerprintToPayloadMap, that.schemaFingerprintToPayloadMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentStatsMap, schemaPayloadMap);
+    return Objects.hash(segmentIdToMetadataMap, schemaFingerprintToPayloadMap);
   }
 
   @Override
   public String toString()
   {
     return "MinimalSegmentSchemas{" +
-           "segmentStatsMap=" + segmentStatsMap +
-           ", schemaPayloadMap=" + schemaPayloadMap +
+           "segmentIdToMetadataMap=" + segmentIdToMetadataMap +
+           ", schemaFingerprintToPayloadMap=" + schemaFingerprintToPayloadMap +
            '}';
   }
 
@@ -133,16 +133,16 @@ public class MinimalSegmentSchemas
   public static class SegmentStats
   {
     final Long numRows;
-    final String fingerprint;
+    final String schemaFingerprint;
 
     @JsonCreator
     public SegmentStats(
         @JsonProperty("numRows") Long numRows,
-        @JsonProperty("fingerprint") String fingerprint
+        @JsonProperty("fingerprint") String schemaFingerprint
     )
     {
       this.numRows = numRows;
-      this.fingerprint = fingerprint;
+      this.schemaFingerprint = schemaFingerprint;
     }
 
     @JsonProperty
@@ -152,9 +152,9 @@ public class MinimalSegmentSchemas
     }
 
     @JsonProperty
-    public String getFingerprint()
+    public String getSchemaFingerprint()
     {
-      return fingerprint;
+      return schemaFingerprint;
     }
 
     @Override
@@ -167,13 +167,13 @@ public class MinimalSegmentSchemas
         return false;
       }
       SegmentStats that = (SegmentStats) o;
-      return Objects.equals(numRows, that.numRows) && Objects.equals(fingerprint, that.fingerprint);
+      return Objects.equals(numRows, that.numRows) && Objects.equals(schemaFingerprint, that.schemaFingerprint);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(numRows, fingerprint);
+      return Objects.hash(numRows, schemaFingerprint);
     }
 
     @Override
@@ -181,7 +181,7 @@ public class MinimalSegmentSchemas
     {
       return "SegmentStats{" +
              "numRows=" + numRows +
-             ", fingerprint='" + fingerprint + '\'' +
+             ", fingerprint='" + schemaFingerprint + '\'' +
              '}';
     }
   }

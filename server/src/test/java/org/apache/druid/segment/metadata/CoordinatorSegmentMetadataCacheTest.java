@@ -99,7 +99,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheCommon
+public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheTestBase
 {
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();

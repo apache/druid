@@ -39,7 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheCommon
+public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCacheTestBase
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());

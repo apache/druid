@@ -306,8 +306,8 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(1, segments.size());
     Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
@@ -317,7 +317,7 @@ public class IndexTaskTest extends IngestionTestBase
                     .add("valMet", ColumnType.LONG)
                     .build(),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -327,7 +327,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         Collections.singletonMap("valMet", new LongSumAggregatorFactory("valMet", "valMet")),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -386,8 +386,8 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
 
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
@@ -396,7 +396,7 @@ public class IndexTaskTest extends IngestionTestBase
                     .add("valMet", ColumnType.LONG)
                     .build(),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -406,7 +406,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         Collections.singletonMap("valMet", new LongSumAggregatorFactory("valMet", "valMet")),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -460,8 +460,8 @@ public class IndexTaskTest extends IngestionTestBase
         ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
     );
 
-    Assert.assertEquals(2, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(2, segmentAndSchema.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
@@ -470,7 +470,7 @@ public class IndexTaskTest extends IngestionTestBase
                     .add("val", ColumnType.LONG)
                     .build(),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -480,7 +480,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val")),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -617,8 +617,8 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentStatsMap().size());
-    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(1, segmentAndSchema.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
@@ -633,7 +633,7 @@ public class IndexTaskTest extends IngestionTestBase
                     .add("val", ColumnType.LONG)
                     .build(),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()
@@ -643,7 +643,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val")),
         segmentAndSchema.getMinimalSegmentSchemas()
-                        .getSchemaPayloadMap()
+                        .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
                         .findAny()

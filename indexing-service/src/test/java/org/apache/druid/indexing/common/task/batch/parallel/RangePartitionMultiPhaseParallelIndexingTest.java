@@ -280,10 +280,10 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     final Set<DataSegment> publishedSegments = publishedSegmentAndSchemas.getSegments();
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
-      Assert.assertEquals(1, publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
-      Assert.assertEquals(publishedSegments.size(), publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+      Assert.assertEquals(1, publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
+      Assert.assertEquals(publishedSegments.size(), publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
       for (DataSegment segment : publishedSegments) {
-        Assert.assertTrue(publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+        Assert.assertTrue(publishedSegmentAndSchemas.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().containsKey(segment.getId().toString()));
       }
     }
 
@@ -322,11 +322,11 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
       for (DataSegment segment : publishedSegmentsAfterReplace) {
         if (!segment.isTombstone()) {
-          Assert.assertTrue(publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSegmentStatsMap().containsKey(segment.getId().toString()));
+          Assert.assertTrue(publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().containsKey(segment.getId().toString()));
         }
       }
-      Assert.assertEquals(10, publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSegmentStatsMap().size());
-      Assert.assertEquals(1, publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSchemaPayloadMap().size());
+      Assert.assertEquals(10, publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
+      Assert.assertEquals(1, publishedSegmentAndSchemasAfterReplace.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
     }
   }
 

@@ -33,7 +33,7 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 
-public class SqlSegmentsMetadataManagerCommon
+public class SqlSegmentsMetadataManagerTestBase
 {
   protected SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   protected SQLMetadataSegmentPublisher publisher;

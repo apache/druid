@@ -28,6 +28,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -39,12 +40,13 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
   private final Set<DataSegment> segments;
 
+  @Nullable
   private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   @JsonCreator
   public SegmentInsertAction(
       @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("minimalSegmentSchemas") MinimalSegmentSchemas minimalSegmentSchemas
+      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
@@ -58,6 +60,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   }
 
   @JsonProperty
+  @Nullable
   public MinimalSegmentSchemas getMinimalSegmentSchemas()
   {
     return minimalSegmentSchemas;

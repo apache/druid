@@ -191,6 +191,9 @@ public class MetadataResource
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
     }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
     catch (Exception e) {
       log.error(e, "Error while fetching used segment information.");
       return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();

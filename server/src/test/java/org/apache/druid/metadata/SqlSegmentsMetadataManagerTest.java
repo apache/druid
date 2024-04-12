@@ -59,7 +59,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerCommon
+public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTestBase
 {
   private static class DS
   {

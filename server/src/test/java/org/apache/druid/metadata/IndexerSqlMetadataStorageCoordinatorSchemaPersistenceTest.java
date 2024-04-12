@@ -58,7 +58,8 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends IndexerSqlMetadataStorageCoordinatorCommon
+public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
+    IndexerSqlMetadataStorageCoordinatorTestBase
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());

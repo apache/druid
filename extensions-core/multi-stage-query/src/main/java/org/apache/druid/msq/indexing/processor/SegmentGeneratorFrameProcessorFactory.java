@@ -80,6 +80,7 @@ public class SegmentGeneratorFrameProcessorFactory
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
+  @Nullable
   private final Boolean publishSchema;
 
   @JsonCreator
@@ -87,7 +88,7 @@ public class SegmentGeneratorFrameProcessorFactory
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
       @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig,
-      @JsonProperty("publishSchema") final Boolean publishSchema
+      @JsonProperty("publishSchema") @Nullable final Boolean publishSchema
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -115,6 +116,7 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @JsonProperty
+  @Nullable
   public Boolean getPublishSchema()
   {
     return publishSchema;

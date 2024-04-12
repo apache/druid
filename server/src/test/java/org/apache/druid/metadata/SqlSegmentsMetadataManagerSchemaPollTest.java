@@ -44,7 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadataManagerCommon
+public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadataManagerTestBase
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());

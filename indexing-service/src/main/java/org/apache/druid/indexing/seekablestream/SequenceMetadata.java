@@ -220,9 +220,9 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       }
 
       if (runner.isEndOffsetExclusive()) {
-        ret = ret && recordOffset.compareTo(partitionEndOffset) < 0;
+        ret &= recordOffset.compareTo(partitionEndOffset) < 0;
       } else {
-        ret = ret && recordOffset.compareTo(partitionEndOffset) <= 0;
+        ret &= recordOffset.compareTo(partitionEndOffset) <= 0;
       }
 
       return ret;

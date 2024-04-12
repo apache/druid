@@ -197,7 +197,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, MinimalSegmentSchemas minimalSegmentSchemas) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable MinimalSegmentSchemas minimalSegmentSchemas) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -307,7 +307,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   ) throws IOException;
 
   /**
@@ -369,7 +369,7 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
       Set<ReplaceTaskLock> locksHeldByReplaceTask,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   );
 
   /**

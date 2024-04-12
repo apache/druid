@@ -256,8 +256,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
   {
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -556,10 +555,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       }
       nonTombstoneSegments++;
       Assert.assertTrue(segmentAndSchemas.getMinimalSegmentSchemas()
-                                         .getSegmentStatsMap()
+                                         .getSegmentIdToMetadataMap()
                                          .containsKey(segment.getId().toString()));
     }
-    Assert.assertEquals(nonTombstoneSegments, segmentAndSchemas.getMinimalSegmentSchemas().getSegmentStatsMap().size());
+    Assert.assertEquals(nonTombstoneSegments, segmentAndSchemas.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
   }
 
   public TaskReport.ReportMap getReports() throws IOException

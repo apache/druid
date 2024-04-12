@@ -80,7 +80,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
+public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataCacheTestBase
 {
   private static final String DATASOURCE = "datasource";
   static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");

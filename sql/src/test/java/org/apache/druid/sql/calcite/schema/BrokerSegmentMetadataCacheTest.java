@@ -101,7 +101,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCommon
+public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTestBase
 {
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.

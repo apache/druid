@@ -86,7 +86,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMetadataCacheCommon
+public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMetadataCacheTestBase
 {
   private static final String DATASOURCE = "datasource";
   static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
