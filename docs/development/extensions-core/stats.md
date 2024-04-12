@@ -137,20 +137,6 @@ GROUP BY 1
 }
 ```
 
-#### Druid SQL
-
-```SQL
-SELECT 
-  DATE_TRUNC('day', __time),
-  VARIANCE("index_var")
-FROM 
-  "testing"
-WHERE
-  TIME_IN_INTERVAL(__time, '2013-03-01T00:00:00.000/2016-03-20T00:00:00.000')
-GROUP BY
-  DATE_TRUNC('day', __time)
-```
-
 ### TopN query
 
 #### Druid SQL
@@ -184,12 +170,6 @@ There is no equivalent SQL for this query.
     "2016-03-06/2016-03-07"
   ]
 }
-```
-
-#### Druid SQL
-
-```SQL
-There is no equivalent SQL for this query.
 ```
 
 ### GroupBy query
@@ -231,15 +211,4 @@ GROUP BY alias
     "2016-03-06/2016-03-07"
   ]
 }
-```
-
-#### Druid SQL
-
-```SQL
-SELECT
-  alias,
-  VARIANCE("index") AS index_var
-FROM "testing"
-WHERE TIME_IN_INTERVAL(__time, '2016-03-06T00:00:00/2016-03-06T23:59:59')
-GROUP BY alias
 ```
