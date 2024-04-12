@@ -10,11 +10,11 @@ jobs:
       - checkout
       - setup_remote_docker:
           docker_layer_caching: true
-            - restore_cache:
-                keys:
-                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
-                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-
-                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-
+#            - restore_cache:
+#                keys:
+#                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
+#                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-
+#                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-
 #      - run:
 #          name: Fetch plugins and dependencies
 #          command: mvn -B -V -T2C -U -P ci-helpers,ci-build,generate-assembly-jar de.qaware.maven:go-offline-maven-plugin:resolve-dependencies -Dmaven.javadoc.skip=true
