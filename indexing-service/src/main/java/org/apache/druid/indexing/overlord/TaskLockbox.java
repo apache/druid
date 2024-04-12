@@ -1204,6 +1204,7 @@ public class TaskLockbox
     try {
       try {
         log.info("Removing task[%s] from activeTasks", task.getId());
+        unlockAll(task);
         if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.REPLACE)) {
           final int upgradeSegmentsDeleted = metadataStorageCoordinator.deleteUpgradeSegmentsForTask(task.getId());
           log.info(
@@ -1214,24 +1215,21 @@ public class TaskLockbox
         }
         if (task instanceof PendingSegmentAllocatingTask) {
           final String pendingSegmentGroup = ((PendingSegmentAllocatingTask) task).getPendingSegmentGroupId();
-          if (pendingSegmentGroup != null && activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
+          if (activePendingTaskGroupToTaskIds.containsKey(pendingSegmentGroup)) {
             final Set<String> idsInSameGroup = activePendingTaskGroupToTaskIds.get(pendingSegmentGroup);
             idsInSameGroup.remove(task.getId());
             if (idsInSameGroup.isEmpty()) {
-              if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.APPEND)) {
-                final int pendingSegmentsDeleted
-                    = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(pendingSegmentGroup);
-                log.info(
-                    "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
-                    pendingSegmentsDeleted,
-                    pendingSegmentGroup
-                );
-              }
-              activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
+              final int pendingSegmentsDeleted
+                  = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(pendingSegmentGroup);
+              log.info(
+                  "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
+                  pendingSegmentsDeleted,
+                  pendingSegmentGroup
+              );
             }
+            activePendingTaskGroupToTaskIds.remove(pendingSegmentGroup);
           }
         }
-        unlockAll(task);
       }
       finally {
         activeTasks.remove(task.getId());
