@@ -10,34 +10,35 @@ jobs:
       - checkout
       - setup_remote_docker:
           docker_layer_caching: true
-      #      - restore_cache:
-      #          keys:
-      #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
-      #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-
-      #            - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-
+            - restore_cache:
+                keys:
+                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
+                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-
+                  - maven-repo-{{ .Environment.CI_CACHE_VERSION }}-
 #      - run:
 #          name: Fetch plugins and dependencies
 #          command: mvn -B -V -T2C -U -P ci-helpers,ci-build,generate-assembly-jar de.qaware.maven:go-offline-maven-plugin:resolve-dependencies -Dmaven.javadoc.skip=true
-      #      - save_cache:
-      #          paths:
-      #            - ~/.m2
-      #          key: maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
-      #      - run:
-      #          name: Provision JFrog Artifactory maven repo
-      #          command: |
-      #            mkdir -p ~/.m2
-      #            eval "echo \"$(<~/repo/.circleci/settings.xml)\"" 2> /dev/null 1>~/.m2/settings.xml
+#            - save_cache:
+#                paths:
+#                  - ~/.m2
+#                key: maven-repo-{{ .Environment.CI_CACHE_VERSION }}-{{ .Branch }}-{{ checksum "pom.xml" }}
+#            - run:
+#                name: Provision JFrog Artifactory maven repo
+#                command: |
+#                  mkdir -p ~/.m2
+#                  eval "echo \"$(<~/repo/.circleci/settings.xml)\"" 2> /dev/null 1>~/.m2/settings.xml
       - run:
           name: Install Python
           command: |
             sudo apt-get update
             sudo apt-get install -y python3 python3-pip
+            sudo pip install pyyaml
       - run:
           name: Build
           command: mvn clean package -DskipTests -Pdist
-      #      - run:
-      #          name: Test
-      #          command: mvn test
+#            - run:
+#                name: Test
+#                command: mvn test
       - run:
           name: Build Image
           command: |
