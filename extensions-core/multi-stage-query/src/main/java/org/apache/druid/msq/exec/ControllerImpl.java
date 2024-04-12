@@ -124,6 +124,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.InvalidFieldFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -3139,17 +3140,17 @@ public class ControllerImpl implements Controller
                                   .build(),
           task.getQuerySpec().getColumnMappings()
       );
-    } else if (workerErrorReport.getFault() instanceof InvalidFieldException) {
-      InvalidFieldException ife = (InvalidFieldException) workerErrorReport.getFault();
+    } else if (workerErrorReport.getFault() instanceof InvalidFieldFault) {
+      InvalidFieldFault iff = (InvalidFieldFault) workerErrorReport.getFault();
       return MSQErrorReport.fromException(
           workerErrorReport.getTaskId(),
           workerErrorReport.getHost(),
           workerErrorReport.getStageNumber(),
           InvalidFieldException.builder()
-                               .source(ife.getSource())
-                               .rowNumber(ife.getRowNumber())
-                               .column(ife.getColumn())
-                               .errorMsg(ife.getErrorMsg())
+                               .source(iff.getSource())
+                               .rowNumber(iff.getRowNumber())
+                               .column(iff.getColumn())
+                               .errorMsg(iff.getErrorMsg())
                                .build(),
           task.getQuerySpec().getColumnMappings()
       );
