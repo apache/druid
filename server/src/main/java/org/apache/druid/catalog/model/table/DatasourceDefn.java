@@ -83,9 +83,6 @@ public class DatasourceDefn extends TableDefn
     public void validate(Object value, ObjectMapper jsonMapper)
     {
       String gran = decode(value, jsonMapper);
-      if (Strings.isNullOrEmpty(gran)) {
-        throw new IAE("Segment granularity is required.");
-      }
       CatalogUtils.validateGranularity(gran);
     }
   }
