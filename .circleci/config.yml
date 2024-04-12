@@ -4,7 +4,6 @@ jobs:
   build_docker_image:
     docker:
       - image: cimg/openjdk:8.0
-      - image: python:3.9
     resource_class: large
     working_directory: ~/repo
     steps:
@@ -28,6 +27,11 @@ jobs:
       #          command: |
       #            mkdir -p ~/.m2
       #            eval "echo \"$(<~/repo/.circleci/settings.xml)\"" 2> /dev/null 1>~/.m2/settings.xml
+      - run:
+          name: Install Python
+          command: |
+            apt-get update
+            apt-get install -y python3 python3-pip
       - run:
           name: Build
           command: mvn clean package -DskipTests -Pdist
