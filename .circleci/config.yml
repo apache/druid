@@ -4,6 +4,7 @@ jobs:
   build_docker_image:
     docker:
       - image: cimg/openjdk:8.0
+      - image: python:3.9
     resource_class: large
     working_directory: ~/repo
     steps:
