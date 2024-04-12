@@ -339,6 +339,53 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 
 For more information on the supervisors system table, see [SUPERVISORS table](../querying/sql-metadata-tables.md#supervisors-table).
 
+## Supervisor actions
+ 
+To view available supervisor actions in the web console, navigate to the **Supervisors** view and click the ellipsis in the **Actions** column. Select the desired action from the menu that appears.
+
+![Actions menu](../assets/supervisor-actions.png)
+
+The supervisor must be running for some of these actions to be available.
+
+### Suspend a supervisor
+
+The **Suspend** action suspends the specified running supervisor. The suspended supervisor continues to emit logs and metrics. Indexing tasks remain suspended until you resume the supervisor.
+
+For information on how to suspend a supervisor by API, see [Supervisors: Suspend a running supervisor](../api-reference/supervisor-api.md#suspend-a-running-supervisor).
+
+### Set offsets
+
+:::info
+Perform this action with caution as it may result in skipped messages and lead to data loss or duplicate data.
+:::
+
+The **Set offsets** action resets the specified offsets for partitions without resetting the entire set.
+It clears only the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume reading data from the specified offsets. If there are no stored offsets, the specified offsets are set in the metadata store.
+
+After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions, so that tasks begin reading specified offsets. For partitions that are not specified in this operation, the supervisor resumes from the last stored offset.
+
+For information on how to reset offsets by API, see [Supervisors: Reset offsets for a supervisor](../api-reference/supervisor-api.md#reset-offsets-for-a-supervisor).
+
+### Hard reset
+
+:::info
+Perform this action with caution as it may result in skipped messages and lead to data loss or duplicate data.
+:::
+
+The **Hard reset** action clears all stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the platform: offsets in Kafka or sequence numbers in Kinesis. After clearing all stored offsets in Kafka or sequence numbers in Kinesis, the supervisor kills and recreates active tasks, so that tasks begin reading from valid positions.
+
+Use this action to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis.
+
+For information on how to reset a supervisor by API, see [Supervisors: Reset a supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).
+
+### Terminate a supervisor
+
+The **Terminate** action terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart.
+
+The terminated supervisor still exists in the metadata store and its history can be retrieved.
+
+For information on how to terminate a supervisor by API, see [Supervisors: Terminate a supervisor](../api-reference/supervisor-api.md#terminate-a-supervisor).
+
 ## Capacity planning
 
 Indexing tasks run on MiddleManagers and are limited by the resources available in the MiddleManager cluster. In particular, you should make sure that you have sufficient worker capacity, configured using the
