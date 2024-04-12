@@ -121,7 +121,7 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
     }
   ],
   "intervals": [
-    "2016-03-01T00:00:00.000/2013-03-20T00:00:00.000"
+    "2016-03-01/2013-03-20"
   ]
 }
 ```
@@ -166,7 +166,7 @@ GROUP BY
     }
   ],
   "intervals": [
-    "2016-03-06T00:00:00/2016-03-06T23:59:59"
+    "2016-03-06/2016-03-07"
   ]
 }
 ```
@@ -202,7 +202,7 @@ There is no equivalent SQL for this query.
     }
   ],
   "intervals": [
-    "2016-03-06T00:00:00/2016-03-06T23:59:59"
+    "2016-03-06/2016-03-07"
   ]
 }
 ```
