@@ -76,8 +76,7 @@ public class KillUnreferencedSegmentSchemas
     // or the previous run of this duty.
     List<Long> schemaIdsToUpdate = segmentSchemaManager.identifyReferencedUnusedSchema();
     if (schemaIdsToUpdate.size() > 0) {
-      int updateCount = segmentSchemaManager.markSchemaUsed(schemaIdsToUpdate);
-      System.out.println(updateCount);
+      segmentSchemaManager.markSchemaUsed(schemaIdsToUpdate);
       log.info("Identified [%s] unused schemas still referenced by used segments. Marking them as used.", schemaIdsToUpdate.size());
     }
 
