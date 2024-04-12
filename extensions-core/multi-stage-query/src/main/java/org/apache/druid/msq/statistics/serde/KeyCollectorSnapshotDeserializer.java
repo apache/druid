@@ -36,7 +36,7 @@ import java.util.function.Function;
 public class KeyCollectorSnapshotDeserializer
 {
   private static final ImmutableMap<Byte, Function<ByteBuffer, KeyCollectorSnapshot>> DESERIALIZERS =
-      ImmutableMap.<Byte, Function<ByteBuffer, KeyCollectorSnapshot>>builder() // TODO: better
+      ImmutableMap.<Byte, Function<ByteBuffer, KeyCollectorSnapshot>>builder()
                   .put(
                       QuantilesSnapshotSerializer.TYPE,
                       QuantilesSnapshotDeserializer::deserialize

@@ -55,14 +55,13 @@ public class ClusterByStatisticsSnapshotSerde
     outputStream.write(0x0);
 
     writeIntToStream(outputStream, buckets.size());
-    writeIntToStream(outputStream, multipleValueBuckets.size());
-
-    for (Integer multiValueBucket : multipleValueBuckets) {
-      writeIntToStream(outputStream, multiValueBucket); // TODO: batch into a single buffer
-    }
+    ByteBuffer multivalueBuffer = ByteBuffer.allocate(Integer.BYTES + multipleValueBuckets.size())
+                                            .putInt(multipleValueBuckets.size());
+    multipleValueBuckets.forEach(multivalueBuffer::putInt);
+    outputStream.write(multivalueBuffer.array());
 
     for (Map.Entry<Long, ClusterByStatisticsSnapshot.Bucket> entry : buckets.entrySet()) {
-      writeLongToStream(outputStream, entry.getKey()); // TODO: move this to inside the bucket?
+      writeLongToStream(outputStream, entry.getKey());
       serializeBucket(outputStream, entry.getValue());
     }
   }
@@ -84,9 +83,8 @@ public class ClusterByStatisticsSnapshotSerde
     final int mvSetSize = byteBuffer.getInt(position + MV_SET_SIZE_OFFSET);
 
     final Set<Integer> hasMultiValues = new HashSet<>();
-    for (int i = 0; i < mvSetSize; i++) {
-      // TODO: use better read
-      hasMultiValues.add(byteBuffer.getInt(position + MV_VALUES_OFFSET + Integer.BYTES * i));
+    for (int offset = position + MV_VALUES_OFFSET; offset < position + mvSetSize * Integer.BYTES; offset += Integer.BYTES) {
+      hasMultiValues.add(byteBuffer.getInt(offset));
     }
 
     final Map<Long, ClusterByStatisticsSnapshot.Bucket> buckets = new HashMap<>();
