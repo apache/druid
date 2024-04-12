@@ -20,25 +20,15 @@
 package org.apache.druid.sql.calcite.planner.convertlet;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlCastFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.type.SqlTypeUtil;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql2rel.SqlRexContext;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.druid.sql.calcite.expression.builtin.NestedDataOperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -89,51 +79,6 @@ public class DruidConvertletTable implements SqlRexConvertletTable
   @Override
   public SqlRexConvertlet get(SqlCall call)
   {
-    if(false && call.getKind() == SqlKind.CAST ) {
-      @Nullable
-      SqlRexConvertlet def = StandardConvertletTable.INSTANCE.get(call);
-      return new SqlRexConvertlet()
-      {
-
-        @Override
-        public RexNode convertCall(SqlRexContext cx, SqlCall call)
-        {
-          if(false) {
-          SqlNode left=call.getOperandList().get(0);
-          SqlNode right=call.getOperandList().get(1);
-          final RexNode arg = cx.convertExpression(left);
-          final SqlDataTypeSpec dataType = (SqlDataTypeSpec) right;
-          SqlValidator validator= cx.getValidator();
-          RelDataType type =
-              SqlCastFunction.deriveType(cx.getTypeFactory(), arg.getType(),
-                  dataType.deriveType(validator), false);
-          if (arg.getType().getSqlTypeName() == SqlTypeName.BOOLEAN && SqlTypeUtil.isIntType(type)) {
-            validator.setValidatedNodeType(left, type);
-            return cx.convertExpression(left);
-          }
-          }
-          SqlNode left=call.getOperandList().get(0);
-          SqlNode right=call.getOperandList().get(1);
-          SqlValidator validator= cx.getValidator();
-          final SqlDataTypeSpec dataType = (SqlDataTypeSpec) right;
-          if(SqlTypeUtil.isNumeric(dataType.deriveType(validator))) {
-          final RexNode arg = cx.convertExpression(left);
-          RelDataType type =
-              SqlCastFunction.deriveType(cx.getTypeFactory(), arg.getType(),
-                  dataType.deriveType(validator), false);
-          if (arg.getType().getSqlTypeName() == SqlTypeName.BOOLEAN && SqlTypeUtil.isNumeric(type)) {
-            validator.setValidatedNodeType(call, type);
-            validator.setValidatedNodeType(left, type);
-            return cx.convertExpression(left);
-          }
-          }
-
-
-          return def.convertCall(cx, call);
-        }
-      };
-
-    }
     if (call.getKind() == SqlKind.EXTRACT && call.getOperandList().get(1).getKind() != SqlKind.LITERAL) {
       // Avoid using the standard convertlet for EXTRACT(TIMEUNIT FROM col), since we want to handle it directly
       // in ExtractOperationConversion.

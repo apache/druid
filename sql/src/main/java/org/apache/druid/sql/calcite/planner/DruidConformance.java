@@ -46,12 +46,6 @@ public class DruidConformance extends SqlAbstractConformance
   }
 
   @Override
-  public boolean allowLenientCoercion()
-  {
-    return true ;
-  }
-
-  @Override
   public boolean isSortByOrdinal()
   {
     // For ORDER BY 1
