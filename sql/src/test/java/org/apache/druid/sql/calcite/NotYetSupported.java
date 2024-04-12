@@ -85,7 +85,6 @@ public @interface NotYetSupported
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
-    RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
     INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
