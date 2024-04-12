@@ -16,14 +16,26 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Code, ControlGroup, Dialog, FormGroup, Intent } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  ControlGroup,
+  Dialog,
+  Divider,
+  FormGroup,
+  Intent,
+  Label,
+  Tag,
+} from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { Loader } from '../../components';
+import { ExternalLink, Loader } from '../../components';
 import { FancyNumericInput } from '../../components/fancy-numeric-input/fancy-numeric-input';
 import { useQueryManager } from '../../hooks';
+import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { deepDelete, deepGet, getDruidErrorMessage } from '../../utils';
+import type { NumberLike } from '../../utils';
+import { deepDelete, deepGet, formatInteger, getDruidErrorMessage } from '../../utils';
 
 import './supervisor-reset-offsets-dialog.scss';
 
@@ -32,7 +44,7 @@ type OffsetMap = Record<string, number>;
 interface SupervisorResetOffsetsDialogProps {
   supervisorId: string;
   supervisorType: string;
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetOffsetsDialog(
@@ -52,7 +64,10 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
   });
 
   const stream = deepGet(statusResp.data || {}, 'payload.stream');
-  const latestOffsets = deepGet(statusResp.data || {}, 'payload.latestOffsets');
+  const latestOffsets: Record<string, NumberLike> = deepGet(
+    statusResp.data || {},
+    'payload.latestOffsets',
+  );
   const latestOffsetsEntries = latestOffsets ? Object.entries(latestOffsets) : undefined;
 
   async function onSave() {
@@ -80,7 +95,11 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
     }
 
     AppToaster.show({
-      message: `${supervisorId} offsets have been set`,
+      message: (
+        <>
+          <Tag minimal>{supervisorId}</Tag> offsets have been set.
+        </>
+      ),
       intent: Intent.SUCCESS,
     });
     onClose();
@@ -98,12 +117,21 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
         {latestOffsetsEntries && (
           <>
             <p>
-              Set <Code>{supervisorId}</Code> to specific offsets
+              Set <Tag minimal>{supervisorId}</Tag> to specific offsets. For more details on setting
+              offsets please refer to the{' '}
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>
+                documentation
+              </ExternalLink>
+              .
             </p>
+            <Divider />
             {latestOffsetsEntries.map(([key, latestOffset]) => (
-              <FormGroup key={key} label={key} helperText={`(currently: ${latestOffset})`}>
+              <FormGroup
+                key={key}
+                label={`Partition ${key} (current offset=${formatInteger(latestOffset)}):`}
+              >
                 <ControlGroup>
-                  <Button className="label-button" text="New offset:" disabled />
+                  <Label className="new-offset-label">New offset</Label>
                   <FancyNumericInput
                     value={offsetsToResetTo[key]}
                     onValueChange={valueAsNumber => {
