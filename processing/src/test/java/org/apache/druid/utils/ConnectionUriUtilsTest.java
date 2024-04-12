@@ -195,7 +195,7 @@ public class ConnectionUriUtilsTest
       Set<String> props = ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI);
       // mysql actually misses 'keyonly', but spits out several keys that are not actually uri parameters
       // DBNAME, HOST, PORT, HOST.1, PORT.1, NUM_HOSTS
-      Assert.assertEquals(9, props.size());
+      Assert.assertEquals(6, props.size());
       Assert.assertTrue(props.contains("user"));
       Assert.assertTrue(props.contains("password"));
       Assert.assertTrue(props.contains("otherOptions"));

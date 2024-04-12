@@ -47,7 +47,6 @@ public final class ConnectionUriUtils
   public static final String POSTGRES_DRIVER = "org.postgresql.Driver";
   public static final String MYSQL_CONNECTION_URL = "com.mysql.cj.conf.ConnectionUrl";
   public static final String MYSQL_HOST_INFO = "com.mysql.cj.conf.HostInfo";
-  public static final String MYSQL_CONNECTION_URL_PARSER = "com.mysql.cj.conf.ConnectionUrlParser";
 
   /**
    * This method checks {@param actualProperties} against {@param allowedProperties} if they are not system properties.
