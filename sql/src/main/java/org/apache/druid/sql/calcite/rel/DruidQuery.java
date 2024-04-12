@@ -491,7 +491,7 @@ public class DruidQuery
       }
       if (!outputType.getNullableStrategy().groupable()) {
         // Can't group on 'ungroupable' types.
-        plannerContext.setPlanningError("SQL requires a group-by column with ungroupable type [%s].", outputType);
+        plannerContext.setPlanningError("SQL requires a group-by on a column with type [%s] that is unsupported.", outputType);
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
@@ -1249,7 +1249,8 @@ public class DruidQuery
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
-    // grouping col cannot be arrays or complex types
+    // TopN queries can't handle arrays or complex dimensions. Return's null so that they get planned as a group by query
+    // which does support complex and array dimensions
     if (!dimensionSpec.getOutputType().isPrimitive()) {
       return null;
     }

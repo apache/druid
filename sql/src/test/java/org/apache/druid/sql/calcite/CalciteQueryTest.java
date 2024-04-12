@@ -5849,7 +5849,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
         "SELECT unique_dim1, COUNT(*) FROM druid.foo GROUP BY 1",
-        "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
+        "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."
     );
   }
 
