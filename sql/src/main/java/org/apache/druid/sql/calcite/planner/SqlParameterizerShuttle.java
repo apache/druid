@@ -141,7 +141,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
       } else if (element instanceof Double || element instanceof Float) {
         node = SqlLiteral.createApproxNumeric(element.toString(), SqlParserPos.ZERO);
       } else if (element instanceof Boolean) {
-        node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
+        node = SqlLiteral.createBoolean((Boolean) element, SqlParserPos.ZERO);
       } else {
         throw InvalidSqlInput.exception(
             "parameter [%d] is an array, with an illegal value of type [%s] at index [%d]",

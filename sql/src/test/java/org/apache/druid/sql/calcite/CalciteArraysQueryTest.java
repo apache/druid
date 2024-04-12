@@ -1307,6 +1307,39 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayContainsFilterWithDynamicParameter()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE3)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .filters(expressionFilter("array_contains(array(1,null),array((\"d1\" > 1)))"))
+            .columns("dim3")
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .limit(5)
+            .context(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+            PLANNER_CONFIG_DEFAULT,
+            QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(
+                    new SqlParameter(SqlType.ARRAY, Arrays.asList(true, null))
+            ),
+            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(?, ARRAY[d1>1]) LIMIT 5",
+            CalciteTests.REGULAR_USER_AUTH_RESULT,
+            ImmutableList.of(builder.build()),
+            NullHandling.sqlCompatible() ? ImmutableList.of(
+                    new Object[]{"[\"b\",\"c\"]"},
+                    new Object[]{""},
+                    new Object[]{null},
+                    new Object[]{null}
+            ) : ImmutableList.of(
+                    new Object[]{"[\"b\",\"c\"]"}
+            )
+    );
+  }
+
+
+  @Test
   public void testArraySlice()
   {
     testQuery(
