@@ -48,9 +48,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -80,11 +79,11 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactoryWrapper joinableFactory,
       final Injector injector
-  ) throws IOException
+  )
   {
     QueryableIndex index =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newTempFolder())
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -120,7 +119,8 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
   @Test
   public abstract void testCompressedBigDecimalAggWithNumberParse();
 
-  @Test(expected = NumberFormatException.class)
+  // expected: NumberFormatException.class
+  @Test
   public abstract void testCompressedBigDecimalAggWithStrictNumberParse();
 
   @Test

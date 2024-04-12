@@ -44,9 +44,9 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.hamcrest.CoreMatchers;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -97,7 +97,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
 
   // Disabled until replace supports external destinations. To be enabled after that point.
   @Test
-  @Ignore
+  @Disabled
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
@@ -224,7 +224,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
 
   // Disabled until replace supports external destinations. To be enabled after that point.
   @Test
-  @Ignore
+  @Disabled
   public void testReplaceIntoExternParameterized()
   {
     testIngestionQuery()

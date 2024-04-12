@@ -42,9 +42,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -609,12 +610,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
    *
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private TaskReport.ReportMap getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
-            new IngestionStatsAndErrorsTaskReportData(
+            new IngestionStatsAndErrors(
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
@@ -625,7 +626,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

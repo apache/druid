@@ -42,10 +42,12 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -318,6 +320,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     List<String> rowsFromSegment = getCSVFormatRowsFromSegments(segments);
     Assert.assertEquals(TEST_ROWS, rowsFromSegment);
+
+    List<IngestionStatsAndErrors> reports = getIngestionReports();
+    Assert.assertEquals(
+        3L,
+        reports.stream().mapToLong(IngestionStatsAndErrors::getSegmentsPublished).sum()
+    );
+    Assert.assertEquals(
+        6L,
+        reports.stream().mapToLong(IngestionStatsAndErrors::getSegmentsRead).sum()
+    );
   }
 
   @Test
@@ -557,7 +569,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             false,
             false
         ),
@@ -1900,7 +1912,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             appendToExisting,
             false
         ),
@@ -1940,7 +1952,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             appendToExisting,
             false
         ),
@@ -2019,7 +2031,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .taskWorkDir(temporaryFolder.newFolder())
         .indexIO(getIndexIO())
         .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
-        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
         .chatHandlerProvider(new NoopChatHandlerProvider())
         .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())

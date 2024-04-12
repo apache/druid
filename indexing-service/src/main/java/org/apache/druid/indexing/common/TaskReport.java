@@ -21,9 +21,9 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Optional;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * TaskReport objects contain additional information about an indexing task, such as row statistics, errors, and
@@ -31,8 +31,12 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "ingestionStatsAndErrors", value = IngestionStatsAndErrorsTaskReport.class),
-    @JsonSubTypes.Type(name = KillTaskReport.REPORT_KEY, value = KillTaskReport.class)
+    @JsonSubTypes.Type(
+        name = IngestionStatsAndErrorsTaskReport.REPORT_KEY,
+        value = IngestionStatsAndErrorsTaskReport.class
+    ),
+    @JsonSubTypes.Type(name = KillTaskReport.REPORT_KEY, value = KillTaskReport.class),
+    @JsonSubTypes.Type(name = TaskContextReport.REPORT_KEY, value = TaskContextReport.class)
 })
 public interface TaskReport
 {
@@ -48,13 +52,29 @@ public interface TaskReport
   /**
    * Returns an order-preserving map that is suitable for passing into {@link TaskReportFileWriter#write}.
    */
-  static Map<String, TaskReport> buildTaskReports(TaskReport... taskReports)
+  static ReportMap buildTaskReports(TaskReport... taskReports)
   {
-    // Use LinkedHashMap to preserve order of the reports.
-    Map<String, TaskReport> taskReportMap = new LinkedHashMap<>();
+    ReportMap taskReportMap = new ReportMap();
     for (TaskReport taskReport : taskReports) {
       taskReportMap.put(taskReport.getReportKey(), taskReport);
     }
     return taskReportMap;
+  }
+
+  /**
+   * Represents an ordered map from report key to a TaskReport that is compatible
+   * for writing out reports to files or serving over HTTP.
+   * <p>
+   * This class is needed for Jackson serde to work correctly. Without this class,
+   * a TaskReport is serialized without the type information and cannot be
+   * deserialized back into a concrete implementation.
+   */
+  class ReportMap extends LinkedHashMap<String, TaskReport>
+  {
+    @SuppressWarnings("unchecked")
+    public <T extends TaskReport> Optional<T> findReport(String reportKey)
+    {
+      return Optional.fromNullable((T) get(reportKey));
+    }
   }
 }

@@ -36,14 +36,11 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
  */
-@RunWith(Enclosed.class)
-public abstract class CalciteSelectJoinQueryMSQTest
+public class CalciteSelectJoinQueryMSQTest
 {
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
@@ -87,11 +84,15 @@ public abstract class CalciteSelectJoinQueryMSQTest
   {
     private final JoinAlgorithm joinAlgorithm;
 
-
     protected Base(final JoinAlgorithm joinAlgorithm)
     {
-      super(joinAlgorithm == JoinAlgorithm.SORT_MERGE);
       this.joinAlgorithm = joinAlgorithm;
+    }
+
+    @Override
+    public boolean isSortBasedJoin()
+    {
+      return joinAlgorithm == JoinAlgorithm.SORT_MERGE;
     }
 
     @Override
@@ -99,7 +100,7 @@ public abstract class CalciteSelectJoinQueryMSQTest
     {
       super.configureGuice(builder);
       builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+          CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
       );
     }
 

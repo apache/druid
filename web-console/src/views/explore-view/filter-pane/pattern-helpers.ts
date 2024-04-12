@@ -30,6 +30,8 @@ export function initPatternForColumn(column: ExpressionMeta): FilterPattern {
         column: column.name,
         anchor: 'maxDataTime',
         rangeDuration: 'P1D',
+        startBound: '[',
+        endBound: ')',
       };
 
     default:

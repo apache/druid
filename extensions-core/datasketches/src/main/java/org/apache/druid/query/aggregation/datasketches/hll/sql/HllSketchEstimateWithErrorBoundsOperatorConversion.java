@@ -47,7 +47,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion implements SqlOp
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
       .requiredOperandCount(1)
-      .returnTypeNonNull(SqlTypeName.OTHER)
+      .returnTypeNullableArrayWithNullableElements(SqlTypeName.DOUBLE)
       .build();
 
   @Override

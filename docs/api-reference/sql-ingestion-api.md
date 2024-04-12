@@ -299,7 +299,7 @@ The response shows an example report for a query.
         },
         "pendingTasks": 0,
         "runningTasks": 2,
-        "segmentLoadStatus": {
+        "segmentLoadWaiterStatus": {
           "state": "SUCCESS",
           "dataSource": "kttm_simple",
           "startTime": "2022-09-14T23:12:09.266Z",
@@ -310,6 +310,10 @@ The response shows an example report for a query.
           "onDemandSegments": 0,
           "pendingSegments": 0,
           "unknownSegments": 0
+        },
+        "segmentReport": {
+          "shardSpec": "NumberedShardSpec",
+          "details": "Cannot use RangeShardSpec, RangedShardSpec only supports string CLUSTER BY keys. Using NumberedShardSpec instead."
         }
       },
       "stages": [
@@ -631,6 +635,9 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.segmentLoadStatus.onDemandSegments` | The number of segments which are not loaded on any historical, as per the load rules. |
 | `multiStageQuery.payload.status.segmentLoadStatus.pendingSegments` | The number of segments remaining to be loaded. |
 | `multiStageQuery.payload.status.segmentLoadStatus.unknownSegments` | The number of segments whose status is unknown. |
+| `multiStageQuery.payload.status.segmentReport` | Segment report. Only present if the query is an ingestion. |
+| `multiStageQuery.payload.status.segmentReport.shardSpec` | Contains the shard spec chosen. |
+| `multiStageQuery.payload.status.segmentReport.details` | Contains further reasoning about the shard spec chosen. |
 | `multiStageQuery.payload.status.errorReport` | Error object. Only present if there was an error. |
 | `multiStageQuery.payload.status.errorReport.taskId` | The task that reported the error, if known. May be a controller task or a worker task. |
 | `multiStageQuery.payload.status.errorReport.host` | The hostname and port of the task that reported the error, if known. |

@@ -574,7 +574,7 @@ public class PlannerContext
   /**
    * Checks if the current {@link SqlEngine} supports a particular feature.
    *
-   * When executing a specific query, use this method instead of {@link SqlEngine#featureAvailable(EngineFeature)},
+   * When executing a specific query, use this method instead of {@link SqlEngine#featureAvailable(EngineFeature)}
    * because it also verifies feature flags such as {@link #CTX_ENABLE_WINDOW_FNS}.
    */
   public boolean featureAvailable(final EngineFeature feature)

@@ -89,6 +89,14 @@ An example output is shown below:
       "errorMsg": null
     },
     "type": "ingestionStatsAndErrors"
+  },
+  "taskContext": {
+    "type": "taskContext",
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "forceTimeChunkLock": true,
+      "useLineageBasedSegmentAllocation": true
+    }
   }
 }
 ```
@@ -160,8 +168,8 @@ For some task types, the indexing task can wait for the newly ingested segments 
 
 |Field|Description|
 |---|---|
-|`segmentsRead`|Number of segments read by compaction task with more than 1 subtask.|
-|`segmentsPublished`|Number of segments published by compaction task with more than 1 subtask.|
+|`segmentsRead`|Number of segments read by compaction task.|
+|`segmentsPublished`|Number of segments published by compaction task.|
 
 ### Live report
 

@@ -86,7 +86,9 @@ export const TimeIntervalFilterControl = React.memo(function TimeIntervalFilterC
       negated,
       column,
       start,
+      startBound: '[',
       end,
+      endBound: ')',
     };
   }
 
