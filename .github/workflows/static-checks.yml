@@ -163,16 +163,8 @@ jobs:
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: rewrite:dryRun
-        id: rewrite-dryRun
         run: |
           ${MVN} rewrite:dryRun ${MAVEN_SKIP}
-
-      - name: Upload open rewrite patch
-        if: ${{ failure() && steps.rewrite-dryRun.conclusion == 'failure' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: Rewrite patch
-          path: ./target/rewrite/rewrite.patch
 
   web-checks:
     strategy:
