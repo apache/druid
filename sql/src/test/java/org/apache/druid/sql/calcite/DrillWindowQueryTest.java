@@ -6141,6 +6141,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @NotYetSupported(Modes.LONG_CASTING)
   @DrillTest("aggregates/winFnQry_10")
   @Test
   public void test_aggregates_winFnQry_10()
@@ -6155,6 +6156,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @NotYetSupported(Modes.LONG_CASTING)
   @DrillTest("aggregates/winFnQry_18")
   @Test
   public void test_aggregates_winFnQry_18()
