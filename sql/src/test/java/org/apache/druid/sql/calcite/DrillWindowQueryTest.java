@@ -5813,7 +5813,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  //@NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("first_val/firstValFn_25")
   @Test
   public void test_first_val_firstValFn_25()
