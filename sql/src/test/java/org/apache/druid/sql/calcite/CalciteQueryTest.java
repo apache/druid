@@ -5172,7 +5172,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + "  cnt,\n"
-        + "  SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END) + SUM(cnt)\n"
+        + "  SUM(CAST((dim1 <> '1') AS INTEGER)) + SUM(cnt)\n"
         + "FROM druid.foo\n"
         + "GROUP BY cnt",
         ImmutableList.of(
@@ -5181,6 +5181,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
+//                        .setVirtualColumns(
+//                            expressionVirtualColumn(
+//                                "v0",
+//                                "case_searched((\"dim1\" != '1'),1,0)",
+//                                ColumnType.LONG
+//                            )
+//                        )
                         .setAggregatorSpecs(aggregators(
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
