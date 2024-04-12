@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
@@ -930,6 +932,40 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"[1.1,2.2,null]", "[1.1,2.2,3.3]"},
             new Object[]{"[999.0,null,5.5]", "[3.3,4.4,5.5]"}
         )
+    );
+  }
+
+  @Test
+  public void testArrayOverlapFilterWithDynamicParameter()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE3)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .filters(expressionFilter("array_overlap(array(1.0,1.7,null),array(\"d1\"))"))
+            .columns("dim3")
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .limit(5)
+            .context(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+            PLANNER_CONFIG_DEFAULT,
+            QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(
+                    new SqlParameter(SqlType.ARRAY, Arrays.asList(1.0, 1.7, null))
+            ),
+            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, ARRAY[d1]) LIMIT 5",
+            CalciteTests.REGULAR_USER_AUTH_RESULT,
+            ImmutableList.of(builder.build()),
+            NullHandling.sqlCompatible() ? ImmutableList.of(
+                    new Object[]{"[\"a\",\"b\"]"},
+                    new Object[]{"[\"b\",\"c\"]"},
+                    new Object[]{""},
+                    new Object[]{null},
+                    new Object[]{null}
+            ) : ImmutableList.of(
+                    new Object[]{"[\"a\",\"b\"]"},
+                    new Object[]{"[\"b\",\"c\"]"}
+            )
     );
   }
 
