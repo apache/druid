@@ -34,7 +34,6 @@ import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexerServiceModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
@@ -53,7 +52,6 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
@@ -66,7 +64,6 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -138,6 +135,8 @@ public class CliIndexer extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            CliCoordinator.validateCentralizedDatasourceSchemaConfig(properties);
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
@@ -150,27 +149,6 @@ public class CliIndexer extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
-            String serverViewType = (String) properties.getOrDefault(
-                ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                ServerViewModule.DEFAULT_SERVERVIEW_TYPE
-            );
-
-            if (Boolean.parseBoolean(properties.getProperty(CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED))
-                && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
-              throw DruidException
-                  .forPersona(DruidException.Persona.ADMIN)
-                  .ofCategory(DruidException.Category.UNSUPPORTED)
-                  .build(
-                      StringUtils.format(
-                          "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
-                          + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
-                          + "or disable the feature (set %4$s=false).",
-                          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                          serverViewType,
-                          ServerViewModule.SERVERVIEW_TYPE_HTTP,
-                          CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
-                      ));
-            }
 
             JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
 

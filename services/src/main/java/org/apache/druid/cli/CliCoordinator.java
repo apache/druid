@@ -189,14 +189,9 @@ public class CliCoordinator extends ServerRunnable
            : ImmutableSet.of(NodeRole.COORDINATOR);
   }
 
-  @Override
-  protected List<? extends Module> getModules()
+  protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
   {
-    List<Module> modules = new ArrayList<>();
-
-    modules.add(JettyHttpClientModule.global());
-
-    if (isSegmentMetadataCacheEnabled) {
+    if (isSegmentMetadataCacheEnabled(properties)) {
       String serverViewType = (String) properties.getOrDefault(
           ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
           ServerViewModule.DEFAULT_SERVERVIEW_TYPE
@@ -216,6 +211,18 @@ public class CliCoordinator extends ServerRunnable
                     CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
                 ));
       }
+    }
+  }
+
+  @Override
+  protected List<? extends Module> getModules()
+  {
+    List<Module> modules = new ArrayList<>();
+
+    modules.add(JettyHttpClientModule.global());
+
+    if (isSegmentMetadataCacheEnabled) {
+      validateCentralizedDatasourceSchemaConfig(properties);
       modules.add(new CoordinatorSegmentMetadataCacheModule());
       modules.add(new QueryableModule());
     }
@@ -391,7 +398,7 @@ public class CliCoordinator extends ServerRunnable
     return Boolean.parseBoolean(properties.getProperty(AS_OVERLORD_PROPERTY));
   }
 
-  private boolean isSegmentMetadataCacheEnabled(Properties properties)
+  private static boolean isSegmentMetadataCacheEnabled(Properties properties)
   {
     return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }

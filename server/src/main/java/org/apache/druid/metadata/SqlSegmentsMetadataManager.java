@@ -787,7 +787,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     final List<DataSegmentPlus> retrievedSegments = SqlSegmentsMetadataQuery
         .forHandle(handle, connector, dbTables.get(), jsonMapper)
-        .retrieveSegmentsById(dataSource, segmentIds, false);
+        .retrieveSegmentsById(dataSource, segmentIds);
 
     final Set<String> unknownSegmentIds = new HashSet<>(segmentIds);
     final List<DataSegment> unusedSegments = new ArrayList<>();
