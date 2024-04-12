@@ -31,15 +31,12 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNullHandlingTest
 {
   private static final List<Object[]> DATASOURCE_ROWS = ImmutableList.of(
