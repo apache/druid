@@ -84,6 +84,22 @@ public class TaskReportSerdeTest
   }
 
   @Test
+  public void testSerdeOfTaskContextReport() throws Exception
+  {
+    TaskContextReport originalReport = new TaskContextReport(
+        "taskId",
+        ImmutableMap.of("key1", "value1", "key2", "value2")
+    );
+    String reportJson = jsonMapper.writeValueAsString(originalReport);
+    TaskReport deserialized = jsonMapper.readValue(reportJson, TaskReport.class);
+
+    Assert.assertTrue(deserialized instanceof TaskContextReport);
+
+    TaskContextReport deserializedReport = (TaskContextReport) deserialized;
+    Assert.assertEquals(originalReport, deserializedReport);
+  }
+
+  @Test
   public void testWriteReportMapToFileAndRead() throws Exception
   {
     IngestionStatsAndErrorsTaskReport report1 = buildTestIngestionReport();

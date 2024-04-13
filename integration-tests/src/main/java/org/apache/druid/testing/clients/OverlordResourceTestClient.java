@@ -27,6 +27,7 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.http.TaskPayloadResponse;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.ISE;
@@ -262,15 +263,16 @@ public class OverlordResourceTestClient
 
   public String getTaskErrorMessage(String taskId)
   {
-    return getTaskReport(taskId).get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                .getPayload().getErrorMsg();
+    return ((IngestionStatsAndErrorsTaskReport) getTaskReport(taskId).get(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+        .getPayload().getErrorMsg();
   }
 
   public RowIngestionMetersTotals getTaskStats(String taskId)
   {
     try {
-      Object buildSegment = getTaskReport(taskId).get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                                 .getPayload().getRowStats().get("buildSegments");
+      Object buildSegment = ((IngestionStatsAndErrorsTaskReport) getTaskReport(taskId).get(
+          IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+          .getPayload().getRowStats().get("buildSegments");
       return jsonMapper.convertValue(buildSegment, RowIngestionMetersTotals.class);
     }
     catch (Exception e) {
@@ -278,7 +280,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
+  public Map<String, TaskReport> getTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -291,7 +293,7 @@ public class OverlordResourceTestClient
       );
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
+          new TypeReference<Map<String, TaskReport>>()
           {
           }
       );

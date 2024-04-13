@@ -144,6 +144,13 @@ public class MultiStageQueryContext
   public static final String CTX_IS_REINDEX = "isReindex";
 
   /**
+   * Key for controller task's context passed to worker tasks.
+   * Facilitates sharing the controller's execution environment
+   * and configurations with its associated worker tasks.
+   */
+  public static final String CTX_OF_CONTROLLER = "controllerCtx";
+
+  /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
    * CLUSTERED BY clause) but it can be overridden.
    */

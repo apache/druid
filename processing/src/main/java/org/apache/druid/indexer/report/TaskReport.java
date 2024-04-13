@@ -35,7 +35,8 @@ import java.util.Optional;
         name = IngestionStatsAndErrorsTaskReport.REPORT_KEY,
         value = IngestionStatsAndErrorsTaskReport.class
     ),
-    @JsonSubTypes.Type(name = KillTaskReport.REPORT_KEY, value = KillTaskReport.class)
+    @JsonSubTypes.Type(name = KillTaskReport.REPORT_KEY, value = KillTaskReport.class),
+    @JsonSubTypes.Type(name = TaskContextReport.REPORT_KEY, value = TaskContextReport.class)
 })
 public interface TaskReport
 {

@@ -42,6 +42,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -625,7 +626,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

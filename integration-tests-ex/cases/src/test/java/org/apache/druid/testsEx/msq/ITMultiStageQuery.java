@@ -22,6 +22,8 @@ package org.apache.druid.testsEx.msq;
 import com.google.api.client.util.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -234,11 +236,15 @@ public class ITMultiStageQuery
 
     msqHelper.pollTaskIdForSuccess(resultTaskStatus.getTaskId());
 
-    Map<String, MSQTaskReport> statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
-    MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
+    Map<String, TaskReport> statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
+
+    MSQTaskReport taskReport = (MSQTaskReport) statusReport.get(MSQTaskReport.REPORT_KEY);
     if (taskReport == null) {
       throw new ISE("Unable to fetch the status report for the task [%]", resultTaskStatus.getTaskId());
     }
+    TaskContextReport taskContextReport = (TaskContextReport) statusReport.get(TaskContextReport.REPORT_KEY);
+    Assert.assertFalse(taskContextReport.getPayload().isEmpty());
+
     MSQTaskReportPayload taskReportPayload = Preconditions.checkNotNull(
         taskReport.getPayload(),
         "payload"

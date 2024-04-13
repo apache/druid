@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -170,20 +171,24 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      Map<String, IngestionStatsAndErrorsTaskReport> reports = indexer.getTaskReport(taskId);
+      Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
 
-      Assert.assertEquals(2,
-                          reports.values()
-                                 .stream()
-                                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsPublished())
-                                 .sum()
+      Assert.assertEquals(
+          2,
+          reports.values()
+                 .stream()
+                 .filter(r -> r instanceof IngestionStatsAndErrorsTaskReport)
+                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsPublished())
+                 .sum()
       );
-      Assert.assertEquals(4,
-                          reports.values()
-                                 .stream()
-                                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsRead())
-                                 .sum()
+      Assert.assertEquals(
+          4,
+          reports.values()
+                 .stream()
+                 .filter(r -> r instanceof IngestionStatsAndErrorsTaskReport)
+                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsRead())
+                 .sum()
       );
     }
   }
@@ -268,7 +273,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       }
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      Map<String, IngestionStatsAndErrorsTaskReport> reports = indexer.getTaskReport(taskId);
+      Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
       Assert.assertTrue(reports != null && reports.size() > 0);
     }
   }
