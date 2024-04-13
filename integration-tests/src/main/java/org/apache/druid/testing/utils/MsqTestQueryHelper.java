@@ -40,8 +40,8 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
-import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 
@@ -65,7 +65,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
   private final ObjectMapper jsonMapper;
   private final IntegrationTestingConfig config;
-  private final MsqOverlordResourceTestClient overlordClient;
+  private final OverlordResourceTestClient overlordClient;
   private final SqlResourceTestClient msqClient;
 
 
@@ -74,7 +74,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       final ObjectMapper jsonMapper,
       final SqlResourceTestClient queryClient,
       final IntegrationTestingConfig config,
-      final MsqOverlordResourceTestClient overlordClient,
+      final OverlordResourceTestClient overlordClient,
       final SqlResourceTestClient msqClient
   )
   {
@@ -188,7 +188,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public TaskReport.ReportMap fetchStatusReports(String taskId)
   {
-    return overlordClient.getMsqTaskReport(taskId);
+    return overlordClient.getTaskReport(taskId);
   }
 
   /**
