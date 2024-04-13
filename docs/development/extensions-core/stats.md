@@ -141,7 +141,16 @@ GROUP BY 1
 
 #### Druid SQL
 
-There is no equivalent SQL for this query.
+```SQL
+SELECT
+  alias,
+  VARIANCE("index") AS index_var
+FROM "testing"
+WHERE TIME_IN_INTERVAL(__time, '2016-03-06/2016-03-07')
+GROUP BY 1
+ORDER BY 2
+LIMIT 5
+```
 
 #### Native Query
 
