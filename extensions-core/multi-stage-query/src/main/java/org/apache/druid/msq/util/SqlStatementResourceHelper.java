@@ -377,8 +377,8 @@ public class SqlStatementResourceHelper
       return null;
     }
 
-    com.google.common.base.Optional<MSQTaskReport> report = reportMap.findReport("multiStageQuery");
-    return report.isPresent() ? report.get().getPayload() : null;
+    Optional<MSQTaskReport> report = reportMap.findReport("multiStageQuery");
+    return report.map(MSQTaskReport::getPayload).orElse(null);
   }
 
   private static Map<String, String> buildExceptionContext(MSQFault fault, ObjectMapper mapper)

@@ -887,9 +887,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       TaskReport.ReportMap actualReports
   )
   {
-    final Optional<IngestionStatsAndErrorsTaskReport> expectedReportOptional
+    final java.util.Optional<IngestionStatsAndErrorsTaskReport> expectedReportOptional
         = expectedReports.findReport("ingestionStatsAndErrors");
-    final Optional<IngestionStatsAndErrorsTaskReport> actualReportOptional
+    final java.util.Optional<IngestionStatsAndErrorsTaskReport> actualReportOptional
         = actualReports.findReport("ingestionStatsAndErrors");
 
     Assert.assertTrue(expectedReportOptional.isPresent());

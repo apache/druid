@@ -736,7 +736,8 @@ public class SqlStatementResource
       }
 
       MSQTaskReportPayload msqTaskReportPayload = SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+      );
 
       if (msqTaskReportPayload.getResults().getResultYielder() == null) {
         results = Optional.empty();
@@ -747,7 +748,8 @@ public class SqlStatementResource
     } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
 
       MSQTaskReportPayload msqTaskReportPayload = SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+      );
 
       List<PageInformation> pages =
           SqlStatementResourceHelper.populatePageList(

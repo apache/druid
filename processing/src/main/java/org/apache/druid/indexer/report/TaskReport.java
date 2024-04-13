@@ -21,9 +21,9 @@ package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Optional;
 
 import java.util.LinkedHashMap;
+import java.util.Optional;
 
 /**
  * TaskReport objects contain additional information about an indexing task, such as row statistics, errors, and
@@ -73,7 +73,7 @@ public interface TaskReport
     @SuppressWarnings("unchecked")
     public <T extends TaskReport> Optional<T> findReport(String reportKey)
     {
-      return Optional.fromNullable((T) get(reportKey));
+      return Optional.ofNullable((T) get(reportKey));
     }
   }
 }
