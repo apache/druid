@@ -280,7 +280,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, TaskReport> getTaskReport(String taskId)
+  public TaskReport.ReportMap getTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -293,9 +293,7 @@ public class OverlordResourceTestClient
       );
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, TaskReport>>()
-          {
-          }
+          TaskReport.ReportMap.class
       );
     }
     catch (ISE e) {

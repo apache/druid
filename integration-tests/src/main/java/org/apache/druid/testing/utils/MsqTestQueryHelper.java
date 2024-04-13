@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -186,7 +186,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Fetches status reports for a given task
    */
-  public Map<String, TaskReport> fetchStatusReports(String taskId)
+  public TaskReport.ReportMap fetchStatusReports(String taskId)
   {
     return overlordClient.getMsqTaskReport(taskId);
   }

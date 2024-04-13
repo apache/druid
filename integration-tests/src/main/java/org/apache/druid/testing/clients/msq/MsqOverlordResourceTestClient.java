@@ -19,11 +19,10 @@
 
 package org.apache.druid.testing.clients.msq;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -33,14 +32,12 @@ import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import java.util.Map;
-
 /**
  * Overlord resource client for MSQ Tasks
  */
 public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
 {
-  private ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapper;
 
   @Inject
   MsqOverlordResourceTestClient(
@@ -54,7 +51,7 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
     this.jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
   }
 
-  public Map<String, TaskReport> getMsqTaskReport(String taskId)
+  public TaskReport.ReportMap getMsqTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -65,9 +62,7 @@ public class MsqOverlordResourceTestClient extends OverlordResourceTestClient
               StringUtils.format("task/%s/reports", StringUtils.urlEncode(taskId))
           )
       );
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, TaskReport>>()
-      {
-      });
+      return jsonMapper.readValue(response.getContent(), TaskReport.ReportMap.class);
     }
     catch (RuntimeException e) {
       throw e;

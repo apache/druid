@@ -23,7 +23,7 @@ import com.google.api.client.util.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.report.TaskContextReport;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -46,7 +46,6 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
@@ -236,7 +235,7 @@ public class ITMultiStageQuery
 
     msqHelper.pollTaskIdForSuccess(resultTaskStatus.getTaskId());
 
-    Map<String, TaskReport> statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
+    TaskReport.ReportMap statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
 
     MSQTaskReport taskReport = (MSQTaskReport) statusReport.get(MSQTaskReport.REPORT_KEY);
     if (taskReport == null) {
