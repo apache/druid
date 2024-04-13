@@ -566,10 +566,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     @Override
     public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
     {
-      return Futures.immediateFuture(null);
+      return Futures.immediateFuture(getLiveReportsForTask(taskId));
     }
 
-    public TaskReport.ReportMap getLiveReportsForTask(String taskId)
+    private TaskReport.ReportMap getLiveReportsForTask(String taskId)
     {
       final Optional<Task> task = getTaskStorage().getTask(taskId);
       if (!task.isPresent()) {
