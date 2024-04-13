@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
@@ -110,6 +111,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.NativeQueryIgnore;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -6117,6 +6119,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             "From line 1, column 38 to line 1, column 77: "
             + "Function 'TIME_IN_INTERVAL' second argument is not a valid ISO8601 interval: "
             + "Invalid format: \"X\""))
+    );
+  }
+
+  @Test
+  public void testTimeInIntervalBooleanNullable()
+  {
+    testQuery(
+            "SELECT TIME_IN_INTERVAL(TIME_PARSE('2000-01-10'), '2000-01-01/P1Y')",
+            QUERY_CONTEXT_LOS_ANGELES,
+            ImmutableList.of(
+                    Druids.newScanQueryBuilder()
+                            .dataSource(InlineDataSource.fromIterable(
+                                    ImmutableList.of(new Object[]{0L}),
+                                    RowSignature.builder()
+                                            .add("ZERO", ColumnType.LONG)
+                                            .build()
+                            ))
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
+                            .columns("v0")
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .legacy(false)
+                            .context(QUERY_CONTEXT_LOS_ANGELES)
+                            .build()
+            ),
+            ImmutableList.of(
+                    new Object[]{true}
+            )
     );
   }
 
