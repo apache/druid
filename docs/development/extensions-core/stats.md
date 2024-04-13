@@ -56,6 +56,19 @@ Numer. Math, 58 (1991) pp. 583--590
  precisely the same across query runs.
 :::
 
+### Variance Aggregator in Druid SQL
+
+You can use the variance and standard deviation aggregation functions in the SELECT clause of any Druid SQL query.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`VAR_POP(expr)`|Computes variance population of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`VAR_SAMP(expr)`|Computes variance sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`VARIANCE(expr)`|Computes variance sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`STDDEV(expr)`|Computes standard deviation sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+
 ### Pre-aggregating variance at ingestion time
 
 To use this feature, an "variance" aggregator must be included at indexing time.
