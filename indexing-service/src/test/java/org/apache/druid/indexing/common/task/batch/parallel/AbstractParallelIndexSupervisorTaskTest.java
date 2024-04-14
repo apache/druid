@@ -521,7 +521,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       final TaskContainer taskContainer = tasks.get(taskId);
       if (taskContainer == null || taskContainer.actionClient == null) {
-        return new DataSegmentWithSchemas();
+        return new DataSegmentWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
       } else {
         return new DataSegmentWithSchemas(taskContainer.actionClient.getPublishedSegments(), taskContainer.actionClient.getSegmentSchemas());
       }

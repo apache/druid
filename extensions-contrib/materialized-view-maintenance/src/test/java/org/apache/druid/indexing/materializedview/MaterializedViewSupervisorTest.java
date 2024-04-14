@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -101,7 +102,12 @@ public class MaterializedViewSupervisorTest
     derbyConnector.createSegmentTable();
     taskStorage = EasyMock.createMock(TaskStorage.class);
     taskMaster = EasyMock.createMock(TaskMaster.class);
-    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        objectMapper,
+        derbyConnector,
+        new FingerprintGenerator(objectMapper)
+    );
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

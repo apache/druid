@@ -343,7 +343,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
-    private MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    private MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     private TestLocalTaskActionClient(Task task)
     {
