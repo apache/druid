@@ -686,7 +686,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     final List<DataSegment> dataSegments = new ArrayList<>();
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     return Futures.transform(
         persistAll(null), // make sure persists is done before push...

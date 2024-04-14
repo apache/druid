@@ -81,7 +81,7 @@ public class KillUnreferencedMinimalSegmentSchemasTest
   }
 
   @Test
-  public void testCleanupUnreferencedSchema()
+  public void testKillUnreferencedSchema()
   {
     Set<DataSegment> segments = new HashSet<>();
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
@@ -135,7 +135,7 @@ public class KillUnreferencedMinimalSegmentSchemasTest
     schemaMetadataPluses.add(plus2);
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     List<Long> schemaIds = derbyConnector.retryWithHandle(
         handle -> handle.createQuery(StringUtils.format(
@@ -209,7 +209,7 @@ public class KillUnreferencedMinimalSegmentSchemasTest
   }
 
   @Test
-  public void testCleanupUnreferencedSchema_repair()
+  public void testKillUnreferencedSchema_repair()
   {
     RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
 
@@ -221,7 +221,8 @@ public class KillUnreferencedMinimalSegmentSchemasTest
           segmentSchemaManager.persistSegmentSchema(
               handle,
               "foo",
-              Collections.singletonMap(fingerprint, schemaPayload)
+              Collections.singletonMap(fingerprint, schemaPayload),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
           );
           return null;
         }
@@ -297,5 +298,121 @@ public class KillUnreferencedMinimalSegmentSchemasTest
     );
 
     Assert.assertTrue(usedStatus.get(0));
+  }
+
+  @Test
+  public void testKillOlderVersionSchema()
+  {
+    // create 2 versions of same schema
+    // unreferenced one should get deleted
+    RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
+
+    SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
+    String fingerprint = fingerprintGenerator.generateFingerprint(schemaPayload);
+
+    derbyConnector.retryWithHandle(
+        handle -> {
+          segmentSchemaManager.persistSegmentSchema(
+              handle,
+              "foo",
+              Collections.singletonMap(fingerprint, schemaPayload),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          );
+          return null;
+        }
+    );
+
+    derbyConnector.retryWithHandle(
+        handle -> {
+          segmentSchemaManager.persistSegmentSchema(
+              handle,
+              "foo",
+              Collections.singletonMap(fingerprint, schemaPayload),
+              "v0"
+          );
+          return null;
+        }
+    );
+
+    List<Long> schemaIds = derbyConnector.retryWithHandle(
+        handle -> handle.createQuery(
+            StringUtils.format(
+                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = '%s'",
+                tablesConfig.getSegmentSchemasTable(), fingerprint, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            )).mapTo(Long.class).list()
+    );
+
+    long schemaIdNewVersion = schemaIds.get(0);
+
+
+    schemaIds = derbyConnector.retryWithHandle(
+        handle -> handle.createQuery(
+            StringUtils.format(
+                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = '%s'",
+                tablesConfig.getSegmentSchemasTable(), fingerprint, "v0"
+            )).mapTo(Long.class).list()
+    );
+
+    long schemaIdOldVersion = schemaIds.get(0);
+
+    // this call should mark both the schema as unused
+    killUnreferencedSegmentSchemas.cleanup(0);
+
+    List<Boolean> usedStatus = derbyConnector.retryWithHandle(
+        handle -> handle.createQuery(
+            StringUtils.format(
+                "SELECT used from %s where id = %s",
+                tablesConfig.getSegmentSchemasTable(), schemaIdNewVersion
+            )
+        ).mapTo(Boolean.class).list()
+    );
+
+    Assert.assertFalse(usedStatus.get(0));
+
+    // associate a segment to the schema
+    DataSegment segment1 = new DataSegment(
+        "foo",
+        Intervals.of("2023-01-02/2023-01-03"),
+        "2023-01-02",
+        ImmutableMap.of("path", "a-1"),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new LinearShardSpec(0),
+        9,
+        100
+    );
+
+    segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
+
+    derbyConnector.retryWithHandle(
+        handle -> handle.createStatement(
+            StringUtils.format(
+                "UPDATE %s SET schema_id = %s, num_rows = 100 WHERE id = '%s'",
+                tablesConfig.getSegmentsTable(), schemaIdNewVersion, segment1.getId().toString()
+            )).execute()
+    );
+
+    // this call should make the referenced schema used and kill the other schema
+    killUnreferencedSegmentSchemas.cleanup(DateTimes.nowUtc().withDurationAdded(TimeUnit.HOURS.toMillis(10), 10).getMillis());
+
+    usedStatus = derbyConnector.retryWithHandle(
+        handle -> handle.createQuery(
+            StringUtils.format(
+                "SELECT used from %s where id = %s",
+                tablesConfig.getSegmentSchemasTable(), schemaIdNewVersion
+            )).mapTo(Boolean.class).list()
+    );
+
+    Assert.assertTrue(usedStatus.get(0));
+
+    List<Integer> counts = derbyConnector.retryWithHandle(
+        handle -> handle.createQuery(
+            StringUtils.format(
+                "SELECT count(*) from %s where id = %s",
+                tablesConfig.getSegmentSchemasTable(), schemaIdOldVersion
+            )).mapTo(Integer.class).list()
+    );
+
+    Assert.assertEquals(0, counts.get(0).intValue());
   }
 }

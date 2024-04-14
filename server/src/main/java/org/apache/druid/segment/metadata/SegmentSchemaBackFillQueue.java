@@ -146,7 +146,7 @@ public class SegmentSchemaBackFillQueue
 
     for (Map.Entry<String, List<SegmentSchemaMetadataPlus>> entry : polled.entrySet()) {
       try {
-        segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(entry.getKey(), entry.getValue());
+        segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(entry.getKey(), entry.getValue(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
           segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());

@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadataManagerTestBase
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   @Before
   public void setUp() throws Exception
@@ -110,7 +110,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     SchemaPayloadPlus schemaMetadata2 = new SchemaPayloadPlus(payload2, 40L);
     list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
 
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);
@@ -164,10 +164,44 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     );
   }
 
-  private CentralizedDatasourceSchemaConfig getEnabledConfig()
+  @Test
+  public void testPollOnlyNewSchemaVersion()
   {
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
-    return config;
+    List<SegmentSchemaManager.SegmentSchemaMetadataPlus> list = new ArrayList<>();
+    FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(jsonMapper);
+    SchemaPayload payload1 = new SchemaPayload(
+        RowSignature.builder().add("c1", ColumnType.FLOAT).build());
+    SchemaPayloadPlus schemaMetadata1 = new SchemaPayloadPlus(payload1, 20L);
+    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), fingerprintGenerator.generateFingerprint(payload1), schemaMetadata1));
+    SchemaPayload payload2 = new SchemaPayload(
+        RowSignature.builder().add("c2", ColumnType.FLOAT).build());
+    SchemaPayloadPlus schemaMetadata2 = new SchemaPayloadPlus(payload2, 40L);
+    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
+
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, "V0");
+
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
+    config = new SegmentsMetadataManagerConfig();
+    config.setPollDuration(Period.seconds(3));
+    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
+        jsonMapper,
+        Suppliers.ofInstance(config),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        connector,
+        segmentSchemaCache,
+        centralizedDatasourceSchemaConfig
+    );
+
+    sqlSegmentsMetadataManager.start();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
   }
 }

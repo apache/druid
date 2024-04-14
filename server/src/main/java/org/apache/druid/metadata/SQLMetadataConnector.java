@@ -1018,12 +1018,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %3$s NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  version VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (id),\n"
-                + "  UNIQUE (datasource, fingerprint) \n"
+                + "  UNIQUE (datasource, version, fingerprint) \n"
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(datasource, fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(datasource, version, fingerprint)", tableName),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
         )
     );

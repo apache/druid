@@ -60,6 +60,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -432,7 +433,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
-      final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+      final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
       while (inputRowIterator.hasNext()) {
         final InputRow inputRow = inputRowIterator.next();

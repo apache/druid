@@ -37,20 +37,25 @@ public class MinimalSegmentSchemas
   // Mapping of schema fingerprint to payload.
   private final Map<String, SchemaPayload> schemaFingerprintToPayloadMap;
 
+  private final String schemaVersion;
+
   @JsonCreator
   public MinimalSegmentSchemas(
       @JsonProperty("segmentIdToMetadataMap") Map<String, SegmentStats> segmentIdToMetadataMap,
-      @JsonProperty("schemaFingerprintToPayloadMap") Map<String, SchemaPayload> schemaFingerprintToPayloadMap
+      @JsonProperty("schemaFingerprintToPayloadMap") Map<String, SchemaPayload> schemaFingerprintToPayloadMap,
+      @JsonProperty("schemaVersion") String schemaVersion
   )
   {
     this.segmentIdToMetadataMap = segmentIdToMetadataMap;
     this.schemaFingerprintToPayloadMap = schemaFingerprintToPayloadMap;
+    this.schemaVersion = schemaVersion;
   }
 
-  public MinimalSegmentSchemas()
+  public MinimalSegmentSchemas(String schemaVersion)
   {
     this.segmentIdToMetadataMap = new HashMap<>();
     this.schemaFingerprintToPayloadMap = new HashMap<>();
+    this.schemaVersion = schemaVersion;
   }
 
   @JsonProperty
@@ -63,6 +68,12 @@ public class MinimalSegmentSchemas
   public Map<String, SchemaPayload> getSchemaFingerprintToPayloadMap()
   {
     return schemaFingerprintToPayloadMap;
+  }
+
+  @JsonProperty
+  public String getSchemaVersion()
+  {
+    return schemaVersion;
   }
 
   public boolean isNonEmpty()
@@ -124,6 +135,7 @@ public class MinimalSegmentSchemas
     return "MinimalSegmentSchemas{" +
            "segmentIdToMetadataMap=" + segmentIdToMetadataMap +
            ", schemaFingerprintToPayloadMap=" + schemaFingerprintToPayloadMap +
+           ", version='" + schemaVersion + '\'' +
            '}';
   }
 
@@ -138,7 +150,7 @@ public class MinimalSegmentSchemas
     @JsonCreator
     public SegmentStats(
         @JsonProperty("numRows") Long numRows,
-        @JsonProperty("fingerprint") String schemaFingerprint
+        @JsonProperty("schemaFingerprint") String schemaFingerprint
     )
     {
       this.numRows = numRows;

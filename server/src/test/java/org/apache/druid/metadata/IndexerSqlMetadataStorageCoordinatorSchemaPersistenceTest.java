@@ -130,7 +130,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     );
 
     final Set<DataSegment> appendSegments = new HashSet<>();
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     final Set<DataSegment> expectedSegmentsToUpgrade = new HashSet<>();
 
     Random random = new Random(5);
@@ -217,7 +217,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
   public void testAnnounceHistoricalSegments() throws IOException
   {
     Set<DataSegment> segments = new HashSet<>();
-    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     Random random = ThreadLocalRandom.current();
     Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
 
@@ -278,7 +278,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
   public void testAnnounceHistoricalSegments_schemaExists() throws IOException
   {
     Set<DataSegment> segments = new HashSet<>();
-    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     Random random = ThreadLocalRandom.current();
     Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
 
@@ -314,7 +314,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     }
 
     derbyConnector.retryWithHandle(handle -> {
-      segmentSchemaManager.persistSegmentSchema(handle, "fooDataSource", schemaPayloadMapToPerist);
+      segmentSchemaManager.persistSegmentSchema(handle, "fooDataSource", schemaPayloadMapToPerist, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
       return null;
     });
 
@@ -380,7 +380,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
 
-    Map<String, Long> fingerprintSchemaMap = segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMap, Collections.emptySet());
+    Map<String, Long> fingerprintSchemaMap = segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMap, schemaPayloadMap.keySet());
 
     for (Map.Entry<String, Pair<SchemaPayload, Integer>> entry : segmentIdSchemaMap.entrySet()) {
       String segmentId = entry.getKey();
@@ -393,7 +393,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, segmentStatsMap);
     insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
 
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(

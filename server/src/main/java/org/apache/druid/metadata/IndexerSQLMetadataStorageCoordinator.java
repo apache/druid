@@ -2005,11 +2005,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
       if (publishSchema()
           && minimalSegmentSchemas != null
-          && minimalSegmentSchemas.isNonEmpty()) {
+          && minimalSegmentSchemas.isNonEmpty()
+      ) {
         String dataSource = segments.stream().iterator().next().getDataSource();
         schemaPresent = true;
         log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
-        segmentSchemaManager.persistSegmentSchema(handle, dataSource, minimalSegmentSchemas.getSchemaFingerprintToPayloadMap());
+        segmentSchemaManager.persistSegmentSchema(
+            handle,
+            dataSource,
+            minimalSegmentSchemas.getSchemaFingerprintToPayloadMap(),
+            minimalSegmentSchemas.getSchemaVersion()
+        );
 
         // fetch schemaId
         fingerprintSchemaIdMap =
@@ -2237,7 +2243,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       String dataSource = segments.iterator().next().getDataSource();
       schemaPresent = true;
       log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
-      segmentSchemaManager.persistSegmentSchema(handle, dataSource, minimalSegmentSchemas.getSchemaFingerprintToPayloadMap());
+      segmentSchemaManager.persistSegmentSchema(
+          handle,
+          dataSource,
+          minimalSegmentSchemas.getSchemaFingerprintToPayloadMap(),
+          minimalSegmentSchemas.getSchemaVersion()
+      );
 
       // fetch schemaId
       fingerprintSchemaIdMap =

@@ -617,7 +617,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
-  private void markSegmentAsNeedRefresh(SegmentId segmentId)
+  protected void markSegmentAsNeedRefresh(SegmentId segmentId)
   {
     synchronized (lock) {
       segmentsNeedingRefresh.add(segmentId);

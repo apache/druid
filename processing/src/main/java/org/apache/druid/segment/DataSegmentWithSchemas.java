@@ -34,10 +34,10 @@ public class DataSegmentWithSchemas
   private final Set<DataSegment> segments;
   private final MinimalSegmentSchemas minimalSegmentSchemas;
 
-  public DataSegmentWithSchemas()
+  public DataSegmentWithSchemas(String schemaVersion)
   {
     this.segments = new HashSet<>();
-    this.minimalSegmentSchemas = new MinimalSegmentSchemas();
+    this.minimalSegmentSchemas = new MinimalSegmentSchemas(schemaVersion);
   }
 
   @JsonCreator

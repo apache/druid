@@ -1182,12 +1182,19 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     Long lastSchemaIdPrePoll = latestSchemaId.get();
     if (lastSchemaIdPrePoll == null) {
       log.info("Executing full schema refresh.");
-      schemaPollQuery = StringUtils.format("SELECT id, payload FROM %s", getSegmentSchemaTable());
+      schemaPollQuery =
+          StringUtils.format(
+              "SELECT id, payload FROM %s WHERE version = '%s'",
+              getSegmentSchemaTable(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          );
     } else {
       schemaPollQuery = StringUtils.format(
-          "SELECT id, payload FROM %1$s where id > %2$s",
+          "SELECT id, payload FROM %s WHERE version = '%s' AND id > %s",
           getSegmentSchemaTable(),
-          lastSchemaIdPrePoll);
+          CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
+          lastSchemaIdPrePoll
+      );
     }
     String finalSchemaPollQuery = schemaPollQuery;
 

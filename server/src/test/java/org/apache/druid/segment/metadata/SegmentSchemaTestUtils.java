@@ -143,8 +143,8 @@ public class SegmentSchemaTestUtils
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
-                  "INSERT INTO %1$s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
-                  + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
+                  "INSERT INTO %1$s (created_date, datasource, fingerprint, payload, used, used_status_last_updated, version) "
+                  + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated, :version)",
                   table
               )
           );
@@ -159,7 +159,8 @@ public class SegmentSchemaTestUtils
                          .bind("fingerprint", fingerprint)
                          .bind("payload", mapper.writeValueAsBytes(payload))
                          .bind("used", usedFingerprints.contains(fingerprint))
-                         .bind("used_status_last_updated", now);
+                         .bind("used_status_last_updated", now)
+                         .bind("version", CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
           }
 
           final int[] affectedRows = preparedBatch.execute();
@@ -199,7 +200,7 @@ public class SegmentSchemaTestUtils
     final String schemaTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemasTable();
 
     derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id, fingerprint, payload, created_date, used FROM "
+        handle -> handle.createQuery("SELECT id, fingerprint, payload, created_date, used, version FROM "
                                      + schemaTable)
                         .map(((index, r, ctx) ->
                             schemaRepresentationMap.put(
@@ -212,7 +213,8 @@ public class SegmentSchemaTestUtils
                                         SchemaPayload.class
                                     ),
                                     r.getString(4),
-                                    r.getBoolean(5)
+                                    r.getBoolean(5),
+                                    r.getString(6)
                                 )
                             )))
                         .list());
@@ -230,6 +232,7 @@ public class SegmentSchemaTestUtils
       SegmentSchemaRepresentation schemaRepresentation = schemaRepresentationMap.get(segmentStats.get(id).lhs);
       Assert.assertEquals(schemaPayload, schemaRepresentation.getSchemaPayload());
       Assert.assertTrue(schemaRepresentation.isUsed());
+      Assert.assertEquals(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaRepresentation.getVersion());
     }
   }
 
@@ -239,13 +242,15 @@ public class SegmentSchemaTestUtils
     private final SchemaPayload schemaPayload;
     private final String createdDate;
     private final boolean used;
+    private final String version;
 
-    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used)
+    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used, String version)
     {
       this.fingerprint = fingerprint;
       this.schemaPayload = schemaPayload;
       this.createdDate = createdDate;
       this.used = used;
+      this.version = version;
     }
 
     public String getFingerprint()
@@ -266,6 +271,11 @@ public class SegmentSchemaTestUtils
     public boolean isUsed()
     {
       return used;
+    }
+
+    public String getVersion()
+    {
+      return version;
     }
   }
 }

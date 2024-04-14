@@ -146,7 +146,7 @@ public class SegmentSchemaManager
   /**
    * Persist segment schema and update segments in a transaction.
    */
-  public void persistSchemaAndUpdateSegmentsTable(String dataSource, List<SegmentSchemaMetadataPlus> segmentSchemas)
+  public void persistSchemaAndUpdateSegmentsTable(String dataSource, List<SegmentSchemaMetadataPlus> segmentSchemas, String schemaVersion)
   {
     connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
       Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
@@ -157,7 +157,7 @@ public class SegmentSchemaManager
             segmentSchema.getSegmentSchemaMetadata().getSchemaPayload()
         );
       }
-      persistSegmentSchema(handle, dataSource, schemaPayloadMap);
+      persistSegmentSchema(handle, dataSource, schemaPayloadMap, schemaVersion);
       updateSegmentWithSchemaInformation(handle, dataSource, segmentSchemas);
 
       return null;
@@ -167,12 +167,16 @@ public class SegmentSchemaManager
   /**
    * Persist unique segment schema in the DB.
    */
-  public void persistSegmentSchema(Handle handle, String dataSource, Map<String, SchemaPayload> fingerprintSchemaPayloadMap)
-      throws JsonProcessingException
+  public void persistSegmentSchema(
+      Handle handle,
+      String dataSource,
+      Map<String, SchemaPayload> fingerprintSchemaPayloadMap,
+      String schemaVersion
+  ) throws JsonProcessingException
   {
     try {
       // Filter already existing schema
-      Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(handle, dataSource, fingerprintSchemaPayloadMap.keySet());
+      Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(handle, dataSource, schemaVersion, fingerprintSchemaPayloadMap.keySet());
       Set<String> usedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(true) ? existingFingerprintsAndUsedStatus.get(true) : new HashSet<>();
       Set<String> unusedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(false) ? existingFingerprintsAndUsedStatus.get(false) : new HashSet<>();
       Set<String> existingFingerprints = Sets.union(usedExistingFingerprints, unusedExistingFingerprints);
@@ -201,16 +205,17 @@ public class SegmentSchemaManager
         handle.createStatement(
                   StringUtils.format(
                       "UPDATE %s SET used = true, used_status_last_updated = :created_date"
-                      + " WHERE datasource = :datasource AND fingerprint IN (%s)",
+                      + " WHERE datasource = :datasource AND version = :version AND fingerprint IN (%s)",
                       dbTables.getSegmentSchemasTable(), inClause)
               )
               .bind("created_date", DateTimes.nowUtc().toString())
               .bind("datasource", dataSource)
+              .bind("version", schemaVersion)
               .execute();
 
         // it is possible that a delete job could have actually deleted these unused schema
         // in that scenario fail the transaction
-        Map<Boolean, Set<String>> unusedFingerprintStatus = fingerprintExistBatch(handle, dataSource, unusedExistingFingerprints);
+        Map<Boolean, Set<String>> unusedFingerprintStatus = fingerprintExistBatch(handle, dataSource, schemaVersion, unusedExistingFingerprints);
         if (!unusedExistingFingerprints.equals(unusedFingerprintStatus.get(true))) {
           throw new ISE("Failed to mark unused schema as used for datasource: [%s], fingerprints: [%s].", dataSource, unusedExistingFingerprints);
         }
@@ -235,8 +240,8 @@ public class SegmentSchemaManager
       );
 
       String insertSql = StringUtils.format(
-          "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
-          + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
+          "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated, version) "
+          + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated, :version)",
           dbTables.getSegmentSchemasTable()
       );
 
@@ -251,7 +256,8 @@ public class SegmentSchemaManager
                            .bind("fingerprint", fingerprint)
                            .bind("payload", jsonMapper.writeValueAsBytes(fingerprintSchemaPayloadMap.get(fingerprint)))
                            .bind("used", true)
-                           .bind("used_status_last_updated", now);
+                           .bind("used_status_last_updated", now)
+                           .bind("version", schemaVersion);
         }
         final int[] affectedRows = schemaInsertBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
@@ -280,23 +286,12 @@ public class SegmentSchemaManager
   {
     log.debug("Updating segment with schema and numRows information: [%s].", batch);
 
-    // segments which are already updated with the schema information.
-    Set<String> updatedSegments =
-        segmentUpdatedBatch(handle, batch.stream().map(plus -> plus.getSegmentId().toString()).collect(Collectors.toSet()));
-
-    log.debug("Already updated segments: [%s].", updatedSegments);
-
-    List<SegmentSchemaMetadataPlus> segmentsToUpdate =
-        batch.stream()
-             .filter(id -> !updatedSegments.contains(id.getSegmentId().toString()))
-             .collect(Collectors.toList());
-
     // fetch schemaId
     Map<String, Long> fingerprintSchemaIdMap =
         schemaIdFetchBatch(
             handle,
             dataSource,
-            segmentsToUpdate
+            batch
                 .stream()
                 .map(SegmentSchemaMetadataPlus::getFingerprint)
                 .collect(Collectors.toSet())
@@ -315,12 +310,12 @@ public class SegmentSchemaManager
 
     List<List<SegmentSchemaMetadataPlus>> partitionedSegmentIds =
         Lists.partition(
-            segmentsToUpdate,
+            batch,
             DB_ACTION_PARTITION_SIZE
         );
 
     for (List<SegmentSchemaMetadataPlus> partition : partitionedSegmentIds) {
-      for (SegmentSchemaMetadataPlus segmentSchema : segmentsToUpdate) {
+      for (SegmentSchemaMetadataPlus segmentSchema : batch) {
         String fingerprint = segmentSchema.getFingerprint();
         if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
           log.error(
@@ -353,7 +348,7 @@ public class SegmentSchemaManager
     }
   }
 
-  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, String dataSource, Set<String> fingerprintsToInsert)
+  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, String dataSource, String schemaVersion, Set<String> fingerprintsToInsert)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToInsert),
@@ -367,11 +362,12 @@ public class SegmentSchemaManager
                                            .collect(Collectors.joining(","));
       handle.createQuery(
                 StringUtils.format(
-                    "SELECT used, fingerprint FROM %s WHERE fingerprint IN (%s) AND datasource = :datasource",
+                    "SELECT used, fingerprint FROM %s WHERE datasource = :datasource AND version = :version AND fingerprint IN (%s)",
                     dbTables.getSegmentSchemasTable(), fingerprints
                 )
             )
             .bind("datasource", dataSource)
+            .bind("version", schemaVersion)
             .map((index, r, ctx) -> existingFingerprints.computeIfAbsent(
                 r.getBoolean(1), value -> new HashSet<>()).add(r.getString(2)))
             .list();
@@ -409,33 +405,6 @@ public class SegmentSchemaManager
       fingerprintIdMap.putAll(partitionFingerprintIdMap);
     }
     return fingerprintIdMap;
-  }
-
-  private Set<String> segmentUpdatedBatch(Handle handle, Set<String> segmentIds)
-  {
-    List<List<String>> partitionedSegmentIds = Lists.partition(
-        new ArrayList<>(segmentIds),
-        DB_ACTION_PARTITION_SIZE
-    );
-
-    Set<String> updated = new HashSet<>();
-    for (List<String> partition : partitionedSegmentIds) {
-      String ids = partition.stream()
-                            .map(id -> "'" + StringEscapeUtils.escapeSql(id) + "'")
-                            .collect(Collectors.joining(","));
-      List<String> updatedSegmentIds =
-          handle.createQuery(
-                    StringUtils.format(
-                        "SELECT id FROM %s WHERE id IN (%s) AND schema_id IS NOT NULL AND num_rows IS NOT NULL",
-                        dbTables.getSegmentsTable(),
-                        ids
-                    ))
-                .mapTo(String.class)
-                .list();
-
-      updated.addAll(updatedSegmentIds);
-    }
-    return updated;
   }
 
   /**

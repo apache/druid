@@ -56,7 +56,7 @@ public class SegmentSchemaManagerTest
   }
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -123,7 +123,7 @@ public class SegmentSchemaManagerTest
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
 
@@ -156,7 +156,11 @@ public class SegmentSchemaManagerTest
         );
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(newSegment), Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", Collections.singletonList(plus));
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(
+        "foo",
+        Collections.singletonList(plus),
+        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
 
     segmentIdSchemaMap.clear();
     segmentIdSchemaMap.put(newSegment.getId().toString(), Pair.of(schemaPayloadIntegerPair.lhs, 500));
@@ -220,15 +224,8 @@ public class SegmentSchemaManagerTest
 
     segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMapToPersist, unusedFingerprints);
 
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
-  }
-
-  private CentralizedDatasourceSchemaConfig getEnabledConfig()
-  {
-    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
-    config.setEnabled(true);
-    return config;
   }
 }

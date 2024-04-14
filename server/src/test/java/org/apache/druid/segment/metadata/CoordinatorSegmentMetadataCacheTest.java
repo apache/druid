@@ -1510,7 +1510,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     SegmentSchemaTestUtils segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     segmentSchemaTestUtils.insertUsedSegments(segmentsToPersist, Collections.emptyMap());
 
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(DATASOURCE1, pluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(DATASOURCE1, pluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
 

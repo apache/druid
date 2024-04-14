@@ -139,7 +139,7 @@ public class SegmentGeneratorFrameProcessorFactory
     if (extra == null || extra.isEmpty()) {
       return new ProcessorsAndChannels<>(
           ProcessorManagers.of(Sequences.<SegmentGeneratorFrameProcessor>empty())
-                           .withAccumulation(new DataSegmentWithSchemas(), (acc, segment) -> acc),
+                           .withAccumulation(new DataSegmentWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION), (acc, segment) -> acc),
           OutputChannels.none()
       );
     }
@@ -220,7 +220,7 @@ public class SegmentGeneratorFrameProcessorFactory
     return new ProcessorsAndChannels<>(
         ProcessorManagers.of(workers)
                          .withAccumulation(
-                             new DataSegmentWithSchemas(),
+                             new DataSegmentWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
                              (acc, segment) -> {
                                if (segment != null) {
                                  acc.merge(segment);

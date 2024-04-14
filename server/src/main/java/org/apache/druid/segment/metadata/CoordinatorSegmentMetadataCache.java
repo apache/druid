@@ -75,8 +75,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @ManageLifecycle
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
-
-  // TODO add case to handle the case when schema goes missing for an existing segment
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
 
   private final SegmentMetadataCacheConfig config;
@@ -281,7 +279,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
-    log.debug("Fetching segmentMetadataSnapshot.");
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
     for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
       for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
@@ -293,6 +290,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                                            .withNumRows(metadata.get().getNumRows())
                                            .build();
         } else {
+          // mark it for refresh, however, this case shouldn't arise by design
+          markSegmentAsNeedRefresh(entry.getKey());
           log.debug("SchemaMetadata for segmentId [%s] is absent.", entry.getKey());
         }
         segmentMetadata.put(entry.getKey(), copied);
@@ -316,6 +315,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                                        .withNumRows(metadata.get().getNumRows())
                                        .build();
     } else {
+      // mark it for refresh, however, this case shouldn't arise by design
+      markSegmentAsNeedRefresh(segmentId);
       log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
     }
     return availableSegmentMetadata;
@@ -406,7 +407,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public RowSignature buildDataSourceRowSignature(final String dataSource)
   {
-    log.debug("Method Start: buildDataSourceRowSignature");
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
     // Preserve order.
@@ -425,6 +425,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
             columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
           }
         } else {
+          // mark it for refresh, however, this case shouldn't arise by design
+          markSegmentAsNeedRefresh(segmentId);
           log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
         }
       }
@@ -435,8 +437,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
     final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
-
-    log.debug("Method Stop: buildDataSourceRowSignature");
 
     return builder.build();
   }
