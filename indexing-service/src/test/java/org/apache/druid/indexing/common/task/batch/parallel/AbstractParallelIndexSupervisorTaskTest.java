@@ -571,11 +571,17 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
     private TaskReport.ReportMap getLiveReportsForTask(String taskId)
     {
-      final Optional<Task> task = getTaskStorage().getTask(taskId);
-      if (!task.isPresent()) {
+      final Optional<Task> taskOptional = getTaskStorage().getTask(taskId);
+      if (!taskOptional.isPresent()) {
         return null;
       }
-      return ((ParallelIndexSupervisorTask) task.get()).doGetLiveReports(true);
+
+      final Task task = taskOptional.get();
+      if (task instanceof SinglePhaseSubTask) {
+        return ((SinglePhaseSubTask) task).doGetLiveReports(true);
+      } else {
+        return ((ParallelIndexSupervisorTask) task).doGetLiveReports(true);
+      }
     }
 
     public TaskContainer getTaskContainer(String taskId)
