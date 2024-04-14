@@ -158,7 +158,7 @@ public class SegmentSchemaManager
         );
       }
       persistSegmentSchema(handle, dataSource, schemaPayloadMap, schemaVersion);
-      updateSegmentWithSchemaInformation(handle, dataSource, segmentSchemas);
+      updateSegmentWithSchemaInformation(handle, dataSource, schemaVersion, segmentSchemas);
 
       return null;
     }, 1, 3);
@@ -282,7 +282,7 @@ public class SegmentSchemaManager
   /**
    * Update segment with schemaId and numRows information.
    */
-  public void updateSegmentWithSchemaInformation(Handle handle, String dataSource, List<SegmentSchemaMetadataPlus> batch)
+  public void updateSegmentWithSchemaInformation(Handle handle, String dataSource, String schemaVersion, List<SegmentSchemaMetadataPlus> batch)
   {
     log.debug("Updating segment with schema and numRows information: [%s].", batch);
 
@@ -291,6 +291,7 @@ public class SegmentSchemaManager
         schemaIdFetchBatch(
             handle,
             dataSource,
+            schemaVersion,
             batch
                 .stream()
                 .map(SegmentSchemaMetadataPlus::getFingerprint)
@@ -375,7 +376,7 @@ public class SegmentSchemaManager
     return existingFingerprints;
   }
 
-  public Map<String, Long> schemaIdFetchBatch(Handle handle, String dataSource, Set<String> fingerprintsToQuery)
+  public Map<String, Long> schemaIdFetchBatch(Handle handle, String dataSource, String schemaVersion, Set<String> fingerprintsToQuery)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToQuery),
@@ -390,11 +391,12 @@ public class SegmentSchemaManager
       Map<String, Long> partitionFingerprintIdMap =
           handle.createQuery(
                     StringUtils.format(
-                        "SELECT fingerprint, id FROM %s WHERE fingerprint IN (%s) AND datasource = :datasource",
+                        "SELECT fingerprint, id FROM %s WHERE fingerprint IN (%s) AND datasource = :datasource AND version = :version",
                         dbTables.getSegmentSchemasTable(), fingerprints
                     )
                 )
                 .bind("datasource", dataSource)
+                .bind("version", schemaVersion)
                 .map((index, r, ctx) -> Pair.of(r.getString("fingerprint"), r.getLong("id")))
                 .fold(
                     new HashMap<>(), (accumulator, rs, control, ctx) -> {

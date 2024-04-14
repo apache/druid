@@ -331,7 +331,7 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   );
 
   /**
@@ -347,7 +347,7 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   );
 
   /**

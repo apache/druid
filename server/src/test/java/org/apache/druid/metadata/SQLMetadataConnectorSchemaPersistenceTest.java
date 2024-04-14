@@ -37,7 +37,7 @@ import java.util.Locale;
 public class SQLMetadataConnectorSchemaPersistenceTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
@@ -163,12 +163,5 @@ public class SQLMetadataConnectorSchemaPersistenceTest
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
     ));
-  }
-
-  private CentralizedDatasourceSchemaConfig getEnabledConfig()
-  {
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
-    return centralizedDatasourceSchemaConfig;
   }
 }

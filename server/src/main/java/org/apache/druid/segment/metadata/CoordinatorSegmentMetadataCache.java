@@ -347,7 +347,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       refreshed = refreshSegments(segmentsToRefreshMinusCachedSegments);
     }
 
-    log.debug("Refreshed segments are [%s]", refreshed);
+    log.info("Refreshed segments are [%s]", refreshed);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.

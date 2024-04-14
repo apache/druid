@@ -420,7 +420,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public Set<DataSegment> commitSegments(
       final Set<DataSegment> segments,
-      final MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable final MinimalSegmentSchemas minimalSegmentSchemas
   ) throws IOException
   {
     final SegmentPublishResult result =
@@ -547,7 +547,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public SegmentPublishResult commitAppendSegments(
       final Set<DataSegment> appendSegments,
       final Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
-      final MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable final MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     return commitAppendSegmentsAndMetadataInTransaction(
@@ -565,7 +565,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     return commitAppendSegmentsAndMetadataInTransaction(
@@ -1313,7 +1313,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     verifySegmentsToCommit(appendSegments);
@@ -1993,7 +1993,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final Set<DataSegment> segments,
       final Set<DataSegment> usedSegments,
-      final MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable final MinimalSegmentSchemas minimalSegmentSchemas
   ) throws IOException
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
@@ -2019,7 +2019,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
         // fetch schemaId
         fingerprintSchemaIdMap =
-            segmentSchemaManager.schemaIdFetchBatch(handle, dataSource, minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet());
+            segmentSchemaManager.schemaIdFetchBatch(
+                handle,
+                dataSource,
+                minimalSegmentSchemas.getSchemaVersion(),
+                minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet()
+            );
 
         log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
       }
@@ -2252,7 +2257,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // fetch schemaId
       fingerprintSchemaIdMap =
-          segmentSchemaManager.schemaIdFetchBatch(handle, dataSource, minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet());
+          segmentSchemaManager.schemaIdFetchBatch(
+              handle,
+              dataSource,
+              minimalSegmentSchemas.getSchemaVersion(),
+              minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet()
+          );
 
       log.info("Fingerprint schema map is [%s].", fingerprintSchemaIdMap);
     }

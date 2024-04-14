@@ -586,7 +586,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected void alterSegmentTableSchemaPersistenceEnabled()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    final String schemaTableName = tablesConfigSupplier.get().getSegmentSchemasTable();
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "varchar(255)");
@@ -618,13 +617,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
-
-    alterCommands.add(
-        StringUtils.format(
-            "ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)",
-            tableName,
-            schemaTableName
-        ));
 
     alterTable(
         tableName,

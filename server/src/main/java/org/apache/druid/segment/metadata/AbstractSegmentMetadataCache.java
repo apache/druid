@@ -702,7 +702,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.debug("Refreshing metadata for datasource[%s].", dataSource);
+    log.info("Refreshing metadata for datasource[%s].", dataSource);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -746,7 +746,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
 
-    log.debug(
+    log.info(
         "Refreshed metadata for datasource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         refreshDurationMillis,

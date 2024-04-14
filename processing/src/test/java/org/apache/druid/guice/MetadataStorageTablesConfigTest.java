@@ -64,7 +64,7 @@ public class MetadataStorageTablesConfigTest
 
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.base"), config.getBase());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segments"), config.getSegmentsTable());
-    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segmentSchema"), config.getSegmentSchemasTable());
+    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segmentSchemas"), config.getSegmentSchemasTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.rules"), config.getRulesTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.config"), config.getConfigTable());
     Assert.assertEquals(
