@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
@@ -144,7 +145,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         taskActionClientFactory,
         getLockbox(),
         new NoopServiceEmitter(),
-        getObjectMapper()
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     runningTasks.clear();
     taskQueue.start();

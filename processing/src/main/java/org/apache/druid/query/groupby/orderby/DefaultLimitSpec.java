@@ -181,8 +181,12 @@ public class DefaultLimitSpec implements LimitSpec
   {
     final List<DimensionSpec> dimensions = query.getDimensions();
 
-    // Can avoid re-sorting if the natural ordering is good enough.
-    boolean sortingNeeded = dimensions.size() < columns.size();
+    // Can avoid re-sorting if the natural ordering is good enough. Set sortingNeeded to true if we definitely must
+    // sort, due to query dimensions list being shorter than the sort columns list, or due to having subtotalsSpec
+    // (when subtotalsSpec is set, dimensions are not naturally sorted).
+    //
+    // If sortingNeeded is false here, we may set it to true later on in this method. False is just a starting point.
+    boolean sortingNeeded = dimensions.size() < columns.size() || query.getSubtotalsSpec() != null;
 
     final Set<String> aggAndPostAggNames = new HashSet<>();
     for (AggregatorFactory agg : query.getAggregatorSpecs()) {

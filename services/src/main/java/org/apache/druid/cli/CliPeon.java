@@ -308,13 +308,18 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
+            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+            builder.put(DruidMetrics.TASK_ID, task.getId());
+            builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
+            builder.put(DruidMetrics.TASK_TYPE, task.getType());
+            builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
+            Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+            if (tags != null && !tags.isEmpty()) {
+              builder.put(DruidMetrics.TAGS, tags);
+            }
+
             return Suppliers.ofInstance(
-                ImmutableMap.of(
-                    DruidMetrics.TASK_ID, task.getId(),
-                    DruidMetrics.DATASOURCE, task.getDataSource(),
-                    DruidMetrics.TASK_TYPE, task.getType(),
-                    DruidMetrics.GROUP_ID, task.getGroupId()
-                )
+                builder.build()
             );
           }
 
