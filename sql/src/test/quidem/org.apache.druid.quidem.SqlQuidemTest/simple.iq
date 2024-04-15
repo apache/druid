@@ -47,8 +47,8 @@ select cityName, countryName from wikipedia where cityName='New York' limit 1;
 }
 !nativePlan
 LogicalSort(fetch=[1])
-  LogicalProject(cityName=[$2], countryName=[$5])
-    LogicalFilter(condition=[=($2, 'New York')])
+  LogicalFilter(condition=[=($0, 'New York')])
+    LogicalProject(cityName=[$2], countryName=[$5])
       LogicalTableScan(table=[[druid, wikipedia]])
 
 !logicalPlan
