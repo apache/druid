@@ -856,7 +856,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final DataSegmentWithSchemas dataSegmentWithSchemas = runTask(compactionTask);
     verifySchema(dataSegmentWithSchemas);
-    final Set<DataSegment> compactedSegments = dataSegmentWithSchemas.getSegments();
 
     usedSegments = getCoordinatorClient().fetchUsedSegments(
         DATA_SOURCE,
@@ -903,7 +902,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final DataSegmentWithSchemas dataSegmentWithSchemas = runTask(compactionTask);
     verifySchema(dataSegmentWithSchemas);
-    final Set<DataSegment> compactedSegments = dataSegmentWithSchemas.getSegments();
 
     usedSegments = getCoordinatorClient().fetchUsedSegments(
         DATA_SOURCE,

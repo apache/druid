@@ -72,7 +72,6 @@ public class SegmentSchemaBackFillQueueTest
     SegmentSchemaTestUtils segmentSchemaTestUtils =
         new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
-    FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(true);
