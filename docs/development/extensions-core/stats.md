@@ -56,7 +56,7 @@ Numer. Math, 58 (1991) pp. 583--590
  precisely the same across query runs.
 :::
 
-### Variance Aggregator in Druid SQL
+### Variance and Standard Deviation SQL Aggregators
 
 You can use the variance and standard deviation aggregation functions in the SELECT clause of any Druid SQL query.
 
