@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.KillTaskReport;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TestUtils;
 import org.junit.Assert;
@@ -78,6 +79,22 @@ public class TaskReportSerdeTest
     Assert.assertTrue(deserialized instanceof KillTaskReport);
 
     KillTaskReport deserializedReport = (KillTaskReport) deserialized;
+    Assert.assertEquals(originalReport, deserializedReport);
+  }
+
+  @Test
+  public void testSerdeOfTaskContextReport() throws Exception
+  {
+    TaskContextReport originalReport = new TaskContextReport(
+        "taskId",
+        ImmutableMap.of("key1", "value1", "key2", "value2")
+    );
+    String reportJson = jsonMapper.writeValueAsString(originalReport);
+    TaskReport deserialized = jsonMapper.readValue(reportJson, TaskReport.class);
+
+    Assert.assertTrue(deserialized instanceof TaskContextReport);
+
+    TaskContextReport deserializedReport = (TaskContextReport) deserialized;
     Assert.assertEquals(originalReport, deserializedReport);
   }
 
@@ -144,7 +161,6 @@ public class TaskReportSerdeTest
             null
         )
     );
-
 
     Assert.assertEquals(expected, jsonMapper.readValue(
         json,

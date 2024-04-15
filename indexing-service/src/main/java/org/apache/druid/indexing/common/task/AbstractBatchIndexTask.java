@@ -34,6 +34,7 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexing.common.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
@@ -607,7 +608,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return tuningConfig.isForceGuaranteedRollup();
   }
 
-  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+  public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       boolean storeCompactionState,
       TaskToolbox toolbox,
       IngestionSpec ingestionSpec
@@ -628,7 +629,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                  ? null
                                  : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<List<Object>>() {});
 
-      final CompactionState compactionState = new CompactionState(
+      return CompactionState.addCompactionStateToSegments(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
           metricsSpec,
@@ -636,10 +637,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
           granularitySpec.asMap(toolbox.getJsonMapper())
       );
-      return segments -> segments
-          .stream()
-          .map(s -> s.withLastCompactionState(compactionState))
-          .collect(Collectors.toSet());
     } else {
       return Function.identity();
     }
@@ -923,7 +920,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 
@@ -952,7 +950,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 segmentsRead,
                 segmentsPublished
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

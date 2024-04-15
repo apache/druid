@@ -148,7 +148,7 @@ Druid returns 2. Both the empty string and null values are excluded.
 
 ## Numeric query examples
 
-Druid does does not count null values in numeric comparisons.
+Druid does not count null values in numeric comparisons.
 
 ```sql
 SELECT COUNT(*)

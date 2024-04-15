@@ -1374,7 +1374,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       return;
     }
     cannotVectorize();
-    skipVectorize();
     testBuilder()
         .sql(
             "SELECT "

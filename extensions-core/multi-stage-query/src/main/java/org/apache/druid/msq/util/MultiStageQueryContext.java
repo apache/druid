@@ -131,7 +131,7 @@ public class MultiStageQueryContext
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
 
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
-  static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
+  public static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
   public static final String CTX_ROWS_PER_PAGE = "rowsPerPage";
   static final int DEFAULT_ROWS_PER_PAGE = 100000;
@@ -142,6 +142,13 @@ public class MultiStageQueryContext
   static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
+
+  /**
+   * Key for controller task's context passed to worker tasks.
+   * Facilitates sharing the controller's execution environment
+   * and configurations with its associated worker tasks.
+   */
+  public static final String CTX_OF_CONTROLLER = "controllerCtx";
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
