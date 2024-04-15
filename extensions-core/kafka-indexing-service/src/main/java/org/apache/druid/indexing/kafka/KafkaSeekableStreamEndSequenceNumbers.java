@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
-import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -36,12 +35,12 @@ import java.util.stream.Collectors;
  * Represents the kafka based end sequenceNumber per partition of a sequence.
  *
  * Do not register this class as a subtype of base class in Jackson. We want this class to be serialized
- * when written to DB as a {@link SeekableStreamStartSequenceNumbers} and read back
+ * when written to DB as a {@link SeekableStreamEndSequenceNumbers}. Do not create instances of this class
+ * directly from jackson mapper.
  */
 @JsonTypeName(SeekableStreamEndSequenceNumbers.TYPE)
 public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>
 {
-
   private final boolean isMultiTopicPartition;
 
   public KafkaSeekableStreamEndSequenceNumbers(

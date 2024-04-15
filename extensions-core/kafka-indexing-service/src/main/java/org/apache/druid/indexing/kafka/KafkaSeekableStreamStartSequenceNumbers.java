@@ -38,12 +38,12 @@ import java.util.stream.Collectors;
  * Represents the kafka based start sequenceNumber per partition of a sequence.
  * <p>
  * Do not register this class as a subtype of base class in Jackson. We want this class to be serialized
- * when written to DB as a {@link SeekableStreamStartSequenceNumbers} and read back
+ * when written to DB as a {@link SeekableStreamStartSequenceNumbers}. Do not create instances of this class
+ * directly from jackson mapper.
  */
 @JsonTypeName(SeekableStreamStartSequenceNumbers.TYPE)
 public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>
 {
-  private static final String TYPE = "start";
   private final boolean isMultiTopicPartition;
 
   public KafkaSeekableStreamStartSequenceNumbers(
