@@ -459,7 +459,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // In such a case the priming of results is not needed
     if (rowIdProvider.get() == numRows) {
       for (int i = 0; i < aggs.length; i++) {
-        results[i][resultStorageIndex] = aggs[i].get();
+        results[i][resultStorageIndex] = aggFactories[i].finalizeComputation(aggs[i].get());
       }
       ++resultStorageIndex;
     }
@@ -555,7 +555,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // In such a case the priming of results is not needed
     if (rowIdProvider.get() < 0) {
       for (int i = 0; i < aggs.length; i++) {
-        results[i][resultStorageIndex] = aggs[i].get();
+        results[i][resultStorageIndex] = aggFactories[i].finalizeComputation(aggs[i].get());
       }
       --resultStorageIndex;
     }
