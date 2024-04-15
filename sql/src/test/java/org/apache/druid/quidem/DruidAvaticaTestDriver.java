@@ -69,7 +69,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
@@ -113,16 +112,15 @@ public class DruidAvaticaTestDriver implements Driver
     if (!acceptsURL(url)) {
       return null;
     }
-    SqlTestFrameworkConfigInstance config = buildConfigfromURIParams(url);
-
-    ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
-        config,
-        new AvaticaBasedTestConnectionSupplier(
-            new StandardComponentSupplier(createTempFolder(getClass().getSimpleName()))
-        )
-    );
-
     try {
+      SqlTestFrameworkConfigInstance config = buildConfigfromURIParams(url);
+
+      ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
+          config,
+          () -> createTempFolder(getClass().getSimpleName()),
+          x -> new AvaticaBasedTestConnectionSupplier(x)
+      );
+
       AvaticaJettyServer server = ci.framework.injector().getInstance(AvaticaJettyServer.class);
       return server.getConnection(info);
     }

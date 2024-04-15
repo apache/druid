@@ -27,7 +27,6 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -43,6 +42,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 /**
@@ -52,7 +52,7 @@ import java.util.function.Function;
  * to the annotation. These rules also cache the previously created frameworks.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.TYPE})
 public @interface SqlTestFrameworkConfig
 {
   int numMergeBuffers() default 0;
@@ -109,11 +109,13 @@ public @interface SqlTestFrameworkConfig
 
     public ConfigurationInstance getConfigurationInstance(
         SqlTestFrameworkConfigInstance config,
-        QueryComponentSupplier testHost)
+        Callable<File> tempDirProducer,
+        Function<QueryComponentSupplier,QueryComponentSupplier> queryComponentSupplierWrapper
+        ) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
-        ret = new ConfigurationInstance(config, testHost);
+        ret = new ConfigurationInstance(config, tempDirProducer, queryComponentSupplierWrapper);
         configMap.put(config, ret);
       }
       return ret;
@@ -131,19 +133,25 @@ public @interface SqlTestFrameworkConfig
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class Rule implements AfterAllCallback, BeforeEachCallback, BeforeAllCallback
+  class Rule implements AfterAllCallback, BeforeEachCallback
   {
     SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
     private SqlTestFrameworkConfigInstance config;
     private Function<File, QueryComponentSupplier> testHostSupplier;
     private Method method;
+//
+//    @Override
+//    public void beforeAll(ExtensionContext context) throws Exception
+//    {
+//      Class<?> testClass = context.getTestClass().get();
+//      SqlTestFramework.SqlTestFrameWorkModule moduleAnnotation = getModuleAnnotationFor(testClass);
+//      Class<? extends QueryComponentSupplier> value = moduleAnnotation.value();
+//      setComponentSupplier(value);
+//    }
 
-    @Override
-    public void beforeAll(ExtensionContext context) throws Exception
+    private void setComponentSupplier(Class<? extends QueryComponentSupplier> value) throws NoSuchMethodException
     {
-      Class<?> testClass = context.getTestClass().get();
-      SqlTestFramework.SqlTestFrameWorkModule moduleAnnotation = getModuleAnnotationFor(testClass);
-      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(File.class);
+      Constructor<? extends QueryComponentSupplier> constructor = value.getConstructor(File.class);
       testHostSupplier = f -> {
         try {
           return constructor.newInstance(f);
@@ -173,10 +181,22 @@ public @interface SqlTestFrameworkConfig
     }
 
     @Override
-    public void beforeEach(ExtensionContext context)
+    public void beforeEach(ExtensionContext context) throws NoSuchMethodException
+    {
+      setConfig(context);
+    }
+
+    private void setConfig(ExtensionContext context) throws NoSuchMethodException
     {
       method = context.getTestMethod().get();
-      setConfig(method.getAnnotation(SqlTestFrameworkConfig.class));
+      SqlTestFrameworkConfig annotation = method.getAnnotation(SqlTestFrameworkConfig.class);
+      if (annotation == null) {
+        annotation = defaultConfig();
+      }
+      config = new SqlTestFrameworkConfigInstance(annotation);
+      setComponentSupplier(config.supplier);
+
+
     }
 
     @SqlTestFrameworkConfig
@@ -193,22 +213,14 @@ public @interface SqlTestFrameworkConfig
       }
     }
 
-    private void setConfig(SqlTestFrameworkConfig annotation)
-    {
-      if (annotation == null) {
-        annotation = defaultConfig();
-      }
-      config = new SqlTestFrameworkConfigInstance(annotation);
-    }
-
     public SqlTestFrameworkConfigInstance getConfig()
     {
       return config;
     }
 
-    public SqlTestFramework get()
+    public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, testHostSupplier.apply(createTempFolder("druid-test"))).framework;
+      return configStore.getConfigurationInstance(config, () -> createTempFolder("druid-test"), x -> x).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -247,12 +259,30 @@ public @interface SqlTestFrameworkConfig
 
     ConfigurationInstance(SqlTestFrameworkConfigInstance config, QueryComponentSupplier testHost)
     {
+
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .catalogResolver(testHost.createCatalogResolver())
           .minTopNThreshold(config.minTopNThreshold)
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
       framework = builder.build();
+    }
+
+    public ConfigurationInstance(
+        SqlTestFrameworkConfigInstance config,
+        Callable<File> tempDirProducer,
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
+        ) throws Exception
+    {
+      this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.supplier, tempDirProducer)));
+    }
+
+    private static QueryComponentSupplier makeQueryComponentSupplier(
+        Class<? extends QueryComponentSupplier> supplierClazz,
+        Callable<File> tempDirProducer) throws Exception
+    {
+      Constructor<? extends QueryComponentSupplier> constructor = supplierClazz.getConstructor(File.class);
+      return constructor.newInstance(tempDirProducer.call());
     }
 
     public void close()

@@ -180,7 +180,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   private static final List<InputRow> ROWS_MIX =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
-  protected static class NestedComponentSupplier extends StandardComponentSupplier
+  public static class NestedComponentSupplier extends StandardComponentSupplier
   {
     public NestedComponentSupplier(File temporaryFolder)
     {

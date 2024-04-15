@@ -19,9 +19,11 @@
 
 package org.apache.druid.quidem;
 
+import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -70,6 +72,21 @@ class MapToInterfaceHandler implements InvocationHandler
     if (returnType == int.class) {
       return Integer.parseInt(obj);
     }
+    if (returnType == Class.class) {
+
+      Object clazz = getClazzShortHandMap().get(obj);
+      if (clazz != null) {
+        return clazz;
+      }
+
+    }
     throw new RuntimeException("don't know how to handle conversion to " + returnType);
+  }
+
+  private static Map<String, Class<?>> getClazzShortHandMap()
+  {
+    Map<String, Class<?>> map = new HashMap<String, Class<?>>();
+    map.put(NestedComponentSupplier.class.getSimpleName(), NestedComponentSupplier.class);
+    return map;
   }
 }
