@@ -19,23 +19,30 @@
 
 package org.apache.druid.sql.calcite;
 
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Annotation to specify desired framework settings.
@@ -119,12 +126,40 @@ public @interface SqlTestFrameworkConfig
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class Rule implements AfterAllCallback, BeforeEachCallback
+  class Rule implements AfterAllCallback, BeforeEachCallback, BeforeAllCallback
   {
     SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
     private SqlTestFrameworkConfigInstance config;
-    private QueryComponentSupplier testHost;
+    private Function<File, QueryComponentSupplier> testHostSupplier;
     private Method method;
+
+    @Override
+    public void beforeAll(ExtensionContext context) throws Exception
+    {
+      Class<?> testClass = context.getTestClass().get();
+      SqlTestFramework.SqlTestFrameWorkModule moduleAnnotation = getModuleAnnotationFor(testClass);
+      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(File.class);
+      testHostSupplier = f -> {
+        try {
+          return constructor.newInstance(f);
+        }
+        catch (Exception e) {
+          throw new RE(e, "Unable to create QueryComponentSupplier");
+        }
+      };
+    }
+
+    private SqlTestFramework.SqlTestFrameWorkModule getModuleAnnotationFor(Class<?> testClass)
+    {
+      SqlTestFramework.SqlTestFrameWorkModule annotation = testClass.getAnnotation(SqlTestFramework.SqlTestFrameWorkModule.class);
+      if (annotation == null) {
+        if (testClass.getSuperclass() == null) {
+          throw new RE("Can't get QueryComponentSupplier for testclass!");
+        }
+        return getModuleAnnotationFor(testClass.getSuperclass());
+      }
+      return annotation;
+    }
 
     @Override
     public void afterAll(ExtensionContext context)
@@ -135,10 +170,8 @@ public @interface SqlTestFrameworkConfig
     @Override
     public void beforeEach(ExtensionContext context)
     {
-      testHost = (QueryComponentSupplier) context.getTestInstance().get();
       method = context.getTestMethod().get();
       setConfig(method.getAnnotation(SqlTestFrameworkConfig.class));
-
     }
 
     @SqlTestFrameworkConfig
@@ -170,7 +203,7 @@ public @interface SqlTestFrameworkConfig
 
     public SqlTestFramework get()
     {
-      return configStore.getConfigurationInstance(config, testHost).framework;
+      return configStore.getConfigurationInstance(config, testHostSupplier.apply(createTempFolder("druid-test"))).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -181,6 +214,25 @@ public @interface SqlTestFrameworkConfig
     public String testName()
     {
       return method.getName();
+    }
+
+    protected File createTempFolder(String prefix)
+    {
+      File tempDir = FileUtils.createTempDir(prefix);
+      Runtime.getRuntime().addShutdownHook(new Thread()
+      {
+        @Override
+        public void run()
+        {
+          try {
+            FileUtils.deleteDirectory(tempDir);
+          }
+          catch (IOException ex) {
+            ex.printStackTrace();
+          }
+        }
+      });
+      return tempDir;
     }
   }
 

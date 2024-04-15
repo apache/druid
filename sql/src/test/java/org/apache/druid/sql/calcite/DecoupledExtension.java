@@ -105,7 +105,7 @@ public class DecoupledExtension implements BeforeEachCallback
 
     assumeTrue(BaseCalciteQueryTest.queryFrameworkRule.getConfig().numMergeBuffers == 0);
 
-    PlannerComponentSupplier componentSupplier = baseTest;
+    PlannerComponentSupplier componentSupplier = baseTest.basePlannerComponentSupplier;
 
     boolean runQuidem = (decTestConfig != null && decTestConfig.quidem());
 

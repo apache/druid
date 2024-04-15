@@ -36,6 +36,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+
+import java.io.File;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
@@ -45,13 +49,9 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
+  @SqlTestFramework.SqlTestFrameWorkModule(BroadcastJoinComponentSupplier.class)
   public static class BroadcastTest extends Base
   {
-    public BroadcastTest()
-    {
-      super(JoinAlgorithm.BROADCAST);
-    }
-
     @Override
     protected QueryTestBuilder testBuilder()
     {
@@ -63,11 +63,13 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
+  @SqlTestFramework.SqlTestFrameWorkModule(SortMergeJoinComponentSupplier.class)
   public static class SortMergeTest extends Base
   {
-    public SortMergeTest()
+    @Override
+    public boolean isSortBasedJoin()
     {
-      super(JoinAlgorithm.SORT_MERGE);
+      return true;
     }
 
     @Override
@@ -82,17 +84,41 @@ public class CalciteSelectJoinQueryMSQTest
 
   public abstract static class Base extends CalciteJoinQueryTest
   {
-    private final JoinAlgorithm joinAlgorithm;
-
-    protected Base(final JoinAlgorithm joinAlgorithm)
-    {
-      this.joinAlgorithm = joinAlgorithm;
-    }
-
     @Override
-    public boolean isSortBasedJoin()
+    protected QueryTestBuilder testBuilder()
     {
-      return joinAlgorithm == JoinAlgorithm.SORT_MERGE;
+      return new QueryTestBuilder(new CalciteTestConfig(true))
+          .addCustomRunner(
+              new ExtractResultsFactory(
+                  () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
+          .skipVectorize(true);
+    }
+  }
+
+  protected static class SortMergeJoinComponentSupplier extends AbstractJoinComponentSupplier
+  {
+    public SortMergeJoinComponentSupplier(File temporaryFolder)
+    {
+      super(temporaryFolder, JoinAlgorithm.SORT_MERGE);
+    }
+  }
+
+  protected static class BroadcastJoinComponentSupplier extends AbstractJoinComponentSupplier
+  {
+    public BroadcastJoinComponentSupplier(File temporaryFolder)
+    {
+      super(temporaryFolder, JoinAlgorithm.BROADCAST);
+    }
+  }
+
+  protected abstract static class AbstractJoinComponentSupplier extends StandardComponentSupplier
+  {
+    private JoinAlgorithm joinAlgorithm;
+
+    public AbstractJoinComponentSupplier(File temporaryFolder, JoinAlgorithm joinAlgorithm)
+    {
+      super(temporaryFolder);
+      this.joinAlgorithm = joinAlgorithm;
     }
 
     @Override
@@ -135,16 +161,6 @@ public class CalciteSelectJoinQueryMSQTest
           return super.buildQueryMakerForSelect(relRoot, plannerContext);
         }
       };
-    }
-
-    @Override
-    protected QueryTestBuilder testBuilder()
-    {
-      return new QueryTestBuilder(new CalciteTestConfig(true))
-          .addCustomRunner(
-              new ExtractResultsFactory(
-                  () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-          .skipVectorize(true);
     }
   }
 }
