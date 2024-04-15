@@ -19,12 +19,15 @@
 
 package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.reflections.Reflections;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Utility class to provide interface implementation based on a map of string
@@ -74,7 +77,7 @@ class MapToInterfaceHandler implements InvocationHandler
     }
     if (returnType == Class.class) {
 
-      Object clazz = getClazzShortHandMap().get(obj);
+      Object clazz = getQueryComponentSupplierForName(obj);
       if (clazz != null) {
         return clazz;
       }
@@ -83,10 +86,18 @@ class MapToInterfaceHandler implements InvocationHandler
     throw new RuntimeException("don't know how to handle conversion to " + returnType);
   }
 
-  private static Map<String, Class<?>> getClazzShortHandMap()
+  private Object getQueryComponentSupplierForName(String name)
   {
-    Map<String, Class<?>> map = new HashMap<String, Class<?>>();
-    map.put(NestedComponentSupplier.class.getSimpleName(), NestedComponentSupplier.class);
-    return map;
+    Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
+        .getSubTypesOf(QueryComponentSupplier.class);
+    Set<String> knownNames =new HashSet<String>();
+
+    for (Class<? extends QueryComponentSupplier> cl : subTypes) {
+      if(cl.getSimpleName().equals(name)) {
+        return cl;
+      }
+      knownNames.add(cl.getSimpleName());
+    }
+    throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
   }
 }
