@@ -118,8 +118,8 @@ public class SQLMetadataConnectorSchemaPersistenceTest
   }
 
   /**
-   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_status_last_updated
-   * in the segments table.
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_status_last_updated,
+   * schema_id, num_rows in the segments table.
    */
   @Test
   public void testAlterSegmentTable()
@@ -127,30 +127,11 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     connector.createSegmentTable(tablesConfig.getSegmentsTable());
 
     // Drop column used_status_last_updated to bring us in line with pre-upgrade state
-    derbyConnectorRule.getConnector().retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            final Batch batch = handle.createBatch();
-            batch.add(
-                StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN used_status_last_updated",
-                    derbyConnectorRule.metadataTablesConfigSupplier()
-                                      .get()
-                                      .getSegmentsTable()
-                                      .toUpperCase(Locale.ENGLISH)
-                )
-            );
-            batch.execute();
-            return null;
-          }
-        }
-    );
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED");
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN SCHEMA_ID");
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN NUM_ROWS");
 
-    connector.createSegmentSchemaTable();
-    connector.alterSegmentTableSchemaPersistenceEnabled();
+    connector.alterSegmentTable();
     Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"

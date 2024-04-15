@@ -317,58 +317,38 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createSegmentTable(final String tableName)
   {
-    createTable(
-        tableName,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
-                + "  created_date VARCHAR(255) NOT NULL,\n"
-                + "  start VARCHAR(255) NOT NULL,\n"
-                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
-                + "  partitioned BOOLEAN NOT NULL,\n"
-                + "  version VARCHAR(255) NOT NULL,\n"
-                + "  used BOOLEAN NOT NULL,\n"
-                + "  payload %2$s NOT NULL,\n"
-                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (id)\n"
-                + ")",
-                tableName, getPayloadType(), getQuoteString(), getCollation()
-            ),
-            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
-            StringUtils.format(
-                "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
-                tableName,
-                getQuoteString()
-            )
-        )
-    );
-  }
+    List<String> columns = new ArrayList<>();
+    columns.add("id VARCHAR(255) NOT NULL");
+    columns.add("dataSource VARCHAR(255) %4$s NOT NULL");
+    columns.add("created_date VARCHAR(255) NOT NULL");
+    columns.add("start VARCHAR(255) NOT NULL");
+    columns.add("%3$send%3$s VARCHAR(255) NOT NULL");
+    columns.add("partitioned BOOLEAN NOT NULL");
+    columns.add("version VARCHAR(255) NOT NULL");
+    columns.add("used BOOLEAN NOT NULL");
+    columns.add("payload %2$s NOT NULL");
+    columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
 
-  public void createSegmentsTableSchemaPersistenceEnabled(final String tableName)
-  {
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      columns.add("schema_id BIGINT");
+      columns.add("num_rows BIGINT");
+    }
+
+    StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
+
+    for (String column : columns) {
+      createStatementBuilder.append(column);
+      createStatementBuilder.append(",");
+    }
+
+    createStatementBuilder.append("PRIMARY KEY (id))");
+
     createTable(
         tableName,
         ImmutableList.of(
             StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
-                + "  created_date VARCHAR(255) NOT NULL,\n"
-                + "  start VARCHAR(255) NOT NULL,\n"
-                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
-                + "  partitioned BOOLEAN NOT NULL,\n"
-                + "  version VARCHAR(255) NOT NULL,\n"
-                + "  used BOOLEAN NOT NULL,\n"
-                + "  payload %2$s NOT NULL,\n"
-                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
-                + "  schema_id BIGINT,\n"
-                + "  num_rows BIGINT,\n"
-                + "  PRIMARY KEY (id),\n"
-                + "  FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
-                + ")",
-                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemasTable()
+                createStatementBuilder.toString(),
+                tableName, getPayloadType(), getQuoteString(), getCollation()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
@@ -559,38 +539,19 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Adds the used_status_last_updated column to the "segments" table.
+   * Adds new columns (used_status_last_updated) to the "segments" table.
+   * Conditionally, add schema_id, segment_stats columns.
    */
   protected void alterSegmentTable()
-  {
-    final String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    if (tableHasColumn(tableName, "used_status_last_updated")) {
-      log.info("Table[%s] already has column[used_status_last_updated].", tableName);
-    } else {
-      log.info("Adding column[used_status_last_updated] to table[%s].", tableName);
-      alterTable(
-          tableName,
-          ImmutableList.of(
-              StringUtils.format(
-                  "ALTER TABLE %1$s ADD used_status_last_updated varchar(255)",
-                  tableName
-              )
-          )
-      );
-    }
-  }
-
-  /**
-   * Adds new columns (used_status_last_updated, schema_id, segment_stats) to the "segments" table.
-   */
-  protected void alterSegmentTableSchemaPersistenceEnabled()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "varchar(255)");
-    columnNameTypes.put("schema_id", "BIGINT");
-    columnNameTypes.put("num_rows", "BIGINT");
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      columnNameTypes.put("schema_id", "BIGINT");
+      columnNameTypes.put("num_rows", "BIGINT");
+    }
 
     Set<String> columnsToAdd = new HashSet<>();
 
@@ -768,13 +729,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createSegmentTable()
   {
     if (config.get().isCreateTables()) {
-      if (centralizedDatasourceSchemaConfig.isEnabled()) {
-        createSegmentsTableSchemaPersistenceEnabled(tablesConfigSupplier.get().getSegmentsTable());
-        alterSegmentTableSchemaPersistenceEnabled();
-      } else {
-        createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
-        alterSegmentTable();
-      }
+      createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+      alterSegmentTable();
     }
     // Called outside of the above conditional because we want to validate the table
     // regardless of cluster configuration for creating tables.
@@ -1010,7 +966,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %3$s NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
-                + "  version VARCHAR(255) NOT NULL,\n"
+                + "  version INTEGER NOT NULL,\n"
                 + "  PRIMARY KEY (id),\n"
                 + "  UNIQUE (datasource, version, fingerprint) \n"
                 + ")",
@@ -1171,7 +1127,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     } else {
       throw new ISE(
           "Cannot start Druid as table[%s] has an incompatible schema."
-          + " Reason: Column [used_status_last_updated] does not exist in table."
+          + " Reason: One or all of these columns [used_status_last_updated, schema_id, num_rows] does not exist in table."
           + " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation.",
           tablesConfigSupplier.get().getSegmentsTable()
       );

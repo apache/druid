@@ -180,6 +180,16 @@ public class SQLMetadataConnectorTest
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"
     ));
+
+    Assert.assertFalse(connector.tableHasColumn(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+        "SCHEMA_ID"
+    ));
+
+    Assert.assertFalse(connector.tableHasColumn(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+        "NUM_ROWS"
+    ));
   }
 
   @Test

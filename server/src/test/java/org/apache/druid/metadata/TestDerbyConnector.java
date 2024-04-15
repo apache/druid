@@ -150,11 +150,6 @@ public class TestDerbyConnector extends DerbyConnector
       return connector;
     }
 
-    public boolean isSchemaPersistenceEnabled()
-    {
-      return centralizedDatasourceSchemaConfig.isEnabled();
-    }
-
     public MetadataStorageConnectorConfig getMetadataConnectorConfig()
     {
       return connectorConfig;

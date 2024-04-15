@@ -1177,7 +1177,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     ConcurrentMap<Long, SchemaPayload> schemaMap = new ConcurrentHashMap<>();
 
-    String schemaPollQuery;
+    final String schemaPollQuery;
 
     Long lastSchemaIdPrePoll = latestSchemaId.get();
     if (lastSchemaIdPrePoll == null) {
@@ -1196,7 +1196,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           lastSchemaIdPrePoll
       );
     }
-    String finalSchemaPollQuery = schemaPollQuery;
 
     final AtomicReference<Long> maxPolledId = new AtomicReference<>();
     maxPolledId.set(lastSchemaIdPrePoll);
@@ -1206,7 +1205,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       @Override
       public Object inTransaction(Handle handle, TransactionStatus status)
       {
-        return handle.createQuery(finalSchemaPollQuery)
+        return handle.createQuery(schemaPollQuery)
                      .setFetchSize(connector.getStreamingFetchSize())
                      .map(new ResultSetMapper<Void>()
                      {
