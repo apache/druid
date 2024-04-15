@@ -739,6 +739,7 @@ public class RowBasedGrouperHelper
     }
   }
 
+  // TODO(laksh): Figure out why this isn't getting triggered
   private static class InputRawSupplierColumnSelectorStrategyFactory
       implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
@@ -782,6 +783,12 @@ public class RowBasedGrouperHelper
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
+    }
+
+    @Override
+    public boolean supportsNestedArraysAndComplexTypes()
+    {
+      return true;
     }
   }
 

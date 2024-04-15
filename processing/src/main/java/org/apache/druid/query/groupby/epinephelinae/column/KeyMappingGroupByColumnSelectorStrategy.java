@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
  * and complex types.
  * <p>
  * The visibility of the class is limited, and the callers must use one of the two variants of the mapping strategy:
- * 1. {@link PrebuiltDictionaryGroupByColumnSelectorStrategy}
+ * 1. TODO(laksh): PrebuiltDictionaryGroupByColumnSelectorStrategy - (not available, because no one is using it)
  * 2. {@link DictionaryBuildingGroupByColumnSelectorStrategy}
  * <p>
  * {@code null} can be represented by either -1 or the position of null in the dictionary it was stored when it was

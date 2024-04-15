@@ -98,4 +98,10 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
         throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
     }
   }
+
+  @Override
+  public boolean supportsNestedArraysAndComplexTypes()
+  {
+    return true;
+  }
 }

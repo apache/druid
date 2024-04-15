@@ -9865,22 +9865,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    Assert.assertEquals(Functions.<Sequence<ResultRow>>identity(), query.getLimitSpec().build(query));
-
-    List<ResultRow> expectedResults = Collections.singletonList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "quality_uniques",
-            null,
-            "rows",
-            26L,
-            "idx",
-            12446L
-        )
-    );
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "long");
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Unable to group on the type [COMPLEX<hyperUnique>]");
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
   @Test

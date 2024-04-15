@@ -84,6 +84,12 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
     }
+
+    @Override
+    public boolean supportsNestedArraysAndComplexTypes()
+    {
+      return false;
+    }
   }
 
   public interface SearchColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy

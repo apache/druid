@@ -46,4 +46,10 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
         throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
     }
   }
+
+  @Override
+  public boolean supportsNestedArraysAndComplexTypes()
+  {
+    return false;
+  }
 }

@@ -202,7 +202,8 @@ public final class DimensionHandlerUtils
       final String dimName = dimSpec.getDimension();
       final ColumnValueSelector<?> selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
-          columnSelectorFactory
+          columnSelectorFactory,
+          strategyFactory.supportsNestedArraysAndComplexTypes()
       );
       Strategy strategy = makeStrategy(
           strategyFactory,
@@ -223,12 +224,13 @@ public final class DimensionHandlerUtils
 
   private static ColumnValueSelector<?> getColumnValueSelectorFromDimensionSpec(
       DimensionSpec dimSpec,
-      ColumnSelectorFactory columnSelectorFactory
+      ColumnSelectorFactory columnSelectorFactory,
+      boolean supportsComplexTypes
   )
   {
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities, supportsComplexTypes);
     if (capabilities.is(ValueType.STRING)) {
       return columnSelectorFactory.makeDimensionSelector(dimSpec);
     }
@@ -242,10 +244,16 @@ public final class DimensionHandlerUtils
    */
   private static ColumnCapabilities getEffectiveCapabilities(
       DimensionSpec dimSpec,
-      @Nullable ColumnCapabilities capabilities
+      @Nullable ColumnCapabilities capabilities,
+      boolean supportsComplexTypes
   )
   {
     if (capabilities == null) {
+      capabilities = DEFAULT_STRING_CAPABILITIES;
+    }
+
+    // Complex dimension type is not supported
+    if (!supportsComplexTypes && capabilities.is(ValueType.COMPLEX)) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
@@ -285,7 +293,7 @@ public final class DimensionHandlerUtils
       ColumnValueSelector<?> selector
   )
   {
-    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities, strategyFactory.supportsNestedArraysAndComplexTypes());
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
