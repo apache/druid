@@ -22,8 +22,8 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -53,7 +53,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.Map;
 
 public class WorkerChatHandlerTest
 {
@@ -88,7 +87,7 @@ public class WorkerChatHandlerTest
                          new TaskReportFileWriter()
                          {
                            @Override
-                           public void write(String taskId, Map<String, TaskReport> reports)
+                           public void write(String taskId, TaskReport.ReportMap reports)
                            {
 
                            }

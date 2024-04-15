@@ -105,6 +105,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -168,6 +169,7 @@ import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -177,6 +179,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConfig;
@@ -184,6 +187,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -222,6 +226,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -257,6 +262,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
+                  .put(PlannerContext.CTX_ENABLE_WINDOW_FNS, true)
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -657,6 +663,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
               .rows(ROWS2)
               .buildMMappedIndex();
           break;
+        case WIKIPEDIA:
+          index = TestDataBuilder.makeWikipediaIndex(newTempFolder());
+          break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
 
@@ -847,6 +856,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
+    protected CompactionState expectedLastCompactionState = null;
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
@@ -854,6 +864,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected MSQSegmentReport expectedSegmentReport = null;
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
@@ -890,6 +901,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
+      return asBuilder();
+    }
+
+    public Builder setExpectedLastCompactionState(CompactionState expectedLastCompactionState)
+    {
+      this.expectedLastCompactionState = expectedLastCompactionState;
       return asBuilder();
     }
 
@@ -939,6 +956,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
     {
       this.expectedMSQFaultClass = expectedMSQFaultClass;
+      return asBuilder();
+    }
+
+    public Builder setExpectedMSQSegmentReport(MSQSegmentReport expectedSegmentReport)
+    {
+      this.expectedSegmentReport = expectedSegmentReport;
       return asBuilder();
     }
 
@@ -1233,6 +1256,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedTuningConfig != null) {
           assertTuningConfig(expectedTuningConfig, foundSpec.getTuningConfig());
         }
+        if (expectedSegmentReport != null) {
+          Assert.assertEquals(expectedSegmentReport, reportPayload.getStatus().getSegmentReport());
+        }
         if (expectedDestinationIntervals != null) {
           Assert.assertNotNull(foundSpec);
           DataSourceMSQDestination destination = (DataSourceMSQDestination) foundSpec.getDestination();
@@ -1260,6 +1286,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
+          if (expectedLastCompactionState != null) {
+            CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
+                                                                  .getLastCompactionState();
+            Assert.assertEquals(expectedLastCompactionState, compactionState);
+
+          }
           Set<SegmentId> publishedSegmentIds = testTaskActionClient.getPublishedSegments()
                                                                    .stream()
                                                                    .map(DataSegment::getId)
@@ -1477,4 +1509,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
     return retVal;
   }
+
 }
+

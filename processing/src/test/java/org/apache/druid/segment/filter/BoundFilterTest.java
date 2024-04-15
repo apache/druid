@@ -46,6 +46,10 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.List;
 
+/**
+ * Classic {@link BoundFilter} test. Consider adding tests to {@link RangeFilterTests} in addition to, or instead of
+ * here.
+ */
 @RunWith(Parameterized.class)
 public class BoundFilterTest extends BaseFilterTest
 {

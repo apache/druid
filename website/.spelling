@@ -21,6 +21,7 @@
 1M
 100MiB
 32-bit
+4MiB
 500MiB
 64-bit
 ACL
@@ -1654,6 +1655,7 @@ EventReceiverFirehose
 EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
+jvmVersion
 QueryCountStatsMonitor
 RealtimeMetricsMonitor
 Sys
@@ -2164,6 +2166,9 @@ jackson-jq
 missingValue
 skipBytesInMemoryOverheadCheck
 spatialDimensions
+radiusUnit
+euclidean
+kilometers
 useFieldDiscovery
 4CPU
 cityName

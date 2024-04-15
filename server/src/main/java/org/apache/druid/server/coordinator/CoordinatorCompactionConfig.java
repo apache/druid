@@ -32,7 +32,7 @@ public class CoordinatorCompactionConfig
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
-  private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
+  private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
   private static final DataSourceCompactionConfig.Engine DEFAULT_COMPACTION_ENGINE = DataSourceCompactionConfig.Engine.NATIVE;
 
@@ -51,8 +51,7 @@ public class CoordinatorCompactionConfig
         compactionConfigs,
         baseConfig.compactionTaskSlotRatio,
         baseConfig.maxCompactionTaskSlots,
-        baseConfig.useAutoScaleSlots,
-        baseConfig.engine
+        baseConfig.useAutoScaleSlots
     );
   }
 
@@ -93,9 +92,11 @@ public class CoordinatorCompactionConfig
   )
   {
     this.compactionConfigs = compactionConfigs;
-    this.compactionTaskSlotRatio = compactionTaskSlotRatio == null ? DEFAULT_COMPACTION_TASK_RATIO :
+    this.compactionTaskSlotRatio = compactionTaskSlotRatio == null ?
+                                   DEFAULT_COMPACTION_TASK_RATIO :
                                    compactionTaskSlotRatio;
-    this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ? DEFAILT_MAX_COMPACTION_TASK_SLOTS :
+    this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ?
+                                  DEFAULT_MAX_COMPACTION_TASK_SLOTS :
                                   maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots == null ? DEFAULT_USE_AUTO_SCALE_SLOTS : useAutoScaleSlots;
     this.engine = engine == null ? DEFAULT_COMPACTION_ENGINE : engine;

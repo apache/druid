@@ -151,9 +151,10 @@ public class ContainsExprMacroTest extends MacroTestBase
   public void testEmptyStringSearchOnNull()
   {
     final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.nilBindings());
-    Assert.assertEquals(
-        ExprEval.ofLongBoolean(!NullHandling.sqlCompatible()).value(),
-        result.value()
-    );
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals(ExprEval.ofLongBoolean(true).value(), result.value());
+    }
   }
 }

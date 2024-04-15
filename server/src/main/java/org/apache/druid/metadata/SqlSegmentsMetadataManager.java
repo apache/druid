@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -1014,7 +1015,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @GuardedBy("pollLock")
   private void doPoll()
   {
-    log.debug("Starting polling of segment table");
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Starting polling of segment table");
 
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -1072,11 +1074,17 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     if (segments.isEmpty()) {
       log.info("No segments found in the database!");
     } else {
-      log.info("Polled and found %,d segments in the database", segments.size());
+      log.info("Polled and found [%,d] segments in the database in [%,d] ms.", segments.size(), stopwatch.millisElapsed());
     }
+    stopwatch.restart();
+
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties
+    );
+    log.info(
+        "Successfully created snapshot from polled segments in [%d] ms. Found [%d] overshadowed segments.",
+        stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
   }
 

@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
@@ -122,7 +123,9 @@ public class TaskQueueScaleTest
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
         new TaskLockbox(taskStorage, storageCoordinator),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        jsonMapper,
+        new NoopTaskContextEnricher()
     );
 
     taskQueue.start();

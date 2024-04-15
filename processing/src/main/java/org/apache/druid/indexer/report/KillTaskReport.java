@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -60,6 +60,25 @@ public class KillTaskReport implements TaskReport
   public Object getPayload()
   {
     return stats;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    KillTaskReport that = (KillTaskReport) o;
+    return Objects.equals(taskId, that.taskId) && Objects.equals(stats, that.stats);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(taskId, stats);
   }
 
   public static class Stats

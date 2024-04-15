@@ -52,10 +52,10 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -690,7 +690,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg().contains("org.apache.druid.java.util.common.RE: Max parse exceptions[0] exceeded"));
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
@@ -798,7 +798,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
   }
@@ -901,7 +901,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     ParseExceptionReport parseExceptionReport =
@@ -981,7 +981,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
     Assert.assertTrue(taskStatus.getErrorMsg().contains("Max parse exceptions[3] exceeded"));
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1257,7 +1257,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
           )
       );
 
-      IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+      IngestionStatsAndErrors reportData = getTaskReportData();
       Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
       Pattern errorPattern = Pattern.compile(
@@ -1677,15 +1677,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     }
   }
 
-  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  private IngestionStatsAndErrors getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
+    TaskReport.ReportMap taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
-        new TypeReference<Map<String, TaskReport>>()
+        new TypeReference<TaskReport.ReportMap>()
         {
         }
     );
-    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+    return IngestionStatsAndErrors.getPayloadFromTaskReports(
         taskReports
     );
   }

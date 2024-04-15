@@ -998,8 +998,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testReplaceWithNonExistentOrdinalInClusteredBy()
   {
-    skipVectorize();
-
     final String sql = "REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
                        + " SELECT * FROM foo"
@@ -1017,8 +1015,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testReplaceWithNegativeOrdinalInClusteredBy()
   {
-    skipVectorize();
-
     final String sql = "REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
                        + " SELECT * FROM foo"
