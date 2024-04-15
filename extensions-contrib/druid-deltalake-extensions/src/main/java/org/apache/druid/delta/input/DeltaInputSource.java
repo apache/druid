@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import io.delta.kernel.Scan;
+import io.delta.kernel.ScanBuilder;
 import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.TableNotFoundException;
@@ -32,6 +33,7 @@ import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
+import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.internal.InternalScanFileUtils;
 import io.delta.kernel.internal.data.ScanStateRow;
 import io.delta.kernel.internal.util.Utils;
@@ -47,6 +49,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.delta.filter.DeltaFilter;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
@@ -79,10 +82,15 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Nullable
   private final DeltaSplit deltaSplit;
 
+  @JsonProperty
+  @Nullable
+  private final DeltaFilter deltaFilter;
+
   @JsonCreator
   public DeltaInputSource(
       @JsonProperty("tablePath") String tablePath,
-      @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit
+      @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit,
+      @JsonProperty("filter") @Nullable DeltaFilter deltaFilter
   )
   {
     if (tablePath == null) {
@@ -90,6 +98,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     }
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
+    this.deltaFilter = deltaFilter;
   }
 
   @Override
@@ -127,17 +136,23 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         for (String file : deltaSplit.getFiles()) {
           final Row scanFile = deserialize(tableClient, file);
           scanFileDataIters.add(
-              getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema)
+              getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, Optional.empty()) // fixme where the predicate should be propagated
           );
         }
       } else {
         final Table table = Table.forPath(tableClient, tablePath);
         final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
+        final StructType fullSnapshotSchema = latestSnapshot.getSchema(tableClient);
         final StructType prunedSchema = pruneSchema(
-            latestSnapshot.getSchema(tableClient),
+            fullSnapshotSchema,
             inputRowSchema.getColumnsFilter()
         );
-        final Scan scan = latestSnapshot.getScanBuilder(tableClient).withReadSchema(tableClient, prunedSchema).build();
+
+        final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(tableClient);
+        if (deltaFilter != null) {
+          scanBuilder.withFilter(tableClient, deltaFilter.getFilterPredicate(fullSnapshotSchema));
+        }
+        final Scan scan = scanBuilder.withReadSchema(tableClient, prunedSchema).build();
         final CloseableIterator<FilteredColumnarBatch> scanFilesIter = scan.getScanFiles(tableClient);
         final Row scanState = scan.getScanState(tableClient);
 
@@ -151,7 +166,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
           while (scanFileRows.hasNext()) {
             final Row scanFile = scanFileRows.next();
             scanFileDataIters.add(
-                getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema)
+                getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, scan.getRemainingFilter()) // just try to pass the remaining filter
             );
           }
         }
@@ -187,7 +202,13 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     catch (TableNotFoundException e) {
       throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
     }
-    final Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
+    final StructType fullSnapshotSchema = latestSnapshot.getSchema(tableClient);
+
+    final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(tableClient);
+    if (deltaFilter != null) {
+      scanBuilder.withFilter(tableClient, deltaFilter.getFilterPredicate(fullSnapshotSchema));
+    }
+    final Scan scan = scanBuilder.withReadSchema(tableClient, fullSnapshotSchema).build();
     // scan files iterator for the current snapshot
     final CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(tableClient);
 
@@ -220,7 +241,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     return new DeltaInputSource(
         tablePath,
-        split.get()
+        split.get(),
+        deltaFilter
     );
   }
 
@@ -279,7 +301,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       final TableClient tableClient,
       final Row scanState,
       final Row scanFile,
-      final StructType physicalReadSchema
+      final StructType physicalReadSchema,
+      final Optional<Predicate> optionalPredicate
   ) throws IOException
   {
     final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
@@ -287,8 +310,9 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     final CloseableIterator<ColumnarBatch> physicalDataIter = tableClient.getParquetHandler().readParquetFiles(
         Utils.singletonCloseableIterator(fileStatus),
         physicalReadSchema,
-        Optional.empty()
+        optionalPredicate
     );
+
     return Scan.transformPhysicalData(
         tableClient,
         scanState,

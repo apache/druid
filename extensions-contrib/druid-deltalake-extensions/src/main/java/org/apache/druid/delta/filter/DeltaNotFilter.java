@@ -17,25 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.delta.input;
+package org.apache.druid.delta.filter;
 
-import io.delta.kernel.Scan;
-import io.delta.kernel.ScanBuilder;
-import io.delta.kernel.Snapshot;
-import io.delta.kernel.Table;
-import io.delta.kernel.TableNotFoundException;
-import io.delta.kernel.client.TableClient;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.types.StructType;
+import org.apache.druid.error.InvalidInput;
 
-public class DeltaTestUtils
+public class DeltaNotFilter implements DeltaFilter
 {
-  public static Scan getScan(final TableClient tableClient, final String deltaTablePath) throws TableNotFoundException
+  @JsonProperty
+  private final DeltaFilter filter;
+
+  @JsonCreator
+  public DeltaNotFilter(
+      @JsonProperty("filter") DeltaFilter filter
+  )
   {
-    final Table table = Table.forPath(tableClient, deltaTablePath);
-    final Snapshot snapshot = table.getLatestSnapshot(tableClient);
-    final StructType readSchema = snapshot.getSchema(tableClient);
-    final ScanBuilder scanBuilder = snapshot.getScanBuilder(tableClient)
-                                            .withReadSchema(tableClient, readSchema);
-    return scanBuilder.build();
+    if (filter == null) {
+      throw InvalidInput.exception("Delta not filter predicate cannot be empty. It requires 1 predicate.");
+    }
+    this.filter = filter;
+  }
+
+  @Override
+  public Predicate getFilterPredicate(StructType snapshotSchema)
+  {
+    return new Predicate(
+        "NOT",
+        filter.getFilterPredicate(snapshotSchema)
+    );
   }
 }

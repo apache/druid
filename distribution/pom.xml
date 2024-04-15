@@ -256,6 +256,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-deltalake-extensions</argument> <!-- remove it after testing -->
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
