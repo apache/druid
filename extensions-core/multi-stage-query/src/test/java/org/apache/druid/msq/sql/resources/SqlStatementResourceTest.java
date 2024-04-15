@@ -147,6 +147,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private static final MSQControllerTask MSQ_CONTROLLER_SELECT_PAYLOAD = new MSQControllerTask(
       ACCEPTED_SELECT_MSQ_QUERY,
+      null,
       MSQSpec.builder()
              .query(QUERY)
              .columnMappings(
@@ -187,6 +188,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private static final MSQControllerTask MSQ_CONTROLLER_INSERT_PAYLOAD = new MSQControllerTask(
       ACCEPTED_SELECT_MSQ_QUERY,
+      null,
       MSQSpec.builder()
              .query(QUERY)
              .columnMappings(

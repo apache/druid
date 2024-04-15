@@ -168,7 +168,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       intervalsToSkipCompaction.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>())
                                .add(interval);
 
-      busyCompactionTaskSlots += findMaxNumTaskSlotsUsedByOneCompactionTask(
+      busyCompactionTaskSlots += findMaxNumTaskSlotsUsedByOneNativeCompactionTask(
           compactionTaskQuery.getTuningConfig()
       );
     }
@@ -284,7 +284,7 @@ public class CompactSegments implements CoordinatorCustomDuty
    * the given tuningConfig.
    */
   @VisibleForTesting
-  static int findMaxNumTaskSlotsUsedByOneCompactionTask(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
+  static int findMaxNumTaskSlotsUsedByOneNativeCompactionTask(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     if (isParallelMode(tuningConfig)) {
       @Nullable
@@ -465,6 +465,22 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       }
 
+      DataSourceCompactionConfig.Engine engine = config.getEngine();
+
+      Map<String, Object> autoCompactionContext = config.getTaskContext();
+      int numCurrentCompactionTasksAndSubtasks;
+      if (engine == DataSourceCompactionConfig.Engine.MSQ && autoCompactionContext!= null && !autoCompactionContext.containsKey("maxNumTasks")) {
+        autoCompactionContext = newAutoCompactionContext(autoCompactionContext);
+        numCurrentCompactionTasksAndSubtasks = numAvailableCompactionTaskSlots;
+        // todo (vishesh): there was a plan to use auto strategy for task slots calculation. How to introduce that
+        // and then how to retrieve that number to manage underneath calculation
+        // also check if there is a need to clone the map here
+          autoCompactionContext.putIfAbsent("maxNumTasks", numCurrentCompactionTasksAndSubtasks);
+        }
+       else {
+        numCurrentCompactionTasksAndSubtasks = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());
+      }
+
       final String taskId = compactSegments(
           "coordinator-issued",
           segmentsToCompact,
@@ -479,7 +495,8 @@ public class CompactSegments implements CoordinatorCustomDuty
           config.getMetricsSpec(),
           transformSpec,
           dropExisting,
-          newAutoCompactionContext(config.getTaskContext())
+          autoCompactionContext,
+          engine
       );
 
       LOG.info(
@@ -489,7 +506,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       LOG.debugSegments(segmentsToCompact, "Compacting segments");
       // Count the compaction task itself + its sub tasks
       numSubmittedTasks++;
-      numCompactionTasksAndSubtasks += findMaxNumTaskSlotsUsedByOneCompactionTask(config.getTuningConfig());
+      numCompactionTasksAndSubtasks += numCurrentCompactionTasksAndSubtasks;
     }
 
     LOG.info("Submitted a total of [%d] compaction tasks.", numSubmittedTasks);
@@ -632,7 +649,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
-      @Nullable Map<String, Object> context
+      @Nullable Map<String, Object> context,
+      @Nullable DataSourceCompactionConfig.Engine engine
   )
   {
     Preconditions.checkArgument(!segments.isEmpty(), "Expect non-empty segments to compact");
@@ -660,7 +678,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         dimensionsSpec,
         metricsSpec,
         transformSpec,
-        context
+        context,
+        engine
     );
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
     return taskId;

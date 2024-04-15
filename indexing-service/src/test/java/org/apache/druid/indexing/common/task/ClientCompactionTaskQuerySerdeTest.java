@@ -63,6 +63,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
@@ -127,7 +128,8 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        ImmutableMap.of("key", "value")
+        ImmutableMap.of("key", "value"),
+        DataSourceCompactionConfig.Engine.MSQ
     );
 
     final byte[] json = mapper.writeValueAsBytes(query);
@@ -232,6 +234,10 @@ public class ClientCompactionTaskQuerySerdeTest
     Assert.assertArrayEquals(
         query.getMetricsSpec(),
         task.getMetricsSpec()
+    );
+    Assert.assertEquals(
+        query.getEngine().toString(),
+        task.getEngine().toString()
     );
   }
 
@@ -345,7 +351,8 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        new HashMap<>()
+        new HashMap<>(),
+        null
     );
 
     final byte[] json = mapper.writeValueAsBytes(task);

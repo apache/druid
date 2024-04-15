@@ -61,6 +61,7 @@ public class MSQControllerTaskTest
   {
     MSQControllerTask msqWorkerTask = new MSQControllerTask(
         null,
+        null,
         MSQ_SPEC,
         null,
         null,

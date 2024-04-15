@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -36,7 +37,9 @@ import java.util.Objects;
 
 public class DataSourceCompactionConfig
 {
-  /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
+  /**
+   * Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY
+   */
   public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
   // Approx. 100TB. Chosen instead of Long.MAX_VALUE to avoid overflow on web-console and other clients
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 100_000_000_000_000L;
@@ -59,7 +62,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
-  private Engine engine;
+  private final Engine engine;
 
   @JsonCreator
   public DataSourceCompactionConfig(
@@ -231,32 +234,56 @@ public class DataSourceCompactionConfig
     return result;
   }
 
-  public void updateEngineAndValidate(Engine defaultEngine)
+  public static DataSourceCompactionConfig from(Engine defaultEngine, DataSourceCompactionConfig currentConfig)
   {
-    boolean usingDefault = false;
-    if (engine == null) {
-      engine = defaultEngine;
-      usingDefault = true;
+    Engine newEngine = currentConfig.getEngine();
+    String engineSourceLog = "specified in spec";
+    if (newEngine == null) {
+      newEngine = defaultEngine;
+      engineSourceLog = "set as default";
     }
-    if (engine == Engine.MSQ) {
-      if (tuningConfig != null) {
-        PartitionsSpec partitionsSpec = tuningConfig.getPartitionsSpec();
-        if (partitionsSpec != null && !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
+    if (newEngine == Engine.MSQ) {
+      if (currentConfig.getTuningConfig() != null) {
+        PartitionsSpec partitionsSpec = currentConfig.getTuningConfig().getPartitionsSpec();
+
+        if (partitionsSpec != null && !(partitionsSpec instanceof DimensionRangePartitionsSpec
+                                        || partitionsSpec instanceof DynamicPartitionsSpec)) {
           throw InvalidInput.exception(
-              "Invalid partition spec type[%s] for MSQ compaction engine %s. Type must be DynamicRangePartitionSpec.",
-              partitionsSpec.getClass(), usingDefault ? "set as default" : "specified in spec"
+              "Invalid partition spec type[%s] for MSQ compaction engine %s."
+              + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec .",
+              partitionsSpec.getClass(),
+              engineSourceLog
+          );
+        }
+        if (partitionsSpec instanceof DynamicPartitionsSpec
+            && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
+          throw InvalidInput.exception(
+              "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ compaction engine %s.",
+              ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows(), engineSourceLog
           );
         }
       }
-      if (maxRowsPerSegment != null) {
-        throw InvalidInput.exception(
-            "MaxRowsPerSegment[%d] field not supported for MSQ compaction engine.",
-           maxRowsPerSegment
-        );
-      }
     }
+    return new DataSourceCompactionConfig(
+        currentConfig.getDataSource(),
+        currentConfig.getTaskPriority(),
+        currentConfig.getInputSegmentSizeBytes(),
+        currentConfig.getMaxRowsPerSegment(),
+        currentConfig.getSkipOffsetFromLatest(),
+        currentConfig.getTuningConfig(),
+        currentConfig.getGranularitySpec(),
+        currentConfig.getDimensionsSpec(),
+        currentConfig.getMetricsSpec(),
+        currentConfig.getTransformSpec(),
+        currentConfig.getIoConfig(),
+        currentConfig.getTaskContext(),
+        newEngine
+    );
   }
 
+  /**
+   * Engine to be used for a compaction task.
+   */
   public enum Engine
   {
     NATIVE,

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -46,6 +47,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final AggregatorFactory[] metricsSpec;
   private final ClientCompactionTaskTransformSpec transformSpec;
   private final Map<String, Object> context;
+  private final DataSourceCompactionConfig.Engine engine;
 
   @JsonCreator
   public ClientCompactionTaskQuery(
@@ -57,8 +59,9 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("dimensionsSpec") ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
-      @JsonProperty("context") Map<String, Object> context
-  )
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("engine") DataSourceCompactionConfig.Engine engine
+      )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
@@ -69,6 +72,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.metricsSpec = metrics;
     this.transformSpec = transformSpec;
     this.context = context;
+    this.engine = engine;
   }
 
   @JsonProperty
@@ -135,6 +139,12 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     return context;
   }
 
+  @JsonProperty
+  public DataSourceCompactionConfig.Engine getEngine()
+  {
+    return engine;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -153,7 +163,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
-           Objects.equals(context, that.context);
+           Objects.equals(context, that.context) &&
+           Objects.equals(engine, that.engine);
   }
 
   @Override
@@ -167,7 +178,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         granularitySpec,
         dimensionsSpec,
         transformSpec,
-        context
+        context,
+        engine
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
@@ -186,6 +198,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", metricsSpec=" + Arrays.toString(metricsSpec) +
            ", transformSpec=" + transformSpec +
            ", context=" + context +
+           ", engine=" + engine +
            '}';
   }
 }

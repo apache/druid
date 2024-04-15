@@ -114,6 +114,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   @JsonCreator
   public MSQControllerTask(
       @JsonProperty("id") @Nullable String id,
+      @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("spec") MSQSpec querySpec,
       @JsonProperty("sqlQuery") @Nullable String sqlQuery,
       @JsonProperty("sqlQueryContext") @Nullable Map<String, Object> sqlQueryContext,
@@ -125,7 +126,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   {
     super(
         id != null ? id : MSQTasks.controllerTaskId(null),
-        id,
+        groupId != null ? groupId : id,
         null,
         getDataSourceForTaskMetadata(querySpec),
         context

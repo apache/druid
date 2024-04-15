@@ -169,7 +169,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final SegmentProvider segmentProvider;
   @JsonIgnore
   private final PartitionConfigurationManager partitionConfigurationManager;
-
+  @Nullable
+  private final Engine engine;
   @JsonIgnore
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
@@ -197,6 +198,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
+      @JsonProperty("engine") @Nullable final Engine engine,
       @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory
   )
   {
@@ -250,6 +252,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
+    this.engine = engine;
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
   }
 
@@ -397,6 +400,12 @@ public class CompactionTask extends AbstractBatchIndexTask
     return tuningConfig;
   }
 
+  @JsonProperty
+  public Engine getEngine()
+  {
+    return engine;
+  }
+
   @Override
   public String getType()
   {
@@ -476,13 +485,13 @@ public class CompactionTask extends AbstractBatchIndexTask
         getMetricBuilder()
     );
 
-    // TODO: Uncomment the condition
-//    if (tuningConfig.useMSQ && toolbox.getCompactionToMSQ() != null) {
-    if (toolbox.getCompactionToMSQ() != null) {
-      // Switch to using MSQ for compaction
-      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
-      return toolbox.getCompactionToMSQ()
-                    .createAndRunMSQControllerTasks(this, toolbox, intervalDataSchemas);
+    // TODO: Remove below test
+    log.info ("Test log");
+    log.info("Compacting using engine[%s]", engine);
+    if (engine == Engine.MSQ) {
+        registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
+        return toolbox.getCompactionToMSQ()
+                      .createAndRunMSQControllerTasks(this, toolbox, intervalDataSchemas);
     } else {
       final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSpecs(
           intervalDataSchemas,
@@ -520,13 +529,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   private TaskStatus runParallelIndexSubtasks(List<ParallelIndexSupervisorTask> tasks, TaskToolbox toolbox)
       throws JsonProcessingException
   {
-
-    // TODO(vishesh): Remove below line.
-//    System.out.println(new ObjectMapper().writeValueAsString(tasks));
-//    return TaskStatus.failure(getId(), "Forced failure");
     final int totalNumSpecs = tasks.size();
     log.info("Generated [%d] compaction task specs", totalNumSpecs);
-
 
       int failCnt = 0;
       Map<String, TaskReport> completionReports = new HashMap<>();
@@ -1270,6 +1274,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private TuningConfig tuningConfig;
     @Nullable
     private Map<String, Object> context;
+    private Engine engine;
 
     public Builder(
         String dataSource,
@@ -1352,6 +1357,14 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
+    public Builder engine(Engine engine)
+    {
+      this.engine = engine;
+      return this;
+    }
+
+
+
     public CompactionTask build()
     {
       return new CompactionTask(
@@ -1369,6 +1382,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           granularitySpec,
           tuningConfig,
           context,
+          engine,
           segmentCacheManagerFactory
       );
     }

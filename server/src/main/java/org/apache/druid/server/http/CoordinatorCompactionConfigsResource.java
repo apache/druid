@@ -123,6 +123,7 @@ public class CoordinatorCompactionConfigsResource
             null,
             engine
         );
+    // TODO (vishesh): add the check to loop over all configs and validate if this update is compatible.
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
@@ -139,8 +140,8 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-      newConfig.updateEngineAndValidate(current.getEngine());
-      newConfigs.put(newConfig.getDataSource(), newConfig);
+      DataSourceCompactionConfig updateConfig = DataSourceCompactionConfig.from(current.getEngine(), newConfig);
+      newConfigs.put(updateConfig.getDataSource(), updateConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
       return newCompactionConfig;
