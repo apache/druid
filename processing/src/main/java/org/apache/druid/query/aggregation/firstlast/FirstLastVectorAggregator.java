@@ -94,7 +94,8 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
 
       PairType selectedPair = null;
 
-      for (int index = endRow - 1; index >= startRow; --index) {
+      for (int index = startRow; index < endRow; ++index) {
+
         PairType pair = readPairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, index);
         if (pair != null) {
           if (selectedPair == null) {
@@ -125,7 +126,7 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
       final boolean[] valueNullityVector = valueSelector.getNullVector();
       Integer selectedIndex = null;
 
-      for (int index = endRow - 1; index >= startRow; --index) {
+      for (int index = startRow; index < endRow; ++index) {
         if (timeNullityVector != null && timeNullityVector[index]) {
           // Don't aggregate values where time isn't present
           continue;
