@@ -59,6 +59,12 @@ public class StatsDEmitterConfig
   private final Boolean dogstatsdEvents;
   @JsonProperty
   private final Integer queueSize;
+  @JsonProperty
+  private final Integer poolSize;
+  @JsonProperty
+  private final Integer processorWorkers;
+  @JsonProperty
+  private final Integer senderWorkers;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -73,7 +79,10 @@ public class StatsDEmitterConfig
       @JsonProperty("dogstatsdConstantTags") @Nullable List<String> dogstatsdConstantTags,
       @JsonProperty("dogstatsdServiceAsTag") @Nullable Boolean dogstatsdServiceAsTag,
       @JsonProperty("dogstatsdEvents") @Nullable Boolean dogstatsdEvents,
-      @JsonProperty("queueSize") @Nullable Integer queueSize
+      @JsonProperty("queueSize") @Nullable Integer queueSize,
+      @JsonProperty("poolSize") @Nullable Integer poolSize,
+      @JsonProperty("processorWorkers") @Nullable Integer processorWorkers,
+      @JsonProperty("senderWorkers") @Nullable Integer senderWorkers
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -88,6 +97,9 @@ public class StatsDEmitterConfig
     this.dogstatsdServiceAsTag = dogstatsdServiceAsTag != null ? dogstatsdServiceAsTag : false;
     this.dogstatsdEvents = dogstatsdEvents != null ? dogstatsdEvents : false;
     this.queueSize = queueSize != null ? queueSize : NonBlockingStatsDClient.DEFAULT_QUEUE_SIZE;
+    this.poolSize = poolSize != null ? poolSize : NonBlockingStatsDClient.DEFAULT_POOL_SIZE;
+    this.processorWorkers = processorWorkers != null ? processorWorkers : NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
+    this.senderWorkers = senderWorkers != null ? senderWorkers : NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
   }
 
   @Override
@@ -129,6 +141,15 @@ public class StatsDEmitterConfig
     if (!Objects.equals(queueSize, that.queueSize)) {
       return false;
     }
+    if (!Objects.equals(poolSize, that.poolSize)) {
+      return false;
+    }
+    if (!Objects.equals(processorWorkers, that.processorWorkers)) {
+      return false;
+    }
+    if (!Objects.equals(senderWorkers, that.senderWorkers)) {
+      return false;
+    }
     return Objects.equals(dogstatsdConstantTags, that.dogstatsdConstantTags);
   }
 
@@ -136,7 +157,7 @@ public class StatsDEmitterConfig
   public int hashCode()
   {
     return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath,
-            blankHolder, dogstatsd, dogstatsdConstantTags, dogstatsdServiceAsTag, queueSize);
+            blankHolder, dogstatsd, dogstatsdConstantTags, dogstatsdServiceAsTag, queueSize, poolSize, processorWorkers, senderWorkers);
   }
 
   @JsonProperty
@@ -209,5 +230,20 @@ public class StatsDEmitterConfig
   public Integer getQueueSize()
   {
     return queueSize;
+  }
+  @JsonProperty
+  public Integer getPoolSize()
+  {
+    return poolSize;
+  }
+  @JsonProperty
+  public Integer getProcessorWorkers()
+  {
+    return processorWorkers;
+  }
+  @JsonProperty
+  public Integer getSenderWorkers()
+  {
+    return senderWorkers;
   }
 }
