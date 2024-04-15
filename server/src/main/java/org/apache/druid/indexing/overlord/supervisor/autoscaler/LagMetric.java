@@ -19,44 +19,9 @@
 
 package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-public class LagStats
+public enum LagMetric
 {
-  private final long maxLag;
-  private final long totalLag;
-  private final long avgLag;
-
-  public LagStats(long maxLag, long totalLag, long avgLag)
-  {
-    this.maxLag = maxLag;
-    this.totalLag = totalLag;
-    this.avgLag = avgLag;
-  }
-
-  public long getMaxLag()
-  {
-    return maxLag;
-  }
-
-  public long getTotalLag()
-  {
-    return totalLag;
-  }
-
-  public long getAvgLag()
-  {
-    return avgLag;
-  }
-
-  public long get(LagMetric metric)
-  {
-    switch (metric) {
-      case AVERAGE:
-        return avgLag;
-      case TOTAL:
-        return totalLag;
-      case MAX:
-        return maxLag;
-    }
-    throw new IllegalStateException("Unknown Metric");
-  }
+  TOTAL,
+  MAX,
+  AVERAGE;
 }
