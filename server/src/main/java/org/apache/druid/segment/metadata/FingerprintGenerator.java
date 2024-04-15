@@ -21,6 +21,7 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.druid.guice.LazySingleton;
 
 import java.io.IOException;
@@ -41,6 +42,9 @@ public class FingerprintGenerator
     this.objectMapper = objectMapper;
   }
 
+  /**
+   * Generates fingerprint or hash string for an object using SHA-256 hash algorithm.
+   */
   public String generateFingerprint(Object payload)
   {
     try {
@@ -49,23 +53,10 @@ public class FingerprintGenerator
 
       digest.update(serializedObj);
       byte[] hashBytes = digest.digest();
-      return bytesToHex(hashBytes);
+      return Hex.encodeHexString(hashBytes);
     }
     catch (NoSuchAlgorithmException | IOException e) {
-      throw new RuntimeException("Error generating object fingerprint. ", e);
+      throw new RuntimeException("Error generating object fingerprint.", e);
     }
-  }
-
-  private String bytesToHex(byte[] bytes)
-  {
-    StringBuilder hexString = new StringBuilder();
-    for (byte b : bytes) {
-      String hex = Integer.toHexString(0xff & b);
-      if (hex.length() == 1) {
-        hexString.append('0');
-      }
-      hexString.append(hex);
-    }
-    return hexString.toString();
   }
 }
