@@ -5000,7 +5000,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder = builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
+                      builder = builder.virtualColumns(
+                          expressionVirtualColumn(
+                              "v000",
+                              "case_searched((\"dim1\" != '1'),1,0)",
+                              ColumnType.LONG
+                          ),
+                          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
+                        )
                        .aggregators(
                            aggregators(
                                new FilteredAggregatorFactory(
@@ -5181,6 +5188,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched((\"dim1\" != '1'),1,0)",
+                                ColumnType.LONG
+                            )
+                        )
                         .setAggregatorSpecs(aggregators(
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
