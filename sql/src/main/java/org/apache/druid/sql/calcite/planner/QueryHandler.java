@@ -548,7 +548,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     RelNode parameterized = possiblyLimitedRoot.rel.accept(
         new RelParameterizerShuttle(plannerContext)
     );
-    Hook.TRIMMED.run(parameterized);
     QueryValidations.validateLogicalQueryForDruid(handlerContext.plannerContext(), parameterized);
     CalcitePlanner planner = handlerContext.planner();
 
