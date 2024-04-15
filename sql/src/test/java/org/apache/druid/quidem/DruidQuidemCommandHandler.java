@@ -31,9 +31,7 @@ import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.util.Util;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Query;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 
@@ -128,16 +126,18 @@ public class DruidQuidemCommandHandler implements CommandHandler
     @Override
     protected void executeExplain(Context x) throws Exception
     {
-      QueryLogHook qlh = new QueryLogHook(new DefaultObjectMapper());
+      DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();
+      ObjectMapper objectMapper = connectionExtras.getObjectMapper();
+      QueryLogHook qlh = new QueryLogHook(objectMapper);
       qlh.logQueriesForGlobal(
           () -> {
             executeQuery(x);
           }
       );
+//      BaseCalciteQueryTest conn = x.connection().unwrap(BaseCalciteQueryTest.class);
 
       List<Query<?>> queries = qlh.getRecordedQueries();
 
-      ObjectMapper objectMapper = TestHelper.JSON_MAPPER;
       queries = queries
           .stream()
           .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, objectMapper))

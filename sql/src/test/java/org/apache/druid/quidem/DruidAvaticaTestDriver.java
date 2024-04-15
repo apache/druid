@@ -75,7 +75,6 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.eclipse.jetty.server.Server;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -123,7 +122,6 @@ public class DruidAvaticaTestDriver implements Driver
         )
     );
 
-
     try {
       AvaticaJettyServer server = ci.framework.injector().getInstance(AvaticaJettyServer.class);
       return server.getConnection(info);
@@ -150,9 +148,16 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, Closer closer) throws Exception
+    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper) {
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper);
+    }
+
+
+    @Provides
+    @LazySingleton
+    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, Closer closer, DruidConnectionExtras druidConnectionExtras) throws Exception
     {
-      AvaticaJettyServer avaticaJettyServer = new AvaticaJettyServer(druidMeta);
+      AvaticaJettyServer avaticaJettyServer = new AvaticaJettyServer(druidMeta, druidConnectionExtras);
       closer.register(avaticaJettyServer);
       return avaticaJettyServer;
     }
@@ -169,8 +174,9 @@ public class DruidAvaticaTestDriver implements Driver
     final DruidMeta druidMeta;
     final Server server;
     final String url;
+    final DruidConnectionExtras connectionExtras;
 
-    AvaticaJettyServer(final DruidMeta druidMeta) throws Exception
+    AvaticaJettyServer(final DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
     {
       this.druidMeta = druidMeta;
       server = new Server(0);
@@ -180,11 +186,17 @@ public class DruidAvaticaTestDriver implements Driver
           "jdbc:avatica:remote:url=%s",
           new URIBuilder(server.getURI()).setPath(DruidAvaticaJsonHandler.AVATICA_PATH).build()
       );
+      connectionExtras  = druidConnectionExtras;
     }
 
     public Connection getConnection(Properties info) throws SQLException
     {
-      return DriverManager.getConnection(url, info);
+      Connection realConnection = DriverManager.getConnection(url, info);
+      Connection proxyConnection = DynamicComposite.make(
+          realConnection, Connection.class,
+          connectionExtras, DruidConnectionExtras.class
+      );
+      return proxyConnection;
     }
 
     @Override
