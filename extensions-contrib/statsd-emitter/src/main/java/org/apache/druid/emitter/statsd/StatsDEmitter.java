@@ -63,6 +63,7 @@ public class StatsDEmitter implements Emitter
         .hostname(config.getHostname())
         .port(config.getPort())
         .constantTags(config.isDogstatsd() ? config.getDogstatsdConstantTags().toArray(new String[0]) : EMPTY_ARRAY)
+        .queueSize(config.getQueueSize())
         .errorHandler(new StatsDClientErrorHandler()
         {
           private int exceptionCount = 0;

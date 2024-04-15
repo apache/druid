@@ -22,6 +22,7 @@ package org.apache.druid.emitter.statsd;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.timgroup.statsd.NonBlockingStatsDClient;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -56,6 +57,8 @@ public class StatsDEmitterConfig
   private final Boolean dogstatsdServiceAsTag;
   @JsonProperty
   private final Boolean dogstatsdEvents;
+  @JsonProperty
+  private final Integer queueSize;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -69,7 +72,8 @@ public class StatsDEmitterConfig
       @JsonProperty("dogstatsd") @Nullable Boolean dogstatsd,
       @JsonProperty("dogstatsdConstantTags") @Nullable List<String> dogstatsdConstantTags,
       @JsonProperty("dogstatsdServiceAsTag") @Nullable Boolean dogstatsdServiceAsTag,
-      @JsonProperty("dogstatsdEvents") @Nullable Boolean dogstatsdEvents
+      @JsonProperty("dogstatsdEvents") @Nullable Boolean dogstatsdEvents,
+      @JsonProperty("queueSize") @Nullable Integer queueSize
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -83,6 +87,7 @@ public class StatsDEmitterConfig
     this.dogstatsdConstantTags = dogstatsdConstantTags != null ? dogstatsdConstantTags : Collections.emptyList();
     this.dogstatsdServiceAsTag = dogstatsdServiceAsTag != null ? dogstatsdServiceAsTag : false;
     this.dogstatsdEvents = dogstatsdEvents != null ? dogstatsdEvents : false;
+    this.queueSize = queueSize != null ? queueSize : NonBlockingStatsDClient.DEFAULT_QUEUE_SIZE;
   }
 
   @Override
@@ -121,6 +126,9 @@ public class StatsDEmitterConfig
     if (!Objects.equals(dogstatsdServiceAsTag, that.dogstatsdServiceAsTag)) {
       return false;
     }
+    if (!Objects.equals(queueSize, that.queueSize)) {
+      return false;
+    }
     return Objects.equals(dogstatsdConstantTags, that.dogstatsdConstantTags);
   }
 
@@ -128,7 +136,7 @@ public class StatsDEmitterConfig
   public int hashCode()
   {
     return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath,
-            blankHolder, dogstatsd, dogstatsdConstantTags, dogstatsdServiceAsTag);
+            blankHolder, dogstatsd, dogstatsdConstantTags, dogstatsdServiceAsTag, queueSize);
   }
 
   @JsonProperty
@@ -196,5 +204,10 @@ public class StatsDEmitterConfig
   public Boolean isDogstatsdEvents()
   {
     return dogstatsdEvents;
+  }
+  @JsonProperty
+  public Integer getQueueSize()
+  {
+    return queueSize;
   }
 }
