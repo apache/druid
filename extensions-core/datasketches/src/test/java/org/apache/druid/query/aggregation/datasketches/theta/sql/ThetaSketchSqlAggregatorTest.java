@@ -1121,7 +1121,6 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaEstimateAsVirtualColumnWithGroupByOrderBy()
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT"

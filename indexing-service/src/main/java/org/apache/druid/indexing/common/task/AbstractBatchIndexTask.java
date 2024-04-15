@@ -31,12 +31,13 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -919,7 +920,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 
@@ -948,7 +950,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 segmentsRead,
                 segmentsPublished
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

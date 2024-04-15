@@ -1100,7 +1100,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT"
@@ -1200,7 +1199,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testResultCacheWithWindowing()
   {
     cannotVectorize();
-    skipVectorize();
     for (int i = 0; i < 2; i++) {
       testBuilder()
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))

@@ -580,7 +580,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSafeDivide()
   {
-    skipVectorize();
     cannotVectorize();
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
@@ -852,7 +851,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testAnyAggregator()
   {
     // Cannot vectorize virtual expressions.
-    skipVectorize();
+    cannotVectorize();
 
     testQuery(
         "SELECT "
@@ -883,9 +882,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"})
-        : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"})
+        ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"})
     );
   }
 
@@ -8735,7 +8732,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     msqIncompatible();
     cannotVectorize();
-    skipVectorize();
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -9707,7 +9703,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
 
     cannotVectorize();
-    skipVectorize();
     // timeseries with all granularity have a single group, so should return default results for given aggregators
     testQuery(
         "SELECT\n"
@@ -10022,7 +10017,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupByAggregatorDefaultValuesNonVectorized()
   {
     cannotVectorize();
-    skipVectorize();
     testQuery(
         "SELECT\n"
         + " dim2,\n"
@@ -13014,7 +13008,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeStampAddZeroYearPeriod()
   {
-    skipVectorize();
+    cannotVectorize();
 
     testQuery(
         "SELECT TIMESTAMPADD(YEAR, 0, \"__time\") FROM druid.foo",
@@ -13915,7 +13909,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testStringAggExpression()
   {
     cannotVectorize();
-    skipVectorize();
     testQuery(
         "SELECT\n"
         + "  STRING_AGG(DISTINCT CONCAT(dim1, dim2), ','),\n"
@@ -14227,7 +14220,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithSingleConstantDimension()
   {
-    skipVectorize();
+    cannotVectorize();
     testQuery(
         "SELECT 'A' from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY 'foobar'",
         ImmutableList.of(
@@ -14281,7 +14274,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithMultipleConstantDimensions()
   {
-    skipVectorize();
+    cannotVectorize();
     testQuery(
         "SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1",
         ImmutableList.of(
@@ -15025,7 +15018,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByLimitOutGroupByOrderBy()
   {
-    skipVectorize();
     cannotVectorize();
 
     testBuilder()
@@ -15103,7 +15095,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByOrderByLimitOutGroupByOrderByLimit()
   {
-    skipVectorize();
     cannotVectorize();
     String sql = "with t AS (SELECT m2 as mo, COUNT(m1) as trend_score\n"
         + "FROM \"foo\"\n"
@@ -15199,7 +15190,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWindowingWithScanAndSort()
   {
-    skipVectorize();
     cannotVectorize();
     msqIncompatible();
     String sql = "with t AS (\n"
@@ -15557,7 +15547,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testBitwiseXor()
   {
-    skipVectorize();
     cannotVectorize();
     msqIncompatible();
     testQuery(
