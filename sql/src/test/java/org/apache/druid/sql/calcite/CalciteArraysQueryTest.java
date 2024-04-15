@@ -73,8 +73,8 @@ import org.apache.druid.sql.calcite.CalciteArraysQueryTest.ArraysComponentSuppli
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 

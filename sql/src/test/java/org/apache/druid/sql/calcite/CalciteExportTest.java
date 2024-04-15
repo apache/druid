@@ -68,24 +68,24 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-    builder.addModule(
-        new DruidModule()
-        {
-          @Override
-          public void configure(Binder binder)
+      builder.addModule(
+          new DruidModule()
           {
-          }
+            @Override
+            public void configure(Binder binder)
+            {
+            }
 
-          @Override
-          public List<? extends Module> getJacksonModules()
-          {
-            return ImmutableList.of(
-                new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
-                    new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
-                )
-            );
-          }
-        });
+            @Override
+            public List<? extends Module> getJacksonModules()
+            {
+              return ImmutableList.of(
+                  new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
+                      new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
+                  )
+              );
+            }
+          });
       builder.addModule(new DruidModule()
       {
         @Override
