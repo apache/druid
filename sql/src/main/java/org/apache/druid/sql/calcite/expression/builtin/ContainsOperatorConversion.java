@@ -82,7 +82,7 @@ public class ContainsOperatorConversion extends DirectOperatorConversion
         .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
         .requiredOperandCount(2)
         .literalOperands(1)
-        .returnTypeNonNull(SqlTypeName.BOOLEAN)
+        .returnTypeNullable(SqlTypeName.BOOLEAN)
         .functionCategory(SqlFunctionCategory.STRING)
         .build();
   }
