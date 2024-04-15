@@ -35,20 +35,20 @@ This extension emits druid metrics to a StatsD server.
 
 All the configuration parameters for the StatsD emitter are under `druid.emitter.statsd`.
 
-| property                                     |description|required?|default|
-|----------------------------------------------|-----------|---------|-----|
-| `druid.emitter.statsd.hostname`              |The hostname of the StatsD server.|yes|none|
-| `druid.emitter.statsd.port`                  |The port of the StatsD server.|yes|none|
-| `druid.emitter.statsd.prefix`                |Optional metric name prefix.|no|""|
-| `druid.emitter.statsd.separator`             |Metric name separator|no|.|
-| `druid.emitter.statsd.includeHost`           |Flag to include the hostname as part of the metric name.|no|false|
-| `druid.emitter.statsd.dimensionMapPath`      |JSON file defining the StatsD type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
-| `druid.emitter.statsd.blankHolder`           |The blank character replacement as StatsD does not support path with blank character|no|"-"|
-| `druid.emitter.statsd.queueSize`             |Maximum number of unprocessed messages in the queue. Can be increased if packets are being dropped|no|Default value of StatsD Client(4096)|
-| `druid.emitter.statsd.dogstatsd`             |Flag to enable [DogStatsD](https://docs.datadoghq.com/developers/dogstatsd/) support. Causes dimensions to be included as tags, not as a part of the metric name. `convertRange` fields will be ignored.|no|false|
-| `druid.emitter.statsd.dogstatsdConstantTags` |If `druid.emitter.statsd.dogstatsd` is true, the tags in the JSON list of strings will be sent with every event.|no|[]|
-| `druid.emitter.statsd.dogstatsdServiceAsTag` |If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdServiceAsTag` are true, druid service (e.g. `druid/broker`, `druid/coordinator`, etc) is reported as a tag (e.g. `druid_service:druid/broker`) instead of being included in metric name (e.g. `druid.broker.query.time`) and `druid` is used as metric prefix (e.g. `druid.query.time`).|no|false|
-| `druid.emitter.statsd.dogstatsdEvents`       |If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdEvents` are true, [Alert events](../../operations/alerts.md) are reported to DogStatsD.|no|false|
+|property|description|required?|default|
+|--------|-----------|---------|-------|
+|`druid.emitter.statsd.hostname`|The hostname of the StatsD server.|yes|none|
+|`druid.emitter.statsd.port`|The port of the StatsD server.|yes|none|
+|`druid.emitter.statsd.prefix`|Optional metric name prefix.|no|""|
+|`druid.emitter.statsd.separator`|Metric name separator|no|.|
+|`druid.emitter.statsd.includeHost`|Flag to include the hostname as part of the metric name.|no|false|
+|`druid.emitter.statsd.dimensionMapPath`|JSON file defining the StatsD type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
+|`druid.emitter.statsd.blankHolder`|The blank character replacement as StatsD does not support path with blank character|no|"-"|
+|`druid.emitter.statsd.queueSize`|Maximum number of unprocessed messages in the queue. Can be increased if packets are being dropped|no|Default value of StatsD Client(4096)|
+|`druid.emitter.statsd.dogstatsd`|Flag to enable [DogStatsD](https://docs.datadoghq.com/developers/dogstatsd/) support. Causes dimensions to be included as tags, not as a part of the metric name. `convertRange` fields will be ignored.|no|false|
+|`druid.emitter.statsd.dogstatsdConstantTags`|If `druid.emitter.statsd.dogstatsd` is true, the tags in the JSON list of strings will be sent with every event.|no|[]|
+|`druid.emitter.statsd.dogstatsdServiceAsTag`|If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdServiceAsTag` are true, druid service (e.g. `druid/broker`, `druid/coordinator`, etc) is reported as a tag (e.g. `druid_service:druid/broker`) instead of being included in metric name (e.g. `druid.broker.query.time`) and `druid` is used as metric prefix (e.g. `druid.query.time`).|no|false|
+|`druid.emitter.statsd.dogstatsdEvents`|If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdEvents` are true, [Alert events](../../operations/alerts.md) are reported to DogStatsD.|no|false|
 
 ### Druid to StatsD Event Converter
 
