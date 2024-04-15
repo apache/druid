@@ -49,6 +49,7 @@ import org.apache.druid.msq.input.table.TableInputSpecSlicer;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -192,7 +193,7 @@ public class IndexerControllerContext implements ControllerContext
         task.getDataSource(),
         overlordClient,
         workerFailureListener,
-        makeTaskContext(querySpec, queryKernelConfig),
+        makeTaskContext(querySpec, queryKernelConfig, task.getContext()),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
     );
@@ -250,10 +251,13 @@ public class IndexerControllerContext implements ControllerContext
 
   /**
    * Helper method for {@link #newWorkerManager}, split out to be used in tests.
+   *
+   * @param querySpec MSQ query spec; used for
    */
   public static Map<String, Object> makeTaskContext(
       final MSQSpec querySpec,
-      final ControllerQueryKernelConfig queryKernelConfig
+      final ControllerQueryKernelConfig queryKernelConfig,
+      final Map<String, Object> controllerTaskContext
   )
   {
     final ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
@@ -270,6 +274,15 @@ public class IndexerControllerContext implements ControllerContext
           MultiStageQueryContext.CTX_SELECT_DESTINATION,
           querySpec.getDestination().toSelectDestination().getName()
       );
+    }
+
+    // propagate the controller's context and tags to the worker task
+    taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, controllerTaskContext);
+    // specifically assign the 'tags' field for enhanced worker task metrics reporting
+    @SuppressWarnings("unchecked")
+    Map<String, Object> tags = (Map<String, Object>) controllerTaskContext.get(DruidMetrics.TAGS);
+    if (tags != null) {
+      taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
     }
 
     return taskContextOverridesBuilder.build();

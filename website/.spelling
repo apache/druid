@@ -1655,6 +1655,7 @@ EventReceiverFirehose
 EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
+jvmVersion
 QueryCountStatsMonitor
 RealtimeMetricsMonitor
 Sys

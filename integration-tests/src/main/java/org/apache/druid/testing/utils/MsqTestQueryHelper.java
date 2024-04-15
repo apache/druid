@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -184,7 +185,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Fetches status reports for a given task
    */
-  public Map<String, MSQTaskReport> fetchStatusReports(String taskId)
+  public Map<String, TaskReport> fetchStatusReports(String taskId)
   {
     return overlordClient.getMsqTaskReport(taskId);
   }
@@ -194,8 +195,8 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   private void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
   {
-    Map<String, MSQTaskReport> statusReport = fetchStatusReports(taskId);
-    MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
+    Map<String, TaskReport> statusReport = fetchStatusReports(taskId);
+    MSQTaskReport taskReport = (MSQTaskReport) statusReport.get(MSQTaskReport.REPORT_KEY);
     if (taskReport == null) {
       throw new ISE("Unable to fetch the status report for the task [%]", taskId);
     }
