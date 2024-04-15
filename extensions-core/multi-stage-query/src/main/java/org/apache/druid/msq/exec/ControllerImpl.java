@@ -718,9 +718,7 @@ public class ControllerImpl implements Controller
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
 
-    // propagate the controller's context and tags to the worker task
-    taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, task.getContext());
-    // specifically assign the 'tags' field for enhanced worker task metrics reporting
+    // propagate the controller's tags to the worker task for enhanced metrics reporting
     Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
     if (tags != null) {
       taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
