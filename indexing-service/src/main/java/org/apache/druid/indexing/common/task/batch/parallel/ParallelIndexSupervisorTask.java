@@ -40,10 +40,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -1683,21 +1683,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
-        final Map<String, Object> report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
+        final TaskReport.ReportMap report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
 
         if (report == null || report.isEmpty()) {
           // task does not have a running report yet
           continue;
         }
 
-        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
-        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
-        Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
+        final IngestionStatsAndErrorsTaskReport ingestionStatsReport
+            = (IngestionStatsAndErrorsTaskReport) report.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+
+        final IngestionStatsAndErrors payload = ingestionStatsReport.getPayload();
+
+        Map<String, Object> rowStats = payload.getRowStats();
         Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
         Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
 
         if (includeUnparseable) {
-          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
+          Map<String, Object> taskUnparseableEvents = payload.getUnparseableEvents();
           List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>)
               taskUnparseableEvents.get(RowIngestionMeters.BUILD_SEGMENTS);
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
@@ -1804,7 +1807,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  public TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
+  TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparsebleEvents =
         doGetRowStatsAndUnparseableEvents(isFullReport, true);
@@ -1846,7 +1849,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   @Nullable
   @VisibleForTesting
-  static Map<String, Object> getTaskReport(final OverlordClient overlordClient, final String taskId)
+  static TaskReport.ReportMap getTaskReport(final OverlordClient overlordClient, final String taskId)
       throws InterruptedException, ExecutionException
   {
     try {

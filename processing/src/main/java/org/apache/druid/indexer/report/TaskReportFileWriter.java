@@ -17,30 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.indexer.report;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+import java.io.IOException;
+import java.io.OutputStream;
+
+public interface TaskReportFileWriter
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
+  void write(String taskId, TaskReport.ReportMap reports);
 
-  @Override
-  public StorageConnector get()
-  {
-    return STORAGE_CONNECTOR;
-  }
+  OutputStream openReportOutputStream(String taskId) throws IOException;
 
-  @Override
-  public String getResourceType()
-  {
-    return "testExport";
-  }
-
-  @Override
-  public String getBasePath()
-  {
-    return "testExport";
-  }
+  void setObjectMapper(ObjectMapper objectMapper);
 }

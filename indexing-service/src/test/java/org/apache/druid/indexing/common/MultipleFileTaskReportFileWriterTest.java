@@ -21,6 +21,8 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Rule;

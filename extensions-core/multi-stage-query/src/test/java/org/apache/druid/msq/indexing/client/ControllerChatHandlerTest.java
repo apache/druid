@@ -19,8 +19,8 @@
 
 package org.apache.druid.msq.indexing.client;
 
-import org.apache.druid.indexing.common.KillTaskReport;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.junit.Assert;

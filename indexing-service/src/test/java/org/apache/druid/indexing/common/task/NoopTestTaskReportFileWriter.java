@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;

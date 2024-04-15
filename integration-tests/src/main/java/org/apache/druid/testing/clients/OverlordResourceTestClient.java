@@ -26,8 +26,8 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.http.TaskPayloadResponse;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.ISE;
@@ -280,7 +280,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, TaskReport> getTaskReport(String taskId)
+  public TaskReport.ReportMap getTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -293,9 +293,7 @@ public class OverlordResourceTestClient
       );
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, TaskReport>>()
-          {
-          }
+          TaskReport.ReportMap.class
       );
     }
     catch (ISE e) {

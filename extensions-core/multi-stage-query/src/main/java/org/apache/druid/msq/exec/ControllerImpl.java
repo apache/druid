@@ -61,11 +61,10 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
@@ -173,8 +172,6 @@ import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
-import org.apache.druid.msq.util.SqlStatementResourceHelper;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -393,7 +390,7 @@ public class ControllerImpl implements Controller
 
       queryKernel = Preconditions.checkNotNull(queryRunResult.lhs);
       workerTaskRunnerFuture = Preconditions.checkNotNull(queryRunResult.rhs);
-      publishSegmentsIfNeeded(queryDef, queryKernel);
+      handleQueryResults(queryDef, queryKernel);
     }
     catch (Throwable e) {
       exceptionEncountered = e;
@@ -1488,12 +1485,16 @@ public class ControllerImpl implements Controller
     }
   }
 
-  private void publishSegmentsIfNeeded(
+  private void handleQueryResults(
       final QueryDefinition queryDef,
       final ControllerQueryKernel queryKernel
   ) throws IOException
   {
-    if (queryKernel.isSuccess() && MSQControllerTask.isIngestion(querySpec)) {
+    if (!queryKernel.isSuccess()) {
+      return;
+    }
+    if (MSQControllerTask.isIngestion(querySpec)) {
+      // Publish segments if needed.
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
 
       @SuppressWarnings("unchecked")
@@ -1531,6 +1532,44 @@ public class ControllerImpl implements Controller
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments);
+    } else if (MSQControllerTask.isExport(querySpec)) {
+      // Write manifest file.
+      ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
+
+      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
+      //noinspection unchecked
+
+
+      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
+      if (!(resultObjectForStage instanceof List)) {
+        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
+        log.warn("Was unable to create manifest file due to ");
+        return;
+      }
+      @SuppressWarnings("unchecked")
+      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
+      log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
+      exportMetadataManager.writeMetadata(exportedFiles);
+    } else if (MSQControllerTask.isExport(querySpec)) {
+      // Write manifest file.
+      ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
+
+      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
+      //noinspection unchecked
+
+
+      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
+      if (!(resultObjectForStage instanceof List)) {
+        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
+        log.warn("Was unable to create manifest file due to ");
+        return;
+      }
+      @SuppressWarnings("unchecked")
+      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
+      log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
+      exportMetadataManager.writeMetadata(exportedFiles);
     }
   }
 
@@ -1758,7 +1797,7 @@ public class ControllerImpl implements Controller
       } else {
         return queryDef;
       }
-    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
+    } else if (MSQControllerTask.isExport(querySpec)) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
       final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
 
