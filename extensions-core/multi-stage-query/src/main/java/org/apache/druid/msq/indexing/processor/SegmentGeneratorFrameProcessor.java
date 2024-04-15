@@ -48,7 +48,6 @@ import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
@@ -57,6 +56,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -67,7 +67,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmentWithSchemas>
+public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegment>
 {
   private static final Logger log = new Logger(SegmentGeneratorFrameProcessor.class);
 
@@ -121,7 +121,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
   }
 
   @Override
-  public ReturnOrAwait<DataSegmentWithSchemas> runIncrementally(final IntSet readableInputs) throws InterruptedException
+  public ReturnOrAwait<DataSegment> runIncrementally(final IntSet readableInputs) throws InterruptedException
   {
     if (firstRun) {
       log.debug("Starting job for segment [%s].", segmentIdWithShardSpec.asSegmentId());
@@ -157,11 +157,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
         appenderator.clear();
 
         log.debug("Finished work for segment [%s].", segmentIdWithShardSpec.asSegmentId());
-        DataSegmentWithSchemas dataSegmentWithSchemas = new DataSegmentWithSchemas(
-            Collections.singleton(Iterables.getOnlyElement(metadata.getSegments())),
-            metadata.getMinimalSegmentSchemas()
-        );
-        return ReturnOrAwait.returnObject(dataSegmentWithSchemas);
+        return ReturnOrAwait.returnObject(Iterables.getOnlyElement(metadata.getSegments()));
       }
     } else {
       if (appenderator.getSegments().isEmpty()) {
