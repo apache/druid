@@ -90,10 +90,10 @@ class MapToInterfaceHandler implements InvocationHandler
   {
     Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
         .getSubTypesOf(QueryComponentSupplier.class);
-    Set<String> knownNames =new HashSet<String>();
+    Set<String> knownNames = new HashSet<String>();
 
     for (Class<? extends QueryComponentSupplier> cl : subTypes) {
-      if(cl.getSimpleName().equals(name)) {
+      if (cl.getSimpleName().equals(name)) {
         return cl;
       }
       knownNames.add(cl.getSimpleName());

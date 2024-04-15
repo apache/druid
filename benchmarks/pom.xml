@@ -206,6 +206,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-protobuf-extensions</artifactId>
       <version>${project.parent.version}</version>

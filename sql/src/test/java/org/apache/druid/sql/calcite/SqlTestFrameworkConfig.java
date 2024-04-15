@@ -110,8 +110,8 @@ public @interface SqlTestFrameworkConfig
     public ConfigurationInstance getConfigurationInstance(
         SqlTestFrameworkConfigInstance config,
         Callable<File> tempDirProducer,
-        Function<QueryComponentSupplier,QueryComponentSupplier> queryComponentSupplierWrapper
-        ) throws Exception
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
+    ) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
@@ -139,15 +139,6 @@ public @interface SqlTestFrameworkConfig
     private SqlTestFrameworkConfigInstance config;
     private Function<File, QueryComponentSupplier> testHostSupplier;
     private Method method;
-//
-//    @Override
-//    public void beforeAll(ExtensionContext context) throws Exception
-//    {
-//      Class<?> testClass = context.getTestClass().get();
-//      SqlTestFramework.SqlTestFrameWorkModule moduleAnnotation = getModuleAnnotationFor(testClass);
-//      Class<? extends QueryComponentSupplier> value = moduleAnnotation.value();
-//      setComponentSupplier(value);
-//    }
 
     private void setComponentSupplier(Class<? extends QueryComponentSupplier> value) throws NoSuchMethodException
     {
@@ -272,7 +263,7 @@ public @interface SqlTestFrameworkConfig
         SqlTestFrameworkConfigInstance config,
         Callable<File> tempDirProducer,
         Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
-        ) throws Exception
+    ) throws Exception
     {
       this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.supplier, tempDirProducer)));
     }

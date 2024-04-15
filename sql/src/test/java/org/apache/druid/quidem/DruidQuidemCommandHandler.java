@@ -134,7 +134,6 @@ public class DruidQuidemCommandHandler implements CommandHandler
             executeQuery(x);
           }
       );
-//      BaseCalciteQueryTest conn = x.connection().unwrap(BaseCalciteQueryTest.class);
 
       List<Query<?>> queries = qlh.getRecordedQueries();
 
