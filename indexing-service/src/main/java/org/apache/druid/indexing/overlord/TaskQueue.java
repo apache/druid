@@ -428,7 +428,7 @@ public class TaskQueue
               errorMessage = e.getMessage();
             } else {
               errorMessage = "Failed while waiting for the task to be ready to run. "
-                                          + "See overlord logs for more details.";
+                             + "See overlord logs for more details. Error: " + e.getMessage();
             }
             notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
             continue;
