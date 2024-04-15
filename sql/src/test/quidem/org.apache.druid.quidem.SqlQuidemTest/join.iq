@@ -119,3 +119,14 @@ LogicalProject(cityName=[$0], cnt=[$1], cityName0=[$2], cnt0=[$3])
         LogicalTableScan(table=[[druid, wikipedia]])
 
 !convertedPlan
+LogicalProject(cityName=[$0], cnt=[$1], cityName0=[$2], cnt0=[$3])
+  LogicalJoin(condition=[=($2, $0)], joinType=[inner])
+    LogicalAggregate(group=[{0}], cnt=[COUNT()])
+      LogicalProject(cityName=[$2])
+        LogicalFilter(condition=[=($2, 'New York')])
+          LogicalTableScan(table=[[druid, wikipedia]])
+    LogicalAggregate(group=[{0}], cnt=[COUNT()])
+      LogicalProject(cityName=[$2])
+        LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan
