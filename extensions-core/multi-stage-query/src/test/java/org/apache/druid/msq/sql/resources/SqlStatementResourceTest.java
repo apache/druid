@@ -19,8 +19,6 @@
 
 package org.apache.druid.msq.sql.resources;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,7 +31,7 @@ import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -45,7 +43,6 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -105,28 +102,23 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Supplier;
 
 public class SqlStatementResourceTest extends MSQTestBase
 {
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
   private static final String ACCEPTED_SELECT_MSQ_QUERY = "QUERY_ID_1";
   private static final String RUNNING_SELECT_MSQ_QUERY = "QUERY_ID_2";
   private static final String FINISHED_SELECT_MSQ_QUERY = "QUERY_ID_3";
-
   private static final String ERRORED_SELECT_MSQ_QUERY = "QUERY_ID_4";
 
-
   private static final String RUNNING_NON_MSQ_TASK = "QUERY_ID_5";
-
   private static final String FAILED_NON_MSQ_TASK = "QUERY_ID_6";
-
   private static final String FINISHED_NON_MSQ_TASK = "QUERY_ID_7";
 
-
   private static final String ACCEPTED_INSERT_MSQ_TASK = "QUERY_ID_8";
-
   private static final String RUNNING_INSERT_MSQ_QUERY = "QUERY_ID_9";
   private static final String FINISHED_INSERT_MSQ_QUERY = "QUERY_ID_10";
   private static final String ERRORED_INSERT_MSQ_QUERY = "QUERY_ID_11";
@@ -235,7 +227,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       new Object[]{234, "foo1", "bar1"}
   );
 
-  private final MSQTaskReport selectTaskReport = new MSQTaskReport(
+  private final Supplier<MSQTaskReport> selectTaskReport = () -> new MSQTaskReport(
       FINISHED_SELECT_MSQ_QUERY,
       new MSQTaskReportPayload(
           new MSQStatusReport(
@@ -350,10 +342,10 @@ public class SqlStatementResourceTest extends MSQTestBase
   private static final String FAILURE_MSG = "failure msg";
   private static SqlStatementResource resource;
 
-  private static String SUPERUSER = "superuser";
-  private static String STATE_R_USER = "stateR";
-  private static String STATE_W_USER = "stateW";
-  private static String STATE_RW_USER = "stateRW";
+  private static final String SUPERUSER = "superuser";
+  private static final String STATE_R_USER = "stateR";
+  private static final String STATE_W_USER = "stateW";
+  private static final String STATE_RW_USER = "stateRW";
 
   private AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
   {
@@ -394,12 +386,8 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Mock
   private OverlordClient overlordClient;
 
-  final ObjectMapper mapper = TestHelper.makeJsonMapper()
-                                        .registerModules(new MSQIndexingModule().getJacksonModules());
-
-  private void setupMocks(OverlordClient indexingServiceClient) throws JsonProcessingException
+  private void setupMocks(OverlordClient indexingServiceClient)
   {
-
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
            .thenReturn(Futures.immediateFuture(new TaskStatusResponse(ACCEPTED_SELECT_MSQ_QUERY, new TaskStatusPlus(
                ACCEPTED_SELECT_MSQ_QUERY,
@@ -466,13 +454,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
 
     Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
-           .thenReturn(Futures.immediateFuture(mapper.readValue(
-               mapper.writeValueAsString(TaskReport.buildTaskReports(selectTaskReport)),
-               new TypeReference<Map<String, Object>>()
-               {
-               }
-           )));
-
+           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
 
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
            .thenReturn(Futures.immediateFuture(new TaskStatusResponse(ERRORED_SELECT_MSQ_QUERY, new TaskStatusPlus(
@@ -605,13 +587,7 @@ public class SqlStatementResourceTest extends MSQTestBase
            ))));
 
     Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(FINISHED_INSERT_MSQ_QUERY)))
-           .thenReturn(Futures.immediateFuture(mapper.readValue(
-               mapper.writeValueAsString(TaskReport.buildTaskReports(
-                   MSQ_INSERT_TASK_REPORT)),
-               new TypeReference<Map<String, Object>>()
-               {
-               }
-           )));
+           .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
 
     Mockito.when(indexingServiceClient.taskPayload(FINISHED_INSERT_MSQ_QUERY))
            .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(

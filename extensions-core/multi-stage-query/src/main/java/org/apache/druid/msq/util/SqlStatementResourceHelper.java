@@ -32,9 +32,11 @@ import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -45,7 +47,10 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.SqlStatementState;
@@ -243,12 +248,13 @@ public class SqlStatementResourceHelper
       TaskStatusResponse taskResponse,
       TaskStatusPlus statusPlus,
       SqlStatementState sqlStatementState,
-      Map<String, Object> msqPayload
+      TaskReport.ReportMap msqPayload,
+      ObjectMapper jsonMapper
   )
   {
-    Map<String, Object> exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
-    Map<String, Object> exception = getMap(exceptionDetails, "error");
-    if (exceptionDetails == null || exception == null) {
+    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
+    final MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
+    if (exceptionDetails == null || fault == null) {
       return Optional.of(new SqlStatementResult(
           queryId,
           sqlStatementState,
@@ -258,18 +264,15 @@ public class SqlStatementResourceHelper
           null,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build("%s", taskResponse.getStatus().getErrorMsg()).toErrorResponse()
+                        .build("%s", taskResponse.getStatus().getErrorMsg())
+                        .toErrorResponse()
       ));
     }
 
-    final String errorMessage = String.valueOf(exception.getOrDefault("errorMessage", statusPlus.getErrorMsg()));
-    exception.remove("errorMessage");
-    String errorCode = String.valueOf(exception.getOrDefault("errorCode", "unknown"));
-    exception.remove("errorCode");
-    Map<String, String> stringException = new HashMap<>();
-    for (Map.Entry<String, Object> exceptionKeys : exception.entrySet()) {
-      stringException.put(exceptionKeys.getKey(), String.valueOf(exceptionKeys.getValue()));
-    }
+    final String errorMessage = fault.getErrorMessage() == null ? statusPlus.getErrorMsg() : fault.getErrorMessage();
+    final String errorCode = fault.getErrorCode() == null ? "unknown" : fault.getErrorCode();
+
+    final Map<String, String> exceptionContext = buildExceptionContext(fault, jsonMapper);
     return Optional.of(new SqlStatementResult(
         queryId,
         sqlStatementState,
@@ -285,7 +288,7 @@ public class SqlStatementResourceHelper
             DruidException ex = bob.forPersona(DruidException.Persona.USER)
                                    .ofCategory(DruidException.Category.UNCATEGORIZED)
                                    .build(errorMessage);
-            ex.withContext(stringException);
+            ex.withContext(exceptionContext);
             return ex;
           }
         }).toErrorResponse()
@@ -361,22 +364,42 @@ public class SqlStatementResourceHelper
     return null;
   }
 
-  public static Map<String, Object> getQueryExceptionDetails(Map<String, Object> payload)
+  @Nullable
+  private static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
   {
-    return getMap(getMap(payload, "status"), "errorReport");
+    return payload == null ? null : payload.getStatus().getErrorReport();
   }
 
-  public static Map<String, Object> getMap(Map<String, Object> map, String key)
+  @Nullable
+  public static MSQTaskReportPayload getPayload(TaskReport.ReportMap reportMap)
   {
-    if (map == null) {
+    if (reportMap == null) {
       return null;
     }
-    return (Map<String, Object>) map.get(key);
+
+    Optional<MSQTaskReport> report = reportMap.findReport("multiStageQuery");
+    return report.map(MSQTaskReport::getPayload).orElse(null);
   }
 
-  public static Map<String, Object> getPayload(Map<String, Object> results)
+  private static Map<String, String> buildExceptionContext(MSQFault fault, ObjectMapper mapper)
   {
-    Map<String, Object> msqReport = getMap(results, "multiStageQuery");
-    return getMap(msqReport, "payload");
+    try {
+      final Map<String, Object> msqFaultAsMap = new HashMap<>(
+          mapper.readValue(
+              mapper.writeValueAsBytes(fault),
+              JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+          )
+      );
+      msqFaultAsMap.remove("errorCode");
+      msqFaultAsMap.remove("errorMessage");
+
+      final Map<String, String> exceptionContext = new HashMap<>();
+      msqFaultAsMap.forEach((key, value) -> exceptionContext.put(key, String.valueOf(value)));
+
+      return exceptionContext;
+    }
+    catch (Exception e) {
+      throw DruidException.defensive("Could not read MSQFault[%s] as a map: [%s]", fault, e.getMessage());
+    }
   }
 }
