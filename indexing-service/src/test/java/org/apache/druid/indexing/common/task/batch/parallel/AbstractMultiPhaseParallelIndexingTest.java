@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -28,9 +29,9 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -185,7 +186,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   TaskReport.ReportMap runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return getIndexingServiceClient().getLiveReportsForTask(task.getId());
+    return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);
   }
 
   protected ParallelIndexSupervisorTask createTask(
