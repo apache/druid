@@ -44,32 +44,18 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
       @JsonProperty("partitions") SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> kafkaPartitions
   )
   {
-    super(kafkaPartitions);
-  }
-
-  @Override
-  @JsonProperty("partitions")
-  public SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> getSeekableStreamSequenceNumbers()
-  {
-    if (seekableStreamSequenceNumbers == null) {
-      return null;
-    }
-    if (seekableStreamSequenceNumbers instanceof SeekableStreamStartSequenceNumbers) {
-      return new KafkaSeekableStreamStartSequenceNumbers(
-          seekableStreamSequenceNumbers.getStream(),
-          ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getTopic(),
-          seekableStreamSequenceNumbers.getPartitionSequenceNumberMap(),
-          ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getPartitionOffsetMap(),
-          ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getExclusivePartitions()
-      );
-    } else {
-      return new KafkaSeekableStreamEndSequenceNumbers(
-          seekableStreamSequenceNumbers.getStream(),
-          ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getTopic(),
-          seekableStreamSequenceNumbers.getPartitionSequenceNumberMap(),
-          ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) seekableStreamSequenceNumbers).getPartitionOffsetMap()
-      );
-    }
+    super(kafkaPartitions instanceof SeekableStreamStartSequenceNumbers ? new KafkaSeekableStreamStartSequenceNumbers(
+        kafkaPartitions.getStream(),
+        ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getTopic(),
+        kafkaPartitions.getPartitionSequenceNumberMap(),
+        ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getPartitionOffsetMap(),
+        ((SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getExclusivePartitions()
+    ) : kafkaPartitions != null ? new KafkaSeekableStreamEndSequenceNumbers(
+        kafkaPartitions.getStream(),
+        ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getTopic(),
+        kafkaPartitions.getPartitionSequenceNumberMap(),
+        ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getPartitionOffsetMap()
+    ) : null);
   }
 
   @Override
