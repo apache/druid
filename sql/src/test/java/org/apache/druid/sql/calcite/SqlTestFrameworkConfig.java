@@ -25,6 +25,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -60,6 +61,8 @@ public @interface SqlTestFrameworkConfig
 
   ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
 
+  Class<? extends QueryComponentSupplier> supplier() default StandardComponentSupplier.class;
+
   /**
    * Non-annotation version of {@link SqlTestFrameworkConfig}.
    *
@@ -70,18 +73,20 @@ public @interface SqlTestFrameworkConfig
     public final int numMergeBuffers;
     public final int minTopNThreshold;
     public final ResultCacheMode resultCache;
+    public final Class<? extends QueryComponentSupplier> supplier;
 
     public SqlTestFrameworkConfigInstance(SqlTestFrameworkConfig annotation)
     {
       numMergeBuffers = annotation.numMergeBuffers();
       minTopNThreshold = annotation.minTopNThreshold();
       resultCache = annotation.resultCache();
+      supplier = annotation.supplier();
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache);
+      return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, supplier);
     }
 
     @Override
@@ -93,9 +98,9 @@ public @interface SqlTestFrameworkConfig
       SqlTestFrameworkConfigInstance other = (SqlTestFrameworkConfigInstance) obj;
       return minTopNThreshold == other.minTopNThreshold
           && numMergeBuffers == other.numMergeBuffers
-          && resultCache == other.resultCache;
+          && resultCache == other.resultCache
+          && supplier == other.supplier;
     }
-
   }
 
   class SqlTestFrameworkConfigStore
