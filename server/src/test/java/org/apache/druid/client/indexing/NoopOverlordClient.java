@@ -22,6 +22,7 @@ package org.apache.druid.client.indexing;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
@@ -84,7 +85,7 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
   {
     throw new UnsupportedOperationException();
   }

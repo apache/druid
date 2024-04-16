@@ -593,24 +593,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;
       }
-      SqlTypeName sqlTypeName = SqlTypeName.get(definedCol.sqlStorageType());
-      RelDataType relType;
-      if (sqlTypeName != null) {
-        relType = typeFactory.createSqlType(sqlTypeName);
-      } else {
-        ColumnType columnType = ColumnType.fromString(definedCol.sqlStorageType());
-        if (columnType != null && columnType.getType().equals(ValueType.COMPLEX)) {
-          relType = RowSignatures.makeComplexType(typeFactory, columnType, sourceField.getType().isNullable());
-        } else {
-          relType = RowSignatures.columnTypeToRelDataType(
-              typeFactory,
-              columnType,
-              // this nullability is ignored for complex types for some reason, hence the check for complex above.
-              sourceField.getType().isNullable()
-          );
-        }
-      }
-
+      RelDataType relType = computeTypeForDefinedCol(definedCol, sourceField);
       fields.add(Pair.of(
           colName,
           typeFactory.createTypeWithNullability(relType, sourceField.getType().isNullable())
@@ -644,18 +627,14 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       RelDataType targetFieldRelDataType = targetFields.get(i).getType();
       ColumnType sourceFieldColumnType = Calcites.getColumnTypeForRelDataType(sourceFielRelDataType);
       ColumnType targetFieldColumnType = Calcites.getColumnTypeForRelDataType(targetFieldRelDataType);
-
-      boolean incompatible;
       try {
-        incompatible = !Objects.equals(
+        if (!Objects.equals(
             targetFieldColumnType,
-            ColumnType.leastRestrictiveType(targetFieldColumnType, sourceFieldColumnType)
-        );
+            ColumnType.leastRestrictiveType(targetFieldColumnType, sourceFieldColumnType))) {
+          throw new Types.IncompatibleTypeException(targetFieldColumnType, sourceFieldColumnType);
+        }
       }
       catch (Types.IncompatibleTypeException e) {
-        incompatible = true;
-      }
-      if (incompatible) {
         SqlNode node = getNthExpr(query, i, sourceCount);
         String targetTypeString;
         String sourceTypeString;
@@ -672,10 +651,37 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
             Static.RESOURCE.typeNotAssignable(
                 targetFields.get(i).getName(), targetTypeString,
                 sourceFields.get(i).getName(), sourceTypeString));
+
       }
     }
     // the call to base class definition will insert implicit casts / coercions where needed.
     super.checkTypeAssignment(sourceScope, table, sourceRowType, targetRowType, query);
+  }
+
+  protected RelDataType computeTypeForDefinedCol(
+      final DatasourceFacade.ColumnFacade definedCol,
+      final RelDataTypeField sourceField
+  )
+  {
+    SqlTypeName sqlTypeName = SqlTypeName.get(definedCol.sqlStorageType());
+    RelDataType relType;
+    if (sqlTypeName != null) {
+      relType = typeFactory.createSqlType(sqlTypeName);
+    } else {
+      ColumnType columnType = ColumnType.fromString(definedCol.sqlStorageType());
+      if (columnType != null && columnType.getType().equals(ValueType.COMPLEX)) {
+        relType = RowSignatures.makeComplexType(typeFactory, columnType, sourceField.getType().isNullable());
+      } else {
+        relType = RowSignatures.columnTypeToRelDataType(
+            typeFactory,
+            columnType,
+            // this nullability is ignored for complex types for some reason, hence the check for complex above.
+            sourceField.getType().isNullable()
+        );
+      }
+    }
+
+    return relType;
   }
 
   /**
