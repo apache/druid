@@ -22,7 +22,6 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -123,13 +122,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other
   )
   {
-    if (this.getClass() != other.getClass()) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          this.getClass().getName(),
-          other.getClass().getName()
-      );
-    }
+    validateSequenceNumbersBaseType(other);
 
     final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherStart =
         (SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType>) other;
@@ -167,13 +160,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
   @Override
   public int compareTo(SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other, Comparator<SequenceOffsetType> comparator)
   {
-    if (this.getClass() != other.getClass()) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          this.getClass().getName(),
-          other.getClass().getName()
-      );
-    }
+    validateSequenceNumbersBaseType(other);
 
     final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherStart =
         (SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType>) other;
@@ -201,13 +188,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other
   )
   {
-    if (this.getClass() != other.getClass()) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          this.getClass().getName(),
-          other.getClass().getName()
-      );
-    }
+    validateSequenceNumbersBaseType(other);
 
     final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherStart =
         (SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType>) other;

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -35,7 +34,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Represents the kafka based start sequenceNumber per partition of a sequence.
+ * Represents the kafka based start sequenceNumber per partition of a sequence. This class is needed because
+ * of special handling that must be done for multi-topic partitions to ensure that offsets are preserved.
  * <p>
  * Do not register this class as a subtype of base class in Jackson. We want this class to be serialized
  * when written to DB as a {@link SeekableStreamStartSequenceNumbers}. Do not create instances of this class
@@ -74,13 +74,7 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
       SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> other
   )
   {
-    if (this.getClass() != other.getClass()) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          this.getClass().getName(),
-          other.getClass().getName()
-      );
-    }
+    validateSequenceNumbersBaseType(other);
 
     KafkaSeekableStreamStartSequenceNumbers that = (KafkaSeekableStreamStartSequenceNumbers) other;
 
@@ -107,7 +101,7 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
               return e.getKey().topic().get().equals(thisTopic);
             } else {
               // this branch shouldn't really be hit since other should be multi-topic here, but adding this
-              // just int case.
+              // just in case.
               return thatTopic.equals(thisTopic);
             }
           })
@@ -181,13 +175,7 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
       SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> other
   )
   {
-    if (this.getClass() != other.getClass()) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          this.getClass().getName(),
-          other.getClass().getName()
-      );
-    }
+    validateSequenceNumbersBaseType(other);
 
     final KafkaSeekableStreamStartSequenceNumbers otherStart =
         (KafkaSeekableStreamStartSequenceNumbers) other;

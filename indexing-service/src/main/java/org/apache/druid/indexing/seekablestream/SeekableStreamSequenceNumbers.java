@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -46,6 +47,21 @@ public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetTy
   default boolean isMultiTopicPartition()
   {
     return false;
+  }
+
+  /**
+   * throws exception if this class and other class are not equal
+   * @param other the other instance to compare.
+   */
+  default void validateSequenceNumbersBaseType(SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other)
+  {
+    if (this.getClass() != other.getClass()) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getName(),
+          other.getClass().getName()
+      );
+    }
   }
 
   /**
