@@ -214,7 +214,7 @@ public class SegmentSchemaTestUtils
                                     ),
                                     r.getString(4),
                                     r.getBoolean(5),
-                                    r.getString(6)
+                                    r.getInt(6)
                                 )
                             )))
                         .list());
@@ -242,9 +242,9 @@ public class SegmentSchemaTestUtils
     private final SchemaPayload schemaPayload;
     private final String createdDate;
     private final boolean used;
-    private final String version;
+    private final int version;
 
-    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used, String version)
+    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used, int version)
     {
       this.fingerprint = fingerprint;
       this.schemaPayload = schemaPayload;
@@ -273,7 +273,7 @@ public class SegmentSchemaTestUtils
       return used;
     }
 
-    public String getVersion()
+    public int getVersion()
     {
       return version;
     }

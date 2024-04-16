@@ -29,7 +29,7 @@ public class CentralizedDatasourceSchemaConfig
 {
   public static final String PROPERTY_PREFIX = "druid.centralizedDatasourceSchema";
 
-  public static final String SCHEMA_VERSION = "v1";
+  public static final int SCHEMA_VERSION = 1;
 
   @JsonProperty
   private boolean enabled = false;

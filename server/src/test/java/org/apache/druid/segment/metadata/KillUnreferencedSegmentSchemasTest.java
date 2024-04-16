@@ -328,7 +328,7 @@ public class KillUnreferencedSegmentSchemasTest
               handle,
               "foo",
               Collections.singletonMap(fingerprint, schemaPayload),
-              "v0"
+              0
           );
           return null;
         }
@@ -337,7 +337,7 @@ public class KillUnreferencedSegmentSchemasTest
     List<Long> schemaIds = derbyConnector.retryWithHandle(
         handle -> handle.createQuery(
             StringUtils.format(
-                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = '%s'",
+                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = %s",
                 tablesConfig.getSegmentSchemasTable(), fingerprint, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
             )).mapTo(Long.class).list()
     );
@@ -348,8 +348,8 @@ public class KillUnreferencedSegmentSchemasTest
     schemaIds = derbyConnector.retryWithHandle(
         handle -> handle.createQuery(
             StringUtils.format(
-                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = '%s'",
-                tablesConfig.getSegmentSchemasTable(), fingerprint, "v0"
+                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = %s",
+                tablesConfig.getSegmentSchemasTable(), fingerprint, 0
             )).mapTo(Long.class).list()
     );
 

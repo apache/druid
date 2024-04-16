@@ -48,7 +48,7 @@ public class MinimalSegmentSchemasTest
     MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(
         Collections.singletonMap("id1", new MinimalSegmentSchemas.SegmentStats(20L, "fp1")),
         Collections.singletonMap("fp1", payload),
-        "v1"
+        1
     );
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -57,12 +57,12 @@ public class MinimalSegmentSchemasTest
 
     Assert.assertEquals(minimalSegmentSchemas, deserialized);
 
-    MinimalSegmentSchemas copy = new MinimalSegmentSchemas("v1");
+    MinimalSegmentSchemas copy = new MinimalSegmentSchemas(1);
     copy.merge(minimalSegmentSchemas);
 
     Assert.assertEquals(minimalSegmentSchemas, copy);
 
-    MinimalSegmentSchemas copy2 = new MinimalSegmentSchemas("v1");
+    MinimalSegmentSchemas copy2 = new MinimalSegmentSchemas(1);
     copy2.addSchema("id1", "fp1", 20L, payload);
 
     Assert.assertEquals(minimalSegmentSchemas, copy2);

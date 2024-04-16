@@ -37,13 +37,13 @@ public class MinimalSegmentSchemas
   // Mapping of schema fingerprint to payload.
   private final Map<String, SchemaPayload> schemaFingerprintToPayloadMap;
 
-  private final String schemaVersion;
+  private final int schemaVersion;
 
   @JsonCreator
   public MinimalSegmentSchemas(
       @JsonProperty("segmentIdToMetadataMap") Map<String, SegmentStats> segmentIdToMetadataMap,
       @JsonProperty("schemaFingerprintToPayloadMap") Map<String, SchemaPayload> schemaFingerprintToPayloadMap,
-      @JsonProperty("schemaVersion") String schemaVersion
+      @JsonProperty("schemaVersion") int schemaVersion
   )
   {
     this.segmentIdToMetadataMap = segmentIdToMetadataMap;
@@ -51,7 +51,7 @@ public class MinimalSegmentSchemas
     this.schemaVersion = schemaVersion;
   }
 
-  public MinimalSegmentSchemas(String schemaVersion)
+  public MinimalSegmentSchemas(int schemaVersion)
   {
     this.segmentIdToMetadataMap = new HashMap<>();
     this.schemaFingerprintToPayloadMap = new HashMap<>();
@@ -71,7 +71,7 @@ public class MinimalSegmentSchemas
   }
 
   @JsonProperty
-  public String getSchemaVersion()
+  public int getSchemaVersion()
   {
     return schemaVersion;
   }

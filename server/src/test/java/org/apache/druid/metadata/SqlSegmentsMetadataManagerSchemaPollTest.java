@@ -178,7 +178,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     SchemaPayloadPlus schemaMetadata2 = new SchemaPayloadPlus(payload2, 40L);
     list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
 
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, "V0");
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, 0);
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);

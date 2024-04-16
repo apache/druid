@@ -34,7 +34,7 @@ public class DataSegmentWithSchemas
   private final Set<DataSegment> segments;
   private final MinimalSegmentSchemas minimalSegmentSchemas;
 
-  public DataSegmentWithSchemas(String schemaVersion)
+  public DataSegmentWithSchemas(int schemaVersion)
   {
     this.segments = new HashSet<>();
     this.minimalSegmentSchemas = new MinimalSegmentSchemas(schemaVersion);

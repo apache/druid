@@ -82,10 +82,11 @@ public class SegmentSchemaManager
     return connector.retryWithHandle(
         handle ->
             handle.createQuery(
-                StringUtils.format(
-                    "SELECT DISTINCT(schema_id) FROM %s WHERE used = true AND schema_id IN (SELECT id FROM %s WHERE used = false)",
-                    dbTables.getSegmentsTable(), dbTables.getSegmentSchemasTable()
-                ))
+                      StringUtils.format(
+                          "SELECT DISTINCT(schema_id) FROM %s WHERE used = true AND schema_id IN (SELECT id FROM %s WHERE used = false)",
+                          dbTables.getSegmentsTable(),
+                          dbTables.getSegmentSchemasTable()
+                      ))
                   .mapTo(Long.class)
                   .list()
     );
@@ -99,26 +100,25 @@ public class SegmentSchemaManager
         handle ->
             handle.createStatement(
                       StringUtils.format(
-                          "UPDATE %s SET used = true, used_status_last_updated = :created_date"
+                          "UPDATE %s SET used = true, used_status_last_updated = :now"
                           + " WHERE id IN (%s)",
                           dbTables.getSegmentSchemasTable(), inClause
                       )
                   )
-                  .bind("created_date", DateTimes.nowUtc().toString())
+                  .bind("now", DateTimes.nowUtc().toString())
                   .execute()
     );
   }
 
   public int deleteSchemasOlderThan(long timestamp)
   {
-    String dateTime = DateTimes.utc(timestamp).toString();
     return connector.retryWithHandle(
         handle -> handle.createStatement(
                             StringUtils.format(
-                                "DELETE FROM %s WHERE used = false AND used_status_last_updated < :date_time",
+                                "DELETE FROM %s WHERE used = false AND used_status_last_updated < :now",
                                 dbTables.getSegmentSchemasTable()
                             ))
-                        .bind("date_time", dateTime)
+                        .bind("now", DateTimes.utc(timestamp).toString())
                         .execute());
   }
 
@@ -128,13 +128,13 @@ public class SegmentSchemaManager
         handle ->
             handle.createStatement(
                       StringUtils.format(
-                          "UPDATE %s SET used = false, used_status_last_updated = :created_date  WHERE used != false "
+                          "UPDATE %s SET used = false, used_status_last_updated = :now  WHERE used != false "
                           + "AND id NOT IN (SELECT DISTINCT(schema_id) FROM %s WHERE used=true AND schema_id IS NOT NULL)",
                           dbTables.getSegmentSchemasTable(),
                           dbTables.getSegmentsTable()
                       )
                   )
-                  .bind("created_date", DateTimes.nowUtc().toString())
+                  .bind("now", DateTimes.nowUtc().toString())
                   .execute());
   }
 
@@ -146,7 +146,7 @@ public class SegmentSchemaManager
   /**
    * Persist segment schema and update segments in a transaction.
    */
-  public void persistSchemaAndUpdateSegmentsTable(String dataSource, List<SegmentSchemaMetadataPlus> segmentSchemas, String schemaVersion)
+  public void persistSchemaAndUpdateSegmentsTable(String dataSource, List<SegmentSchemaMetadataPlus> segmentSchemas, int schemaVersion)
   {
     connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
       Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
@@ -171,7 +171,7 @@ public class SegmentSchemaManager
       Handle handle,
       String dataSource,
       Map<String, SchemaPayload> fingerprintSchemaPayloadMap,
-      String schemaVersion
+      int schemaVersion
   ) throws JsonProcessingException
   {
     try {
@@ -204,11 +204,11 @@ public class SegmentSchemaManager
 
         handle.createStatement(
                   StringUtils.format(
-                      "UPDATE %s SET used = true, used_status_last_updated = :created_date"
+                      "UPDATE %s SET used = true, used_status_last_updated = :now"
                       + " WHERE datasource = :datasource AND version = :version AND fingerprint IN (%s)",
                       dbTables.getSegmentSchemasTable(), inClause)
               )
-              .bind("created_date", DateTimes.nowUtc().toString())
+              .bind("now", DateTimes.nowUtc().toString())
               .bind("datasource", dataSource)
               .bind("version", schemaVersion)
               .execute();
@@ -282,7 +282,7 @@ public class SegmentSchemaManager
   /**
    * Update segment with schemaId and numRows information.
    */
-  public void updateSegmentWithSchemaInformation(Handle handle, String dataSource, String schemaVersion, List<SegmentSchemaMetadataPlus> batch)
+  public void updateSegmentWithSchemaInformation(Handle handle, String dataSource, int schemaVersion, List<SegmentSchemaMetadataPlus> batch)
   {
     log.debug("Updating segment with schema and numRows information: [%s].", batch);
 
@@ -349,7 +349,7 @@ public class SegmentSchemaManager
     }
   }
 
-  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, String dataSource, String schemaVersion, Set<String> fingerprintsToInsert)
+  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, String dataSource, int schemaVersion, Set<String> fingerprintsToInsert)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToInsert),
@@ -376,7 +376,7 @@ public class SegmentSchemaManager
     return existingFingerprints;
   }
 
-  public Map<String, Long> schemaIdFetchBatch(Handle handle, String dataSource, String schemaVersion, Set<String> fingerprintsToQuery)
+  public Map<String, Long> schemaIdFetchBatch(Handle handle, String dataSource, int schemaVersion, Set<String> fingerprintsToQuery)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToQuery),
