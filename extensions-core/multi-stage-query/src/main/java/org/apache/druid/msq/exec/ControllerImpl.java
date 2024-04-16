@@ -433,7 +433,7 @@ public class ControllerImpl implements Controller
       queryKernel = Preconditions.checkNotNull(queryRunResult.lhs);
       workerTaskRunnerFuture = Preconditions.checkNotNull(queryRunResult.rhs);
       resultsYielder = getFinalResultsYielder(queryDef, queryKernel);
-      publishSegmentsIfNeeded(queryDef, queryKernel);
+      handleQueryResults(queryDef, queryKernel);
     }
     catch (Throwable e) {
       exceptionEncountered = e;
@@ -718,9 +718,7 @@ public class ControllerImpl implements Controller
         MSQControllerTask.isReplaceInputDataSourceTask(task)
     );
 
-    // propagate the controller's context and tags to the worker task
-    taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, task.getContext());
-    // specifically assign the 'tags' field for enhanced worker task metrics reporting
+    // propagate the controller's tags to the worker task for enhanced metrics reporting
     Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
     if (tags != null) {
       taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
@@ -1746,12 +1744,16 @@ public class ControllerImpl implements Controller
     }
   }
 
-  private void publishSegmentsIfNeeded(
+  private void handleQueryResults(
       final QueryDefinition queryDef,
       final ControllerQueryKernel queryKernel
   ) throws IOException
   {
-    if (queryKernel.isSuccess() && MSQControllerTask.isIngestion(task.getQuerySpec())) {
+    if (!queryKernel.isSuccess()) {
+      return;
+    }
+    if (MSQControllerTask.isIngestion(task.getQuerySpec())) {
+      // Publish segments if needed.
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
 
       //noinspection unchecked
@@ -1790,6 +1792,25 @@ public class ControllerImpl implements Controller
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments);
+    } else if (MSQControllerTask.isExport(task.getQuerySpec())) {
+      // Write manifest file.
+      ExportMSQDestination destination = (ExportMSQDestination) task.getQuerySpec().getDestination();
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
+
+      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
+      //noinspection unchecked
+
+
+      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
+      if (!(resultObjectForStage instanceof List)) {
+        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
+        log.warn("Was unable to create manifest file due to ");
+        return;
+      }
+      @SuppressWarnings("unchecked")
+      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
+      log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
+      exportMetadataManager.writeMetadata(exportedFiles);
     }
   }
 
@@ -2018,7 +2039,7 @@ public class ControllerImpl implements Controller
       } else {
         return queryDef;
       }
-    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
+    } else if (MSQControllerTask.isExport(querySpec)) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
       final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
 
@@ -2062,7 +2083,6 @@ public class ControllerImpl implements Controller
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
   }
-
 
   private static DataSchema generateDataSchema(
       MSQSpec querySpec,
