@@ -66,7 +66,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   public abstract String getDmlPrefixPattern();
 
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  public static ImmutableMap<String, DruidTable> RESOLVED_TABLES = ImmutableMap.of(
+  public static ImmutableMap<String, DatasourceTable> RESOLVED_TABLES = ImmutableMap.of(
       "hourDs", new DatasourceTable(
           RowSignature.builder().addTimeColumn().build(),
           new DatasourceTable.PhysicalDatasourceMetadata(
