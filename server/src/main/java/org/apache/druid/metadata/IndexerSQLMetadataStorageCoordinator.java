@@ -1323,7 +1323,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String dataSource = appendSegments.iterator().next().getDataSource();
-    final Map<SegmentId, Set<DataSegment>> segmentIdsForNewVersions = connector.retryTransaction(
+    final Map<SegmentId, Set<DataSegment>> parentToUpgradedSegments = connector.retryTransaction(
         (handle, transactionStatus)
             -> createNewIdsForAppendSegments(handle, dataSource, appendSegments),
         0,
@@ -1332,15 +1332,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     Map<SegmentId, SegmentId> newVersionSegmentToParent = new HashMap<>();
 
-    for (Map.Entry<SegmentId, Set<DataSegment>> segmentIdToNewVersions : segmentIdsForNewVersions.entrySet()) {
+    // Create entries for all required versions of the append segments
+    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
+
+    for (Map.Entry<SegmentId, Set<DataSegment>> segmentIdToNewVersions : parentToUpgradedSegments.entrySet()) {
+      allSegmentsToInsert.addAll(segmentIdToNewVersions.getValue());
       for (DataSegment segment : segmentIdToNewVersions.getValue()) {
         newVersionSegmentToParent.put(segment.getId(), segmentIdToNewVersions.getKey());
       }
     }
-
-    // Create entries for all required versions of the append segments
-    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
-    segmentIdsForNewVersions.values().forEach(allSegmentsToInsert::addAll);
 
     final AtomicBoolean metadataNotUpdated = new AtomicBoolean(false);
     try {
@@ -1514,17 +1514,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .stream()
                                            .filter(s -> s.getVersion().equals(upgradeVersion))
                                            .collect(Collectors.toSet());
-        Map<SegmentId, DataSegment> segmentsUpgradedToVersion = createNewIdsForAppendSegmentsWithVersion(
+        Map<SegmentId, DataSegment> parentToUpgradeSegments = createNewIdsForAppendSegmentsWithVersion(
             handle,
             upgradeVersion,
             upgradeInterval,
             upgradeEntry.getValue(),
             segmentsAlreadyOnVersion
         );
-        log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);
+        log.info("Upgraded [%d] segments to version[%s].", parentToUpgradeSegments.size(), upgradeVersion);
 
-        for (Map.Entry<SegmentId, DataSegment> oldAndNewSegment : segmentsUpgradedToVersion.entrySet()) {
-          upgradedSegments.computeIfAbsent(oldAndNewSegment.getKey(), value -> new HashSet<>()).add(oldAndNewSegment.getValue());
+        for (Map.Entry<SegmentId, DataSegment> parentAndUpgradeSegment : parentToUpgradeSegments.entrySet()) {
+          upgradedSegments.computeIfAbsent(parentAndUpgradeSegment.getKey(), value -> new HashSet<>()).add(parentAndUpgradeSegment.getValue());
         }
       }
     }
@@ -1599,7 +1599,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Set<SegmentIdWithShardSpec> allAllocatedIds = new HashSet<>(pendingSegmentIds);
 
     // Create new IDs for each append segment
-    final Map<SegmentId, DataSegment> newSegmentIds = new HashMap<>();
+    final Map<SegmentId, DataSegment> parentToNewSegmentIds = new HashMap<>();
     for (DataSegment segment : segmentsToUpgrade) {
       SegmentCreateRequest request = new SegmentCreateRequest(
           segment.getId() + "__" + upgradeVersion,
@@ -1621,7 +1621,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Update the set so that subsequent segment IDs use a higher partition number
       allAllocatedIds.add(newId);
-      newSegmentIds.put(
+      parentToNewSegmentIds.put(
           segment.getId(),
           DataSegment.builder(segment)
                      .interval(newId.getInterval())
@@ -1631,7 +1631,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
 
-    return newSegmentIds;
+    return parentToNewSegmentIds;
   }
 
   private Map<SegmentCreateRequest, SegmentIdWithShardSpec> createNewSegments(
@@ -1989,6 +1989,71 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  private boolean isSchemaPresent(MinimalSegmentSchemas minimalSegmentSchemas)
+  {
+    return publishSchema()
+           && minimalSegmentSchemas != null
+           && minimalSegmentSchemas.isNonEmpty();
+  }
+
+  private Map<String, Long> persistSchema(
+      final Handle handle,
+      final Set<DataSegment> segments,
+      final MinimalSegmentSchemas minimalSegmentSchemas
+  ) throws JsonProcessingException
+  {
+    if (minimalSegmentSchemas.getSchemaVersion() != CentralizedDatasourceSchemaConfig.SCHEMA_VERSION) {
+      log.error(
+          "Schema version [%d] doesn't match the current version [%d], dropping the schema [%s].",
+          minimalSegmentSchemas.getSchemaVersion(),
+          CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
+          minimalSegmentSchemas
+      );
+      return null;
+    }
+    String dataSource = segments.stream().iterator().next().getDataSource();
+
+    log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
+
+    segmentSchemaManager.persistSegmentSchema(
+        handle,
+        dataSource,
+        minimalSegmentSchemas.getSchemaFingerprintToPayloadMap(),
+        minimalSegmentSchemas.getSchemaVersion()
+    );
+
+    // fetch schemaId
+    Map<String, Long> fingerprintSchemaIdMap =
+        segmentSchemaManager.schemaIdFetchBatch(
+            handle,
+            dataSource,
+            minimalSegmentSchemas.getSchemaVersion(),
+            minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet()
+        );
+
+    log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
+
+    return fingerprintSchemaIdMap;
+  }
+
+  private Pair<Long, Long> fetchSegmentSchemaInformation(
+      MinimalSegmentSchemas minimalSegmentSchemas,
+      String segmentId,
+      Map<String, Long> fingerprintSchemaIdMap
+  )
+  {
+    Long schemaId = null, numRows = null;
+    MinimalSegmentSchemas.SegmentStats segmentStats = minimalSegmentSchemas.getSegmentIdToMetadataMap().get(segmentId);
+    if (segmentStats != null) {
+      numRows = segmentStats.getNumRows();
+      String fingerprint = segmentStats.getSchemaFingerprint();
+      if (fingerprintSchemaIdMap != null && fingerprintSchemaIdMap.containsKey(fingerprint)) {
+        schemaId = fingerprintSchemaIdMap.get(fingerprint);
+      }
+    }
+    return Pair.of(schemaId, numRows);
+  }
+
   private Set<DataSegment> announceHistoricalSegmentBatch(
       final Handle handle,
       final Set<DataSegment> segments,
@@ -1998,35 +2063,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
     Map<String, Long> fingerprintSchemaIdMap = null;
-    boolean schemaPresent = false;
+    boolean schemaPresent = isSchemaPresent(minimalSegmentSchemas);
     try {
-      if (!publishSchema()) {
-        log.info("Task schema publish is disabled.");
-      }
-      if (publishSchema()
-          && minimalSegmentSchemas != null
-          && minimalSegmentSchemas.isNonEmpty()
-      ) {
-        String dataSource = segments.stream().iterator().next().getDataSource();
-        schemaPresent = true;
-        log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
-        segmentSchemaManager.persistSegmentSchema(
-            handle,
-            dataSource,
-            minimalSegmentSchemas.getSchemaFingerprintToPayloadMap(),
-            minimalSegmentSchemas.getSchemaVersion()
-        );
-
-        // fetch schemaId
-        fingerprintSchemaIdMap =
-            segmentSchemaManager.schemaIdFetchBatch(
-                handle,
-                dataSource,
-                minimalSegmentSchemas.getSchemaVersion(),
-                minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet()
-            );
-
-        log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
+      if (schemaPresent) {
+        fingerprintSchemaIdMap = persistSchema(handle, segments, minimalSegmentSchemas);
       }
 
       Set<String> existedSegments = segmentExistsBatch(handle, segments);
@@ -2055,14 +2095,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           Long numRows = null;
 
           if (schemaPresent && minimalSegmentSchemas.getSegmentIdToMetadataMap().containsKey(segmentId)) {
-            MinimalSegmentSchemas.SegmentStats segmentStats = minimalSegmentSchemas.getSegmentIdToMetadataMap().get(segmentId);
-            if (segmentStats != null) {
-              numRows = segmentStats.getNumRows();
-              String fingerprint = segmentStats.getSchemaFingerprint();
-              if (fingerprintSchemaIdMap != null && fingerprintSchemaIdMap.containsKey(fingerprint)) {
-                schemaId = fingerprintSchemaIdMap.get(fingerprint);
-              }
-            }
+            Pair<Long, Long> schemaInfoPair = fetchSegmentSchemaInformation(minimalSegmentSchemas, segmentId, fingerprintSchemaIdMap);
+            schemaId = schemaInfoPair.lhs;
+            numRows = schemaInfoPair.rhs;
           }
 
           PreparedBatchPart preparedBatchPart = preparedBatch.add()
@@ -2239,32 +2274,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     Map<String, Long> fingerprintSchemaIdMap = null;
-    boolean schemaPresent = false;
+    boolean schemaPresent = isSchemaPresent(minimalSegmentSchemas);
 
-    if (!publishSchema()) {
-      log.info("Task schema publish is disabled.");
-    }
-    if (publishSchema() && minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
-      String dataSource = segments.iterator().next().getDataSource();
-      schemaPresent = true;
-      log.info("Persisting segment schema: [%s].", minimalSegmentSchemas);
-      segmentSchemaManager.persistSegmentSchema(
-          handle,
-          dataSource,
-          minimalSegmentSchemas.getSchemaFingerprintToPayloadMap(),
-          minimalSegmentSchemas.getSchemaVersion()
-      );
-
-      // fetch schemaId
-      fingerprintSchemaIdMap =
-          segmentSchemaManager.schemaIdFetchBatch(
-              handle,
-              dataSource,
-              minimalSegmentSchemas.getSchemaVersion(),
-              minimalSegmentSchemas.getSchemaFingerprintToPayloadMap().keySet()
-          );
-
-      log.info("Fingerprint schema map is [%s].", fingerprintSchemaIdMap);
+    if (schemaPresent) {
+      fingerprintSchemaIdMap = persistSchema(handle, segments, minimalSegmentSchemas);
     }
 
     Map<SegmentId, Pair<Long, Long>> upgradeSegmentMetadata = new HashMap<>();
@@ -2298,22 +2311,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         if (schemaPresent &&
             (minimalSegmentSchemas.getSegmentIdToMetadataMap().containsKey(segmentId) ||
              (newVersionForAppendToParent.containsKey(segment.getId())
-              && minimalSegmentSchemas.getSegmentIdToMetadataMap()
-                                      .containsKey(newVersionForAppendToParent.get(segment.getId()).toString())))) {
+              && minimalSegmentSchemas.getSegmentIdToMetadataMap().containsKey(newVersionForAppendToParent.get(segment.getId()).toString())))) {
           String segmentIdToUse;
           if (minimalSegmentSchemas.getSegmentIdToMetadataMap().containsKey(segmentId)) {
             segmentIdToUse = segmentId;
           } else {
             segmentIdToUse = newVersionForAppendToParent.get(segment.getId()).toString();
           }
-          MinimalSegmentSchemas.SegmentStats segmentStats = minimalSegmentSchemas.getSegmentIdToMetadataMap().get(segmentIdToUse);
-          if (segmentStats != null) {
-            numRows = segmentStats.getNumRows();
-            String fingerprint = segmentStats.getSchemaFingerprint();
-            if (fingerprintSchemaIdMap != null && fingerprintSchemaIdMap.containsKey(fingerprint)) {
-              schemaId = fingerprintSchemaIdMap.get(fingerprint);
-            }
-          }
+          Pair<Long, Long> schemaInfoPair = fetchSegmentSchemaInformation(minimalSegmentSchemas, segmentIdToUse, fingerprintSchemaIdMap);
+          schemaId = schemaInfoPair.lhs;
+          numRows = schemaInfoPair.rhs;
         } else if (upgradeSegmentMetadata.containsKey(segment.getId())) {
           Pair<Long, Long> metadata = upgradeSegmentMetadata.get(segment.getId());
           schemaId = metadata.lhs;
