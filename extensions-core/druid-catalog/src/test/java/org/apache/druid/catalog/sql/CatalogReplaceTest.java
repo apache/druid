@@ -31,7 +31,6 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogReplaceTest;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -92,7 +91,7 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
       createTableMetadata(tableBuilder.build());
     });
     DatasourceFacade catalogMetadata =
-        ((DatasourceTable) RESOLVED_TABLES.get("foo")).effectiveMetadata().catalogMetadata();
+        RESOLVED_TABLES.get("foo").effectiveMetadata().catalogMetadata();
     TableBuilder tableBuilder = TableBuilder.datasource("foo", catalogMetadata.segmentGranularityString());
     catalogMetadata.columnFacades().forEach(
         columnFacade -> {
