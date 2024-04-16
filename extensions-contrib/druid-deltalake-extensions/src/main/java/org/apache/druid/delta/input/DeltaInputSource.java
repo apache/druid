@@ -65,11 +65,20 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Input source to ingest data from a Delta Lake.
- * This input source reads the latest snapshot from a Delta table specified by {@code tablePath} parameter.
+ * Input source to ingest data from a Delta Lake. This input source reads the latest snapshot from a Delta table
+ * specified by {@code tablePath} parameter. If {@code deltaFilter} is specified, it's used at the Kernel level
+ * for data pruning. The filtering behavior is as follows:
+ * <ul>
+ * <li> When a filter is applied on a partitioned table using the partitioning columns, the filtering is guaranteed. </li>
+ * <li> When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta
+ * Kernel solely relies on statistics collected when the non-partitioned table is created. In this scenario, this input
+ * source connector may ingest data that doesn't match the filter. </li>
+ * </ul>
+ * <p>
  * We leverage the Delta Kernel APIs to interact with a Delta table. The Kernel API abstracts away the
  * complexities of the Delta protocol itself.
  * Note: currently, the Kernel table API only supports reading from the latest snapshot.
+ * </p>
  */
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 {
