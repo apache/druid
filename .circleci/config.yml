@@ -36,9 +36,9 @@ jobs:
       - run:
           name: Build
           command: mvn clean package -DskipTests -Pdist
-#            - run:
-#                name: Test
-#                command: mvn test
+      - run:
+          name: Test
+          command: mvn test
       - run:
           name: Build Image
           command: |
