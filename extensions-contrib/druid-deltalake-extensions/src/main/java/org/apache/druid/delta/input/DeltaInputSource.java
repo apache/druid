@@ -136,7 +136,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         for (String file : deltaSplit.getFiles()) {
           final Row scanFile = deserialize(tableClient, file);
           scanFileDataIters.add(
-              getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, Optional.empty()) // fixme where the predicate should be propagated
+              getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, Optional.empty())
           );
         }
       } else {
@@ -166,7 +166,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
           while (scanFileRows.hasNext()) {
             final Row scanFile = scanFileRows.next();
             scanFileDataIters.add(
-                getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, scan.getRemainingFilter()) // just try to pass the remaining filter
+                getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, scan.getRemainingFilter())
             );
           }
         }
