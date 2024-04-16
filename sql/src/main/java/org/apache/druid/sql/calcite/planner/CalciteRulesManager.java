@@ -372,8 +372,8 @@ public class CalciteRulesManager
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
-  private static class SaveLogicalPlanProgram implements Program {
-
+  private static class SaveLogicalPlanProgram implements Program
+  {
     public static SaveLogicalPlanProgram INSTANCE = new SaveLogicalPlanProgram();
 
     @Override

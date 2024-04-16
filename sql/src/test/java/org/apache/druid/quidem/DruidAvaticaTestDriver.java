@@ -148,10 +148,10 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper) {
+    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper)
+    {
       return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper);
     }
-
 
     @Provides
     @LazySingleton
@@ -186,15 +186,17 @@ public class DruidAvaticaTestDriver implements Driver
           "jdbc:avatica:remote:url=%s",
           new URIBuilder(server.getURI()).setPath(DruidAvaticaJsonHandler.AVATICA_PATH).build()
       );
-      connectionExtras  = druidConnectionExtras;
+      connectionExtras = druidConnectionExtras;
     }
 
     public Connection getConnection(Properties info) throws SQLException
     {
       Connection realConnection = DriverManager.getConnection(url, info);
       Connection proxyConnection = DynamicComposite.make(
-          realConnection, Connection.class,
-          connectionExtras, DruidConnectionExtras.class
+          realConnection,
+          Connection.class,
+          connectionExtras,
+          DruidConnectionExtras.class
       );
       return proxyConnection;
     }
