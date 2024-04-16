@@ -343,14 +343,16 @@ GROUP BY 1, 2`;
       },
       {
         icon: IconNames.STEP_BACKWARD,
-        title: 'Set offsets',
+        title: `Set ${type === 'kinesis' ? 'sequence numbers' : 'offsets'}`,
         onAction: () => this.setState({ resetOffsetsSupervisorInfo: { id, type } }),
+        disabledReason: supervisorSuspended ? undefined : `Supervisor must be suspended`,
       },
       {
         icon: IconNames.STEP_BACKWARD,
         title: 'Hard reset',
         intent: Intent.DANGER,
         onAction: () => this.setState({ resetSupervisorId: id }),
+        disabledReason: supervisorSuspended ? undefined : `Supervisor must be suspended`,
       },
       {
         icon: IconNames.CROSS,
