@@ -83,6 +83,7 @@ COPY --from=bash-static /bin/bash /bin/bash
 RUN chmod 755 /bin/bash
 
 COPY --chown=druid:druid --from=builder /opt /opt
+COPY --from=tarampampam/curl /bin/curl /bin/curl
 COPY distribution/docker/druid.sh /druid.sh
 COPY distribution/docker/peon.sh /peon.sh
 

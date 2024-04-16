@@ -47,14 +47,15 @@ jobs:
             --password ${JFROG_DEPLOY_PW}
             DOCKER_REPO=${DOCKER_REGISTRY}/conviva-druid
             DOCKER_TAG=$(mvn help:evaluate -Dexpression=fork.version -q -DforceStdout)
-            if ! docker pull ${DOCKER_REPO}:${DOCKER_TAG} &> /dev/null; then
-                DOCKER_BUILDKIT=1 docker build --no-cache \
-                    -t ${DOCKER_REPO}:${DOCKER_TAG} \
-                    -f distribution/docker/Dockerfile --build-arg BUILD_FROM_SOURCE=false .
-                docker push --all-tags ${DOCKER_REPO}
-            else
-                echo "[INFO] Skipping, Docker image already exists: ${DOCKER_REPO}:${DOCKER_TAG}"
+
+            if docker pull ${DOCKER_REPO}:${DOCKER_TAG} &> /dev/null; then
+                echo "[INFO] Docker image already exists: ${DOCKER_REPO}:${DOCKER_TAG}, remove it"
+                docker rmi -f ${DOCKER_REPO}:${DOCKER_TAG}
             fi
+            DOCKER_BUILDKIT=1 docker build --no-cache \
+                -t ${DOCKER_REPO}:${DOCKER_TAG} \
+                -f distribution/docker/Dockerfile --build-arg BUILD_FROM_SOURCE=false .
+            docker push --all-tags ${DOCKER_REPO}
 
 workflows:
   druid-build:
