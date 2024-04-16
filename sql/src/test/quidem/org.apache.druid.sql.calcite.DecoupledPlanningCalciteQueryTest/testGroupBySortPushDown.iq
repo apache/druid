@@ -19,9 +19,9 @@ SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIM
 (4 rows)
 
 !ok
-LogicalSort(sort0=[$1], dir0=[ASC], fetch=[4])
-  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
-    LogicalProject(dim2=[$2], dim1=[$1], cnt=[$4])
+LogicalProject(dim2=[$1], dim1=[$0], EXPR$2=[$2])
+  LogicalSort(sort0=[$0], dir0=[ASC], fetch=[4])
+    LogicalAggregate(group=[{1, 2}], EXPR$2=[SUM($4)])
       LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan

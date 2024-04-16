@@ -35,10 +35,10 @@ SELECT
 (2 rows)
 
 !ok
-LogicalAggregate(group=[{0, 1}])
-  LogicalProject(t1=['dummy'], t2=[CASE(=($0, 'b'), $0, null:VARCHAR)])
-    LogicalAggregate(group=[{0}])
-      LogicalProject(dim4=[$4])
+LogicalProject(t1=['dummy'], t2=[$0])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)])
+      LogicalAggregate(group=[{4}])
         LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan

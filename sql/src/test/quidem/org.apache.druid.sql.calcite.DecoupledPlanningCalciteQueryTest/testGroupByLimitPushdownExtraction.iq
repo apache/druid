@@ -17,11 +17,12 @@ SELECT dim4, substring(dim5, 1, 1), count(*) FROM druid.numfoo WHERE dim4 = 'a' 
 (2 rows)
 
 !ok
-LogicalSort(fetch=[2])
-  LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
-    LogicalProject(dim4=[$4], EXPR$1=[SUBSTRING($5, 1, 1)])
-      LogicalFilter(condition=[=($4, 'a')])
-        LogicalTableScan(table=[[druid, numfoo]])
+LogicalProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1])
+  LogicalSort(fetch=[2])
+    LogicalAggregate(group=[{0}], EXPR$2=[COUNT()])
+      LogicalProject(EXPR$1=[SUBSTRING($5, 1, 1)])
+        LogicalFilter(condition=[=($4, 'a')])
+          LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[logical])

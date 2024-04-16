@@ -31,11 +31,10 @@ group by 1;
 (6 rows)
 
 !ok
-LogicalAggregate(group=[{0}], outer_l1=[SUM($1)])
-  LogicalProject(dim1=[$0], $f1=[CASE(=($1, 0), 1, 0)])
-    LogicalAggregate(group=[{0}], sum_l1=[SUM($1)])
-      LogicalProject(dim1=[$1], l1=[$11])
-        LogicalTableScan(table=[[druid, numfoo]])
+LogicalAggregate(group=[{0}], outer_l1=[COUNT() FILTER $1])
+  LogicalProject(dim1=[$0], $f2=[IS TRUE(=($1, 0))])
+    LogicalAggregate(group=[{1}], sum_l1=[SUM($11)])
+      LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidAggregate(group=[{0}], outer_l1=[COUNT() FILTER $1], druid=[logical])

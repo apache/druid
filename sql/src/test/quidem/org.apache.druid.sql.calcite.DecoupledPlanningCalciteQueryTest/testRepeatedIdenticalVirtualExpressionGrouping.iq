@@ -20,9 +20,10 @@ GROUP BY 1, 2;
 (1 row)
 
 !ok
-LogicalAggregate(group=[{0, 1}])
-  LogicalProject(col_a=[true], col_b=[true])
-    LogicalTableScan(table=[[druid, foo]])
+LogicalProject(col_a=[$0], col_b=[true])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(col_a=[true])
+      LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(col_a=[$0], col_b=[true], druid=[logical])

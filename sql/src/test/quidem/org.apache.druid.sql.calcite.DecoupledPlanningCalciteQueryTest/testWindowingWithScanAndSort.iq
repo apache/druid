@@ -30,12 +30,12 @@ select ranking, trend_score from t ORDER BY trend_score;
 (6 rows)
 
 !ok
-LogicalSort(sort0=[$1], dir0=[ASC])
-  LogicalProject(ranking=[$0], trend_score=[$1])
+LogicalProject(ranking=[$2], trend_score=[$1])
+  LogicalSort(sort0=[$1], dir0=[ASC])
     LogicalSort(fetch=[10])
-      LogicalProject(ranking=[RANK() OVER (PARTITION BY $0 ORDER BY $0)], trend_score=[$2])
-        LogicalAggregate(group=[{0, 1}], trend_score=[COUNT($1)])
-          LogicalProject(m2=[$6], m1=[$5])
+      LogicalWindow(window#0=[window(partition {0} order by [0] aggs [RANK()])])
+        LogicalProject(m2=[$1], trend_score=[$2])
+          LogicalAggregate(group=[{5, 6}], trend_score=[COUNT($5)])
             LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
