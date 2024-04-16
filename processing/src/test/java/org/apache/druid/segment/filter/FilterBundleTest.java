@@ -54,7 +54,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
   public TemporaryFolder tmpDir = new TemporaryFolder();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     final QueryableIndex index = TestIndex.getMMappedWikipediaIndex();
     closer = Closer.create();
