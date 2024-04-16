@@ -36,7 +36,6 @@ import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -47,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@RunWith(Enclosed.class)
 public class DeltaInputSourceTest
 {
   @Before
@@ -57,7 +55,7 @@ public class DeltaInputSourceTest
   }
 
   @RunWith(Parameterized.class)
-  public static class ComponentParamTests
+  public static class TableParameterTests
   {
     @Parameterized.Parameters
     public static Object[][] data()
@@ -138,7 +136,7 @@ public class DeltaInputSourceTest
   }
 
   @RunWith(Parameterized.class)
-  public static class FilterParamTests
+  public static class FilterParameterTests
   {
     @Parameterized.Parameters
     public static Object[][] data()
@@ -317,7 +315,7 @@ public class DeltaInputSourceTest
     }
   }
 
-  public static class ComponentSingleTests
+  public static class InvalidTableTests
   {
     @Test
     public void testNullTable()
