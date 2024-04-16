@@ -101,12 +101,17 @@ public class TaskLockbox
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
-  // Stores List of Active Tasks. TaskLockbox will only grant locks to active activeTasks.
-  // this set should be accessed under the giant lock.
+  /**
+   * Set of active tasks. Locks can be granted only to a task present in this set.
+   * Should be accessed only under the giant lock.
+   */
   private final Set<String> activeTasks = new HashSet<>();
 
-  // Stores map of pending task group of tasks to the set of their ids.
-  // Useful for task replicas. Clean up pending segments only when the set is empty.
+  /**
+   * Map from a taskAllocatorId to the set of active taskIds using that allocator id.
+   * Used to clean up pending segments for a taskAllocatorId as soon as the set
+   * of corresponding active taskIds becomes empty.
+   */
   @GuardedBy("giant")
   private final Map<String, Set<String>> activeAllocatorIdToTaskIds = new HashMap<>();
 
@@ -532,6 +537,7 @@ public class TaskLockbox
     }
   }
 
+  @Nullable
   private TaskLockPosse createOrFindLockPosse(LockRequest request, Task task, boolean persist)
   {
     Preconditions.checkState(!(request instanceof LockRequestForNewSegment), "Can't handle LockRequestForNewSegment");
@@ -1693,7 +1699,6 @@ public class TaskLockbox
             } else {
               throw new ISE("Unknown request type[%s]", request);
             }
-            //noinspection SuspiciousIndentAfterControlStatement
           default:
             throw new ISE("Unknown lock type[%s]", taskLock.getType());
         }
