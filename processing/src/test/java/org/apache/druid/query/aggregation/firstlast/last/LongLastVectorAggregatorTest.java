@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.firstlast.last;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.VectorAggregator;
@@ -45,11 +46,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
-// Check with empty arrays, nulls
-// Check with folded up objects, and non-folded up objects
-// Check with coercing objects
-// Check both the functions that they work properly
-// Check with pre-existing value on the buffer, and no pre-existing value on the buffer
 public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
@@ -193,7 +189,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
       {
         if (TIME_COL.equals(column)) {
           return timeSelector;
-        } else if (FIELD_NAME_LONG.equals(column)) {
+        } else if (FIELD_NAME_LONG.equals(column) || FIELD_NAME.equals(column)) {
           return nonLongValueSelector;
         }
         return null;
@@ -239,16 +235,15 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void initTest()
+  public void testInit()
   {
     target.init(buf, 0);
-    long initVal = buf.getLong(0);
-    Assert.assertEquals(Long.MIN_VALUE, initVal);
+    Assert.assertEquals(DateTimes.MIN.getMillis(), buf.getLong(0));
     Assert.assertEquals(0, buf.getLong(FirstLastVectorAggregator.VALUE_OFFSET));
   }
 
   @Test
-  public void aggregate()
+  public void testAggregate()
   {
     target.init(buf, 0);
     target.aggregate(buf, 0, 0, pairs.length);
@@ -258,7 +253,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateWithNulls()
+  public void testAggregateWithNulls()
   {
     target.aggregate(buf, 0, 0, pairs.length);
     Pair<Long, Long> result = (Pair<Long, Long>) target.get(buf, 0);
@@ -267,7 +262,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithoutRows()
+  public void testAggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int positionOffset = 2;
@@ -285,7 +280,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithRows()
+  public void testAggregateBatchWithRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int[] rows = new int[]{3, 2, 0};
@@ -301,6 +296,67 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
         Assert.assertEquals(pairs[rows[i]].rhs, result.rhs, EPSILON);
       }
     }
+  }
+
+  @Test
+  public void testAggregateWithStringifiedLongs()
+  {
+    VectorObjectSelector objectSelector = new VectorObjectSelector()
+    {
+      @Override
+      public Object[] getObjectVector()
+      {
+        return new Object[]{"1000", "2000", "3000"};
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 3;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 3;
+      }
+    };
+    LongLastVectorAggregator ll = new LongLastVectorAggregator(createLongSelector(new Long[]{1L, 2L, 3L}), objectSelector);
+    clearBufferForPositions(0, 0);
+    ll.aggregate(buf, 0, 0, 3);
+    Pair<Long, Long> val = (Pair<Long, Long>) ll.get(buf, 0);
+    Assert.assertEquals(3, (long) val.lhs);
+    Assert.assertEquals(3000, (long) val.rhs);
+  }
+
+  private VectorValueSelector createLongSelector(Long[] times)
+  {
+    return new BaseLongVectorValueSelector(new NoFilterVectorOffset(times.length, 0, times.length))
+    {
+      @Override
+      public long[] getLongVector()
+      {
+        long[] timesCasted = new long[times.length];
+        for (int i = 0; i < times.length; ++i) {
+          timesCasted[i] = times[i] == null ? 0 : times[i];
+        }
+        return timesCasted;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        if (NullHandling.replaceWithDefault()) {
+          return null;
+        }
+        boolean[] nulls = new boolean[times.length];
+        for (int i = 0; i < times.length; ++i) {
+          nulls[i] = times[i] == null;
+        }
+        return nulls;
+      }
+    };
   }
 
   private void clearBufferForPositions(int offset, int... positions)

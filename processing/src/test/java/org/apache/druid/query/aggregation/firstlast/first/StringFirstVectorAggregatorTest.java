@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.firstlast.first;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
@@ -295,7 +296,7 @@ public class StringFirstVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void initValueShouldBeMaxDate()
+  public void testInit()
   {
     target.init(buf, 0);
     long initVal = buf.getLong(0);
@@ -303,7 +304,7 @@ public class StringFirstVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregate()
+  public void testAggregate()
   {
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, String> result = (Pair<Long, String>) target.get(buf, 0);
@@ -325,7 +326,7 @@ public class StringFirstVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithoutRows()
+  public void testAggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int positionOffset = 2;
@@ -334,12 +335,12 @@ public class StringFirstVectorAggregatorTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[i], result.lhs.longValue());
-      Assert.assertEquals(VALUES[i], result.rhs);
+      Assert.assertEquals(NullHandling.nullToEmptyIfNeeded(VALUES[i]), result.rhs);
     }
   }
 
   @Test
-  public void aggregateBatchWithRows()
+  public void testAggregateBatchWithRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int[] rows = new int[]{3, 2, 0};
@@ -349,7 +350,7 @@ public class StringFirstVectorAggregatorTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[rows[i]], result.lhs.longValue());
-      Assert.assertEquals(VALUES[rows[i]], result.rhs);
+      Assert.assertEquals(NullHandling.nullToEmptyIfNeeded(VALUES[rows[i]]), result.rhs);
     }
   }
 

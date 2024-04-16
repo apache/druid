@@ -21,10 +21,21 @@ package org.apache.druid.query.aggregation.firstlast;
 
 import org.apache.druid.java.util.common.DateTimes;
 
-// TODO(laksh): javadoc
+/**
+ * Differentiating factor between the first and the last aggregator. Specifies the
+ */
 public interface SelectionPredicate
 {
+  /**
+   * @return Time value to initialize the aggregation with
+   */
   long initValue();
+
+  /**
+   * @param currentTime  Time of the current row
+   * @param selectedTime Aggregated time value
+   * @return true if the current row should be selected over the aggregated value, else false
+   */
   boolean apply(long currentTime, long selectedTime);
 
   SelectionPredicate FIRST_PREDICATE = new SelectionPredicate()

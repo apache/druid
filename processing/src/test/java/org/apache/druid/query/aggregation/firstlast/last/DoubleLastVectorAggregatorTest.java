@@ -19,13 +19,16 @@
 
 package org.apache.druid.query.aggregation.firstlast.last;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.firstlast.FirstLastVectorAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
@@ -70,7 +73,8 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
 
   private DoubleLastAggregatorFactory doubleLastAggregatorFactory;
   private VectorColumnSelectorFactory selectorFactory;
-  private VectorValueSelector nonLongValueSelector;
+  private VectorValueSelector longValueSelector;
+  private VectorValueSelector doubleValueSelector;
 
   @Before
   public void setup()
@@ -116,7 +120,7 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
       }
     };
 
-    nonLongValueSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
+    longValueSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
         LONG_VALUES.length,
         0,
         LONG_VALUES.length
@@ -160,6 +164,22 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
       }
     };
 
+    doubleValueSelector = new BaseDoubleVectorValueSelector(new NoFilterVectorOffset(VALUES.length, 0, VALUES.length))
+    {
+      @Override
+      public double[] getDoubleVector()
+      {
+        return VALUES;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        return null;
+      }
+    };
+
     selectorFactory = new VectorColumnSelectorFactory()
     {
       @Override
@@ -186,7 +206,9 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
         if (TIME_COL.equals(column)) {
           return timeSelector;
         } else if (FIELD_NAME_LONG.equals(column)) {
-          return nonLongValueSelector;
+          return longValueSelector;
+        } else if (FIELD_NAME.equals(column)) {
+          return doubleValueSelector;
         }
         return null;
       }
@@ -231,15 +253,15 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void initValueShouldInitZero()
+  public void testInit()
   {
     target.init(buf, 0);
-    double initVal = buf.getDouble(0);
-    Assert.assertEquals(0, initVal, EPSILON);
+    Assert.assertEquals(DateTimes.MIN.getMillis(), buf.getLong(0));
+    Assert.assertEquals(0, buf.getDouble(FirstLastVectorAggregator.VALUE_OFFSET), EPSILON);
   }
 
   @Test
-  public void aggregate()
+  public void testAggregate()
   {
     target.aggregate(buf, 0, 0, pairs.length);
     Pair<Long, Double> result = (Pair<Long, Double>) target.get(buf, 0);
@@ -248,7 +270,7 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateWithNulls()
+  public void testAggregateWithNulls()
   {
     target.aggregate(buf, 0, 0, pairs.length);
     Pair<Long, Double> result = (Pair<Long, Double>) target.get(buf, 0);
@@ -257,7 +279,7 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithoutRows()
+  public void testAggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int positionOffset = 2;
@@ -271,7 +293,7 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithRows()
+  public void testAggregateBatchWithRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int[] rows = new int[]{3, 2, 0};

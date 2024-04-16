@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.firstlast.first;
 
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.firstlast.FirstLastVectorAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -44,31 +46,33 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTest
+
+public class LongFirstVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
-  private static final double[] VALUES = new double[]{7.8d, 11, 23.67, 60};
+  private static final long[] VALUES = new long[]{7, 15, 2, 150};
   private static final long[] LONG_VALUES = new long[]{1L, 2L, 3L, 4L};
   private static final float[] FLOAT_VALUES = new float[]{1.0f, 2.0f, 3.0f, 4.0f};
   private static final double[] DOUBLE_VALUES = new double[]{1.0, 2.0, 3.0, 4.0};
+  private static final boolean[] NULLS = new boolean[]{false, false, false, false};
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
   private static final String FIELD_NAME_LONG = "LONG_NAME";
   private static final String TIME_COL = "__time";
   private final long[] times = {2345001L, 2345100L, 2345200L, 2345300L};
-  private final SerializablePairLongDouble[] pairs = {
-      new SerializablePairLongDouble(2345001L, 1D),
-      new SerializablePairLongDouble(2345100L, 2D),
-      new SerializablePairLongDouble(2345200L, 3D),
-      new SerializablePairLongDouble(2345300L, 4D)
+  private final SerializablePairLongLong[] pairs = {
+      new SerializablePairLongLong(2345001L, 1L),
+      new SerializablePairLongLong(2345100L, 2L),
+      new SerializablePairLongLong(2345200L, 3L),
+      new SerializablePairLongLong(2345300L, 4L)
   };
 
   private VectorObjectSelector selector;
   private BaseLongVectorValueSelector timeSelector;
   private ByteBuffer buf;
-  private DoubleFirstVectorAggregator target;
+  private LongFirstVectorAggregator target;
 
-  private DoubleFirstAggregatorFactory doubleFirstAggregatorFactory;
+  private LongFirstAggregatorFactory longFirstAggregatorFactory;
   private VectorColumnSelectorFactory selectorFactory;
   private VectorValueSelector nonLongValueSelector;
 
@@ -95,6 +99,7 @@ public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTes
         return null;
       }
     };
+
     selector = new VectorObjectSelector()
     {
       @Override
@@ -185,7 +190,7 @@ public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTes
       {
         if (TIME_COL.equals(column)) {
           return timeSelector;
-        } else if (FIELD_NAME_LONG.equals(column)) {
+        } else if (FIELD_NAME_LONG.equals(column) || FIELD_NAME.equals(column)) {
           return nonLongValueSelector;
         }
         return null;
@@ -207,82 +212,89 @@ public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTes
       public ColumnCapabilities getColumnCapabilities(String column)
       {
         if (FIELD_NAME.equals(column)) {
-          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
-        } else if (FIELD_NAME_LONG.equals(column)) {
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
+        } else if (FIELD_NAME_LONG.equals(column)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
         }
         return null;
       }
     };
 
-    target = new DoubleFirstVectorAggregator(timeSelector, selector);
+    target = new LongFirstVectorAggregator(timeSelector, selector);
     clearBufferForPositions(0, 0);
 
-    doubleFirstAggregatorFactory = new DoubleFirstAggregatorFactory(NAME, FIELD_NAME, TIME_COL);
+    longFirstAggregatorFactory = new LongFirstAggregatorFactory(NAME, FIELD_NAME, TIME_COL);
   }
 
   @Test
   public void testFactory()
   {
-    Assert.assertTrue(doubleFirstAggregatorFactory.canVectorize(selectorFactory));
-    VectorAggregator vectorAggregator = doubleFirstAggregatorFactory.factorizeVector(selectorFactory);
+    Assert.assertTrue(longFirstAggregatorFactory.canVectorize(selectorFactory));
+    VectorAggregator vectorAggregator = longFirstAggregatorFactory.factorizeVector(selectorFactory);
     Assert.assertNotNull(vectorAggregator);
-    Assert.assertEquals(DoubleFirstVectorAggregator.class, vectorAggregator.getClass());
+    Assert.assertEquals(LongFirstVectorAggregator.class, vectorAggregator.getClass());
   }
 
   @Test
-  public void initValueShouldInitZero()
+  public void testInit()
   {
     target.init(buf, 0);
-    Assert.assertEquals(Long.MAX_VALUE, buf.getLong(0));
-    Assert.assertEquals(0, buf.getDouble(FirstLastVectorAggregator.VALUE_OFFSET), EPSILON);
+    Assert.assertEquals(DateTimes.MAX.getMillis(), buf.getLong(0));
+    Assert.assertEquals(0, buf.getLong(FirstLastVectorAggregator.VALUE_OFFSET));
   }
 
   @Test
-  public void aggregate()
+  public void testAggregate()
   {
     target.aggregate(buf, 0, 0, pairs.length);
-    Pair<Long, Double> result = (Pair<Long, Double>) target.get(buf, 0);
+    Pair<Long, Long> result = (Pair<Long, Long>) target.get(buf, 0);
     Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
     Assert.assertEquals(pairs[0].rhs, result.rhs, EPSILON);
   }
 
   @Test
-  public void aggregateWithNulls()
+  public void testAggregateWithNulls()
   {
     target.aggregate(buf, 0, 0, pairs.length);
-    Pair<Long, Double> result = (Pair<Long, Double>) target.get(buf, 0);
+    Pair<Long, Long> result = (Pair<Long, Long>) target.get(buf, 0);
     Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
     Assert.assertEquals(pairs[0].rhs, result.rhs, EPSILON);
   }
 
   @Test
-  public void aggregateBatchWithoutRows()
+  public void testAggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int positionOffset = 2;
     clearBufferForPositions(positionOffset, positions);
     target.aggregate(buf, 3, positions, null, positionOffset);
     for (int i = 0; i < positions.length; i++) {
-      Pair<Long, Double> result = (Pair<Long, Double>) target.get(buf, positions[i] + positionOffset);
+      Pair<Long, Long> result = (Pair<Long, Long>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(pairs[i].getLhs().longValue(), result.lhs.longValue());
-      Assert.assertEquals(pairs[i].rhs, result.rhs, EPSILON);
+      if (!NullHandling.replaceWithDefault() && NULLS[i]) {
+        Assert.assertNull(result.rhs);
+      } else {
+        Assert.assertEquals(pairs[i].rhs, result.rhs, EPSILON);
+      }
     }
   }
 
   @Test
-  public void aggregateBatchWithRows()
+  public void testAggregateBatchWithRows()
   {
     int[] positions = new int[]{0, 43, 70};
-    int[] rows = new int[]{3, 0, 2};
+    int[] rows = new int[]{3, 2, 0};
     int positionOffset = 2;
     clearBufferForPositions(positionOffset, positions);
     target.aggregate(buf, 3, positions, rows, positionOffset);
     for (int i = 0; i < positions.length; i++) {
-      Pair<Long, Double> result = (Pair<Long, Double>) target.get(buf, positions[i] + positionOffset);
-      Assert.assertEquals(pairs[rows[i]].lhs.longValue(), result.lhs.longValue());
-      Assert.assertEquals(pairs[rows[i]].rhs, result.rhs, EPSILON);
-
+      Pair<Long, Long> result = (Pair<Long, Long>) target.get(buf, positions[i] + positionOffset);
+      Assert.assertEquals(times[rows[i]], result.lhs.longValue());
+      if (!NullHandling.replaceWithDefault() && NULLS[rows[i]]) {
+        Assert.assertNull(result.rhs);
+      } else {
+        Assert.assertEquals(pairs[rows[i]].rhs, result.rhs, EPSILON);
+      }
     }
   }
 

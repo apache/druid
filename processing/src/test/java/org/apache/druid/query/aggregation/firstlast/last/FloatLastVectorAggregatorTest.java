@@ -20,9 +20,11 @@
 package org.apache.druid.query.aggregation.firstlast.last;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.firstlast.FirstLastVectorAggregator;
 import org.apache.druid.query.aggregation.firstlast.FloatFirstLastVectorAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -232,19 +234,19 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
     Assert.assertTrue(floatLastAggregatorFactory.canVectorize(selectorFactory));
     VectorAggregator vectorAggregator = floatLastAggregatorFactory.factorizeVector(selectorFactory);
     Assert.assertNotNull(vectorAggregator);
-    Assert.assertEquals(FloatFirstLastVectorAggregator.class, vectorAggregator.getClass());
+    Assert.assertEquals(FloatLastVectorAggregator.class, vectorAggregator.getClass());
   }
 
   @Test
-  public void initValueShouldBeZero()
+  public void testInit()
   {
     target.init(buf, 0);
-    float initVal = buf.getFloat(0);
-    Assert.assertEquals(0.0f, initVal, EPSILON);
+    Assert.assertEquals(DateTimes.MIN.getMillis(), buf.getLong(0));
+    Assert.assertEquals(0.0f, buf.getFloat(FirstLastVectorAggregator.VALUE_OFFSET), EPSILON);
   }
 
   @Test
-  public void aggregate()
+  public void testAggregate()
   {
     target.init(buf, 0);
     target.aggregate(buf, 0, 0, VALUES.length);
@@ -254,7 +256,7 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateWithNulls()
+  public void testAggregateWithNulls()
   {
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
@@ -263,7 +265,7 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithoutRows()
+  public void testAggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int positionOffset = 2;
@@ -281,7 +283,7 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void aggregateBatchWithRows()
+  public void testAggregateBatchWithRows()
   {
     int[] positions = new int[]{0, 43, 70};
     int[] rows = new int[]{3, 2, 0};

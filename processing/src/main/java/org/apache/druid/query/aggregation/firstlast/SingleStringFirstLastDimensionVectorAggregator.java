@@ -68,10 +68,6 @@ public class SingleStringFirstLastDimensionVectorAggregator
   /**
    * Doesnt need to handle the null handling because that is taken care of while inserting the value, therefore in
    * replaceWithDefault mode, it is always going to be non-null
-   *
-   * @param buf
-   * @param position
-   * @return
    */
   @Nullable
   @Override
@@ -131,7 +127,10 @@ public class SingleStringFirstLastDimensionVectorAggregator
   }
 
   /**
-   * TODO(laksh): We use this adapter class because..
+   * Adapter class to from {@link SingleValueDimensionVectorSelector} to {@link VectorValueSelector}, to pass to the parent
+   * class. The parent class only uses the passed in selector for the null check, therefore {@link #getNullVector()} is
+   * the only relevant method implemented by the adapter. Each string value (even null) is assigned an id that will get stored,
+   * therefore fetching the nullVector returns null (i.e. no null values)
    */
   private static class SingleValueDimensionVectorSelectorAdapter implements VectorValueSelector
   {
@@ -174,7 +173,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
     }
 
     /**
-     * TODO(laksh): Only useful method
+     * This is the only useful method, that will get used by the parent class.
      */
     @Nullable
     @Override
