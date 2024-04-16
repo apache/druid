@@ -31,7 +31,6 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogInsertTest;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
