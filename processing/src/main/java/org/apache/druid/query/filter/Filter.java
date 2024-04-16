@@ -53,7 +53,10 @@ public interface Filter
    * @param bitmapResultFactory - wrapper for {@link ImmutableBitmap} operations to tie into
    *                              {@link org.apache.druid.query.QueryMetrics} and build the output indexes
    * @param applyRowCount       - upper bound on number of rows this filter would be applied to, after removing rows
-   *                              short-circuited by prior bundle operations
+   *                              short-circuited by prior bundle operations. For example, given "x AND y", if "x" is
+   *                              resolved using an index, then "y" will receive the number of rows that matched
+   *                              the filter "x". As another example, given "x OR y", if "x" is resolved using an
+   *                              index, then "y" will receive the number of rows that did *not* match the filter "x".
    * @param totalRowCount       - total number of rows to be scanned if no indexes are applied
    * @param includeUnknown      - mapping for Druid native two state logic system into SQL three-state logic system. If
    *                              set to true, bitmaps returned by this method should include true bits for any rows
