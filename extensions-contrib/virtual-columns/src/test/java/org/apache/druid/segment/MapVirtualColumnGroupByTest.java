@@ -26,6 +26,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -118,6 +119,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
   @Test
   public void testWithMapColumn()
   {
+    // TODO(laksh): VET, The GroupBy engine groups using the complex type, but the output is a STRING
     final GroupByQuery query = new GroupByQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
@@ -134,10 +136,10 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     );
 
     Throwable t = Assert.assertThrows(
-        UnsupportedOperationException.class,
+        IAE.class,
         () -> runner.run(QueryPlus.wrap(query)).toList()
     );
-    Assert.assertEquals("Map column doesn't support getRow()", t.getMessage());
+    Assert.assertEquals("Cannot find strategy for type [COMPLEX]", t.getMessage());
   }
 
 

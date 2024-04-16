@@ -162,6 +162,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       ColumnValueSelector columnValueSelector1 = Mockito.mock(ColumnValueSelector.class);
 
       Mockito.when(columnValueSelector1.getObject()).thenReturn(key);
+      Mockito.when(columnValueSelector1.getLong()).thenReturn(key == null ? 0 : key);
       Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
 
       Assert.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
@@ -304,6 +305,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       ColumnValueSelector columnValueSelector1 = Mockito.mock(ColumnValueSelector.class);
 
       Mockito.when(columnValueSelector1.getObject()).thenReturn(key);
+      Mockito.when(columnValueSelector1.getFloat()).thenReturn(key == null ? 0.0f : key);
       Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
 
       Assert.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
@@ -448,6 +450,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       ColumnValueSelector columnValueSelector1 = Mockito.mock(ColumnValueSelector.class);
 
       Mockito.when(columnValueSelector1.getObject()).thenReturn(key);
+      Mockito.when(columnValueSelector1.getDouble()).thenReturn(key == null ? 0.0d : key);
       Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
 
       Assert.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));

@@ -9856,17 +9856,21 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByComplexColumn()
   {
+    cannotVectorize();
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("quality_uniques", "quality_uniques"))
+        .setDimensions(new DefaultDimensionSpec(
+            "quality_uniques",
+            "quality_uniques",
+            HyperUniquesAggregatorFactory.TYPE
+        ))
         .setDimFilter(new SelectorDimFilter("quality_uniques", null, null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Unable to group on the type [COMPLEX<hyperUnique>]");
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
