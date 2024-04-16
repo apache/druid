@@ -70,8 +70,7 @@ public abstract class CalciteTestBase
   public void setCaseTempDir(TestInfo testInfo)
   {
     String methodName = testInfo.getTestMethod().get().getName();
-    Path path = FileUtils.createTempDirInLocation(rootTempPath, methodName).toPath();
-    casetempPath = path;
+    casetempPath = FileUtils.createTempDirInLocation(rootTempPath, methodName).toPath();
   }
 
   public File newTempFolder()
