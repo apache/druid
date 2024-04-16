@@ -62,8 +62,8 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       null,
       null,
-      ImmutableMap.of("key", "val"),
-      null
+      null,
+      ImmutableMap.of("key", "val")
   );
   private static final DataSourceCompactionConfig NEW_CONFIG = new DataSourceCompactionConfig(
       "newDataSource",
@@ -77,8 +77,8 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       null,
       null,
-      ImmutableMap.of("key", "val"),
-      null
+      null,
+      ImmutableMap.of("key", "val")
   );
   private static final byte[] OLD_CONFIG_IN_BYTES = {1, 2, 3};
 
@@ -191,8 +191,8 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        ImmutableMap.of("key", "val"),
-        null
+        null,
+        ImmutableMap.of("key", "val")
     );
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
@@ -233,8 +233,8 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        ImmutableMap.of("key", "val"),
-        null
+        null,
+        ImmutableMap.of("key", "val")
     );
     final CoordinatorCompactionConfig originalConfig = CoordinatorCompactionConfig.from(ImmutableList.of(toDelete));
     Mockito.when(mockJacksonConfigManager.convertByteToConfig(
@@ -392,8 +392,8 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        ImmutableMap.of("key", "val"),
-        null
+        null,
+        ImmutableMap.of("key", "val")
     );
     String author = "maytas";
     String comment = "hello";

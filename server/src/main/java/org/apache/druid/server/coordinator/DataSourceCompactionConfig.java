@@ -37,9 +37,7 @@ import java.util.Objects;
 
 public class DataSourceCompactionConfig
 {
-  /**
-   * Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY
-   */
+  /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
   public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
   // Approx. 100TB. Chosen instead of Long.MAX_VALUE to avoid overflow on web-console and other clients
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 100_000_000_000_000L;
@@ -77,8 +75,8 @@ public class DataSourceCompactionConfig
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
-      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
-      @JsonProperty("engine") @Nullable Engine engine
+      @JsonProperty("engine") @Nullable Engine engine,
+      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -250,7 +248,7 @@ public class DataSourceCompactionConfig
                                         || partitionsSpec instanceof DynamicPartitionsSpec)) {
           throw InvalidInput.exception(
               "Invalid partition spec type[%s] for MSQ compaction engine %s."
-              + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec .",
+              + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
               partitionsSpec.getClass(),
               engineSourceLog
           );
@@ -276,13 +274,13 @@ public class DataSourceCompactionConfig
         currentConfig.getMetricsSpec(),
         currentConfig.getTransformSpec(),
         currentConfig.getIoConfig(),
-        currentConfig.getTaskContext(),
-        newEngine
+        newEngine, currentConfig.getTaskContext()
     );
   }
 
   /**
    * Engine to be used for a compaction task.
+   * Should be synchronized with {@link org.apache.druid.indexing.common.task.Engine}.
    */
   public enum Engine
   {

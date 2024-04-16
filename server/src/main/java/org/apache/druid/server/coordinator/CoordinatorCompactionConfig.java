@@ -59,27 +59,25 @@ public class CoordinatorCompactionConfig
       CoordinatorCompactionConfig baseConfig,
       @Nullable Double compactionTaskSlotRatio,
       @Nullable Integer maxCompactionTaskSlots,
-      @Nullable Boolean useAutoScaleSlots,
-      @Nullable DataSourceCompactionConfig.Engine engine
+      @Nullable Boolean useAutoScaleSlots
   )
   {
     return new CoordinatorCompactionConfig(
         baseConfig.compactionConfigs,
         compactionTaskSlotRatio == null ? baseConfig.compactionTaskSlotRatio : compactionTaskSlotRatio,
         maxCompactionTaskSlots == null ? baseConfig.maxCompactionTaskSlots : maxCompactionTaskSlots,
-        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots,
-        engine == null ? baseConfig.engine : engine
+        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots
     );
   }
 
   public static CoordinatorCompactionConfig from(List<DataSourceCompactionConfig> compactionConfigs)
   {
-    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null, null);
+    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null);
   }
 
   public static CoordinatorCompactionConfig empty()
   {
-    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null, null);
+    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null);
   }
 
   @JsonCreator
@@ -87,8 +85,7 @@ public class CoordinatorCompactionConfig
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
-      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("engine") @Nullable final DataSourceCompactionConfig.Engine engine
+      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots
   )
   {
     this.compactionConfigs = compactionConfigs;
@@ -99,7 +96,7 @@ public class CoordinatorCompactionConfig
                                   DEFAULT_MAX_COMPACTION_TASK_SLOTS :
                                   maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots == null ? DEFAULT_USE_AUTO_SCALE_SLOTS : useAutoScaleSlots;
-    this.engine = engine == null ? DEFAULT_COMPACTION_ENGINE : engine;
+    this.engine = DEFAULT_COMPACTION_ENGINE;
   }
 
   @JsonProperty

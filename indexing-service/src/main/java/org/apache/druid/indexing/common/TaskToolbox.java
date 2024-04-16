@@ -36,7 +36,7 @@ import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.CompactionToMSQ;
+import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -135,8 +135,7 @@ public class TaskToolbox
   private final String attemptId;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
-
-  private final CompactionToMSQ compactionToMSQ;
+  private final CompactionToMSQTask compactionToMSQTask;
 
   public TaskToolbox(
       SegmentLoaderConfig segmentLoaderConfig,
@@ -180,7 +179,7 @@ public class TaskToolbox
       TaskLogPusher taskLogPusher,
       String attemptId,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionToMSQ compactionToMSQ
+      CompactionToMSQTask compactionToMSQTask
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -225,7 +224,7 @@ public class TaskToolbox
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.compactionToMSQ = compactionToMSQ;
+    this.compactionToMSQTask = compactionToMSQTask;
   }
 
   public SegmentLoaderConfig getSegmentLoaderConfig()
@@ -503,9 +502,9 @@ public class TaskToolbox
     return centralizedDatasourceSchemaConfig;
   }
 
-  public CompactionToMSQ getCompactionToMSQ()
+  public CompactionToMSQTask getCompactionToMSQ()
   {
-    return compactionToMSQ;
+    return compactionToMSQTask;
   }
 
   /**
@@ -575,7 +574,7 @@ public class TaskToolbox
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-    private CompactionToMSQ compactionToMSQ;
+    private CompactionToMSQTask compactionToMSQTask;
 
     public Builder()
     {
@@ -622,7 +621,7 @@ public class TaskToolbox
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
       this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
-      this.compactionToMSQ = other.compactionToMSQ;
+      this.compactionToMSQTask = other.compactionToMSQTask;
     }
 
     public Builder config(final SegmentLoaderConfig segmentLoaderConfig)
@@ -871,8 +870,8 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder compactionToMSQ(final CompactionToMSQ compactionToMSQ){
-      this.compactionToMSQ = compactionToMSQ;
+    public Builder compactionToMSQ(final CompactionToMSQTask compactionToMSQTask){
+      this.compactionToMSQTask = compactionToMSQTask;
       return this;
     }
 
@@ -920,7 +919,7 @@ public class TaskToolbox
           taskLogPusher,
           attemptId,
           centralizedDatasourceSchemaConfig,
-          compactionToMSQ
+          compactionToMSQTask
       );
     }
   }

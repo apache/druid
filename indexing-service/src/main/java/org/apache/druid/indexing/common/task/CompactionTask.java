@@ -294,8 +294,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           parallelIndexTuningConfig.getMaxSavedParseExceptions(),
           parallelIndexTuningConfig.getMaxColumnsToMerge(),
           parallelIndexTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
-          parallelIndexTuningConfig.getNumPersistThreads(),
-          null
+          parallelIndexTuningConfig.getNumPersistThreads()
       );
     } else if (tuningConfig instanceof IndexTuningConfig) {
       final IndexTuningConfig indexTuningConfig = (IndexTuningConfig) tuningConfig;
@@ -330,8 +329,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           indexTuningConfig.getMaxSavedParseExceptions(),
           indexTuningConfig.getMaxColumnsToMerge(),
           indexTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
-          indexTuningConfig.getNumPersistThreads(),
-          null
+          indexTuningConfig.getNumPersistThreads()
       );
     } else {
       throw new ISE(
@@ -470,11 +468,10 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-
     // emit metric for compact ingestion mode:
     emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
 
-    final List<Pair<Interval, DataSchema>> intervalDataSchemas = createDataSchemasForIntervals(
+    final List<NonnullPair<Interval, DataSchema>> intervalDataSchemas = createDataSchemasForIntervals(
         UTC_CLOCK,
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
@@ -486,13 +483,10 @@ public class CompactionTask extends AbstractBatchIndexTask
         getMetricBuilder()
     );
 
-    // TODO: Remove below test
-    log.info ("Test log");
-    log.info("Compacting using engine[%s]", engine);
     if (engine == Engine.MSQ) {
         registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
         return toolbox.getCompactionToMSQ()
-                      .createAndRunMSQControllerTasks(this, toolbox, intervalDataSchemas);
+                      .createAndRunMSQTasks(this, toolbox, intervalDataSchemas);
     } else {
       final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSpecs(
           intervalDataSchemas,
@@ -535,8 +529,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
       int failCnt = 0;
       final TaskReport.ReportMap completionReports = new TaskReport.ReportMap();
-      for (int i = 0; i < indexTaskSpecs.size(); i++) {
-        ParallelIndexSupervisorTask eachSpec = indexTaskSpecs.get(i);
+      for (int i = 0; i < tasks.size(); i++) {
+        ParallelIndexSupervisorTask eachSpec = tasks.get(i);
         final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         if (!currentSubTaskHolder.setTask(eachSpec)) {
           String errMsg = "Task was asked to stop. Finish as failed.";
@@ -553,11 +547,9 @@ public class CompactionTask extends AbstractBatchIndexTask
             }
 
             String reportKeySuffix = "_" + i;
-            Optional.ofNullable(eachSpec.getCompletionReports()).ifPresent(
-                reports -> completionReports.putAll(
-                    CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)
-                )
-            );
+            Optional.ofNullable(eachSpec.getCompletionReports())
+                    .ifPresent(reports -> completionReports.putAll(
+                        CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)));
           } else {
             failCnt++;
             log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
@@ -608,13 +600,14 @@ public class CompactionTask extends AbstractBatchIndexTask
     return StringUtils.format("%s_%d", getId(), i);
   }
 
+
   /**
-   * Generate {@link ParallelIndexIngestionSpec} from input segments.
-   *
-   * @return an empty list if input segments don't exist. Otherwise, a generated ingestionSpec.
+   * Generate dataschema for segments in each interval
+   * @return
+   * @throws IOException
    */
   @VisibleForTesting
-  static List<Pair<Interval, DataSchema>> createDataSchemasForIntervals(
+  static List<NonnullPair<Interval, DataSchema>> createDataSchemasForIntervals(
       final Clock clock,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
@@ -632,12 +625,12 @@ public class CompactionTask extends AbstractBatchIndexTask
         lockGranularityInUse
     );
 
-    if (timelineSegments.size() == 0) {
+    if (timelineSegments.isEmpty()) {
       return Collections.emptyList();
     }
 
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
-      List<Pair<Interval, DataSchema>> dataSchemas = new ArrayList<>();
+      List<NonnullPair<Interval, DataSchema>> intervalToDataSchemaList = new ArrayList<>();
 
       // original granularity
       final Map<Interval, List<DataSegment>> intervalToSegments = new TreeMap<>(
@@ -690,12 +683,9 @@ public class CompactionTask extends AbstractBatchIndexTask
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
-
-        // TODO(vishesh): Based on a function flag, either create parallel index spec OR just aggregate up dataSchemas. We should
-        // pass a list of schemas to MSQ to have one-to-one mapping between an MSQ controller task and a schema
-        dataSchemas.add(Pair.of(interval, dataSchema));
+        intervalToDataSchemaList.add(new NonnullPair<>(interval, dataSchema));
       }
-      return dataSchemas;
+      return intervalToDataSchemaList;
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
@@ -719,12 +709,18 @@ public class CompactionTask extends AbstractBatchIndexTask
           metricsSpec,
           granularitySpec
       );
-      return Collections.singletonList(Pair.of(segmentProvider.interval, dataSchema));
+      return Collections.singletonList(new NonnullPair<>(segmentProvider.interval, dataSchema));
     }
   }
 
-  private static List<ParallelIndexIngestionSpec> createIngestionSpecs(
-      List<Pair<Interval, DataSchema>> dataschemas,
+  /**
+   * Generate {@link ParallelIndexIngestionSpec} from input dataschemas.
+   *
+   * @return an empty list if input segments don't exist. Otherwise, a generated ingestionSpec.
+   */
+  @VisibleForTesting
+  static List<ParallelIndexIngestionSpec> createIngestionSpecs(
+      List<NonnullPair<Interval, DataSchema>> dataschemas,
       final TaskToolbox toolbox,
       final CompactionIOConfig ioConfig,
       final PartitionConfigurationManager partitionConfigurationManager,
@@ -1399,7 +1395,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   public static class CompactionTuningConfig extends ParallelIndexTuningConfig
   {
     public static final String TYPE = "compaction";
-    public final Boolean useMSQ;
 
     public static CompactionTuningConfig defaultConfig()
     {
@@ -1434,9 +1429,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           null,
           null,
           0L,
-          null,
-          // TODO vishesh: Move this default to false later
-          true
+          null
       );
     }
 
@@ -1473,8 +1466,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
         @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
         @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
-        @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
-        @JsonProperty("useMSQ") @Nullable Boolean useMSQ
+        @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
     )
     {
       super(
@@ -1516,8 +1508,6 @@ public class CompactionTask extends AbstractBatchIndexTask
           awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis == 0,
           "awaitSegmentAvailabilityTimeoutMillis is not supported for Compcation Task"
       );
-      // TODO vishesh: Move this default to false later
-        this.useMSQ = useMSQ != null ? useMSQ: true;
     }
 
     @Override
@@ -1554,8 +1544,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           getMaxSavedParseExceptions(),
           getMaxColumnsToMerge(),
           getAwaitSegmentAvailabilityTimeoutMillis(),
-          getNumPersistThreads(),
-          null
+          getNumPersistThreads()
       );
     }
   }

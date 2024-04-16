@@ -80,6 +80,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -172,7 +173,7 @@ import java.util.stream.IntStream;
 @RunWith(MockitoJUnitRunner.class)
 public class CompactionTaskTest
 {
-  /*private static final long SEGMENT_SIZE_BYTES = 100;
+  private static final long SEGMENT_SIZE_BYTES = 100;
   private static final int NUM_ROWS_PER_SEGMENT = 10;
   private static final String DATA_SOURCE = "dataSource";
   private static final String TIMESTAMP_COLUMN = "timestamp";
@@ -353,7 +354,6 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
-        null,
         null,
         null,
         null,
@@ -790,7 +790,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        null,
         null
     );
 
@@ -863,7 +862,6 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
-        null,
         null,
         null,
         null,
@@ -955,21 +953,27 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
     ingestionSpecs.sort(
@@ -1029,24 +1033,29 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        null,
         null
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(tuningConfig),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(tuningConfig),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
     ingestionSpecs.sort(
@@ -1107,24 +1116,29 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        null,
         null
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(tuningConfig),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(tuningConfig),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
     ingestionSpecs.sort(
@@ -1185,23 +1199,27 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        null,
         null
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(tuningConfig),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(tuningConfig),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1254,20 +1272,25 @@ public class CompactionTaskTest
         )
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         customSpec,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
 
     ingestionSpecs.sort(
@@ -1300,20 +1323,25 @@ public class CompactionTaskTest
         new DoubleMaxAggregatorFactory("custom_double_max", "agg_4")
     };
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         customMetricsSpec,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -1339,21 +1367,27 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
-        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
     ingestionSpecs.sort(
@@ -1384,20 +1418,25 @@ public class CompactionTaskTest
     Collections.sort(segments);
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
-    CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
   }
 
@@ -1410,20 +1449,25 @@ public class CompactionTaskTest
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
   }
 
@@ -1448,20 +1492,25 @@ public class CompactionTaskTest
   @Test
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1488,20 +1537,24 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1526,13 +1579,11 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
@@ -1541,10 +1592,19 @@ public class CompactionTaskTest
             new PeriodGranularity(Period.months(3), null, null),
             null
         ),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
@@ -1571,21 +1631,28 @@ public class CompactionTaskTest
   @Test
   public void testNullGranularitySpec() throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         null,
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
     ingestionSpecs.sort(
@@ -1610,21 +1677,28 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity()
       throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
     ingestionSpecs.sort(
@@ -1649,20 +1723,25 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNotNullRollup()
       throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
+    );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
     );
 
     Assert.assertEquals(6, ingestionSpecs.size());
@@ -1675,21 +1754,28 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullRollup()
       throws IOException
   {
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createDataSchemas(
+    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new CompactionIOConfig(null, false, null),
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
         METRIC_BUILDER
     );
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSpecs(
+        dataSchemasForIntervals,
+        toolbox,
+        new CompactionIOConfig(null, false, null),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+
     Assert.assertEquals(6, ingestionSpecs.size());
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
       //Expect false since rollup value in metadata of existing segments are null
@@ -1834,7 +1920,6 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
-            null,
             null,
             null,
             null,
@@ -2162,11 +2247,11 @@ public class CompactionTaskTest
 
   }
 
-  *//**
+  /**
    * The compaction task spec in 0.16.0 except for the tuningConfig.
    * The original spec accepts only {@link IndexTuningConfig}, but this class acceps any type of tuningConfig for
    * testing.
-   *//*
+   */
   private static class OldCompactionTaskWithAnyTuningConfigType extends AbstractTask
   {
     private final Interval interval;
@@ -2341,5 +2426,5 @@ public class CompactionTaskTest
     {
       return ColumnType.ofComplex(ExtensionDimensionHandler.TYPE_NAME);
     }
-  }*/
+  }
 }

@@ -1797,8 +1797,7 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots,
-                null
+                useAutoScaleSlots
             )
         )
         .build();

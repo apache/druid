@@ -36,7 +36,7 @@ import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
-import org.apache.druid.indexing.common.task.CompactionToMSQ;
+import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
@@ -119,7 +119,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.taskLogPusher,
         bob.attemptId,
         bob.centralizedDatasourceSchemaConfig,
-        bob.compactionToMSQ
+        bob.compactionToMSQTask
     );
   }
 
@@ -164,7 +164,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-    private CompactionToMSQ compactionToMSQ;
+    private CompactionToMSQTask compactionToMSQTask;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -400,8 +400,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
       return this;
     }
 
-    public Builder setCompactionToMSQ(CompactionToMSQ compactionToMSQ){
-      this.compactionToMSQ = compactionToMSQ;
+    public Builder setCompactionToMSQ(CompactionToMSQTask compactionToMSQTask){
+      this.compactionToMSQTask = compactionToMSQTask;
       return this;
     }
   }

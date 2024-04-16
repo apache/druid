@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.msq.guice;
 
 import com.fasterxml.jackson.databind.Module;
@@ -5,9 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.indexing.common.task.CompactionToMSQ;
+import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.msq.compaction.CompactionToMSQImpl;
+import org.apache.druid.msq.compaction.CompactionToMSQTaskImpl;
 import org.apache.druid.rpc.indexing.OverlordClient;
 
 import java.util.Collections;
@@ -16,13 +35,10 @@ import java.util.List;
 public class MSQCompactionDruidModule implements DruidModule
 {
 
-  public static final String SCHEME = "msq";
-
   @Override
   public void configure(Binder binder)
   {
-//    binder.bind(CompactionToMSQ.class).toProvider(CompactionToMSQImplProvider.class).in(LazySingleton.class);
-    binder.bind(CompactionToMSQ.class).to(CompactionToMSQImpl.class).in(LazySingleton.class);
+    binder.bind(CompactionToMSQTask.class).to(CompactionToMSQTaskImpl.class).in(LazySingleton.class);
   }
 
   @Override
@@ -33,9 +49,11 @@ public class MSQCompactionDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  CompactionToMSQImpl getCompactionToMSQImpl(final OverlordClient overlordClient,
-                                             final ObjectMapper jsonMapper){
-    return new CompactionToMSQImpl(overlordClient, jsonMapper);
+  CompactionToMSQTaskImpl getCompactionToMSQImpl(
+      final OverlordClient overlordClient,
+      final ObjectMapper jsonMapper
+  )
+  {
+    return new CompactionToMSQTaskImpl(overlordClient, jsonMapper);
   }
-
 }

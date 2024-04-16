@@ -20,11 +20,7 @@
 package org.apache.druid.testing.utils;
 
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
-import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;

@@ -101,29 +101,8 @@ public class CoordinatorCompactionConfigsResource
             current,
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
-            useAutoScaleSlots,
-            null
+            useAutoScaleSlots
         );
-    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
-  }
-
-  @POST
-  @Path("/engine")
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response setCompactionEngine(
-      @QueryParam("engine") DataSourceCompactionConfig.Engine engine,
-      @Context HttpServletRequest req
-  )
-  {
-    UnaryOperator<CoordinatorCompactionConfig> operator =
-        current -> CoordinatorCompactionConfig.from(
-            current,
-            null,
-            null,
-            null,
-            engine
-        );
-    // TODO (vishesh): add the check to loop over all configs and validate if this update is compatible.
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
@@ -140,8 +119,8 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-      DataSourceCompactionConfig updateConfig = DataSourceCompactionConfig.from(current.getEngine(), newConfig);
-      newConfigs.put(updateConfig.getDataSource(), updateConfig);
+      DataSourceCompactionConfig updatedConfig = DataSourceCompactionConfig.from(current.getEngine(), newConfig);
+      newConfigs.put(updatedConfig.getDataSource(), updatedConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
       return newCompactionConfig;

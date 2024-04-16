@@ -466,18 +466,20 @@ public class CompactSegments implements CoordinatorCustomDuty
       }
 
       DataSourceCompactionConfig.Engine engine = config.getEngine();
-
-      Map<String, Object> autoCompactionContext = config.getTaskContext();
+      Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
       int numCurrentCompactionTasksAndSubtasks;
-      if (engine == DataSourceCompactionConfig.Engine.MSQ && autoCompactionContext!= null && !autoCompactionContext.containsKey("maxNumTasks")) {
-        autoCompactionContext = newAutoCompactionContext(autoCompactionContext);
-        numCurrentCompactionTasksAndSubtasks = numAvailableCompactionTaskSlots;
-        // todo (vishesh): there was a plan to use auto strategy for task slots calculation. How to introduce that
-        // and then how to retrieve that number to manage underneath calculation
-        // also check if there is a need to clone the map here
-          autoCompactionContext.putIfAbsent("maxNumTasks", numCurrentCompactionTasksAndSubtasks);
+      final String maxNumTasksContextParam = "maxNumTasks";
+
+      if (engine == DataSourceCompactionConfig.Engine.MSQ) {
+        if (!autoCompactionContext.containsKey(maxNumTasksContextParam)) {
+          // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
+          // compaction slots to current compaction task to avoid stalling.
+          numCurrentCompactionTasksAndSubtasks = numAvailableCompactionTaskSlots;
+          autoCompactionContext.put(maxNumTasksContextParam, numCurrentCompactionTasksAndSubtasks);
+        } else {
+          numCurrentCompactionTasksAndSubtasks = (int) autoCompactionContext.get(maxNumTasksContextParam);
         }
-       else {
+      } else {
         numCurrentCompactionTasksAndSubtasks = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());
       }
 
