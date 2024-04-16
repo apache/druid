@@ -64,7 +64,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -358,7 +357,7 @@ public class TestIndex
 
     final File tmpDir;
     try {
-      tmpDir = Files.createTempDirectory("test-index-input-source").toFile();
+      tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
         return persistRealtimeAndLoadMMapped(
             IndexBuilder
