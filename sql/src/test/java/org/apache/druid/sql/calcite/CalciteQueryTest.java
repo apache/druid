@@ -5075,25 +5075,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                            )
                        );
     } else {
-      builder = builder.aggregators(
-          aggregators(
+      builder = builder.virtualColumns(
+          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
+              expressionVirtualColumn(
+              "v1",
+              "case_searched((\"dim1\" != '1'),1,0)",
+              ColumnType.LONG
+          ),
+          expressionVirtualColumn(
+              "v2",
+              "case_searched((\"dim1\" != '1'),\"cnt\",0)",
+              ColumnType.LONG
+          ))
+          .aggregators(
+              aggregators(
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a0", "cnt"),
                   equality("dim1", "abc", ColumnType.STRING)
               ),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a1", "cnt"),
-                  not(selector("dim1", "abc"))
+                  not(istrue(selector("dim1", "abc")))
               ),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a2", "cnt"),
-                  selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
-
+                  equality("v0", "a", ColumnType.STRING)
               ),
               new FilteredAggregatorFactory(
                   new CountAggregatorFactory("a3"),
                   and(
-                      notNull("dim2"),
+                      notNull("dim2JAJ"),
                       not(equality("dim1", "1", ColumnType.STRING))
                   )
               ),
@@ -5101,10 +5112,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   new CountAggregatorFactory("a4"),
                   not(equality("dim1", "1", ColumnType.STRING))
               ),
-              new FilteredAggregatorFactory(
-                  new CountAggregatorFactory("a5"),
-                  not(equality("dim1", "1", ColumnType.STRING))
-              ),
+              new LongSumAggregatorFactory("a5", "v1"),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a6", "cnt"),
                   equality("dim2", "a", ColumnType.STRING)
@@ -5116,10 +5124,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       not(equality("dim1", "1", ColumnType.STRING))
                   )
               ),
-              new FilteredAggregatorFactory(
-                  new LongSumAggregatorFactory("a8", "cnt"),
-                  not(equality("dim1", "1", ColumnType.STRING))
-              ),
+              new LongSumAggregatorFactory("a8", "v2"),
               new FilteredAggregatorFactory(
                   new LongMaxAggregatorFactory("a9", "cnt"),
                   not(equality("dim1", "1", ColumnType.STRING))
@@ -5144,7 +5149,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           )
       );
     }
-    //FIXME case was removed
     testQuery(
         "SELECT "
         + "SUM(case dim1 when 'abc' then cnt end), "

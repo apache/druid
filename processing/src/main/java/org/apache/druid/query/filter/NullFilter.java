@@ -211,7 +211,7 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   public String toString()
   {
     return new DimFilterToStringBuilder().appendDimension(column, null)
-                                         .append(" IS NULL")
+                                         .append(" IS NULLX")
                                          .appendFilterTuning(filterTuning)
                                          .build();
   }
