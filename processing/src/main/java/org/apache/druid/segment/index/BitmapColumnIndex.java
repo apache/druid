@@ -59,7 +59,8 @@ public interface BitmapColumnIndex
    *
    * @param bitmapResultFactory helper to format the {@link org.apache.druid.collections.bitmap.ImmutableBitmap} in a
    *                            form ready for consumption by callers
-   * @param selectionRowCount   number of rows selected so far by any previous index computations
+   * @param applyRowCount       upper bound on number of rows this filter would be applied to, after removing rows
+   *                            short-circuited by prior bundle operations
    * @param totalRowCount       total number of rows to be scanned if no indexes are used
    * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If
    *                            set to true, bitmaps returned by this method should include true bits for any rows where
@@ -71,7 +72,7 @@ public interface BitmapColumnIndex
   @Nullable
   default <T> T computeBitmapResult(
       BitmapResultFactory<T> bitmapResultFactory,
-      int selectionRowCount,
+      int applyRowCount,
       int totalRowCount,
       boolean includeUnknown
   )

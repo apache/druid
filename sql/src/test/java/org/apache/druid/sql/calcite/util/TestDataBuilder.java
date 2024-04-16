@@ -58,6 +58,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -600,51 +601,6 @@ public class TestDataBuilder
       DateTimes.nowUtc().toString()
   );
 
-  public static QueryableIndex makeWikipediaIndex(File tmpDir)
-  {
-    final List<DimensionSchema> dimensions = Arrays.asList(
-        new StringDimensionSchema("channel"),
-        new StringDimensionSchema("cityName"),
-        new StringDimensionSchema("comment"),
-        new StringDimensionSchema("countryIsoCode"),
-        new StringDimensionSchema("countryName"),
-        new StringDimensionSchema("isAnonymous"),
-        new StringDimensionSchema("isMinor"),
-        new StringDimensionSchema("isNew"),
-        new StringDimensionSchema("isRobot"),
-        new StringDimensionSchema("isUnpatrolled"),
-        new StringDimensionSchema("metroCode"),
-        new StringDimensionSchema("namespace"),
-        new StringDimensionSchema("page"),
-        new StringDimensionSchema("regionIsoCode"),
-        new StringDimensionSchema("regionName"),
-        new StringDimensionSchema("user"),
-        new LongDimensionSchema("delta"),
-        new LongDimensionSchema("added"),
-        new LongDimensionSchema("deleted")
-    );
-
-    return IndexBuilder
-        .create()
-        .tmpDir(new File(tmpDir, "wikipedia1"))
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(new IncrementalIndexSchema.Builder()
-                    .withRollup(false)
-                    .withTimestampSpec(new TimestampSpec("time", null, null))
-                    .withDimensionsSpec(new DimensionsSpec(dimensions))
-                    .build()
-        )
-        .inputSource(
-            ResourceInputSource.of(
-                TestDataBuilder.class.getClassLoader(),
-                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
-            )
-        )
-        .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
-        .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
-        .buildMMappedIndex();
-  }
-
   public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
   {
     final List<DimensionSchema> dimensions = Arrays.asList(
@@ -687,8 +643,8 @@ public class TestDataBuilder
         )
         .inputSource(
             ResourceInputSource.of(
-                TestDataBuilder.class.getClassLoader(),
-                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
+                TestIndex.class.getClassLoader(),
+                "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
             )
         )
         .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
@@ -961,7 +917,7 @@ public class TestDataBuilder
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
-        makeWikipediaIndex(tmpDir)
+        TestIndex.getMMappedWikipediaIndex()
     ).add(
       DataSegment.builder()
                  .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)

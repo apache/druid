@@ -120,7 +120,9 @@ public class FilterBundle
   public interface IndexBundle
   {
     IndexBundleInfo getIndexInfo();
+
     ImmutableBitmap getBitmap();
+
     ColumnIndexCapabilities getIndexCapabilities();
   }
 
@@ -135,7 +137,9 @@ public class FilterBundle
   public interface MatcherBundle
   {
     MatcherBundleInfo getMatcherInfo();
+
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
+
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset);
   }
 
@@ -205,7 +209,10 @@ public class FilterBundle
     }
 
     @Override
-    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+    public VectorValueMatcher vectorMatcher(
+        VectorColumnSelectorFactory selectorFactory,
+        ReadableVectorOffset baseOffset
+    )
     {
       return vectorMatcherFn.apply(selectorFactory);
     }
@@ -238,6 +245,21 @@ public class FilterBundle
     public MatcherBundleInfo getMatcher()
     {
       return matcher;
+    }
+
+    /**
+     * Return a multiline description string, suitable for comparisons in tests.
+     */
+    public String describe()
+    {
+      final StringBuilder sb = new StringBuilder();
+      if (index != null) {
+        sb.append(index.describe());
+      }
+      if (matcher != null) {
+        sb.append(matcher.describe());
+      }
+      return sb.toString();
     }
 
     @Override
@@ -292,6 +314,27 @@ public class FilterBundle
       return indexes;
     }
 
+    /**
+     * Return a multiline description string, suitable for comparisons in tests.
+     */
+    public String describe()
+    {
+      final StringBuilder sb = new StringBuilder()
+          .append("index: ")
+          .append(filter.get())
+          .append(" (selectionSize = ")
+          .append(selectionSize)
+          .append(")\n");
+
+      if (indexes != null) {
+        for (final IndexBundleInfo info : indexes) {
+          sb.append(info.describe().replaceAll("(?m)^", "  "));
+        }
+      }
+
+      return sb.toString();
+    }
+
     @Override
     public String toString()
     {
@@ -343,6 +386,30 @@ public class FilterBundle
     public List<MatcherBundleInfo> getMatchers()
     {
       return matchers;
+    }
+
+    /**
+     * Return a multiline description string, suitable for comparisons in tests.
+     */
+    public String describe()
+    {
+      final StringBuilder sb = new StringBuilder()
+          .append("matcher: ")
+          .append(filter.get())
+          .append("\n");
+
+      if (partialIndex != null) {
+        sb.append("  with partial ")
+          .append(partialIndex.describe().replaceAll("(?m)^", "  ").replaceAll("^  ", ""));
+      }
+
+      if (matchers != null) {
+        for (MatcherBundleInfo info : matchers) {
+          sb.append(info.describe().replaceAll("(?m)^", "  "));
+        }
+      }
+
+      return sb.toString();
     }
 
     @Override
