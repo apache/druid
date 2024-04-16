@@ -94,13 +94,11 @@ def main():
     parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument('--save_path', default=None, required=True, help="Save path for Delta table")
     parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
                         help="Specify write mode (append/overwrite)")
-    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "march-employee-delta-table-partitioned-name"),
-                        help="Save path for Delta table")
     parser.add_argument('--partitioned_by', choices=("date", "name"), default=None, help="Partitioned by columns")
-    parser.add_argument('--num_records', type=int, default=10,
-                        help="Specify number of Delta records to write")
+    parser.add_argument('--num_records', type=int, default=5, help="Specify number of Delta records to write")
 
     args = parser.parse_args()
 
@@ -120,7 +118,8 @@ def main():
 
     df.show()
 
-    print(f"Generated Delta records to {save_path} in {save_mode} mode with {num_records} records.")
+    print(f"Generated Delta table records partitioned by {partitioned_by} in {save_path} in {save_mode} mode"
+          f" with {num_records} records.")
 
 
 if __name__ == "__main__":
