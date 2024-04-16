@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream.supervisor;
+package org.apache.druid.indexing.overlord.supervisor;
 
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
