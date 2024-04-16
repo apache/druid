@@ -48,10 +48,10 @@ import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -1221,10 +1221,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
         partitionsSpec = new DynamicPartitionsSpec(
             dynamicPartitionsSpec.getMaxRowsPerSegment(),
-            // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
-            // If this is set to something too small, compactionTask can generate small segments
-            // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-            dynamicPartitionsSpec.getMaxTotalRowsOr(Long.MAX_VALUE)
+            dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS)
         );
       }
       return newTuningConfig.withPartitionsSpec(partitionsSpec);
