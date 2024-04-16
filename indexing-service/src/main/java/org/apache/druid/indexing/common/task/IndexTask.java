@@ -303,7 +303,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getGroupId();
   }

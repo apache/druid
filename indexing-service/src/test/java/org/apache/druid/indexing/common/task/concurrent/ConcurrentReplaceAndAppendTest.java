@@ -1025,7 +1025,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       @Override
       public TaskToolbox build(TaskConfig config, Task task)
       {
-        return createTaskToolbox(config, task);
+        return createTaskToolbox(config, task, null);
       }
     };
   }

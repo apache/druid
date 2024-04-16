@@ -271,7 +271,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getTaskResource().getAvailabilityGroup();
   }

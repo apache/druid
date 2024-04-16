@@ -134,7 +134,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     EasyMock.reset(supervisorManager);
     EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(WIKI))
             .andReturn(Optional.of(WIKI)).anyTimes();
-    super.setSupervisorManager(supervisorManager);
     super.setUpIngestionTestBase();
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
     taskActionClientFactory = createActionClientFactory();
@@ -771,7 +770,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
       @Override
       public TaskToolbox build(TaskConfig config, Task task)
       {
-        return createTaskToolbox(config, task);
+        return createTaskToolbox(config, task, supervisorManager);
       }
     };
   }

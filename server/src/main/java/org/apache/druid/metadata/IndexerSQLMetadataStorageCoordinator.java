@@ -288,7 +288,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval
   )
   {
-    boolean compareIntervalEndpointsAsStrings = Intervals.canCompareEndpointsAsStrings(interval);
+    final boolean compareIntervalEndpointsAsStrings = Intervals.canCompareEndpointsAsStrings(interval);
 
     String sql = "SELECT payload, sequence_name, sequence_prev_id, task_allocator_id, upgraded_from_segment_id"
                  + " FROM " + dbTables.getPendingSegmentsTable()

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
@@ -212,10 +213,9 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   )
   {
     if (!(task instanceof PendingSegmentAllocatingTask)) {
-      throw new IAE(
+      throw DruidException.defensive(
           "Task[%s] of type[%s] cannot allocate segments as it does not implement PendingSegmentAllocatingTask.",
-          task.getId(),
-          task.getType()
+          task.getId(), task.getType()
       );
     }
     int attempt = 0;

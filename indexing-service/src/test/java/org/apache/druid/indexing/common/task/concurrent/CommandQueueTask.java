@@ -142,7 +142,7 @@ public class CommandQueueTask extends AbstractTask implements PendingSegmentAllo
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getId();
   }

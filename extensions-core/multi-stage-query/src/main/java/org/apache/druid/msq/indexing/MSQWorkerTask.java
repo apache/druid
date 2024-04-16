@@ -127,7 +127,7 @@ public class MSQWorkerTask extends AbstractTask implements PendingSegmentAllocat
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getControllerTaskId();
   }

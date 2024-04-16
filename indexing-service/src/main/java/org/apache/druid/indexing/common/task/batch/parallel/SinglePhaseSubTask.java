@@ -238,7 +238,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getGroupId();
   }

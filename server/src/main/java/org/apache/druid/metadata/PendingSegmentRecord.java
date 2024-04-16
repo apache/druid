@@ -33,11 +33,14 @@ import java.sql.ResultSet;
 /**
  * Representation of a record in the pending segments table. <br/>
  * Mapping of column in table to field:
- * <li/>  id -> id (Unique identifier for pending segment)
- * <li/>  sequence_name -> sequenceName (sequence name used for segment allocation)
- * <li/>  sequence_prev_id -> sequencePrevId (previous segment id used for segment allocation)
- * <li/>  upgraded_from_segment_id -> upgradedFromSegmentId (Id of the root segment from which this was upgraded)
- * <li/>  task_allocator_id -> taskAllocatorId (Associates a task / task group / replica group with the pending segment)
+ *
+ * <ul>
+ * <li>  id -> id (Unique identifier for pending segment) <li/>
+ * <li>  sequence_name -> sequenceName (sequence name used for segment allocation) <li/>
+ * <li>  sequence_prev_id -> sequencePrevId (previous segment id used for segment allocation) <li/>
+ * <li>  upgraded_from_segment_id -> upgradedFromSegmentId (Id of the root segment from which this was upgraded) <li/>
+ * <li>  task_allocator_id -> taskAllocatorId (Associates a task / task group / replica group with the pending segment) <li/>
+ * </ul>
  */
 public class PendingSegmentRecord
 {
@@ -79,7 +82,6 @@ public class PendingSegmentRecord
 
   /**
    * The original pending segment using which this upgraded segment was created.
-   * Corresponds to the column upgraded_from_segment_id in druid_pendingSegments.
    * Can be null for pending segments allocated before this column was added or for segments that have not been upgraded.
    */
   @Nullable
@@ -90,7 +92,6 @@ public class PendingSegmentRecord
 
   /**
    * task / taskGroup / replica group of task that allocated this segment.
-   * Corresponds to the column task_allocator_id in druid_pendingSegments.
    * Can be null for pending segments allocated before this column was added.
    */
   @Nullable

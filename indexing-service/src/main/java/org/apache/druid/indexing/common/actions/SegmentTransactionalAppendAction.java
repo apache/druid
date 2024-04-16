@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -31,7 +32,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
+ *
  * Append segments to metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
  *
@@ -128,7 +129,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
     if (!(task instanceof PendingSegmentAllocatingTask)) {
-      throw new IAE(
+      throw DruidException.defensive(
           "Task[%s] of type[%s] cannot append segments as it does not implement PendingSegmentAllocatingTask.",
           task.getId(),
           task.getType()
@@ -152,12 +153,12 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
 
     final CriticalAction.Action<SegmentPublishResult> publishAction;
-    final String pendingSegmentGroupId = ((PendingSegmentAllocatingTask) task).getPendingSegmentGroupId();
+    final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
     if (startMetadata == null) {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
           segmentToReplaceLock,
-          pendingSegmentGroupId
+          taskAllocatorId
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
@@ -165,7 +166,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           segmentToReplaceLock,
           startMetadata,
           endMetadata,
-          pendingSegmentGroupId
+          taskAllocatorId
       );
     }
 

@@ -28,5 +28,5 @@ public interface PendingSegmentAllocatingTask
    * Unique string used by an appending task (or its sub-tasks and replicas) to allocate pending segments
    * and identify pending segments allocated to it.
    */
-  String getPendingSegmentGroupId();
+  String getTaskAllocatorId();
 }

@@ -479,7 +479,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getGroupId();
   }

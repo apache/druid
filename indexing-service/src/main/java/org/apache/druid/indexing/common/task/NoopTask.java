@@ -112,7 +112,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getId();
   }

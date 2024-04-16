@@ -261,7 +261,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public String getPendingSegmentGroupId()
+  public String getTaskAllocatorId()
   {
     return getGroupId();
   }

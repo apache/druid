@@ -234,13 +234,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
   }
 
-  protected void setSupervisorManager(SupervisorManager supervisorManager)
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
   {
     this.supervisorManager = supervisorManager;
-  }
-
-  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
-  {
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
