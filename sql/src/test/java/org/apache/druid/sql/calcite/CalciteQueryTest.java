@@ -4989,10 +4989,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations()
   {
-    if (NullHandling.sqlCompatible()) {
-      // cannot vectorize due to expression filter
-      cannotVectorize();
-    }
+    // cannot vectorize due to expression filter
+    cannotVectorize();
+
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -5021,7 +5020,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                ),
                                new FilteredAggregatorFactory(
                                    new LongSumAggregatorFactory("a1", "cnt"),
-                                   not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+                                   not(equality("dim1", "abc", ColumnType.STRING))
                                ),
                                new FilteredAggregatorFactory(
                                    new LongSumAggregatorFactory("a2", "cnt"),
@@ -5076,14 +5075,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                        );
     } else {
       builder = builder.virtualColumns(
-          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
               expressionVirtualColumn(
-              "v1",
+              "v0",
               "case_searched((\"dim1\" != '1'),1,0)",
               ColumnType.LONG
           ),
           expressionVirtualColumn(
-              "v2",
+              "v1",
               "case_searched((\"dim1\" != '1'),\"cnt\",0)",
               ColumnType.LONG
           ))
@@ -5095,16 +5093,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               ),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a1", "cnt"),
-                  not(istrue(selector("dim1", "abc")))
+                  not(selector("dim1", "abc"))
               ),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a2", "cnt"),
-                  equality("v0", "a", ColumnType.STRING)
+                  selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
               ),
               new FilteredAggregatorFactory(
                   new CountAggregatorFactory("a3"),
                   and(
-                      notNull("dim2JAJ"),
+                      notNull("dim2"),
                       not(equality("dim1", "1", ColumnType.STRING))
                   )
               ),
@@ -5112,7 +5110,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   new CountAggregatorFactory("a4"),
                   not(equality("dim1", "1", ColumnType.STRING))
               ),
-              new LongSumAggregatorFactory("a5", "v1"),
+              new LongSumAggregatorFactory("a5", "v0"),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a6", "cnt"),
                   equality("dim2", "a", ColumnType.STRING)
@@ -5124,7 +5122,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       not(equality("dim1", "1", ColumnType.STRING))
                   )
               ),
-              new LongSumAggregatorFactory("a8", "v2"),
+              new LongSumAggregatorFactory("a8", "v1"),
               new FilteredAggregatorFactory(
                   new LongMaxAggregatorFactory("a9", "cnt"),
                   not(equality("dim1", "1", ColumnType.STRING))
@@ -5175,10 +5173,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  // FIXME: CASE WAS removed earlier
   @Test
   public void testCaseFilteredAggregationWithGroupBy()
   {
+    cannotVectorize();
     testQuery(
         "SELECT\n"
         + "  cnt,\n"
