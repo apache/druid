@@ -1,0 +1,93 @@
+!set enableWindowing true
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+select cityName,count(1) over (partition by cityName) from wikipedia where cityName in ('New York', 'Aarhus');
++----------+--------+
+| cityName | EXPR$1 |
++----------+--------+
+| Aarhus   |      1 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
+| New York |     13 |
++----------+--------+
+(14 rows)
+
+!ok
+{
+  "queryType" : "windowOperator",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "wikipedia"
+  },
+  "intervals" : {
+    "type" : "LegacySegmentSpec",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "outputSignature" : [ {
+    "name" : "cityName",
+    "type" : "STRING"
+  }, {
+    "name" : "w0",
+    "type" : "LONG"
+  } ],
+  "operatorDefinition" : [ {
+    "type" : "naiveSort",
+    "columns" : [ {
+      "column" : "cityName",
+      "direction" : "ASC"
+    } ]
+  }, {
+    "type" : "naivePartition",
+    "partitionColumns" : [ "cityName" ]
+  }, {
+    "type" : "window",
+    "processor" : {
+      "type" : "framedAgg",
+      "frame" : {
+        "peerType" : "ROWS",
+        "lowUnbounded" : true,
+        "lowOffset" : 0,
+        "uppUnbounded" : true,
+        "uppOffset" : 0,
+        "orderBy" : null
+      },
+      "aggregations" : [ {
+        "type" : "count",
+        "name" : "w0"
+      } ]
+    }
+  } ],
+  "leafOperators" : [ {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : {
+      "type" : "inType",
+      "column" : "cityName",
+      "matchValueType" : "STRING",
+      "sortedValues" : [ "Aarhus", "New York" ]
+    },
+    "offsetLimit" : {
+      "offset" : 0,
+      "limit" : 9223372036854775807
+    },
+    "projectedColumns" : [ "cityName" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan
+
