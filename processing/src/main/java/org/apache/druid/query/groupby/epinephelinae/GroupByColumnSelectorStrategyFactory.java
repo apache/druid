@@ -45,17 +45,28 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
   @Override
   public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      String dimension
   )
   {
     if (capabilities == null || capabilities.getType() == null) {
       throw DruidException.defensive("Unable to deduce type for the grouping dimension");
     }
-    if (!capabilities.toColumnType().getNullableStrategy().groupable()) {
-      // InvalidInput because the SQL planner would have already flagged these dimensions, therefore this will only happen
-      // if native queries have been submitted.
-      throw InvalidInput.exception("Unable to group on the type [%s]", capabilities.toColumnType());
+    try {
+      if (!capabilities.toColumnType().getNullableStrategy().groupable()) {
+        // InvalidInput because the SQL planner would have already flagged these dimensions, therefore this will only happen
+        // if native queries have been submitted.
+        throw InvalidInput.exception(
+            "Unable to group on the column[%s] with type[%s]",
+            dimension,
+            capabilities.toColumnType()
+        );
+      }
     }
+    catch (Exception e) {
+      throw InvalidInput.exception(e, "Unable to group on the column[%s]", dimension);
+    }
+
     switch (capabilities.getType()) {
       case STRING:
         return KeyMappingMultiValueGroupByColumnSelectorStrategy.create(capabilities, (DimensionSelector) selector);

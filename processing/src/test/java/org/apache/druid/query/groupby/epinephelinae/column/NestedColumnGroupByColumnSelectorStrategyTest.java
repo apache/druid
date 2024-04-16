@@ -150,7 +150,8 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
   {
     return STRATEGY_FACTORY.makeColumnSelectorStrategy(
         createCursor().getColumnSelectorFactory().getColumnCapabilities(NESTED_COLUMN),
-        createCursor().getColumnSelectorFactory().makeColumnValueSelector(NESTED_COLUMN)
+        createCursor().getColumnSelectorFactory().makeColumnValueSelector(NESTED_COLUMN),
+        "dimension"
     );
   }
 

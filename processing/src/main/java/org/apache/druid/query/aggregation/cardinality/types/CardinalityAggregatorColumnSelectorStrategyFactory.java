@@ -30,7 +30,8 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
   @Override
   public CardinalityAggregatorColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      String dimension
   )
   {
     switch (capabilities.getType()) {

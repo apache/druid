@@ -57,7 +57,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     private static final GroupByColumnSelectorStrategy STRATEGY =
         STRATEGY_FACTORY.makeColumnSelectorStrategy(
             createCursor().getColumnSelectorFactory().getColumnCapabilities(LONG_COLUMN),
-            createCursor().getColumnSelectorFactory().makeColumnValueSelector(LONG_COLUMN)
+            createCursor().getColumnSelectorFactory().makeColumnValueSelector(LONG_COLUMN),
+            "dimension"
         );
 
     @Test
@@ -202,7 +203,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     private static final GroupByColumnSelectorStrategy STRATEGY =
         STRATEGY_FACTORY.makeColumnSelectorStrategy(
             createCursor().getColumnSelectorFactory().getColumnCapabilities(FLOAT_COLUMN),
-            createCursor().getColumnSelectorFactory().makeColumnValueSelector(FLOAT_COLUMN)
+            createCursor().getColumnSelectorFactory().makeColumnValueSelector(FLOAT_COLUMN),
+            "dimension"
         );
 
     @Test
@@ -345,7 +347,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     private static final GroupByColumnSelectorStrategy STRATEGY =
         STRATEGY_FACTORY.makeColumnSelectorStrategy(
             createCursor().getColumnSelectorFactory().getColumnCapabilities(DOUBLE_COLUMN),
-            createCursor().getColumnSelectorFactory().makeColumnValueSelector(DOUBLE_COLUMN)
+            createCursor().getColumnSelectorFactory().makeColumnValueSelector(DOUBLE_COLUMN),
+            "dimension"
         );
 
     @Test

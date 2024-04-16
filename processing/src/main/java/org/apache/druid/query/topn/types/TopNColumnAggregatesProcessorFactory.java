@@ -43,7 +43,8 @@ public class TopNColumnAggregatesProcessorFactory
   @Override
   public TopNColumnAggregatesProcessor<?> makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      String dimension
   )
   {
     if (capabilities.is(ValueType.STRING)) {

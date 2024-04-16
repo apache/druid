@@ -294,7 +294,7 @@ public final class DimensionHandlerUtils
   )
   {
     capabilities = getEffectiveCapabilities(dimSpec, capabilities, strategyFactory.supportsNestedArraysAndComplexTypes());
-    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector, dimSpec.getDimension());
   }
 
   @Nullable
