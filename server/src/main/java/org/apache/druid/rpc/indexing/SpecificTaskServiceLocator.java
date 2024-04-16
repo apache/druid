@@ -26,6 +26,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -55,6 +57,7 @@ public class SpecificTaskServiceLocator implements ServiceLocator
 
   private final String taskId;
   private final OverlordClient overlordClient;
+  private final TaskLocationFetcher locationFetcher = new TaskLocationFetcher();
   private final Object lock = new Object();
 
   @GuardedBy("lock")
@@ -129,14 +132,20 @@ public class SpecificTaskServiceLocator implements ServiceLocator
                       lastKnownLocation = null;
                     } else {
                       lastKnownState = status.getStatusCode();
-
+                      final TaskLocation location;
                       if (TaskLocation.unknown().equals(status.getLocation())) {
+                        location = locationFetcher.getLocation();
+                      } else {
+                        location = status.getLocation();
+                      }
+
+                      if (TaskLocation.unknown().equals(location)) {
                         lastKnownLocation = null;
                       } else {
                         lastKnownLocation = new ServiceLocation(
-                            status.getLocation().getHost(),
-                            status.getLocation().getPort(),
-                            status.getLocation().getTlsPort(),
+                            location.getHost(),
+                            location.getPort(),
+                            location.getTlsPort(),
                             StringUtils.format("%s/%s", BASE_PATH, StringUtils.urlEncode(taskId))
                         );
                       }
@@ -196,6 +205,22 @@ public class SpecificTaskServiceLocator implements ServiceLocator
         }
 
         closed = true;
+      }
+    }
+  }
+
+  private class TaskLocationFetcher
+  {
+    TaskLocation getLocation()
+    {
+      final TaskStatusResponse statusResponse = FutureUtils.getUnchecked(
+          overlordClient.taskStatus(taskId),
+          true
+      );
+      if (statusResponse == null || statusResponse.getStatus() == null) {
+        return TaskLocation.unknown();
+      } else {
+        return statusResponse.getStatus().getLocation();
       }
     }
   }
