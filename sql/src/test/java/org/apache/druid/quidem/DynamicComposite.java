@@ -23,28 +23,28 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+/**
+ * Dynamically creates a composite from two classes.
+ */
 public class DynamicComposite<T, E> implements InvocationHandler
 {
-
   @SuppressWarnings("unchecked")
   public static <T, E> T make(T base, Class<T> baseClass, E ext, Class<E> extClass)
   {
     return (T) Proxy.newProxyInstance(
         base.getClass().getClassLoader(),
         new Class[] {baseClass, extClass},
-        new DynamicComposite<T, E>(base, baseClass, ext, extClass)
+        new DynamicComposite<T, E>(base, ext, extClass)
     );
   }
 
   private final T base;
-  private final Class<T> baseClass;
   private final E ext;
   private final Class<E> extClass;
 
-  DynamicComposite(T base, Class<T> baseClass, E ext, Class<E> extClass)
+  private DynamicComposite(T base, E ext, Class<E> extClass)
   {
     this.base = base;
-    this.baseClass = baseClass;
     this.ext = ext;
     this.extClass = extClass;
   }
