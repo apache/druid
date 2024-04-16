@@ -1128,7 +1128,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     final Stopwatch stopwatch = Stopwatch.createStarted();
     log.info("Starting polling of segment and schema table. latestSchemaId is [%s].", latestSchemaId.get());
 
-    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsBuilder = new ImmutableMap.Builder<>();
+
+    // We are emitting the stats here since this method is called periodically.
+    // Secondly, the stats are emitted before polling the schema,
+    // as {@link SegmentSchemaCache#resetInTransitSMQResultPublishedOnDBPoll} call after schema poll clears some cached information.
+    segmentSchemaCache.emitStats();
 
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -1152,7 +1157,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          segmentStats.put(
+                          segmentStatsBuilder.put(
                               segment.getId(),
                               new SegmentSchemaCache.SegmentStats(
                                   (Long) r.getObject("schema_id"),
@@ -1197,53 +1202,31 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       );
     }
 
-    final AtomicReference<Long> maxPolledId = new AtomicReference<>();
-    maxPolledId.set(lastSchemaIdPrePoll);
+    Long maxPolledSchemaId = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          SchemaPollResultMapper schemaPollResultMapper = new SchemaPollResultMapper(schemaMap, lastSchemaIdPrePoll);
 
-    connector.inReadOnlyTransaction(new TransactionCallback<Object>()
-    {
-      @Override
-      public Object inTransaction(Handle handle, TransactionStatus status)
-      {
-        return handle.createQuery(schemaPollQuery)
-                     .setFetchSize(connector.getStreamingFetchSize())
-                     .map(new ResultSetMapper<Void>()
-                     {
-                       @Override
-                       public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
-                       {
-                         try {
-                           long id = r.getLong("id");
+          handle.createQuery(schemaPollQuery)
+                .setFetchSize(connector.getStreamingFetchSize())
+                .map(schemaPollResultMapper)
+                .list();
 
-                           if (maxPolledId.get() == null || id > maxPolledId.get()) {
-                             maxPolledId.set(id);
-                           }
+          segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
 
-                           schemaMap.put(
-                               r.getLong("id"),
-                               jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
-                           );
-                         }
-                         catch (IOException e) {
-                           log.makeAlert(e, "Failed to read schema from db.").emit();
-                         }
-                         return null;
-                       }
-                     }).list();
-      }
-    });
+          return schemaPollResultMapper.getMaxSchemaId();
+        });
 
     log.debug("SchemaMap polled from the database is [%s]", schemaMap);
 
     if (lastSchemaIdPrePoll == null) {
       // full refresh
+      log.info("Executing full segment schema refresh.");
       segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
     } else {
       // delta update
       schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
     }
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
-    segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsBuilder.build());
 
     if (lastSchemaIdPrePoll == null) {
       segmentSchemaCache.setInitialized();
@@ -1251,9 +1234,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     // It is possible that the schema cleanup duty resets the {@code latestSchemaId}.
     // In that case, we shouldn't update this value with the latest polled schemaId.
-    latestSchemaId.compareAndSet(lastSchemaIdPrePoll, maxPolledId.get());
-
-    segmentSchemaCache.emitStats();
+    latestSchemaId.compareAndSet(lastSchemaIdPrePoll, maxPolledSchemaId);
 
     Preconditions.checkNotNull(
         segments,
@@ -1394,8 +1375,46 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public void resetLatestSchemaId()
+  public void refreshSegmentSchema()
   {
     latestSchemaId.set(0L);
+  }
+
+  private class SchemaPollResultMapper implements ResultSetMapper<Void>
+  {
+    private final ConcurrentMap<Long, SchemaPayload> schemaMap;
+    private long maxSchemaId;
+
+    public SchemaPollResultMapper(ConcurrentMap<Long, SchemaPayload> schemaMap, Long previousSchemaId)
+    {
+      this.schemaMap = schemaMap;
+      this.maxSchemaId = previousSchemaId == null ? 0 : previousSchemaId;
+    }
+
+    public long getMaxSchemaId()
+    {
+      return maxSchemaId;
+    }
+
+    @Override
+    public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
+    {
+      try {
+        long id = r.getLong("id");
+
+        if (id > maxSchemaId) {
+          maxSchemaId = id;
+        }
+
+        schemaMap.put(
+            r.getLong("id"),
+            jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
+        );
+      }
+      catch (IOException e) {
+        log.makeAlert(e, "Failed to read schema from db.").emit();
+      }
+      return null;
+    }
   }
 }

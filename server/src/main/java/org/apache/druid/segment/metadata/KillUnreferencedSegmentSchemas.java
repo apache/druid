@@ -86,7 +86,7 @@ public class KillUnreferencedSegmentSchemas
     if (deleted > 0) {
       log.info("Deleted [%s] schemas.", deleted);
       // Reset latest segment schema Id to trigger full schema refresh.
-      metadataManager.resetLatestSchemaId();
+      metadataManager.refreshSegmentSchema();
     }
     return deleted;
   }

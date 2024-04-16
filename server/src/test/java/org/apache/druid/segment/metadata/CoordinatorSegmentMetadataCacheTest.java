@@ -92,8 +92,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1512,7 +1510,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(DATASOURCE1, pluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ImmutableMap.Builder<>();
 
     derbyConnector.retryWithHandle(handle -> {
       handle.createQuery(StringUtils.format(
@@ -1539,7 +1537,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       return null;
     });
 
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap);
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap.build());
     segmentSchemaCache.setInitialized();
 
     serverView = new TestCoordinatorServerView(Collections.emptyList(), Collections.emptyList());
@@ -1633,10 +1631,10 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
 
-    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ImmutableMap.Builder<>();
     segmentStatsMap.put(segment3.getId(), new SegmentSchemaCache.SegmentStats(1L, (long) adapter.getNumRows()));
     segmentSchemaCache.addFinalizedSegmentSchema(1L, new SchemaPayload(adapter.getRowSignature()));
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap);
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap.build());
 
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     List<DataSegment> segments = segmentsMetadata.values()

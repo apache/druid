@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -63,7 +64,7 @@ public class SegmentSchemaCache
    * Mapping from segmentId to segment level information which includes numRows and schemaId.
    * This mapping is updated on each database poll.
    */
-  private volatile ConcurrentMap<SegmentId, SegmentStats> finalizedSegmentStats = new ConcurrentHashMap<>();
+  private volatile ImmutableMap<SegmentId, SegmentStats> finalizedSegmentStats = ImmutableMap.of();
 
   /**
    * Mapping from schemaId to payload. Gets updated after DB poll.
@@ -118,8 +119,8 @@ public class SegmentSchemaCache
     log.info("[%s] is uninitializing.", getClass().getSimpleName());
     initialized.set(new CountDownLatch(1));
 
+    finalizedSegmentStats = ImmutableMap.of();
     finalizedSegmentSchema.clear();
-    finalizedSegmentStats.clear();
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
   }
@@ -133,7 +134,7 @@ public class SegmentSchemaCache
     initialized.get().await();
   }
 
-  public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
+  public void updateFinalizedSegmentStatsReference(ImmutableMap<SegmentId, SegmentStats> segmentStatsMap)
   {
     this.finalizedSegmentStats = segmentStatsMap;
   }
@@ -282,10 +283,10 @@ public class SegmentSchemaCache
   public void emitStats()
   {
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchemaMap.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedStats/size", realtimeSegmentSchemaMap.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", realtimeSegmentSchemaMap.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", realtimeSegmentSchemaMap.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/size", realtimeSegmentSchemaMap.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedStats/size", finalizedSegmentStats.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", finalizedSegmentSchema.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", inTransitSMQResults.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/size", inTransitSMQPublishedResults.size()));
   }
 
   /**

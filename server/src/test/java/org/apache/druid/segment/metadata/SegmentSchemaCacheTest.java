@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.ColumnType;
@@ -29,8 +30,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 public class SegmentSchemaCacheTest
 {
@@ -91,9 +90,9 @@ public class SegmentSchemaCacheTest
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
     cache.addFinalizedSegmentSchema(0L, new SchemaPayload(rowSignature));
-    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ImmutableMap.Builder<>();
     segmentStats.put(id, new SegmentSchemaCache.SegmentStats(0L, 20L));
-    cache.updateFinalizedSegmentStatsReference(segmentStats);
+    cache.updateFinalizedSegmentStatsReference(segmentStats.build());
 
     Assert.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);

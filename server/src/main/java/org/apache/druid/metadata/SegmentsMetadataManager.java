@@ -218,5 +218,8 @@ public interface SegmentsMetadataManager
 
   void stopAsyncUsedFlagLastUpdatedUpdate();
 
-  void resetLatestSchemaId();
+  /**
+   * Trigger a full refresh of segment schema on next DB poll.
+   */
+  void refreshSegmentSchema();
 }
