@@ -1,11 +1,11 @@
 !use druidtest:///
 !set outputformat mysql
 
-select 1+5;
+select 1+8;
 +--------+
 | EXPR$0 |
 +--------+
-|      6 |
+|      9 |
 +--------+
 (1 row)
 
