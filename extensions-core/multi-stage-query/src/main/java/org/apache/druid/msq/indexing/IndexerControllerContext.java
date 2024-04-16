@@ -276,9 +276,7 @@ public class IndexerControllerContext implements ControllerContext
       );
     }
 
-    // propagate the controller's context and tags to the worker task
-    taskContextOverridesBuilder.put(MultiStageQueryContext.CTX_OF_CONTROLLER, controllerTaskContext);
-    // specifically assign the 'tags' field for enhanced worker task metrics reporting
+    // propagate the controller's tags to the worker task for enhanced metrics reporting
     @SuppressWarnings("unchecked")
     Map<String, Object> tags = (Map<String, Object>) controllerTaskContext.get(DruidMetrics.TAGS);
     if (tags != null) {
