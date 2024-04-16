@@ -27,7 +27,6 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.jupiter.api.extension.Extension;
-import static org.junit.Assume.assumeTrue;
 
 public class DecoupledExtension implements Extension
 {
@@ -49,7 +48,6 @@ public class DecoupledExtension implements Extension
     DecoupledTestConfig decTestConfig = BaseCalciteQueryTest.queryFrameworkRule
         .getAnnotation(DecoupledTestConfig.class);
 
-    assumeTrue(BaseCalciteQueryTest.queryFrameworkRule.getConfig().numMergeBuffers == 0);
     PlannerComponentSupplier componentSupplier = baseTest;
 
     CalciteTestConfig testConfig = baseTest.new CalciteTestConfig(CONTEXT_OVERRIDES)
