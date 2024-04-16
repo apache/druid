@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -56,7 +55,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -636,28 +634,6 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
-    DruidQTestInfo iqTestInfo = config.getQTestInfo();
-    if (iqTestInfo != null) {
-      QTestCase qt = new QTestCase(iqTestInfo);
-      Map<String, Object> queryContext = builder.getQueryContext();
-      for (Entry<String, Object> entry : queryContext.entrySet()) {
-        qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
-      }
-      qt.println("!set outputformat mysql");
-      qt.println("!use druidtest:///");
-
-      qt.println(builder.sql + ";");
-      if (builder.expectedResults != null) {
-        qt.println("!ok");
-      }
-      qt.println("!logicalPlan");
-      qt.println("!druidPlan");
-      if (builder.expectedQueries != null) {
-        qt.println("!nativePlan");
-      }
-      runSteps.add(qt.toRunner());
-      return;
-    }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,

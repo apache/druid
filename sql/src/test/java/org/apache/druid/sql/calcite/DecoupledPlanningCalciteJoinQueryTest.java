@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,12 +42,6 @@ public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return decoupledExtension.testBuilder();
-  }
-
-  @Test
-  public void validateTestClass()
-  {
-    // technical testcase needed by the extension temporarily
   }
 
   @MethodSource("provideQueryContexts")
