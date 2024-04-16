@@ -225,7 +225,9 @@ public class TestIndex
                    .build()
       )
   );
-  private static Supplier<QueryableIndex> wikipediaMMappedIndex = Suppliers.memoize(TestIndex::makeWikipediaIndex);
+  private static Supplier<QueryableIndex> wikipediaMMappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(makeWikipediaIncrementalIndex())
+  );
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -331,7 +333,7 @@ public class TestIndex
     }
   }
 
-  private static QueryableIndex makeWikipediaIndex()
+  public static IncrementalIndex makeWikipediaIncrementalIndex()
   {
     final List<DimensionSchema> dimensions = Arrays.asList(
         new StringDimensionSchema("channel"),
@@ -359,26 +361,24 @@ public class TestIndex
     try {
       tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
-        return persistRealtimeAndLoadMMapped(
-            IndexBuilder
-                .create()
-                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                .schema(new IncrementalIndexSchema.Builder()
-                            .withRollup(false)
-                            .withTimestampSpec(new TimestampSpec("time", null, null))
-                            .withDimensionsSpec(new DimensionsSpec(dimensions))
-                            .build()
+        return IndexBuilder
+            .create()
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(new IncrementalIndexSchema.Builder()
+                        .withRollup(false)
+                        .withTimestampSpec(new TimestampSpec("time", null, null))
+                        .withDimensionsSpec(new DimensionsSpec(dimensions))
+                        .build()
+            )
+            .inputSource(
+                ResourceInputSource.of(
+                    TestIndex.class.getClassLoader(),
+                    "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
                 )
-                .inputSource(
-                    ResourceInputSource.of(
-                        TestIndex.class.getClassLoader(),
-                        "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
-                    )
-                )
-                .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
-                .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
-                .buildIncrementalIndex()
-        );
+            )
+            .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+            .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
+            .buildIncrementalIndex();
       }
       finally {
         FileUtils.deleteDirectory(tmpDir);

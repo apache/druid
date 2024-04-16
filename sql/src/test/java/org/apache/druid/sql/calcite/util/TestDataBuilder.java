@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -56,11 +57,13 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -79,11 +82,13 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -601,6 +606,19 @@ public class TestDataBuilder
       DateTimes.nowUtc().toString()
   );
 
+  public static QueryableIndex makeWikipediaIndex(File tmpDir)
+  {
+    try {
+      final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+      final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      return TestIndex.INDEX_IO.loadIndex(directory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
   {
     final List<DimensionSchema> dimensions = Arrays.asList(
@@ -917,7 +935,7 @@ public class TestDataBuilder
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
-        TestIndex.getMMappedWikipediaIndex()
+        makeWikipediaIndex(tmpDir)
     ).add(
       DataSegment.builder()
                  .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
