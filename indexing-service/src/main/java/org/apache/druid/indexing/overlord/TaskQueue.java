@@ -427,10 +427,10 @@ public class TaskQueue
             if (e instanceof MaxAllowedLocksExceededException) {
               errorMessage = e.getMessage();
             } else {
-              errorMessage = StringUtils.format(
+              errorMessage = StringUtils.chop(StringUtils.format(
                   "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
                   e.getMessage()
-              );
+              ), 100);
             }
             notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
             continue;
