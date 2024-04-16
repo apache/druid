@@ -83,7 +83,9 @@ public interface VectorAggregator
   }
 
   /**
-   * Release any resources used by the aggregator.
+   * Release any resources used by the aggregator. The aggregator may be reused after this call. This call would be
+   * more properly named "reset", but we use the name "close" to improve compatibility with existing aggregator
+   * implementations in extensions.
    */
   void close();
 }
