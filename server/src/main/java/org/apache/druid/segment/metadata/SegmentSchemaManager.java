@@ -191,10 +191,12 @@ public class SegmentSchemaManager
 
       // There is a possibility of race with schema cleanup Coordinator duty.
       // The duty could delete the unused schema. We try to mark them used.
-      // However, if the duty succeeds in deleting it we just fail the transaction and retry.
+      // However, if the duty succeeds in deleting it the transaction fails due to consistency guarantees.
+      // The failed transaction is retried.
       // Since the deletion period would be at least > 1h, we are sure that the race wouldn't arise on retry.
       // There is another race, wherein used schema could be marked as unused by the cleanup duty.
-      // The implication is that a segment could reference an unused schema.
+      // The implication is that a segment could reference an unused schema. Since there is a significant gap
+      // between marking the segment as unused and deletion, the schema won't be lost during retry.
       // There is no functional problem as such, since the duty would itself mark those schema as used.
       if (unusedExistingFingerprints.size() > 0) {
         // make the unused schema as used to prevent deletion
@@ -212,13 +214,6 @@ public class SegmentSchemaManager
               .bind("datasource", dataSource)
               .bind("version", schemaVersion)
               .execute();
-
-        // it is possible that a delete job could have actually deleted these unused schema
-        // in that scenario fail the transaction
-        Map<Boolean, Set<String>> unusedFingerprintStatus = fingerprintExistBatch(handle, dataSource, schemaVersion, unusedExistingFingerprints);
-        if (!unusedExistingFingerprints.equals(unusedFingerprintStatus.get(true))) {
-          throw new ISE("Failed to mark unused schema as used for datasource: [%s], fingerprints: [%s].", dataSource, unusedExistingFingerprints);
-        }
       }
 
       Map<String, SchemaPayload> schemaPayloadToCreate = new HashMap<>();
@@ -349,6 +344,10 @@ public class SegmentSchemaManager
     }
   }
 
+  /**
+   * Query the metadata DB to filter the fingerprints that exists.
+   * It returns separate set for used and unused fingerprints in a map.
+   */
   private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, String dataSource, int schemaVersion, Set<String> fingerprintsToInsert)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
