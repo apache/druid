@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * FilterBundle is a container for all the goodies used for producing filtered cursors, a {@link ImmutableBitmap} if
@@ -271,6 +272,8 @@ public class FilterBundle
 
   public static class IndexBundleInfo
   {
+    private static final Pattern PATTERN_LINE_START = Pattern.compile("(?m)^");
+
     private final Supplier<String> filter;
     private final List<IndexBundleInfo> indexes;
     private final int selectionSize;
@@ -328,7 +331,7 @@ public class FilterBundle
 
       if (indexes != null) {
         for (final IndexBundleInfo info : indexes) {
-          sb.append(info.describe().replaceAll("(?m)^", "  "));
+          sb.append(PATTERN_LINE_START.matcher(info.describe()).replaceAll("  "));
         }
       }
 
@@ -349,6 +352,8 @@ public class FilterBundle
 
   public static class MatcherBundleInfo
   {
+    private static final Pattern PATTERN_LINE_START = Pattern.compile("(?m)^");
+
     private final Supplier<String> filter;
     @Nullable
     final List<MatcherBundleInfo> matchers;
@@ -400,12 +405,12 @@ public class FilterBundle
 
       if (partialIndex != null) {
         sb.append("  with partial ")
-          .append(partialIndex.describe().replaceAll("(?m)^", "  ").replaceAll("^  ", ""));
+          .append(PATTERN_LINE_START.matcher(partialIndex.describe()).replaceAll("  ").substring(2));
       }
 
       if (matchers != null) {
         for (MatcherBundleInfo info : matchers) {
-          sb.append(info.describe().replaceAll("(?m)^", "  "));
+          sb.append(PATTERN_LINE_START.matcher(info.describe()).replaceAll("  "));
         }
       }
 
