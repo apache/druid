@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Limits;
@@ -57,6 +58,7 @@ import java.util.stream.IntStream;
 public class TaskReportQueryListenerTest
 {
   private static final String TASK_ID = "mytask";
+  private static final Map<String, Object> TASK_CONTEXT = ImmutableMap.of("foo", "bar");
   private static final List<MSQResultsReport.ColumnAndType> SIGNATURE = ImmutableList.of(
       new MSQResultsReport.ColumnAndType("x", ColumnType.STRING)
   );
@@ -73,7 +75,8 @@ public class TaskReportQueryListenerTest
         TaskReportMSQDestination.instance(),
         Suppliers.ofInstance(baos)::get,
         JSON_MAPPER,
-        TASK_ID
+        TASK_ID,
+        TASK_CONTEXT
     );
 
     Assert.assertTrue(listener.readResults());
@@ -108,13 +111,15 @@ public class TaskReportQueryListenerTest
         )
     );
 
-    final Map<String, TaskReport> reportMap =
+    final TaskReport.ReportMap reportMap =
         JSON_MAPPER.readValue(
             baos.toByteArray(),
-            new TypeReference<Map<String, TaskReport>>() {}
+            new TypeReference<TaskReport.ReportMap>() {}
         );
 
-    Assert.assertEquals(ImmutableSet.of("multiStageQuery"), reportMap.keySet());
+    Assert.assertEquals(ImmutableSet.of("multiStageQuery", TaskContextReport.REPORT_KEY), reportMap.keySet());
+    Assert.assertEquals(TASK_CONTEXT, ((TaskContextReport) reportMap.get(TaskContextReport.REPORT_KEY)).getPayload());
+
     final MSQTaskReport report = (MSQTaskReport) reportMap.get("multiStageQuery");
     final List<List<Object>> results =
         report.getPayload().getResults().getResults().stream().map(Arrays::asList).collect(Collectors.toList());
@@ -138,7 +143,8 @@ public class TaskReportQueryListenerTest
         DurableStorageMSQDestination.instance(),
         Suppliers.ofInstance(baos)::get,
         JSON_MAPPER,
-        TASK_ID
+        TASK_ID,
+        TASK_CONTEXT
     );
 
     Assert.assertTrue(listener.readResults());
@@ -174,13 +180,15 @@ public class TaskReportQueryListenerTest
         )
     );
 
-    final Map<String, TaskReport> reportMap =
+    final TaskReport.ReportMap reportMap =
         JSON_MAPPER.readValue(
             baos.toByteArray(),
-            new TypeReference<Map<String, TaskReport>>() {}
+            new TypeReference<TaskReport.ReportMap>() {}
         );
 
-    Assert.assertEquals(ImmutableSet.of("multiStageQuery"), reportMap.keySet());
+    Assert.assertEquals(ImmutableSet.of("multiStageQuery", TaskContextReport.REPORT_KEY), reportMap.keySet());
+    Assert.assertEquals(TASK_CONTEXT, ((TaskContextReport) reportMap.get(TaskContextReport.REPORT_KEY)).getPayload());
+
     final MSQTaskReport report = (MSQTaskReport) reportMap.get("multiStageQuery");
     final List<List<Object>> results =
         report.getPayload().getResults().getResults().stream().map(Arrays::asList).collect(Collectors.toList());

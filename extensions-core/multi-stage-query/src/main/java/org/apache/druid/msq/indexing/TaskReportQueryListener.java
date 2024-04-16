@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.exec.OutputChannelMode;
@@ -37,6 +38,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Query listener that writes {@link MSQTaskReport} to an {@link OutputStream}.
@@ -64,6 +66,7 @@ public class TaskReportQueryListener implements QueryListener
   private final ObjectMapper jsonMapper;
   private final SerializerProvider serializers;
   private final String taskId;
+  private final Map<String, Object> taskContext;
 
   private JsonGenerator jg;
   private long numResults;
@@ -73,7 +76,8 @@ public class TaskReportQueryListener implements QueryListener
       final MSQDestination destination,
       final OutputStreamSupplier reportSink,
       final ObjectMapper jsonMapper,
-      final String taskId
+      final String taskId,
+      final Map<String, Object> taskContext
   )
   {
     this.rowsInTaskReport = destination.getRowsInTaskReport();
@@ -81,6 +85,7 @@ public class TaskReportQueryListener implements QueryListener
     this.jsonMapper = jsonMapper;
     this.serializers = jsonMapper.getSerializerProviderInstance();
     this.taskId = taskId;
+    this.taskContext = taskContext;
   }
 
   @Override
@@ -159,6 +164,7 @@ public class TaskReportQueryListener implements QueryListener
 
       jg.writeEndObject(); // End MSQTaskReportPayload
       jg.writeEndObject(); // End MSQTaskReport
+      jg.writeObjectField(TaskContextReport.REPORT_KEY, new TaskContextReport(taskId, taskContext));
       jg.writeEndObject(); // End report
       jg.close();
     }

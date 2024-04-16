@@ -261,7 +261,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
         querySpec.getDestination(),
         () -> toolbox.getTaskReportFileWriter().openReportOutputStream(getId()),
         toolbox.getJsonMapper(),
-        getId()
+        getId(),
+        getContext()
     );
 
     controller.run(queryListener);
