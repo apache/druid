@@ -489,7 +489,8 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Fetches all the pending segments present in the metadata store for a given datasource
    * @param datasource datasource to be queried
+   * @param interval interval with which segments overlap
    * @return List of pending segment records
    */
-  List<PendingSegmentRecord> getAllPendingSegments(String datasource);
+  List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
 }

@@ -57,7 +57,6 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -94,7 +93,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -1352,7 +1350,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private int insertPendingSegmentsIntoMetastore(
+  @VisibleForTesting
+  int insertPendingSegmentsIntoMetastore(
       Handle handle,
       List<PendingSegmentRecord> pendingSegments,
       String dataSource,
@@ -1394,51 +1393,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return Arrays.stream(updated).sum();
   }
 
-  private int insertPendingSegmentsIntoMetastore(
-      Handle handle,
-      Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments,
-      String dataSource,
-      boolean skipSegmentLineageCheck
-  ) throws JsonProcessingException
-  {
-    final PreparedBatch insertBatch = handle.prepareBatch(
-        StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
-        + "sequence_name_prev_id_sha1, payload) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
-        + ":sequence_name_prev_id_sha1, :payload)",
-        dbTables.getPendingSegmentsTable(),
-        connector.getQuoteString()
-    ));
-
-    // Deduplicate the segment ids by inverting the map
-    Map<SegmentIdWithShardSpec, SegmentCreateRequest> segmentIdToRequest = new HashMap<>();
-    createdSegments.forEach((request, segmentId) -> segmentIdToRequest.put(segmentId, request));
-
-    final String now = DateTimes.nowUtc().toString();
-    for (Map.Entry<SegmentIdWithShardSpec, SegmentCreateRequest> entry : segmentIdToRequest.entrySet()) {
-      final SegmentCreateRequest request = entry.getValue();
-      final SegmentIdWithShardSpec segmentId = entry.getKey();
-      final Interval interval = segmentId.getInterval();
-
-      insertBatch.add()
-                 .bind("id", segmentId.toString())
-                 .bind("dataSource", dataSource)
-                 .bind("created_date", now)
-                 .bind("start", interval.getStart().toString())
-                 .bind("end", interval.getEnd().toString())
-                 .bind("sequence_name", request.getSequenceName())
-                 .bind("sequence_prev_id", request.getPreviousSegmentId())
-                 .bind(
-                     "sequence_name_prev_id_sha1",
-                     getSequenceNameAndPrevIdSha(request, segmentId, skipSegmentLineageCheck)
-                 )
-                 .bind("payload", jsonMapper.writeValueAsBytes(segmentId));
-    }
-    int[] updated = insertBatch.execute();
-    return Arrays.stream(updated).sum();
-  }
-
   private void insertPendingSegmentIntoMetastore(
       Handle handle,
       SegmentIdWithShardSpec newIdentifier,
@@ -1471,183 +1425,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind("payload", jsonMapper.writeValueAsBytes(newIdentifier))
           .bind("task_allocator_id", taskAllocatorId)
           .execute();
-  }
-
-  /**
-   * Creates new IDs for the given append segments if a REPLACE task started and
-   * finished after these append segments had already been allocated. The newly
-   * created IDs belong to the same interval and version as the segments committed
-   * by the REPLACE task.
-   */
-  private Set<DataSegment> createNewIdsForAppendSegments(
-      Handle handle,
-      String dataSource,
-      Set<DataSegment> segmentsToAppend
-  )
-  {
-    if (segmentsToAppend.isEmpty()) {
-      return Collections.emptySet();
-    }
-
-    final Set<Interval> appendIntervals = new HashSet<>();
-    final TreeMap<String, Set<DataSegment>> appendVersionToSegments = new TreeMap<>();
-    for (DataSegment segment : segmentsToAppend) {
-      appendIntervals.add(segment.getInterval());
-      appendVersionToSegments.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
-                             .add(segment);
-    }
-
-    // Fetch all used segments that overlap with any of the append intervals
-    final Collection<DataSegment> overlappingSegments = retrieveUsedSegmentsForIntervals(
-        dataSource,
-        new ArrayList<>(appendIntervals),
-        Segments.INCLUDING_OVERSHADOWED
-    );
-
-    final Map<String, Set<Interval>> overlappingVersionToIntervals = new HashMap<>();
-    final Map<Interval, Set<DataSegment>> overlappingIntervalToSegments = new HashMap<>();
-    for (DataSegment segment : overlappingSegments) {
-      overlappingVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
-                                   .add(segment.getInterval());
-      overlappingIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
-                                   .add(segment);
-    }
-
-    final Set<DataSegment> upgradedSegments = new HashSet<>();
-    for (Map.Entry<String, Set<Interval>> entry : overlappingVersionToIntervals.entrySet()) {
-      final String upgradeVersion = entry.getKey();
-      Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
-          upgradeVersion,
-          entry.getValue(),
-          appendVersionToSegments
-      );
-      for (Map.Entry<Interval, Set<DataSegment>> upgradeEntry : segmentsToUpgrade.entrySet()) {
-        final Interval upgradeInterval = upgradeEntry.getKey();
-        final Set<DataSegment> segmentsAlreadyOnVersion
-            = overlappingIntervalToSegments.getOrDefault(upgradeInterval, Collections.emptySet())
-                                           .stream()
-                                           .filter(s -> s.getVersion().equals(upgradeVersion))
-                                           .collect(Collectors.toSet());
-        Set<DataSegment> segmentsUpgradedToVersion = createNewIdsForAppendSegmentsWithVersion(
-            handle,
-            upgradeVersion,
-            upgradeInterval,
-            upgradeEntry.getValue(),
-            segmentsAlreadyOnVersion
-        );
-        log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);
-        upgradedSegments.addAll(segmentsUpgradedToVersion);
-      }
-    }
-
-    return upgradedSegments;
-  }
-
-  /**
-   * Creates a Map from eligible interval to Set of segments that are fully
-   * contained in that interval and have a version strictly lower than {@code #cutoffVersion}.
-   */
-  private Map<Interval, Set<DataSegment>> getSegmentsWithVersionLowerThan(
-      String cutoffVersion,
-      Set<Interval> eligibleIntervals,
-      TreeMap<String, Set<DataSegment>> versionToSegments
-  )
-  {
-    final Set<DataSegment> eligibleSegments
-        = versionToSegments.headMap(cutoffVersion).values().stream()
-                           .flatMap(Collection::stream)
-                           .collect(Collectors.toSet());
-
-    final Map<Interval, Set<DataSegment>> eligibleIntervalToSegments = new HashMap<>();
-
-    for (DataSegment segment : eligibleSegments) {
-      final Interval segmentInterval = segment.getInterval();
-      for (Interval eligibleInterval : eligibleIntervals) {
-        if (eligibleInterval.contains(segmentInterval)) {
-          eligibleIntervalToSegments.computeIfAbsent(eligibleInterval, itvl -> new HashSet<>())
-                                    .add(segment);
-          break;
-        } else if (eligibleInterval.overlaps(segmentInterval)) {
-          // Committed interval overlaps only partially
-          throw new ISE(
-              "Committed interval[%s] conflicts with interval[%s] of append segment[%s].",
-              eligibleInterval, segmentInterval, segment.getId()
-          );
-        }
-      }
-    }
-
-    return eligibleIntervalToSegments;
-  }
-
-  /**
-   * Computes new segment IDs that belong to the upgradeInterval and upgradeVersion.
-   *
-   * @param committedSegments Segments that already exist in the upgradeInterval
-   *                          at upgradeVersion.
-   */
-  private Set<DataSegment> createNewIdsForAppendSegmentsWithVersion(
-      Handle handle,
-      String upgradeVersion,
-      Interval upgradeInterval,
-      Set<DataSegment> segmentsToUpgrade,
-      Set<DataSegment> committedSegments
-  )
-  {
-    // Find the committed segments with the higest partition number
-    SegmentIdWithShardSpec committedMaxId = null;
-    for (DataSegment committedSegment : committedSegments) {
-      if (committedMaxId == null
-          || committedMaxId.getShardSpec().getPartitionNum() < committedSegment.getShardSpec().getPartitionNum()) {
-        committedMaxId = SegmentIdWithShardSpec.fromDataSegment(committedSegment);
-      }
-    }
-
-    // Get pending segments for the new version to determine the next partition number to allocate
-    final String dataSource = segmentsToUpgrade.iterator().next().getDataSource();
-    final List<PendingSegmentRecord> pendingSegments
-        = getPendingSegmentsForIntervalWithHandle(handle, dataSource, upgradeInterval);
-    final Set<SegmentIdWithShardSpec> allAllocatedIds = new HashSet<>(
-        pendingSegments.stream()
-                       .map(PendingSegmentRecord::getId)
-                       .collect(Collectors.toSet())
-    );
-
-    // Create new IDs for each append segment
-    final Set<DataSegment> newSegmentIds = new HashSet<>();
-    for (DataSegment segment : segmentsToUpgrade) {
-      SegmentCreateRequest request = new SegmentCreateRequest(
-          segment.getId() + "__" + upgradeVersion,
-          null,
-          upgradeVersion,
-          NumberedPartialShardSpec.instance(),
-          null,
-          null
-      );
-
-      // Create new segment ID based on committed segments, allocated pending segments
-      // and new IDs created so far in this method
-      final SegmentIdWithShardSpec newId = createNewSegment(
-          request,
-          dataSource,
-          upgradeInterval,
-          upgradeVersion,
-          committedMaxId,
-          allAllocatedIds
-      ).getId();
-
-      // Update the set so that subsequent segment IDs use a higher partition number
-      allAllocatedIds.add(newId);
-      newSegmentIds.add(
-          DataSegment.builder(segment)
-                     .interval(newId.getInterval())
-                     .version(newId.getVersion())
-                     .shardSpec(newId.getShardSpec())
-                     .build()
-      );
-    }
-
-    return newSegmentIds;
   }
 
   private Map<SegmentCreateRequest, PendingSegmentRecord> createNewSegments(
@@ -2785,10 +2562,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<PendingSegmentRecord> getAllPendingSegments(String datasource)
+  public List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval)
   {
     return connector.retryWithHandle(
-        handle -> getPendingSegmentsForIntervalWithHandle(handle, datasource, Intervals.ETERNITY)
+        handle -> getPendingSegmentsForIntervalWithHandle(handle, datasource, interval)
     );
   }
 

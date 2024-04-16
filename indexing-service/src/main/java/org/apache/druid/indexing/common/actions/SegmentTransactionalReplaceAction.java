@@ -37,7 +37,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -45,6 +45,20 @@ import java.util.stream.Collectors;
 /**
  * Replace segments in metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
+ *
+ * <pre>
+ *  Pseudo code (for a single interval)
+ *- For a replace lock held over an interval:
+ *     transaction {
+ *       commit input segments contained within interval
+ *       upgrade ids in the upgradeSegments table corresponding to this task to the replace lock's version and commit them
+ *       fetch payload, task_allocator_id for pending segments
+ *       upgrade each such pending segment to the replace lock's version with the corresponding root segment
+ *     }
+ * For every pending segment with version == replace lock version:
+ *    Fetch payload, group_id or the pending segment and relay them to the supervisor
+ *    The supervisor relays the payloads to all the tasks with the corresponding group_id to serve realtime queries
+ * </pre>
  */
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
@@ -149,25 +163,38 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return;
     }
 
-    List<PendingSegmentRecord> pendingSegments
-        = toolbox.getIndexerMetadataStorageCoordinator().getAllPendingSegments(task.getDataSource());
-    Map<String, SegmentIdWithShardSpec> pendingSegmentIdMap = new HashMap<>();
-    pendingSegments.forEach(pendingSegment -> pendingSegmentIdMap.put(
+    final Set<ReplaceTaskLock> replaceLocksForTask = toolbox
+        .getTaskLockbox()
+        .getAllReplaceLocksForDatasource(task.getDataSource())
+        .stream()
+        .filter(lock -> task.getId().equals(lock.getSupervisorTaskId()))
+        .collect(Collectors.toSet());
+
+
+    Set<PendingSegmentRecord> pendingSegments = new HashSet<>();
+    for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
+      pendingSegments.addAll(
+          toolbox.getIndexerMetadataStorageCoordinator()
+                 .getPendingSegments(task.getDataSource(), replaceLock.getInterval())
+      );
+    }
+    Map<String, SegmentIdWithShardSpec> idToPendingSegment = new HashMap<>();
+    pendingSegments.forEach(pendingSegment -> idToPendingSegment.put(
         pendingSegment.getId().asSegmentId().toString(),
         pendingSegment.getId()
     ));
-    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments = new HashMap<>();
+    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> segmentToParent = new HashMap<>();
     pendingSegments.forEach(pendingSegment -> {
       if (pendingSegment.getUpgradedFromSegmentId() != null
           && !pendingSegment.getUpgradedFromSegmentId().equals(pendingSegment.getId().asSegmentId().toString())) {
-        upgradedPendingSegments.put(
+        segmentToParent.put(
             pendingSegment.getId(),
-            pendingSegmentIdMap.get(pendingSegment.getUpgradedFromSegmentId())
+            idToPendingSegment.get(pendingSegment.getUpgradedFromSegmentId())
         );
       }
     });
 
-    upgradedPendingSegments.forEach(
+    segmentToParent.forEach(
         (newId, oldId) -> supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
             activeSupervisorIdWithAppendLock.get(),
             oldId,

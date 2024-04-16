@@ -295,7 +295,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<PendingSegmentRecord> getAllPendingSegments(String datasource)
+  public List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval)
   {
     throw new UnsupportedOperationException();
   }

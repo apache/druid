@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -44,6 +45,17 @@ import java.util.stream.Collectors;
 /**
  * Append segments to metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
+ *
+ * <pre>
+ * Pseudo code (for a single interval):
+ * For an append lock held over an interval:
+ *     transaction {
+ *       commit input segments contained within interval
+ *       if there is an active replace lock over the interval:
+ *         add an entry for the inputSegment corresponding to the replace lock's task in the upgradeSegments table
+ *       fetch pending segments with parent contained within the input segments, and commit them
+ *     }
+ * </pre>
  */
 public class SegmentTransactionalAppendAction implements TaskAction<SegmentPublishResult>
 {
@@ -115,6 +127,13 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      throw new IAE(
+          "Task[%s] of type[%s] cannot append segments as it does not implement PendingSegmentAllocatingTask.",
+          task.getId(),
+          task.getType()
+      );
+    }
     // Verify that all the locks are of expected type
     final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
     for (TaskLock lock : locks) {

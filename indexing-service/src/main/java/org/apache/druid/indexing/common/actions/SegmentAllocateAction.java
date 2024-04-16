@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
@@ -210,6 +211,13 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       final TaskActionToolbox toolbox
   )
   {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      throw new IAE(
+          "Task[%s] of type[%s] cannot allocate segments as it does not implement PendingSegmentAllocatingTask.",
+          task.getId(),
+          task.getType()
+      );
+    }
     int attempt = 0;
     while (true) {
       attempt++;

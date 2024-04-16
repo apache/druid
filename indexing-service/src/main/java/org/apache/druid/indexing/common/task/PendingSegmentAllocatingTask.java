@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.common.task;
 
+/**
+ * An interface to be implemented by every appending task that allocates pending segments.
+ */
 public interface PendingSegmentAllocatingTask
 {
   /**

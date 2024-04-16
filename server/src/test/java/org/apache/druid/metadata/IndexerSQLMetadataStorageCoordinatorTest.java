@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -471,44 +469,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  private Boolean insertPendingSegmentAndSequenceName(Pair<SegmentIdWithShardSpec, String> pendingSegmentSequenceName)
-  {
-    final SegmentIdWithShardSpec pendingSegment = pendingSegmentSequenceName.lhs;
-    final String sequenceName = pendingSegmentSequenceName.rhs;
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> {
-          handle.createStatement(
-                    StringUtils.format(
-                        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
-                        + "sequence_name_prev_id_sha1, payload) "
-                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
-                        + ":sequence_name_prev_id_sha1, :payload)",
-                        table,
-                        derbyConnector.getQuoteString()
-                    )
-                )
-                .bind("id", pendingSegment.toString())
-                .bind("dataSource", pendingSegment.getDataSource())
-                .bind("created_date", DateTimes.nowUtc().toString())
-                .bind("start", pendingSegment.getInterval().getStart().toString())
-                .bind("end", pendingSegment.getInterval().getEnd().toString())
-                .bind("sequence_name", sequenceName)
-                .bind("sequence_prev_id", pendingSegment.toString())
-                .bind("sequence_name_prev_id_sha1", BaseEncoding.base16().encode(
-                    Hashing.sha1()
-                           .newHasher()
-                           .putLong((long) pendingSegment.hashCode() * sequenceName.hashCode())
-                           .hash()
-                           .asBytes()
-                ))
-                .bind("payload", mapper.writeValueAsBytes(pendingSegment))
-                .execute();
-          return true;
-        }
-    );
-  }
-
   private Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId)
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
@@ -568,7 +528,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  //@Test
+  @Test
   public void testCommitAppendSegments()
   {
     final String v1 = "2023-01-01";
@@ -620,7 +580,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // Commit the segment and verify the results
     SegmentPublishResult commitResult
-        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, null);
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, "append");
     Assert.assertTrue(commitResult.isSuccess());
     Assert.assertEquals(appendSegments, commitResult.getSegments());
 
@@ -643,12 +603,36 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
   }
 
-  //@Test
+  @Test
   public void testCommitReplaceSegments()
   {
     final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
+    final PendingSegmentRecord pendingSegmentInInterval = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-01-01/2023-01-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    final PendingSegmentRecord pendingSegmentOutsideInterval = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-04-01/2023-04-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
           "foo",
@@ -665,6 +649,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
     insertUsedSegments(segmentsAppendedWithReplaceLock);
+    derbyConnector.retryWithHandle(
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(
+            handle,
+            ImmutableList.of(pendingSegmentInInterval, pendingSegmentOutsideInterval),
+            "foo",
+            true
+        )
+    );
     insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap);
 
     final Set<DataSegment> replacingSegments = new HashSet<>();
@@ -709,6 +701,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       }
       Assert.assertTrue(hasBeenCarriedForward);
     }
+
+    List<PendingSegmentRecord> pendingSegmentsInInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-01-01/2023-02-01"));
+    Assert.assertEquals(2, pendingSegmentsInInterval.size());
+    final SegmentId rootPendingSegmentId = pendingSegmentInInterval.getId().asSegmentId();
+    if (pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId() == null) {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(0).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(1).getUpgradedFromSegmentId());
+    } else {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(1).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId());
+    }
+
+    List<PendingSegmentRecord> pendingSegmentsOutsideInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-04-01/2023-05-01"));
+    Assert.assertEquals(1, pendingSegmentsOutsideInterval.size());
+    Assert.assertEquals(
+        pendingSegmentOutsideInterval.getId().asSegmentId(), pendingSegmentsOutsideInterval.get(0).getId().asSegmentId()
+    );
   }
 
   @Test
