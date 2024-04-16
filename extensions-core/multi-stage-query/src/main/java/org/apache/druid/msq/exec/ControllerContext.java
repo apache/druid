@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;

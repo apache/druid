@@ -56,6 +56,19 @@ Numer. Math, 58 (1991) pp. 583--590
  precisely the same across query runs.
 :::
 
+### Variance and Standard Deviation SQL Aggregators
+
+You can use the variance and standard deviation aggregation functions in the SELECT clause of any Druid SQL query.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`VAR_POP(expr)`|Computes variance population of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`VAR_SAMP(expr)`|Computes variance sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`VARIANCE(expr)`|Computes variance sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`STDDEV(expr)`|Computes standard deviation sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+
 ### Pre-aggregating variance at ingestion time
 
 To use this feature, an "variance" aggregator must be included at indexing time.
@@ -107,6 +120,18 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
 
 ### Timeseries query
 
+#### Druid SQL
+
+```SQL
+SELECT 
+  DATE_TRUNC('day', __time),
+  VARIANCE("index_var") AS index_var
+FROM "testing"
+WHERE TIME_IN_INTERVAL(__time, '2013-03-01/2016-03-20')
+GROUP BY 1
+```
+
+#### Native Query
 ```json
 {
   "queryType": "timeseries",
@@ -120,12 +145,27 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
     }
   ],
   "intervals": [
-    "2016-03-01T00:00:00.000/2013-03-20T00:00:00.000"
+    "2016-03-01/2013-03-20"
   ]
 }
 ```
 
 ### TopN query
+
+#### Druid SQL
+
+```SQL
+SELECT
+  alias,
+  VARIANCE("index") AS index_var
+FROM "testing"
+WHERE TIME_IN_INTERVAL(__time, '2016-03-06/2016-03-07')
+GROUP BY 1
+ORDER BY 2
+LIMIT 5
+```
+
+#### Native Query
 
 ```json
 {
@@ -149,12 +189,25 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
     }
   ],
   "intervals": [
-    "2016-03-06T00:00:00/2016-03-06T23:59:59"
+    "2016-03-06/2016-03-07"
   ]
 }
 ```
 
 ### GroupBy query
+
+#### Druid SQL
+
+```SQL
+SELECT
+  alias,
+  VARIANCE("index") AS index_var
+FROM "testing"
+WHERE TIME_IN_INTERVAL(__time, '2016-03-06/2016-03-07')
+GROUP BY alias
+```
+
+#### Native Query
 
 ```json
 {
@@ -177,7 +230,7 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
     }
   ],
   "intervals": [
-    "2016-03-06T00:00:00/2016-03-06T23:59:59"
+    "2016-03-06/2016-03-07"
   ]
 }
 ```

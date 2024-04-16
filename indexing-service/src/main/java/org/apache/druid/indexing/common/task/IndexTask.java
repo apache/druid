@@ -48,9 +48,9 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
@@ -923,7 +923,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           Tasks.DEFAULT_STORE_COMPACTION_STATE
       );
       final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
-          compactionStateAnnotateFunction(
+          addCompactionStateToSegments(
               storeCompactionState,
               toolbox,
               ingestionSchema
