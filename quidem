@@ -31,13 +31,16 @@ OPTS+=" -Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePl
 OPTS+=" -pl sql -Dtest=SqlQuidemTest"
 OPTS+=" org.apache.maven.plugins:maven-surefire-plugin:test"
 
-if [ "$1" == "-h" ];then
-cat << EOF
+case "$1" in
+ -h|--help)
+	cat << EOF
 Run SqlQuidemTest tests.
+  -q				quiet (recommened)
   -Dquidem.overwrite		enables overwrite mode
   -Dquidem.filter=*join*	runs only tests matching path expression
 EOF
 exit 1
-fi
+	;;
+esac
 
 exec mvn "$@" $OPTS
