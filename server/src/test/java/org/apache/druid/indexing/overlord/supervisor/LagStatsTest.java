@@ -17,46 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.supervisor.autoscaler;
+package org.apache.druid.indexing.overlord.supervisor;
 
-public class LagStats
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class LagStatsTest
 {
-  private final long maxLag;
-  private final long totalLag;
-  private final long avgLag;
 
-  public LagStats(long maxLag, long totalLag, long avgLag)
+  @Test
+  public void lagStatsByMetric()
   {
-    this.maxLag = maxLag;
-    this.totalLag = totalLag;
-    this.avgLag = avgLag;
-  }
+    int max = 1;
+    int avg = 2;
+    int total = 3;
+    LagStats lag = new LagStats(max, total, avg);
 
-  public long getMaxLag()
-  {
-    return maxLag;
-  }
-
-  public long getTotalLag()
-  {
-    return totalLag;
-  }
-
-  public long getAvgLag()
-  {
-    return avgLag;
-  }
-
-  public long get(LagMetric metric)
-  {
-    switch (metric) {
-      case AVERAGE:
-        return avgLag;
-      case TOTAL:
-        return totalLag;
-      case MAX:
-        return maxLag;
-    }
-    throw new IllegalStateException("Unknown Metric");
+    Assert.assertEquals(max, lag.get(LagMetric.MAX));
+    Assert.assertEquals(total, lag.get(LagMetric.TOTAL));
+    Assert.assertEquals(avg, lag.get(LagMetric.AVERAGE));
   }
 }
