@@ -21,6 +21,7 @@ package org.apache.druid.delta.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import io.delta.kernel.Scan;
@@ -93,13 +94,13 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
   @JsonProperty
   @Nullable
-  private final DeltaFilter deltaFilter;
+  private final DeltaFilter filter;
 
   @JsonCreator
   public DeltaInputSource(
-      @JsonProperty("tablePath") String tablePath,
-      @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit,
-      @JsonProperty("filter") @Nullable DeltaFilter deltaFilter
+      @JsonProperty("tablePath") final String tablePath,
+      @JsonProperty("deltaSplit") @Nullable final DeltaSplit deltaSplit,
+      @JsonProperty("filter") @Nullable final DeltaFilter filter
   )
   {
     if (tablePath == null) {
@@ -107,7 +108,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     }
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
-    this.deltaFilter = deltaFilter;
+    this.filter = filter;
   }
 
   @Override
@@ -158,8 +159,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         );
 
         final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(tableClient);
-        if (deltaFilter != null) {
-          scanBuilder.withFilter(tableClient, deltaFilter.getFilterPredicate(fullSnapshotSchema));
+        if (filter != null) {
+          scanBuilder.withFilter(tableClient, filter.getFilterPredicate(fullSnapshotSchema));
         }
         final Scan scan = scanBuilder.withReadSchema(tableClient, prunedSchema).build();
         final CloseableIterator<FilteredColumnarBatch> scanFilesIter = scan.getScanFiles(tableClient);
@@ -214,8 +215,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     final StructType fullSnapshotSchema = latestSnapshot.getSchema(tableClient);
 
     final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(tableClient);
-    if (deltaFilter != null) {
-      scanBuilder.withFilter(tableClient, deltaFilter.getFilterPredicate(fullSnapshotSchema));
+    if (filter != null) {
+      scanBuilder.withFilter(tableClient, filter.getFilterPredicate(fullSnapshotSchema));
     }
     final Scan scan = scanBuilder.withReadSchema(tableClient, fullSnapshotSchema).build();
     // scan files iterator for the current snapshot
@@ -251,7 +252,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     return new DeltaInputSource(
         tablePath,
         split.get(),
-        deltaFilter
+        filter
     );
   }
 
@@ -328,5 +329,17 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         scanFile,
         physicalDataIter
     );
+  }
+
+  @VisibleForTesting
+  String getTablePath()
+  {
+    return tablePath;
+  }
+
+  @VisibleForTesting
+  DeltaFilter getFilter()
+  {
+    return filter;
   }
 }

@@ -118,7 +118,7 @@
       </exclusions>
     </dependency>
 
-    <!-- Tests -->
+    <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

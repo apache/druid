@@ -42,8 +42,11 @@ import java.time.temporal.ChronoUnit;
 
 public abstract class DeltaBinaryOperatorFilter implements DeltaFilter
 {
+  @JsonProperty
   private final String operator;
+  @JsonProperty
   private final String column;
+  @JsonProperty
   private final String value;
 
   private DeltaBinaryOperatorFilter(
