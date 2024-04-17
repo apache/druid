@@ -31,12 +31,10 @@ import java.util.List;
 public class DeltaAndFilter implements DeltaFilter
 {
   @JsonProperty
-  private final List<DeltaFilter> predicates;
+  private final List<DeltaFilter> filters;
 
   @JsonCreator
-  public DeltaAndFilter(
-      @JsonProperty("filters") List<DeltaFilter> filters
-  )
+  public DeltaAndFilter(@JsonProperty("filters") final List<DeltaFilter> filters)
   {
     if (filters == null) {
       throw InvalidInput.exception("Delta and filter requires 2 filter predicates and must be non-empty.");
@@ -47,7 +45,7 @@ public class DeltaAndFilter implements DeltaFilter
           filters.size()
       );
     }
-    this.predicates = filters;
+    this.filters = filters;
   }
 
   @Override
@@ -55,8 +53,8 @@ public class DeltaAndFilter implements DeltaFilter
   {
     // This is simple for now. We can do a recursive flatten.
     return new And(
-        predicates.get(0).getFilterPredicate(snapshotSchema),
-        predicates.get(1).getFilterPredicate(snapshotSchema)
+        filters.get(0).getFilterPredicate(snapshotSchema),
+        filters.get(1).getFilterPredicate(snapshotSchema)
     );
   }
 }

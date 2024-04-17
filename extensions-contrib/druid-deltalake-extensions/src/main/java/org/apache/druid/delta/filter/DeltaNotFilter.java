@@ -31,9 +31,7 @@ public class DeltaNotFilter implements DeltaFilter
   private final DeltaFilter filter;
 
   @JsonCreator
-  public DeltaNotFilter(
-      @JsonProperty("filter") DeltaFilter filter
-  )
+  public DeltaNotFilter(@JsonProperty("filter") final DeltaFilter filter)
   {
     if (filter == null) {
       throw InvalidInput.exception("Delta not filter requiers 1 filter predicate and must be non-empty.");

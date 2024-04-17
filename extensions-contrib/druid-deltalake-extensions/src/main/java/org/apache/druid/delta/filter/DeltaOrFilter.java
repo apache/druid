@@ -34,9 +34,7 @@ public class DeltaOrFilter implements DeltaFilter
   private final List<DeltaFilter> filters;
 
   @JsonCreator
-  public DeltaOrFilter(
-      @JsonProperty("filters") List<DeltaFilter> filters
-  )
+  public DeltaOrFilter(@JsonProperty("filters") final List<DeltaFilter> filters)
   {
     if (filters == null) {
       throw InvalidInput.exception("Delta or filter requires 2 filter predicates and must be non-empty.");
