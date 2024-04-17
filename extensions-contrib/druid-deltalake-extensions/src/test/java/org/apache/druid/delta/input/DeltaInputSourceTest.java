@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class DeltaInputSourceTest
@@ -80,8 +81,8 @@ public class DeltaInputSourceTest
               PartitionedDeltaTable.DELTA_TABLE_PATH,
               PartitionedDeltaTable.FULL_SCHEMA,
               PartitionedDeltaTable.EXPECTED_ROWS
-          },
-          };
+          }
+      };
     }
 
     @Parameterized.Parameter(0)
@@ -141,123 +142,104 @@ public class DeltaInputSourceTest
     @Parameterized.Parameters
     public static Object[][] data()
     {
-      final DeltaBinaryOperatorFilter.DeltaEqualsFilter equalsFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
-          "name",
-          "Employee2"
-      );
-      final List<Map<String, Object>> equalsFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> k.get("name").equals("Employee2"))
-          .collect(Collectors.toList());
-
-      final DeltaBinaryOperatorFilter.DeltaGreaterThanFilter gtFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanFilter(
-          "name",
-          "Employee3"
-      );
-      final List<Map<String, Object>> gtFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> ((String) k.get("name")).compareTo("Employee3") > 0)
-          .collect(Collectors.toList());
-
-      final DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter lteFilter = new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter(
-          "name",
-          "Employee4"
-      );
-      final List<Map<String, Object>> lteFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> ((String) k.get("name")).compareTo("Employee4") <= 0)
-          .collect(Collectors.toList());
-
-      final DeltaAndFilter andFilter = new DeltaAndFilter(
-          Arrays.asList(
-              new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
-              new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee4")
-          )
-      );
-      final List<Map<String, Object>> andFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> k.get("name").equals("Employee1") && k.get("name").equals("Employee4"))
-          .collect(Collectors.toList());
-
-      final DeltaOrFilter orFilter = new DeltaOrFilter(
-          Arrays.asList(
-              new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee5"),
-              new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
-          )
-      );
-      final List<Map<String, Object>> orFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> k.get("name").equals("Employee5") || k.get("name").equals("Employee1"))
-          .collect(Collectors.toList());
-
-      final DeltaNotFilter notFilter = new DeltaNotFilter(
-          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee3")
-      );
-      final List<Map<String, Object>> notFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> !k.get("name").equals("Employee3"))
-          .collect(Collectors.toList());
-
-      final DeltaNotFilter notOfAndFilter = new DeltaNotFilter(andFilter);
-      final List<Map<String, Object>> notofAndFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> !(k.get("name").equals("Employee1") && k.get("name").equals("Employee4")))
-          .collect(Collectors.toList());
-
-      final DeltaNotFilter notOfOrFilter = new DeltaNotFilter(orFilter);
-      final List<Map<String, Object>> notofOrFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
-          .stream()
-          .filter(k -> !(k.get("name").equals("Employee5") || k.get("name").equals("Employee1")))
-          .collect(Collectors.toList());
-
       return new Object[][]{
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              equalsFilter,
+              new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee2"),
               PartitionedDeltaTable.FULL_SCHEMA,
-              equalsFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> row.get("name").equals("Employee2")
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              gtFilter,
+              new DeltaBinaryOperatorFilter.DeltaGreaterThanFilter("name", "Employee3"),
               PartitionedDeltaTable.FULL_SCHEMA,
-              gtFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> ((String) row.get("name")).compareTo("Employee3") > 0
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              lteFilter,
+              new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter("name", "Employee4"),
               PartitionedDeltaTable.FULL_SCHEMA,
-              lteFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> ((String) row.get("name")).compareTo("Employee4") <= 0
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              andFilter,
+              new DeltaAndFilter(
+                  Arrays.asList(
+                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
+                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee4")
+                  )
+              ),
               PartitionedDeltaTable.FULL_SCHEMA,
-              andFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> row.get("name").equals("Employee1") && row.get("name").equals("Employee4")
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              orFilter,
+              new DeltaOrFilter(
+                  Arrays.asList(
+                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee5"),
+                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
+                  )
+              ),
               PartitionedDeltaTable.FULL_SCHEMA,
-              orFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> row.get("name").equals("Employee5") || row.get("name").equals("Employee1")
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              notFilter,
+              new DeltaNotFilter(
+                  new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee3")
+              ),
               PartitionedDeltaTable.FULL_SCHEMA,
-              notFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> !row.get("name").equals("Employee3")
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              notOfAndFilter,
+              new DeltaNotFilter(
+                  new DeltaOrFilter(
+                      Arrays.asList(
+                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee5"),
+                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
+                      )
+                  )
+              ),
               PartitionedDeltaTable.FULL_SCHEMA,
-              notofAndFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> !(row.get("name").equals("Employee5") || row.get("name").equals("Employee1"))
+              )
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              notOfOrFilter,
+              new DeltaNotFilter(
+                  new DeltaAndFilter(
+                      Arrays.asList(
+                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
+                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee4")
+                      )
+                  )
+              ),
               PartitionedDeltaTable.FULL_SCHEMA,
-              notofOrFilterExpectedResults
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> (!(row.get("name").equals("Employee1") && row.get("name").equals("Employee4")))
+              )
           }
       };
     }
@@ -303,6 +285,14 @@ public class DeltaInputSourceTest
           }
         }
       }
+    }
+
+    private static List<Map<String, Object>> filterExpectedRows(
+        final List<Map<String, Object>> rows,
+        final Predicate<Map<String, Object>> filter
+    )
+    {
+      return rows.stream().filter(filter).collect(Collectors.toList());
     }
 
     @Test
