@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -53,6 +55,11 @@ public class SegmentSchemaBackFillQueue
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaBackFillQueue.class);
   private static final int MAX_BATCH_SIZE = 500;
+
+  /**
+   * This queue is updated by {@link AbstractSegmentMetadataCache#cacheExec} thread,
+   * and it is polled by {@link #executor} thread.
+   */
   private final BlockingDeque<SegmentSchemaMetadataPlus> queue = new LinkedBlockingDeque<>();
   private final long executionPeriod;
 
@@ -60,7 +67,7 @@ public class SegmentSchemaBackFillQueue
   private final SegmentSchemaCache segmentSchemaCache;
   private final ServiceEmitter emitter;
   private final CentralizedDatasourceSchemaConfig config;
-  private ScheduledExecutorService executor;
+  private final ScheduledExecutorService executor;
   private @Nullable ScheduledFuture<?> scheduledFuture = null;
 
   @Inject
@@ -77,9 +84,7 @@ public class SegmentSchemaBackFillQueue
     this.emitter = emitter;
     this.config = config;
     this.executionPeriod = config.getBackFillPeriod();
-    if (isEnabled()) {
-      this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s");
-    }
+    this.executor = isEnabled() ? scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s") : null;
   }
 
   @LifecycleStop
@@ -92,7 +97,7 @@ public class SegmentSchemaBackFillQueue
   public void leaderStart()
   {
     if (isEnabled()) {
-      scheduledFuture = executor.scheduleAtFixedRate(this::processBatchesDue, executionPeriod, executionPeriod, TimeUnit.MILLISECONDS);
+      scheduledFuture = executor.scheduleAtFixedRate(this::processBatchesDueSafely, executionPeriod, executionPeriod, TimeUnit.MILLISECONDS);
     }
   }
 
@@ -126,11 +131,24 @@ public class SegmentSchemaBackFillQueue
     return config.isEnabled() && config.isBackFillEnabled();
   }
 
+  private void processBatchesDueSafely()
+  {
+    try {
+      processBatchesDue();
+    }
+    catch (Exception e) {
+      log.error(e, "Exception backfilling segment schemas.");
+    }
+  }
+
+  @VisibleForTesting
   public void processBatchesDue()
   {
     if (queue.isEmpty()) {
       return;
     }
+
+    Stopwatch stopwatch = Stopwatch.createStarted();
 
     log.info("Backfilling segment schema. Queue size is [%s]", queue.size());
 
@@ -158,8 +176,9 @@ public class SegmentSchemaBackFillQueue
         );
       }
       catch (Exception e) {
-        log.error(e, "Exception persisting schema and updating segments table.");
+        log.error(e, "Exception persisting schema and updating segments table for datasource [%s].", entry.getKey());
       }
     }
+    emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/backfill/time", stopwatch.millisElapsed()));
   }
 }
