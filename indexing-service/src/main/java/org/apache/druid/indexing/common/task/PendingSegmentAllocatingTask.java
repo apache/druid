@@ -17,22 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.indexing.common.task;
 
 /**
- * Test for REPLACE DML statements for tables defined in catalog.
+ * An interface to be implemented by every appending task that allocates pending segments.
  */
-public class CalciteCatalogReplaceTest extends CalciteCatalogIngestionDmlTest
+public interface PendingSegmentAllocatingTask
 {
-  @Override
-  public String getOperationName()
-  {
-    return "REPLACE";
-  }
-
-  @Override
-  public String getDmlPrefixPattern()
-  {
-    return "REPLACE INTO \"%s\" OVERWRITE ALL";
-  }
+  /**
+   * Unique string used by an appending task (or its sub-tasks and replicas) to allocate pending segments
+   * and identify pending segments allocated to it.
+   */
+  String getTaskAllocatorId();
 }

@@ -93,14 +93,14 @@ public class NotFilter implements Filter
         @Override
         public <T> T computeBitmapResult(
             BitmapResultFactory<T> bitmapResultFactory,
-            int selectionRowCount,
+            int applyRowCount,
             int totalRowCount,
             boolean includeUnknown
         )
         {
           final T result = baseIndex.computeBitmapResult(
               bitmapResultFactory,
-              selectionRowCount,
+              applyRowCount,
               totalRowCount,
               !includeUnknown && useThreeValueLogic
           );
