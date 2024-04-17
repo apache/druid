@@ -225,7 +225,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   /**
    * Last schema id polled from the DB.
    * It is updated after each poll in {@code doPollSegmentAndSchema}.
-   * The schema cleanup duty {@link KillUnreferencedSegmentSchemaDuty} can reset it.
+   * The schema cleanup duty {@link KillUnreferencedSegmentSchemaDuty} can reset it to trigger a full schema refresh on next DB poll.
+   * This is set to null on leadership change.
    */
   private final AtomicReference<Long> latestSchemaId = new AtomicReference<>(null);
 
@@ -1218,7 +1219,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     log.debug("SchemaMap polled from the database is [%s]", schemaMap);
 
-    if (lastSchemaIdPrePoll == null) {
+    if (lastSchemaIdPrePoll == null || lastSchemaIdPrePoll == 0L) {
       // full refresh
       log.info("Executing full segment schema refresh.");
       segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);

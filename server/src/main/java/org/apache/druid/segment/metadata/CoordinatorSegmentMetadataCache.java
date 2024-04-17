@@ -334,24 +334,26 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
     log.debug("Segments to refresh [%s], dataSourcesToRebuild [%s]", segmentsToRefresh, dataSourcesToRebuild);
-    final Set<SegmentId> segmentsToRefreshMinusRealtimeSegments = filterMutableSegments(segmentsToRefresh);
-    log.debug("SegmentsToRefreshMinusRealtimeSegments [%s]", segmentsToRefreshMinusRealtimeSegments);
-    final Set<SegmentId> segmentsToRefreshMinusCachedSegments = filterSegmentWithCachedSchema(segmentsToRefreshMinusRealtimeSegments);
-    final Set<SegmentId> cachedSegments = Sets.difference(segmentsToRefreshMinusRealtimeSegments, segmentsToRefreshMinusCachedSegments);
-    log.debug("SegmentsToRefreshMinusCachedSegments [%s], cachedSegments [%s]", segmentsToRefreshMinusRealtimeSegments, cachedSegments);
+
+    filterRealtimeSegments(segmentsToRefresh);
+
+    log.debug("SegmentsToRefreshMinusRealtimeSegments [%s]", segmentsToRefresh);
+
+    final Set<SegmentId> cachedSegments = filterSegmentWithCachedSchema(segmentsToRefresh);
+
+    log.debug("SegmentsToRefreshMinusCachedSegments [%s], cachedSegments [%s]", segmentsToRefresh, cachedSegments);
 
     // Refresh the segments.
     Set<SegmentId> refreshed = Collections.emptySet();
 
     if (!config.isDisableSegmentMetadataQueries()) {
-      refreshed = refreshSegments(segmentsToRefreshMinusCachedSegments);
+      refreshed = refreshSegments(segmentsToRefresh);
+      log.info("Refreshed segments are [%s]", refreshed);
     }
-
-    log.info("Refreshed segments are [%s]", refreshed);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.
-      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefreshMinusCachedSegments, refreshed));
+      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
       // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
@@ -383,23 +385,26 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
   }
 
-  private Set<SegmentId> filterMutableSegments(Set<SegmentId> segmentIds)
+  private void filterRealtimeSegments(Set<SegmentId> segmentIds)
   {
-    Set<SegmentId> preFilter = new HashSet<>(segmentIds);
     synchronized (lock) {
-      preFilter.removeAll(mutableSegments);
+      segmentIds.removeAll(mutableSegments);
     }
-    return preFilter;
   }
 
   private Set<SegmentId> filterSegmentWithCachedSchema(Set<SegmentId> segmentIds)
   {
-    Set<SegmentId> preFilter = new HashSet<>(segmentIds);
+    Set<SegmentId> cachedSegments = new HashSet<>();
     synchronized (lock) {
-      preFilter.removeIf(segmentSchemaCache::isSchemaCached);
+      for (SegmentId id : segmentIds) {
+        if (segmentSchemaCache.isSchemaCached(id)) {
+          cachedSegments.add(id);
+          segmentIds.remove(id);
+        }
+      }
     }
 
-    return preFilter;
+    return cachedSegments;
   }
 
   @VisibleForTesting

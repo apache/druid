@@ -41,16 +41,20 @@ import java.util.concurrent.atomic.AtomicReference;
  * In-memory cache of segment schema.
  * <p>
  * Internally, mapping of segmentId to segment level information like schemaId & numRows is maintained.
- * This mapping is updated on each database poll {@code finalizedSegmentStats}.
+ * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentStats}.
  * Segment schema created since last DB poll is also fetched and updated in the cache {@code finalizedSegmentSchema}.
  * <p>
- * Additionally, this class caches schema for realtime segments in {@code realtimeSegmentSchemaMap}. This mapping
+ * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchemaMap}. This mapping
  * is cleared either when the segment is removed or marked as finalized.
  * <p>
  * Finalized segments which do not have their schema information present in the DB, fetch their schema via SMQ.
- * SMQ results are cached in {@code inTransitSMQResults}. Once the schema information is backfilled
- * in the DB, it is removed from {@code inTransitSMQResults} and added to {@code inTransitSMQPublishedResults}.
- * {@code inTransitSMQPublishedResults} is cleared on each successfull DB poll.
+ * SMQ results are cached in {@link SegmentSchemaCache#inTransitSMQResults}. Once the schema information is backfilled
+ * in the DB, it is removed from {@link SegmentSchemaCache#inTransitSMQResults} and added to {@link SegmentSchemaCache#inTransitSMQPublishedResults}.
+ * {@link SegmentSchemaCache#inTransitSMQPublishedResults} is cleared on each successfull DB poll.
+ * <p>
+ * {@link CoordinatorSegmentMetadataCache} uses this cache to fetch schema for a segment.
+ * <p>
+ * Schema corresponding to the specified version in {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached.
  */
 @LazySingleton
 public class SegmentSchemaCache
@@ -134,40 +138,54 @@ public class SegmentSchemaCache
     initialized.get().await();
   }
 
+  /**
+   * This method is called after each DB poll.
+   */
   public void updateFinalizedSegmentStatsReference(ImmutableMap<SegmentId, SegmentStats> segmentStatsMap)
   {
     this.finalizedSegmentStats = segmentStatsMap;
   }
 
+  /**
+   * This method is called after new schema is polled from the DB.
+   */
   public void addFinalizedSegmentSchema(long schemaId, SchemaPayload schemaPayload)
   {
     finalizedSegmentSchema.put(schemaId, schemaPayload);
   }
 
+  /**
+   * This method is called on full schema refresh from the DB.
+   */
   public void updateFinalizedSegmentSchemaReference(ConcurrentMap<Long, SchemaPayload> schemaPayloadMap)
   {
     finalizedSegmentSchema = schemaPayloadMap;
   }
 
+  /**
+   * Cache schema for realtime segment. This is cleared when segment is published.
+   */
   public void addRealtimeSegmentSchema(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
     realtimeSegmentSchemaMap.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
   }
 
+  /**
+   * Cache SMQ result. This entry is cleared when SMQ result is published to the DB.
+   */
   public void addInTransitSMQResult(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
     inTransitSMQResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
   }
 
   /**
-   * When the SMQ result is published to the DB, it is removed from the {@code inTransitSMQResults}
+   * After, SMQ result is published to the DB, it is removed from the {@code inTransitSMQResults}
    * and added to {@code inTransitSMQPublishedResults}.
    */
   public void markInTransitSMQResultPublished(SegmentId segmentId)
   {
     if (!inTransitSMQResults.containsKey(segmentId)) {
       log.error("SegmentId [%s] not found in InTransitSMQResultPublished map.", segmentId);
-      return;
     }
 
     inTransitSMQPublishedResults.put(segmentId, inTransitSMQResults.get(segmentId));
@@ -182,6 +200,11 @@ public class SegmentSchemaCache
     inTransitSMQPublishedResults.clear();
   }
 
+  /**
+   * Fetch schema for a given segment. Note, since schema corresponding to the current schema version in
+   * {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached, there is no check on version here.
+   * Any change in version would require a service restart, so we will never end up with multi version schema.
+   */
   public Optional<SchemaPayloadPlus> getSchemaForSegment(SegmentId segmentId)
   {
     // We first look up the schema in the realtime map. This ensures that during handoff

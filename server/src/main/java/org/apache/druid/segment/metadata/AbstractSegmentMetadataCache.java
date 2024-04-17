@@ -300,7 +300,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
             refreshImmediately = false;
           }
 
-          log.debug("Executing refresh.");
           refresh(segmentsToRefresh, dataSourcesToRebuild);
 
           setInitializedAndReportInitTime(stopwatch);
@@ -335,8 +334,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+  /**
+   * Lifecycle start method.
+   */
   public abstract void start() throws InterruptedException;
 
+  /**
+   * Lifecycle stop method.
+   */
   public abstract void stop();
 
   private void setInitializedAndReportInitTime(Stopwatch stopwatch)
@@ -702,7 +707,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.info("Refreshing metadata for datasource[%s].", dataSource);
+    log.debug("Refreshing metadata for datasource[%s].", dataSource);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -746,7 +751,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
 
-    log.info(
+    log.debug(
         "Refreshed metadata for datasource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         refreshDurationMillis,
@@ -768,8 +773,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       SegmentAnalysis analysis
   )
   {
-    log.info("Executing smq action.");
-
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
         dataSource,
