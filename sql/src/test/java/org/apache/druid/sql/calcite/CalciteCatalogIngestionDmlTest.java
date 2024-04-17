@@ -19,13 +19,8 @@
 
 package org.apache.druid.sql.calcite;
 
-<<<<<<< HEAD
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 
-@SqlTestFramework.SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplier.class)
-public class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
-{
-=======
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +53,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
+@SqlTestFramework.SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplierX.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
   private final String operationName;
@@ -732,5 +728,4 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             "Cannot assign to target field 'unique_dim1' of type COMPLEX<hyperUnique> from source field 'unique_dim1' of type VARCHAR ARRAY (line [4], column [3])")
         .verify();
   }
->>>>>>> a5428e75ff92a4aad1ae9a3d4a613b8dccb6857c
 }
