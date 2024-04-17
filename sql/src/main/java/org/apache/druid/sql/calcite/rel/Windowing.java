@@ -71,6 +71,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Maps onto a {@link org.apache.druid.query.operator.WindowOperatorQuery}.
@@ -243,8 +244,14 @@ public class Windowing
       // We know windowProject is a mapping due to the isMapping() check in DruidRules. Check for null anyway,
       // as defensive programming.
       final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
-          partialQuery.getWindowProject().getMapping(),
-          "mapping for windowProject[%s]", partialQuery.getWindowProject()
+              partialQuery.getWindowProject().getProjects().stream().map(RexNode::toString).collect(Collectors.toSet()).size()
+                      < partialQuery.getWindowProject().getProjects().size()
+                      ? Project.getPartialMapping(
+                              partialQuery.getWindowProject().getRowType().getFieldCount(),
+                              partialQuery.getWindowProject().getProjects()
+                      )
+                      : partialQuery.getWindowProject().getMapping(),
+              "mapping for windowProject[%s]", partialQuery.getWindowProject()
       );
 
       final List<String> windowProjectOutputColumns = new ArrayList<>();
