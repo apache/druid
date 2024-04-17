@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByColumnSelectorStrategyFactory;
@@ -83,7 +84,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
         STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
         // There shouldn't be any internal size increase associated with the fixed width types
         Assert.assertEquals(0, sizeIncrease);
-        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
+        Assert.assertEquals(NullHandling.nullToEmptyIfNeeded((Long) DATASOURCE_ROWS.get(rowNum)[0]), resultRow.get(0));
         cursor.advance();
         ++rowNum;
       }
@@ -100,7 +101,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
         Assert.assertEquals(0, sizeIncrease);
-        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], valuess[0]);
+        Assert.assertEquals(NullHandling.nullToEmptyIfNeeded((Long) DATASOURCE_ROWS.get(rowNum)[0]), valuess[0]);
         cursor.advance();
         ++rowNum;
       }
@@ -227,7 +228,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
         int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
         STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
         Assert.assertEquals(0, sizeIncrease);
-        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], resultRow.get(0));
+        Assert.assertEquals(NullHandling.nullToEmptyIfNeeded((Float) DATASOURCE_ROWS.get(rowNum)[1]), resultRow.get(0));
         cursor.advance();
         ++rowNum;
       }
@@ -244,7 +245,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
         Assert.assertEquals(0, sizeIncrease);
-        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], valuess[0]);
+        Assert.assertEquals(NullHandling.nullToEmptyIfNeeded((Float) DATASOURCE_ROWS.get(rowNum)[1]), valuess[0]);
         cursor.advance();
         ++rowNum;
       }
@@ -372,7 +373,10 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
         int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
         STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
         Assert.assertEquals(0, sizeIncrease);
-        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[2], resultRow.get(0));
+        Assert.assertEquals(
+            NullHandling.nullToEmptyIfNeeded((Double) DATASOURCE_ROWS.get(rowNum)[2]),
+            resultRow.get(0)
+        );
         cursor.advance();
         ++rowNum;
       }
@@ -390,7 +394,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
         Assert.assertEquals(0, sizeIncrease);
-        Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[2], valuess[0]);
+        Assert.assertEquals(NullHandling.nullToEmptyIfNeeded((Double) DATASOURCE_ROWS.get(rowNum)[2]), valuess[0]);
         cursor.advance();
         ++rowNum;
       }

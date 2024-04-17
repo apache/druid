@@ -539,7 +539,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByNested()
+  public void testGroupByOnNestedColumn()
   {
     cannotVectorize();
     testQuery(

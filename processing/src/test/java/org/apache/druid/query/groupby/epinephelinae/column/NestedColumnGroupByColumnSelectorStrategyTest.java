@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByColumnSelectorStrategyFactory;
@@ -42,6 +43,10 @@ import java.util.List;
  */
 public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNullHandlingTest
 {
+  static {
+    NestedDataModule.registerHandlersAndSerde();
+  }
+
   private static final GroupByColumnSelectorStrategyFactory STRATEGY_FACTORY = new GroupByColumnSelectorStrategyFactory();
 
   // No datasource would exist like this, however the inline datasource is an easy way to create the required column value selectors
@@ -51,6 +56,10 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
       new Object[]{null},
       new Object[]{StructuredData.wrap("hello")}
   );
+
+  // Dictionary ids alloted to each object, in the column-0 of the DATASOURCE_ROWS, when building from scratch.
+  // null's dictionary id would be -1
+  private static final int[] DICT_IDS = new int[]{0, 1, -1, 2};
 
   private static final String NESTED_COLUMN = "nested";
   /**
@@ -72,13 +81,20 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
     GroupByColumnSelectorStrategy strategy = createStrategy();
     Cursor cursor = createCursor();
     ColumnValueSelector columnValueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(NESTED_COLUMN);
+    GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
+    Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
     Object[] valuess = new Object[1];
     int rowNum = 0;
     while (!cursor.isDone()) {
       int sz = strategy.initColumnValues(columnValueSelector, 0, valuess);
-      // While adding the values for the first time, the initialisation should have a non-zero footprint
-      Assert.assertTrue(sz > 0);
-      Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], valuess[0]);
+      // While adding the values for the first time, the initialisation should have a non-zero footprint, apart from the
+      // row with the null value
+      if (DATASOURCE_ROWS.get(rowNum)[0] == null) {
+        Assert.assertEquals(0, sz);
+      } else {
+        Assert.assertTrue(sz > 0);
+      }
+      Assert.assertEquals(DICT_IDS[rowNum], valuess[0]);
 
       cursor.advance();
       ++rowNum;
@@ -91,7 +107,7 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
       int sz = strategy.initColumnValues(columnValueSelector, 0, valuess);
       // While adding the values for the first time, the initialisation should have a non-zero footprint
       Assert.assertEquals(0, sz);
-      Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], valuess[0]);
+      Assert.assertEquals(DICT_IDS[rowNum], valuess[0]);
 
       cursor.advance();
       ++rowNum;
@@ -111,9 +127,13 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
     int rowNum = 0;
     while (!cursor.isDone()) {
       int sz = strategy.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
-      Assert.assertTrue(sz > 0);
+      if (DATASOURCE_ROWS.get(rowNum)[0] == null) {
+        Assert.assertEquals(0, sz);
+      } else {
+        Assert.assertTrue(sz > 0);
+      }
       // null is represented by GROUP_BY_MISSING_VALUE on the buffer, even though it gets its own dictionaryId in the dictionary
-      Assert.assertEquals(rowNum == NULL_ROW_NUMBER ? -1 : rowNum, BUFFER1.getInt(0));
+      Assert.assertEquals(DICT_IDS[rowNum], BUFFER1.getInt(0));
       // Readback the value
       strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
       Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
@@ -131,14 +151,9 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
     int[] stack = new int[1];
     ResultRow resultRow = ResultRow.create(1);
-    Object obj = StructuredData.wrap(ImmutableList.of("x", "y", "z"));
 
-    strategy.initGroupingKeyColumnValue(0, 0, obj, BUFFER1, stack);
-    Assert.assertEquals(1, stack[0]);
-    strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-    Assert.assertEquals(obj, resultRow.get(0));
-
-    strategy.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
+    // Test nulls
+    strategy.initGroupingKeyColumnValue(0, 0, -1, BUFFER1, stack);
     Assert.assertEquals(0, stack[0]);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
     Assert.assertNull(resultRow.get(0));

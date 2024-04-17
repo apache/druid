@@ -176,6 +176,9 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     @Override
     public DimensionType idToKey(int id)
     {
+      if (id >= dictionary.size()) {
+        throw DruidException.defensive("Unknown dictionary id");
+      }
       // No need to handle GROUP_BY_MISSING_VALUE, by contract
       return dictionary.get(id);
     }

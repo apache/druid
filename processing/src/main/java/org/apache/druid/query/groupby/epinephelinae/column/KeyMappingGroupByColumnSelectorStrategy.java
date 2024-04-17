@@ -210,8 +210,11 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
       );
     } else {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-        Object lhsObject = idToDimensionConverter.idToKey(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
-        Object rhsObject = idToDimensionConverter.idToKey(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+        int lhsDictId = lhsBuffer.getInt(lhsPosition + keyBufferPosition);
+        int rhsDictId = rhsBuffer.getInt(rhsPosition + keyBufferPosition);
+
+        Object lhsObject = lhsDictId == GROUP_BY_MISSING_VALUE ? null : idToDimensionConverter.idToKey(lhsDictId);
+        Object rhsObject = rhsDictId == GROUP_BY_MISSING_VALUE ? null : idToDimensionConverter.idToKey(rhsDictId);
         if (usesNaturalComparator) {
           return nullableTypeStrategy.compare(
               (DimensionType) DimensionHandlerUtils.convertObjectToType(lhsObject, columnType),
