@@ -24,7 +24,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
@@ -40,8 +40,6 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.DruidNode;
-
-import java.util.Map;
 
 /**
  * Implementation for {@link ControllerContext} required to run multi-stage queries as indexing tasks.
@@ -126,7 +124,7 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void writeReports(String controllerTaskId, Map<String, TaskReport> reports)
+  public void writeReports(String controllerTaskId, TaskReport.ReportMap reports)
   {
     toolbox.getTaskReportFileWriter().write(controllerTaskId, reports);
   }

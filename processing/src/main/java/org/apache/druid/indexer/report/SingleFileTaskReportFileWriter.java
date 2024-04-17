@@ -17,19 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.indexer.report;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
 {
@@ -44,7 +40,7 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   }
 
   @Override
-  public void write(String taskId, Map<String, TaskReport> reports)
+  public void write(String taskId, TaskReport.ReportMap reports)
   {
     try {
       final File reportsFileParent = reportsFile.getParentFile();
@@ -70,20 +66,9 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   public static void writeReportToStream(
       final ObjectMapper objectMapper,
       final OutputStream outputStream,
-      final Map<String, TaskReport> reports
+      final TaskReport.ReportMap reports
   ) throws Exception
   {
-    final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
-
-    try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(outputStream)) {
-      jg.writeStartObject();
-
-      for (final Map.Entry<String, TaskReport> entry : reports.entrySet()) {
-        jg.writeFieldName(entry.getKey());
-        JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, entry.getValue());
-      }
-
-      jg.writeEndObject();
-    }
+    objectMapper.writeValue(outputStream, reports);
   }
 }

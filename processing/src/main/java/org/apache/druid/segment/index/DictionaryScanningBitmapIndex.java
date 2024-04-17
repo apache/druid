@@ -53,12 +53,12 @@ public abstract class DictionaryScanningBitmapIndex extends SimpleImmutableBitma
   @Override
   public final <T> T computeBitmapResult(
       BitmapResultFactory<T> bitmapResultFactory,
-      int selectionRowCount,
+      int applyRowCount,
       int totalRowCount,
       boolean includeUnknown
   )
   {
-    if (selectionRowCount != totalRowCount && selectionRowCount < (dictionarySize * scaleThreshold)) {
+    if (applyRowCount != totalRowCount && applyRowCount < (dictionarySize * scaleThreshold)) {
       return null;
     }
     return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(includeUnknown));

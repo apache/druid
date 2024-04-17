@@ -17,7 +17,7 @@
  */
 
 import type { SampleResponse } from './sampler';
-import { guessDimensionsFromSampleResponse } from './sampler';
+import { changeLookupInExpressionsSampling, guessDimensionsFromSampleResponse } from './sampler';
 
 describe('sampler', () => {
   describe('getInferredDimensionsFromSampleResponse', () => {
@@ -128,6 +128,52 @@ describe('sampler', () => {
           },
         ]
       `);
+    });
+  });
+
+  describe('changeLookupInExpressionsSampling', () => {
+    it('does nothing when there is nothing to do', () => {
+      expect(changeLookupInExpressionsSampling(`concat("x", 'lol')`)).toEqual(`concat("x", 'lol')`);
+    });
+
+    it('works with a SQL parsable expression', () => {
+      expect(
+        changeLookupInExpressionsSampling(`concat(lookup("x", 'lookup_name'), 'lol')`),
+      ).toEqual(
+        `concat(concat('lookup_name', '[', "x", '] -- This is a placeholder, lookups are not supported in sampling'), 'lol')`,
+      );
+
+      expect(
+        changeLookupInExpressionsSampling(`concat(lookup("x", 'lookup_name', 'fallback'), 'lol')`),
+      ).toEqual(
+        `concat(nvl(concat('lookup_name', '[', "x", '] -- This is a placeholder, lookups are not supported in sampling'), 'fallback'), 'lol')`,
+      );
+
+      expect(
+        changeLookupInExpressionsSampling(
+          `concat(lookup("x", 'lookup_name', 'fallback', '?'), 'lol')`,
+        ),
+      ).toEqual(`concat(null, 'lol')`);
+    });
+
+    it('works with a non-SQL parsable expression', () => {
+      expect(
+        changeLookupInExpressionsSampling(`concat(lookup("x", 'lookup_name'), 'lol')^`),
+      ).toEqual(
+        `concat(concat('lookup_name','[',"x",'] -- This is a placeholder, lookups are not supported in sampling'), 'lol')^`,
+      );
+
+      expect(
+        changeLookupInExpressionsSampling(`concat(lookup("x", 'lookup_name', 'fallback'), 'lol')^`),
+      ).toEqual(
+        `concat(nvl(concat('lookup_name','[',"x",'] -- This is a placeholder, lookups are not supported in sampling'),'fallback'), 'lol')^`,
+      );
+
+      expect(
+        changeLookupInExpressionsSampling(
+          `concat(lookup("x", 'lookup_name', 'fallback', '?'), 'lol')^`,
+        ),
+      ).toEqual(`concat(null, 'lol')^`);
     });
   });
 });

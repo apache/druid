@@ -17,30 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.indexing.overlord.supervisor;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+public class LagStatsTest
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
 
-  @Override
-  public StorageConnector get()
+  @Test
+  public void lagStatsByMetric()
   {
-    return STORAGE_CONNECTOR;
-  }
+    int max = 1;
+    int avg = 2;
+    int total = 3;
+    LagStats lag = new LagStats(max, total, avg);
 
-  @Override
-  public String getResourceType()
-  {
-    return "testExport";
-  }
-
-  @Override
-  public String getBasePath()
-  {
-    return "testExport";
+    Assert.assertEquals(max, lag.get(LagMetric.MAX));
+    Assert.assertEquals(total, lag.get(LagMetric.TOTAL));
+    Assert.assertEquals(avg, lag.get(LagMetric.AVERAGE));
   }
 }

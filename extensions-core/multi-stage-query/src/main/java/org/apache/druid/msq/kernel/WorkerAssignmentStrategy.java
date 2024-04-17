@@ -90,7 +90,7 @@ public enum WorkerAssignmentStrategy
 
         final IntSet inputStages = stageDef.getInputStageNumbers();
         final OptionalInt maxInputStageWorkerCount = inputStages.intStream().map(stageWorkerCountMap).max();
-        final int workerCount = maxInputStageWorkerCount.orElse(1);
+        final int workerCount = Math.min(stageDef.getMaxWorkerCount(), maxInputStageWorkerCount.orElse(1));
         return slicer.sliceStatic(inputSpec, workerCount);
       }
     }

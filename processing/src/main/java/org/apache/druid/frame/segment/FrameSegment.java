@@ -21,7 +21,7 @@ package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -87,7 +87,7 @@ public class FrameSegment implements Segment
   public <T> T as(@Nonnull Class<T> clazz)
   {
     if (CloseableShapeshifter.class.equals(clazz)) {
-      return (T) new FrameRowsAndColumns(frame, frameReader.signature());
+      return (T) new ColumnBasedFrameRowsAndColumns(frame, frameReader.signature());
     }
     return Segment.super.as(clazz);
   }

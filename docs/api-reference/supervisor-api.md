@@ -48,7 +48,7 @@ Returns an array of strings representing the names of active supervisors. If the
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor</code>
+`GET` `/druid/indexer/v1/supervisor`
 
 #### Responses
 
@@ -90,7 +90,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -106,7 +106,7 @@ Retrieves an array of active supervisor objects. If there are no active supervis
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor?full</code>
+`GET` `/druid/indexer/v1/supervisor?full`
 
 #### Responses
 
@@ -148,7 +148,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -774,7 +774,7 @@ Retrieves an array of objects representing active supervisors and their current 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor?state=true</code>
+`GET` `/druid/indexer/v1/supervisor?state=true`
 
 #### Responses
 
@@ -816,7 +816,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -845,7 +845,7 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}`
 
 #### Responses
 
@@ -896,7 +896,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -1209,7 +1209,7 @@ For additional information about the status report, see [Supervisor reference](.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/status</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/status`
 
 #### Responses
 
@@ -1259,7 +1259,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1313,7 +1313,7 @@ Retrieves the current health report for a single supervisor. The health of a sup
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/health</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/health`
 
 #### Responses
 
@@ -1367,7 +1367,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1382,7 +1382,7 @@ Returns a snapshot of the current ingestion row counters for each task being man
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/stats</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/stats`
 
 #### Responses
 
@@ -1432,7 +1432,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1488,7 +1488,7 @@ Retrieves an audit history of specs for all supervisors.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/history</code>
+`GET` `/druid/indexer/v1/supervisor/history`
 
 #### Responses
 
@@ -1530,7 +1530,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -1848,7 +1848,7 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/history</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/history`
 
 
 #### Responses
@@ -1899,7 +1899,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -2232,7 +2232,7 @@ This way, you can apply configuration changes without a pause in ingestion.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor</code>
+`POST` `/druid/indexer/v1/supervisor`
 
 #### Responses
 
@@ -2385,7 +2385,7 @@ Content-Length: 1359
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2400,7 +2400,8 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 Indexing tasks remain suspended until you [resume the supervisor](#resume-a-supervisor).
 
 #### URL
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/suspend</code>
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
 #### Responses
 
@@ -2456,7 +2457,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2766,7 +2767,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` code message even if there are no supervisors or running supervisors to suspend.
 
 #### URL
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/suspendAll</code>
+
+`POST` `/druid/indexer/v1/supervisor/suspendAll`
 
 #### Responses
 
@@ -2808,7 +2810,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2823,7 +2825,7 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resume</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resume`
 
 #### Responses
 
@@ -2879,7 +2881,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3190,7 +3192,7 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/resumeAll</code>
+`POST` `/druid/indexer/v1/supervisor/resumeAll`
 
 #### Responses
 
@@ -3232,7 +3234,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3255,7 +3257,7 @@ The indexing service keeps track of the latest persisted offsets in Kafka or seq
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/reset</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/reset`
 
 #### Responses
 
@@ -3305,7 +3307,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3330,7 +3332,7 @@ Use this endpoint with caution. It can cause skipped messages, leading to data l
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resetOffsets</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resetOffsets`
 
 #### Responses
 
@@ -3416,7 +3418,7 @@ when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 1
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3433,7 +3435,7 @@ The terminated supervisor still exists in the metadata store and its history can
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/terminate</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/terminate`
 
 #### Responses
 
@@ -3481,7 +3483,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3496,7 +3498,7 @@ Terminates all supervisors. Terminated supervisors still exist in the metadata s
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/terminateAll</code>
+`POST` `/druid/indexer/v1/supervisor/terminateAll`
 
 #### Responses
 
@@ -3538,7 +3540,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3553,4 +3555,4 @@ Shuts down a supervisor. This endpoint is deprecated and will be removed in futu
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/shutdown</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/shutdown`

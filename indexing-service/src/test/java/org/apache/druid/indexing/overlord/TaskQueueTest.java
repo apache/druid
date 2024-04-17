@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -132,7 +133,8 @@ public class TaskQueueTest extends IngestionTestBase
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
-        getObjectMapper()
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     taskQueue.setActive();
   }
@@ -340,7 +342,8 @@ public class TaskQueueTest extends IngestionTestBase
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
-        getObjectMapper()
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     taskQueue.setActive();
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -427,7 +430,8 @@ public class TaskQueueTest extends IngestionTestBase
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
-        getObjectMapper()
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     taskQueue.setActive();
 
@@ -471,7 +475,8 @@ public class TaskQueueTest extends IngestionTestBase
         createActionClientFactory(),
         new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
         new StubServiceEmitter("druid/overlord", "testHost"),
-        mapper
+        mapper,
+        new NoopTaskContextEnricher()
     );
 
     final DataSchema dataSchema = new DataSchema(
