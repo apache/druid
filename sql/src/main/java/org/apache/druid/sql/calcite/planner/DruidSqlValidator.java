@@ -210,7 +210,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     );
     final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
     // The target is a new or existing datasource.
-    final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName, true);
+    final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName);
 
     // An existing datasource may have metadata.
     final DatasourceFacade tableMetadata = table == null ? null : table.effectiveMetadata().catalogMetadata();
@@ -299,26 +299,22 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
           () -> "namespace for " + enclosingNode
       );
       final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
-      //validateNamespace(targetNamespace, unknownType);
-      // Try to resolve the table. Will fail if this is an INSERT into a new table.
       SqlIdentifier identifier = insertNs.getId();
-      SqlValidatorTable table1 = getCatalogReader().getTable(identifier.names);
-      if (table1 == null) {
-        return super.createSelectNamespace(select, enclosingNode);
-      }
-      final DatasourceTable table = table1.unwrap(DatasourceTable.class);
+      SqlValidatorTable catalogTable = getCatalogReader().getTable(identifier.names);
+      if (catalogTable != null) {
+        final DatasourceTable table = catalogTable.unwrap(DatasourceTable.class);
 
-      // An existing datasource may have metadata.
-      final DatasourceFacade tableMetadata = table == null
-          ? null
-          : table.effectiveMetadata().catalogMetadata();
-      // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
-      final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
-      rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
-      return new SelectNamespace(this, select, enclosingNode);
-    } else {
-      return super.createSelectNamespace(select, enclosingNode);
+        // An existing datasource may have metadata.
+        final DatasourceFacade tableMetadata = table == null
+            ? null
+            : table.effectiveMetadata().catalogMetadata();
+        // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+        final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
+        rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
+        return new SelectNamespace(this, select, enclosingNode);
+      }
     }
+    return super.createSelectNamespace(select, enclosingNode);
   }
 
   /**
@@ -329,8 +325,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   private DatasourceTable validateInsertTarget(
       final SqlValidatorNamespace targetNamespace,
       final IdentifierNamespace insertNs,
-      final String operationName,
-      final boolean validate
+      final String operationName
   )
   {
     // Get the target table ID
@@ -357,10 +352,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
     try {
       // Try to resolve the table. Will fail if this is an INSERT into a new table.
-      if (validate) {
-        validateNamespace(targetNamespace, unknownType);
-      }
-      //validateNamespace(targetNamespace, unknownType);
+      validateNamespace(targetNamespace, unknownType);
       SqlValidatorTable target = insertNs.resolve().getTable();
       try {
         return target.unwrap(DatasourceTable.class);
@@ -465,11 +457,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
 
     return effectiveGranularity;
-  }
-
-  private String statementArticle(final String operationName)
-  {
-    return "INSERT".equals(operationName) ? "an" : "a";
   }
 
   @Nullable

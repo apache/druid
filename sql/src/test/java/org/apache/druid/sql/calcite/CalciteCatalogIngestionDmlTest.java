@@ -53,6 +53,8 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.Nullable;
+
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
   private final String operationName;
@@ -281,6 +283,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   public CatalogResolver createCatalogResolver()
   {
     return new CatalogResolver.NullCatalogResolver() {
+      @Nullable
       @Override
       public DruidTable resolveDatasource(
           final String tableName,
@@ -652,24 +655,6 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   @Test
   public void testInsertTableWithClusteringWithClusteringOnBadColumn()
   {
-    ExternalDataSource externalDataSource = new ExternalDataSource(
-        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
-        RowSignature.builder()
-            .add("a", ColumnType.STRING)
-            .add("b", ColumnType.STRING)
-            .add("c", ColumnType.LONG)
-            .add("d", ColumnType.STRING)
-            .add("e", ColumnType.STRING)
-            .build()
-    );
-    final RowSignature signature = RowSignature.builder()
-        .add("__time", ColumnType.LONG)
-        .add("dim1", ColumnType.STRING)
-        .add("dim2", ColumnType.STRING)
-        .add("dim3", ColumnType.STRING)
-        .add("cnt", ColumnType.LONG)
-        .build();
     testIngestionQuery()
         .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
              "SELECT\n" +
