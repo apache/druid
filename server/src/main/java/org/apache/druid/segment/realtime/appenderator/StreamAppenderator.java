@@ -804,10 +804,9 @@ public class StreamAppenderator implements Appenderator
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
                 minimalSegmentSchemas.addSchema(
-                    segment.getId().toString(),
-                    fingerprintGenerator.generateFingerprint(schemaPayload),
-                    schemaPayloadPlus.getNumRows(),
-                    schemaPayload
+                    segment.getId(),
+                    schemaPayloadPlus,
+                    fingerprintGenerator.generateFingerprint(schemaPayload)
                 );
               }
             } else {

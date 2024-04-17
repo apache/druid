@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -32,6 +33,8 @@ import java.util.Set;
 public class DataSegmentWithSchemas
 {
   private final Set<DataSegment> segments;
+
+  @Nullable
   private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   public DataSegmentWithSchemas(int schemaVersion)
@@ -43,7 +46,7 @@ public class DataSegmentWithSchemas
   @JsonCreator
   public DataSegmentWithSchemas(
       @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("minimalSegmentSchemas") MinimalSegmentSchemas minimalSegmentSchemas
+      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.segments = segments;
@@ -56,16 +59,10 @@ public class DataSegmentWithSchemas
     return segments;
   }
 
+  @Nullable
   @JsonProperty
   public MinimalSegmentSchemas getMinimalSegmentSchemas()
   {
     return minimalSegmentSchemas;
-  }
-
-  public DataSegmentWithSchemas merge(DataSegmentWithSchemas other)
-  {
-    segments.addAll(other.getSegments());
-    minimalSegmentSchemas.merge(other.getMinimalSegmentSchemas());
-    return this;
   }
 }

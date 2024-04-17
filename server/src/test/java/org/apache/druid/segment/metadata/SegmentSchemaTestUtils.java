@@ -195,7 +195,7 @@ public class SegmentSchemaTestUtils
     );
 
     // schemaId -> schema details
-    Map<Long, SegmentSchemaRepresentation> schemaRepresentationMap = new HashMap<>();
+    Map<Long, SegmentSchemaRecord> schemaRepresentationMap = new HashMap<>();
 
     final String schemaTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemasTable();
 
@@ -205,7 +205,7 @@ public class SegmentSchemaTestUtils
                         .map(((index, r, ctx) ->
                             schemaRepresentationMap.put(
                                 r.getLong(1),
-                                new SegmentSchemaRepresentation(
+                                new SegmentSchemaRecord(
                                     r.getString(2),
                                     JacksonUtils.readValue(
                                         mapper,
@@ -229,14 +229,14 @@ public class SegmentSchemaTestUtils
       Assert.assertEquals(random.intValue(), segmentStats.get(id).rhs.intValue());
       Assert.assertTrue(schemaRepresentationMap.containsKey(segmentStats.get(id).lhs));
 
-      SegmentSchemaRepresentation schemaRepresentation = schemaRepresentationMap.get(segmentStats.get(id).lhs);
+      SegmentSchemaRecord schemaRepresentation = schemaRepresentationMap.get(segmentStats.get(id).lhs);
       Assert.assertEquals(schemaPayload, schemaRepresentation.getSchemaPayload());
       Assert.assertTrue(schemaRepresentation.isUsed());
       Assert.assertEquals(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaRepresentation.getVersion());
     }
   }
 
-  public static class SegmentSchemaRepresentation
+  public static class SegmentSchemaRecord
   {
     private final String fingerprint;
     private final SchemaPayload schemaPayload;
@@ -244,7 +244,7 @@ public class SegmentSchemaTestUtils
     private final boolean used;
     private final int version;
 
-    public SegmentSchemaRepresentation(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used, int version)
+    public SegmentSchemaRecord(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used, int version)
     {
       this.fingerprint = fingerprint;
       this.schemaPayload = schemaPayload;

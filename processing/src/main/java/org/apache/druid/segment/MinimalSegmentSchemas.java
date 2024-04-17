@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,17 +32,15 @@ import java.util.Objects;
  */
 public class MinimalSegmentSchemas
 {
-  // Mapping of segmentId to segment level information like schema fingerprint and numRows.
-  private final Map<String, SegmentStats> segmentIdToMetadataMap;
+  private final Map<String, SegmentMetadata> segmentIdToMetadataMap;
 
-  // Mapping of schema fingerprint to payload.
   private final Map<String, SchemaPayload> schemaFingerprintToPayloadMap;
 
   private final int schemaVersion;
 
   @JsonCreator
   public MinimalSegmentSchemas(
-      @JsonProperty("segmentIdToMetadataMap") Map<String, SegmentStats> segmentIdToMetadataMap,
+      @JsonProperty("segmentIdToMetadataMap") Map<String, SegmentMetadata> segmentIdToMetadataMap,
       @JsonProperty("schemaFingerprintToPayloadMap") Map<String, SchemaPayload> schemaFingerprintToPayloadMap,
       @JsonProperty("schemaVersion") int schemaVersion
   )
@@ -59,7 +58,7 @@ public class MinimalSegmentSchemas
   }
 
   @JsonProperty
-  public Map<String, SegmentStats> getSegmentIdToMetadataMap()
+  public Map<String, SegmentMetadata> getSegmentIdToMetadataMap()
   {
     return segmentIdToMetadataMap;
   }
@@ -85,14 +84,13 @@ public class MinimalSegmentSchemas
    * Add schema information for the segment.
    */
   public void addSchema(
-      String segmentId,
-      String fingerprint,
-      long numRows,
-      SchemaPayload schemaPayload
+      SegmentId segmentId,
+      SchemaPayloadPlus schemaPayloadPlus,
+      String fingerprint
   )
   {
-    segmentIdToMetadataMap.put(segmentId, new SegmentStats(numRows, fingerprint));
-    schemaFingerprintToPayloadMap.put(fingerprint, schemaPayload);
+    segmentIdToMetadataMap.put(segmentId.toString(), new SegmentMetadata(schemaPayloadPlus.getNumRows(), fingerprint));
+    schemaFingerprintToPayloadMap.put(fingerprint, schemaPayloadPlus.getSchemaPayload());
   }
 
   /**
@@ -137,64 +135,5 @@ public class MinimalSegmentSchemas
            ", schemaFingerprintToPayloadMap=" + schemaFingerprintToPayloadMap +
            ", version='" + schemaVersion + '\'' +
            '}';
-  }
-
-  /**
-   * Encapsulates segment level information like numRows, schema fingerprint.
-   */
-  public static class SegmentStats
-  {
-    final Long numRows;
-    final String schemaFingerprint;
-
-    @JsonCreator
-    public SegmentStats(
-        @JsonProperty("numRows") Long numRows,
-        @JsonProperty("schemaFingerprint") String schemaFingerprint
-    )
-    {
-      this.numRows = numRows;
-      this.schemaFingerprint = schemaFingerprint;
-    }
-
-    @JsonProperty
-    public long getNumRows()
-    {
-      return numRows;
-    }
-
-    @JsonProperty
-    public String getSchemaFingerprint()
-    {
-      return schemaFingerprint;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      SegmentStats that = (SegmentStats) o;
-      return Objects.equals(numRows, that.numRows) && Objects.equals(schemaFingerprint, that.schemaFingerprint);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(numRows, schemaFingerprint);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "SegmentStats{" +
-             "numRows=" + numRows +
-             ", fingerprint='" + schemaFingerprint + '\'' +
-             '}';
-    }
   }
 }

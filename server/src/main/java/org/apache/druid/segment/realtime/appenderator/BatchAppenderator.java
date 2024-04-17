@@ -676,7 +676,6 @@ public class BatchAppenderator implements Appenderator
       final boolean useUniquePath
   )
   {
-
     if (committer != null) {
       throw new ISE("There should be no committer for batch ingestion");
     }
@@ -729,10 +728,9 @@ public class BatchAppenderator implements Appenderator
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
                 minimalSegmentSchemas.addSchema(
-                    segment.getId().toString(),
-                    fingerprintGenerator.generateFingerprint(schemaPayload),
-                    schemaPayloadPlus.getNumRows(),
-                    schemaPayload
+                    segment.getId(),
+                    schemaPayloadPlus,
+                    fingerprintGenerator.generateFingerprint(schemaPayload)
                 );
               }
             } else {
@@ -749,6 +747,13 @@ public class BatchAppenderator implements Appenderator
     );
   }
 
+  /**
+   * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted.
+   *
+   * @param identifier    sink identifier
+   * @param sink          sink to push
+   * @return segment descriptor along with schema, or null if the sink is no longer valid
+   */
   private DataSegmentWithSchema mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink

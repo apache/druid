@@ -173,9 +173,9 @@ public abstract class DruidCoordinatorConfig
 
   @Config("druid.coordinator.kill.segmentSchema.period")
   @Default("PT1H")
-  public abstract Duration getCoordinatorSegmentSchemaKillPeriod();
+  public abstract Duration getSegmentSchemaKillPeriod();
 
   @Config("druid.coordinator.kill.segmentSchema.durationToRetain")
   @Default("PT6H")
-  public abstract Duration getCoordinatorSegmentSchemaKillDurationToRetain();
+  public abstract Duration getSegmentSchemaKillDurationToRetain();
 }

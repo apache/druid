@@ -24,7 +24,10 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,11 +45,14 @@ public class MinimalSegmentSchemasTest
   {
     RowSignature rowSignature = RowSignature.builder().add("c", ColumnType.FLOAT).build();
 
+    SegmentId segmentId = SegmentId.dummy("ds1");
+
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory("billy", "nilly", null, 20);
     SchemaPayload payload = new SchemaPayload(rowSignature, Collections.singletonMap("twosum", factory));
+    SchemaPayloadPlus schemaPayloadPlus = new SchemaPayloadPlus(payload, 20L);
 
     MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(
-        Collections.singletonMap("id1", new MinimalSegmentSchemas.SegmentStats(20L, "fp1")),
+        Collections.singletonMap(segmentId.toString(), new SegmentMetadata(20L, "fp1")),
         Collections.singletonMap("fp1", payload),
         1
     );
@@ -63,7 +69,7 @@ public class MinimalSegmentSchemasTest
     Assert.assertEquals(minimalSegmentSchemas, copy);
 
     MinimalSegmentSchemas copy2 = new MinimalSegmentSchemas(1);
-    copy2.addSchema("id1", "fp1", 20L, payload);
+    copy2.addSchema(segmentId, schemaPayloadPlus, "fp1");
 
     Assert.assertEquals(minimalSegmentSchemas, copy2);
   }

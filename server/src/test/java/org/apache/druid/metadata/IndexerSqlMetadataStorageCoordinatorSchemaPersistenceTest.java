@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -150,10 +151,9 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       minimalSegmentSchemas.addSchema(
-          segment.getId().toString(),
-          fingerprintGenerator.generateFingerprint(schemaPayload),
-          randomNum,
-          schemaPayload
+          segment.getId(),
+          new SchemaPayloadPlus(schemaPayload, (long) randomNum),
+          fingerprintGenerator.generateFingerprint(schemaPayload)
       );
 
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
@@ -240,10 +240,9 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
       minimalSegmentSchemas.addSchema(
-          segment.getId().toString(),
-          fingerprintGenerator.generateFingerprint(schemaPayload),
-          randomNum,
-          schemaPayload
+          segment.getId(),
+          new SchemaPayloadPlus(schemaPayload, (long) randomNum),
+          fingerprintGenerator.generateFingerprint(schemaPayload)
       );
     }
 
@@ -303,10 +302,9 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
       minimalSegmentSchemas.addSchema(
-          segment.getId().toString(),
-          fingerprintGenerator.generateFingerprint(schemaPayload),
-          randomNum,
-          schemaPayload
+          segment.getId(),
+          new SchemaPayloadPlus(schemaPayload, (long) randomNum),
+          fingerprintGenerator.generateFingerprint(schemaPayload)
       );
 
       schemaPayloadMapToPerist.put(fingerprintGenerator.generateFingerprint(schemaPayload), schemaPayload);
@@ -410,10 +408,9 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       minimalSegmentSchemas.addSchema(
-          segment.getId().toString(),
-          fingerprintGenerator.generateFingerprint(schemaPayload),
-          randomNum,
-          schemaPayload
+          segment.getId(),
+          new SchemaPayloadPlus(schemaPayload, (long) randomNum),
+          fingerprintGenerator.generateFingerprint(schemaPayload)
       );
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
       replacingSegments.add(segment);

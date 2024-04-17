@@ -40,8 +40,8 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
         "segmentSchema",
         "druid.coordinator.kill.segmentSchema",
         config.isSegmentSchemaKillEnabled(),
-        config.getCoordinatorSegmentSchemaKillPeriod(),
-        config.getCoordinatorSegmentSchemaKillDurationToRetain(),
+        config.getSegmentSchemaKillPeriod(),
+        config.getSegmentSchemaKillDurationToRetain(),
         Stats.Kill.RULES,
         config
     );

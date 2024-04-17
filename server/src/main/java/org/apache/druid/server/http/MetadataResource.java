@@ -159,7 +159,7 @@ public class MetadataResource
   )
   {
     try {
-      // realtime segments can be requested only when {@code includeOverShadowedStatus} is set
+      // realtime segments can be requested only when includeOverShadowedStatus is set
       if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }

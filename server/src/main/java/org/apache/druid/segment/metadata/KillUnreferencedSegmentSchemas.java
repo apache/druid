@@ -80,7 +80,7 @@ public class KillUnreferencedSegmentSchemas
       log.info("Identified [%s] unused schemas still referenced by used segments. Marking them as used.", schemaIdsToUpdate.size());
     }
 
-    // 3: Delete unused schema older than {@code timestamp}.
+    // 3: Delete unused schema older than timestamp.
     int deleted = segmentSchemaManager.deleteSchemasOlderThan(timestamp);
 
     if (deleted > 0) {

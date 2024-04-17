@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -2043,10 +2044,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     Long schemaId = null, numRows = null;
-    MinimalSegmentSchemas.SegmentStats segmentStats = minimalSegmentSchemas.getSegmentIdToMetadataMap().get(segmentId);
-    if (segmentStats != null) {
-      numRows = segmentStats.getNumRows();
-      String fingerprint = segmentStats.getSchemaFingerprint();
+    SegmentMetadata segmentMetadata = minimalSegmentSchemas.getSegmentIdToMetadataMap().get(segmentId);
+    if (segmentMetadata != null) {
+      numRows = segmentMetadata.getNumRows();
+      String fingerprint = segmentMetadata.getSchemaFingerprint();
       if (fingerprintSchemaIdMap != null && fingerprintSchemaIdMap.containsKey(fingerprint)) {
         schemaId = fingerprintSchemaIdMap.get(fingerprint);
       }

@@ -289,13 +289,13 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
-  public Duration getCoordinatorSegmentSchemaKillPeriod()
+  public Duration getSegmentSchemaKillPeriod()
   {
     return null;
   }
 
   @Override
-  public Duration getCoordinatorSegmentSchemaKillDurationToRetain()
+  public Duration getSegmentSchemaKillDurationToRetain()
   {
     return null;
   }

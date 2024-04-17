@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
@@ -35,8 +36,12 @@ import java.util.Map;
 
 public class TaskSegmentSchemaUtil
 {
+  /**
+   * Generates segment schema from the segment file.
+   */
   public static SchemaPayloadPlus getSegmentSchema(File segmentFile, IndexIO indexIO) throws IOException
   {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
     final RowSignature rowSignature = storageAdapter.getRowSignature();

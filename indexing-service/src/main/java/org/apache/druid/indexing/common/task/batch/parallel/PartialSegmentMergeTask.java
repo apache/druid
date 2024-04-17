@@ -319,10 +319,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
           SchemaPayloadPlus schemaPayloadPlus =
               TaskSegmentSchemaUtil.getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO());
           minimalSegmentSchemas.addSchema(
-              segment.getId().toString(),
-              fingerprintGenerator.generateFingerprint(schemaPayloadPlus.getSchemaPayload()),
-              schemaPayloadPlus.getNumRows(),
-              schemaPayloadPlus.getSchemaPayload()
+              segment.getId(),
+              schemaPayloadPlus,
+              fingerprintGenerator.generateFingerprint(schemaPayloadPlus.getSchemaPayload())
           );
         }
 
@@ -341,7 +340,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       LOG.info("SegmentSchema for the pushed segments is [%s]", minimalSegmentSchemas);
     }
-    return new DataSegmentWithSchemas(pushedSegments, minimalSegmentSchemas);
+    return new DataSegmentWithSchemas(pushedSegments, minimalSegmentSchemas.isNonEmpty() ? minimalSegmentSchemas : null);
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(
