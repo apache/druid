@@ -17,30 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
-
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+/**
+ * An interface to be implemented by every appending task that allocates pending segments.
+ */
+public interface PendingSegmentAllocatingTask
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
-
-  @Override
-  public StorageConnector get()
-  {
-    return STORAGE_CONNECTOR;
-  }
-
-  @Override
-  public String getResourceType()
-  {
-    return "testExport";
-  }
-
-  @Override
-  public String getBasePath()
-  {
-    return "testExport";
-  }
+  /**
+   * Unique string used by an appending task (or its sub-tasks and replicas) to allocate pending segments
+   * and identify pending segments allocated to it.
+   */
+  String getTaskAllocatorId();
 }

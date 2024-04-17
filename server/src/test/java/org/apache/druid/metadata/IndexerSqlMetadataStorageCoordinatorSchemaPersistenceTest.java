@@ -184,7 +184,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     // Commit the segment and verify the results
     SegmentPublishResult commitResult
-        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, segmentSchemaMapping);
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, "append", segmentSchemaMapping);
     Assert.assertTrue(commitResult.isSuccess());
     Assert.assertEquals(appendSegments, commitResult.getSegments());
 

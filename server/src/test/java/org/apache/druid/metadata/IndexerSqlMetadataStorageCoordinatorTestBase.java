@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,7 +37,6 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -308,6 +305,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
 
   protected IndexerSQLMetadataStorageCoordinator coordinator;
   protected TestDerbyConnector derbyConnector;
+  protected TestDerbyConnector.SegmentsTable segmentsTable;
   protected SegmentSchemaManager segmentSchemaManager;
   protected FingerprintGenerator fingerprintGenerator;
   protected SegmentSchemaTestUtils segmentSchemaTestUtils;
@@ -450,26 +448,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     markAllSegmentsUnused(SEGMENTS, DateTimes.nowUtc(), tablesConfig);
   }
 
-  protected void markAllSegmentsUnused(
-      Set<DataSegment> segments,
-      DateTime usedStatusLastUpdatedTime,
-      MetadataStorageTablesConfig tablesConfig
-  )
+  protected void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime, MetadataStorageTablesConfig tablesConfig)
   {
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
           1,
-          (int) derbyConnector.getDBI().<Integer>withHandle(
-              handle -> {
-                String request = StringUtils.format(
-                    "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
-                    tablesConfig.getSegmentsTable()
-                );
-                return handle.createStatement(request)
-                             .bind("id", segment.getId().toString())
-                             .bind("used_status_last_updated", usedStatusLastUpdatedTime.toString()
-                             ).execute();
-              }
+          segmentsTable.update(
+              "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",
+              usedStatusLastUpdatedTime.toString(),
+              segment.getId().toString()
           )
       );
     }
@@ -512,44 +499,6 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
         handle -> handle.createQuery("SELECT id FROM " + table + " WHERE used = false ORDER BY id")
                         .map(StringMapper.FIRST)
                         .list()
-    );
-  }
-
-  protected Boolean insertPendingSegmentAndSequenceName(Pair<SegmentIdWithShardSpec, String> pendingSegmentSequenceName, MetadataStorageTablesConfig tablesConfig)
-  {
-    final SegmentIdWithShardSpec pendingSegment = pendingSegmentSequenceName.lhs;
-    final String sequenceName = pendingSegmentSequenceName.rhs;
-    final String table = tablesConfig.getPendingSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> {
-          handle.createStatement(
-                    StringUtils.format(
-                        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
-                        + "sequence_name_prev_id_sha1, payload) "
-                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
-                        + ":sequence_name_prev_id_sha1, :payload)",
-                        table,
-                        derbyConnector.getQuoteString()
-                    )
-                )
-                .bind("id", pendingSegment.toString())
-                .bind("dataSource", pendingSegment.getDataSource())
-                .bind("created_date", DateTimes.nowUtc().toString())
-                .bind("start", pendingSegment.getInterval().getStart().toString())
-                .bind("end", pendingSegment.getInterval().getEnd().toString())
-                .bind("sequence_name", sequenceName)
-                .bind("sequence_prev_id", pendingSegment.toString())
-                .bind("sequence_name_prev_id_sha1", BaseEncoding.base16().encode(
-                    Hashing.sha1()
-                           .newHasher()
-                           .putLong((long) pendingSegment.hashCode() * sequenceName.hashCode())
-                           .hash()
-                           .asBytes()
-                ))
-                .bind("payload", mapper.writeValueAsBytes(pendingSegment))
-                .execute();
-          return true;
-        }
     );
   }
 

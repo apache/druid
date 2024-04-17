@@ -23,11 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -38,21 +40,24 @@ import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.kernel.ExtraInfoHolder;
 import org.apache.druid.msq.kernel.FrameContext;
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
+import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 @JsonTypeName("exportResults")
-public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactory
+public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory<Object, Object, Object>
 {
   private final String queryId;
   private final ExportStorageProvider exportStorageProvider;
@@ -101,7 +106,7 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
   }
 
   @Override
-  public ProcessorsAndChannels<Object, Long> makeProcessors(
+  public ProcessorsAndChannels<Object, Object> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -120,7 +125,11 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
     );
 
     if (inputSliceReader.numReadableInputs(slice) == 0) {
-      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
+      return new ProcessorsAndChannels<>(
+          ProcessorManagers.of(Sequences.<ExportResultsFrameProcessor>empty())
+                           .withAccumulation(new ArrayList<String>(), (acc, file) -> acc),
+          OutputChannels.none()
+      );
     }
 
     ChannelCounters channelCounter = counters.channel(CounterNames.outputChannel());
@@ -141,9 +150,48 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
     );
 
     return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(processors),
+        ProcessorManagers.of(processors)
+                         .withAccumulation(new ArrayList<String>(), (acc, file) -> {
+                           ((ArrayList<String>) acc).add((String) file);
+                           return acc;
+                         }),
         OutputChannels.none()
     );
+  }
+
+  @Nullable
+  @Override
+  public TypeReference<Object> getResultTypeReference()
+  {
+    return new TypeReference<Object>() {};
+  }
+
+  @Override
+  public Object mergeAccumulatedResult(Object accumulated, Object otherAccumulated)
+  {
+    // If a worker does not return a list, fail the query
+    if (!(accumulated instanceof List)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Expected a list result from worker, received [%s] instead. This might be due to workers having an older version.", accumulated.getClass());
+    }
+    if (!(otherAccumulated instanceof List)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Expected a list result from worker, received [%s] instead. This might be due to workers having an older version.", otherAccumulated.getClass());
+    }
+    ((List<String>) accumulated).addAll((List<String>) otherAccumulated);
+    return accumulated;
+  }
+
+  @Override
+  public ExtraInfoHolder makeExtraInfoHolder(@Nullable Object extra)
+  {
+    if (extra != null) {
+      throw new ISE("Expected null 'extra'");
+    }
+
+    return NilExtraInfoHolder.instance();
   }
 
   private static String getExportFilePath(String queryId, int workerNumber, int partitionNumber, ResultFormat exportFormat)
