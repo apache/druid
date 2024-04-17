@@ -192,7 +192,7 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            CliCoordinator.validateCentralizedDatasourceSchemaConfig(properties);
+            validateCentralizedDatasourceSchemaConfig(properties);
 
             if (standalone) {
               binder.bindConstant()

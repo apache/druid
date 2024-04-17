@@ -44,7 +44,6 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.Jerseys;
@@ -54,7 +53,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryableModule;
-import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
@@ -158,8 +156,6 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
-
   private Properties properties;
   private boolean beOverlord;
   private boolean isSegmentMetadataCacheEnabled;
@@ -189,30 +185,6 @@ public class CliCoordinator extends ServerRunnable
            : ImmutableSet.of(NodeRole.COORDINATOR);
   }
 
-  protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
-  {
-    if (isSegmentMetadataCacheEnabled(properties)) {
-      String serverViewType = (String) properties.getOrDefault(
-          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-          ServerViewModule.DEFAULT_SERVERVIEW_TYPE
-      );
-      if (!serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
-        throw DruidException
-            .forPersona(DruidException.Persona.ADMIN)
-            .ofCategory(DruidException.Category.UNSUPPORTED)
-            .build(
-                StringUtils.format(
-                    "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
-                    + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
-                    + "or disable the feature (set %4$s=false).",
-                    ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                    serverViewType,
-                    ServerViewModule.SERVERVIEW_TYPE_HTTP,
-                    CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
-                ));
-      }
-    }
-  }
 
   @Override
   protected List<? extends Module> getModules()
@@ -398,10 +370,6 @@ public class CliCoordinator extends ServerRunnable
     return Boolean.parseBoolean(properties.getProperty(AS_OVERLORD_PROPERTY));
   }
 
-  private static boolean isSegmentMetadataCacheEnabled(Properties properties)
-  {
-    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
-  }
 
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
   {

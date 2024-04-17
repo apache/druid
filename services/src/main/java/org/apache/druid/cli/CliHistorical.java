@@ -101,7 +101,7 @@ public class CliHistorical extends ServerRunnable
         new JoinableFactoryModule(),
         new HistoricalServiceModule(),
         binder -> {
-          CliCoordinator.validateCentralizedDatasourceSchemaConfig(getProperties());
+          validateCentralizedDatasourceSchemaConfig(getProperties());
 
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);

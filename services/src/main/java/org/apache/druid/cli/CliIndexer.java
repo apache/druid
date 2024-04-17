@@ -135,7 +135,7 @@ public class CliIndexer extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            CliCoordinator.validateCentralizedDatasourceSchemaConfig(properties);
+            validateCentralizedDatasourceSchemaConfig(properties);
 
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
