@@ -8745,7 +8745,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     msqIncompatible();
-    // FIXME case was removed
     cannotVectorize();
     skipVectorize();
     testQuery(
@@ -8773,6 +8772,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     "v0",
                                                     "((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000))",
                                                     ColumnType.LONG
+                                                ),
+                                                expressionVirtualColumn(
+                                                    "v1",
+                                                    "case_searched(((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000)),1,0)",
+                                                    ColumnType.LONG
                                                 )
                                             )
                                             .setDimensions(
@@ -8783,17 +8787,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )
                                             .setAggregatorSpecs(
                                                 aggregators(
-                                                    new FilteredAggregatorFactory(
-                                                        new CountAggregatorFactory("a0"),
-                                                        range(
-                                                            "__time",
-                                                            ColumnType.LONG,
-                                                            timestamp("2000-01-04T17:00:00"),
-                                                            timestamp("2022-01-05T17:00:00"),
-                                                            false,
-                                                            true
-                                                        )
-                                                    ),
+                                                    new LongSumAggregatorFactory("a0", "v1"),
                                                     new GroupingAggregatorFactory(
                                                         "a1",
                                                         ImmutableList.of("dim1", "v0")
