@@ -67,7 +67,7 @@ import java.util.stream.Stream;
 
 /**
  * Input source to ingest data from a Delta Lake. This input source reads the latest snapshot from a Delta table
- * specified by {@code tablePath} parameter. If {@code deltaFilter} is specified, it's used at the Kernel level
+ * specified by {@code tablePath} parameter. If {@code filter} is specified, it's used at the Kernel level
  * for data pruning. The filtering behavior is as follows:
  * <ul>
  * <li> When a filter is applied on a partitioned table using the partitioning columns, the filtering is guaranteed. </li>

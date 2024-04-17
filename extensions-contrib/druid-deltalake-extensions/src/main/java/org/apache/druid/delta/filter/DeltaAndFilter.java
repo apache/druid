@@ -35,19 +35,19 @@ public class DeltaAndFilter implements DeltaFilter
 
   @JsonCreator
   public DeltaAndFilter(
-      @JsonProperty("predicates") List<DeltaFilter> predicates
+      @JsonProperty("filters") List<DeltaFilter> filters
   )
   {
-    if (predicates == null) {
-      throw InvalidInput.exception("Delta and filter predicates must be non-empty.");
+    if (filters == null) {
+      throw InvalidInput.exception("Delta and filter filters must be non-empty.");
     }
-    if (predicates.size() != 2) {
+    if (filters.size() != 2) {
       throw InvalidInput.exception(
-          "Delta and filter requires 2 predicates, but provided [%d].",
-          predicates.size()
+          "Delta and filter requires 2 filters, but provided [%d].",
+          filters.size()
       );
     }
-    this.predicates = predicates;
+    this.predicates = filters;
   }
 
   @Override

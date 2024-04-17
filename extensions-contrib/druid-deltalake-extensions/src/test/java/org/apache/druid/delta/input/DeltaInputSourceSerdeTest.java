@@ -73,7 +73,7 @@ public class DeltaInputSourceSerdeTest
                      + "      \"tablePath\": \"s3://foo/bar/baz\",\n"
                      + "      \"filter\": {\n"
                      + "        \"type\": \"and\",\n"
-                     + "        \"predicates\": [\n"
+                     + "        \"filters\": [\n"
                      + "          {\n"
                      + "            \"type\": \"<=\",\n"
                      + "            \"column\": \"age\",\n"

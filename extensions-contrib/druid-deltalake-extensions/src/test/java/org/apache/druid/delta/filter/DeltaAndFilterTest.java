@@ -77,7 +77,7 @@ public class DeltaAndFilterTest
   }
 
   @Test
-  public void testAndFilterWithMissingPredicates()
+  public void testAndFilterWithMissingFilters()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -89,7 +89,7 @@ public class DeltaAndFilterTest
             )
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Delta and filter requires 2 predicates, but provided [1]."
+            "Delta and filter requires 2 filters, but provided [1]."
         )
     );
   }

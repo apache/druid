@@ -28,8 +28,8 @@ Lakehouse architecture with various compute engines. [DeltaLakeInputSource](../.
 you ingest data stored in a Delta Lake table into Apache Druid. To use the Delta Lake extension, add the `druid-deltalake-extensions` to the list of loaded extensions.
 See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
-The Delta input source reads the configured Delta Lake table and extracts all the underlying delta files in the table's latest snapshot.
-These Delta Lake files are versioned Parquet files.
+The Delta input source reads the configured Delta Lake table and extracts the underlying Delta files in the table's latest snapshot
+based on an optional Delta filter. These Delta Lake files are versioned Parquet files.
 
 ## Version support
 
