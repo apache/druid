@@ -36,8 +36,8 @@ public class RowSerdeTest
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
-        {DeltaTableUnpartitioned.DELTA_TABLE_PATH},
-        {DeltaTablePartitioned.DELTA_TABLE_PATH}
+        {NonPartitionedDeltaTable.DELTA_TABLE_PATH},
+        {PartitionedDeltaTable.DELTA_TABLE_PATH}
     };
     return Arrays.asList(data);
   }

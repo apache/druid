@@ -97,7 +97,8 @@ def main():
     parser.add_argument('--save_path', default=None, required=True, help="Save path for Delta table")
     parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
                         help="Specify write mode (append/overwrite)")
-    parser.add_argument('--partitioned_by', choices=("date", "name"), default=None, help="Partitioned by columns")
+    parser.add_argument('--partitioned_by', choices=("date", "name"), default=None,
+                        help="Column to partition the Delta table")
     parser.add_argument('--num_records', type=int, default=5, help="Specify number of Delta records to write")
 
     args = parser.parse_args()

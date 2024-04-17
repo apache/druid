@@ -53,8 +53,8 @@ public class DeltaInputRowTest
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
-        {DeltaTableUnpartitioned.DELTA_TABLE_PATH, DeltaTableUnpartitioned.FULL_SCHEMA, DeltaTableUnpartitioned.DIMENSIONS, DeltaTableUnpartitioned.EXPECTED_ROWS},
-        {DeltaTablePartitioned.DELTA_TABLE_PATH, DeltaTablePartitioned.FULL_SCHEMA, DeltaTablePartitioned.DIMENSIONS, DeltaTablePartitioned.EXPECTED_ROWS}
+        {NonPartitionedDeltaTable.DELTA_TABLE_PATH, NonPartitionedDeltaTable.FULL_SCHEMA, NonPartitionedDeltaTable.DIMENSIONS, NonPartitionedDeltaTable.EXPECTED_ROWS},
+        {PartitionedDeltaTable.DELTA_TABLE_PATH, PartitionedDeltaTable.FULL_SCHEMA, PartitionedDeltaTable.DIMENSIONS, PartitionedDeltaTable.EXPECTED_ROWS}
     };
     return Arrays.asList(data);
   }
@@ -116,7 +116,7 @@ public class DeltaInputRowTest
         }
       }
     }
-    Assert.assertEquals(DeltaTableUnpartitioned.EXPECTED_ROWS.size(), totalRecordCount);
+    Assert.assertEquals(NonPartitionedDeltaTable.EXPECTED_ROWS.size(), totalRecordCount);
   }
 
   @MethodSource("data")

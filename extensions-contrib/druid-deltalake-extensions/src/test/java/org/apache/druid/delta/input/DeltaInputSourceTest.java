@@ -62,24 +62,24 @@ public class DeltaInputSourceTest
     {
       return new Object[][]{
           {
-              DeltaTableUnpartitioned.DELTA_TABLE_PATH,
-              DeltaTableUnpartitioned.FULL_SCHEMA,
-              DeltaTableUnpartitioned.EXPECTED_ROWS
+              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
+              NonPartitionedDeltaTable.FULL_SCHEMA,
+              NonPartitionedDeltaTable.EXPECTED_ROWS
           },
           {
-              DeltaTableUnpartitioned.DELTA_TABLE_PATH,
-              DeltaTableUnpartitioned.SCHEMA_1,
-              DeltaTableUnpartitioned.EXPECTED_ROWS
+              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
+              NonPartitionedDeltaTable.SCHEMA_1,
+              NonPartitionedDeltaTable.EXPECTED_ROWS
           },
           {
-              DeltaTableUnpartitioned.DELTA_TABLE_PATH,
-              DeltaTableUnpartitioned.SCHEMA_2,
-              DeltaTableUnpartitioned.EXPECTED_ROWS
+              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
+              NonPartitionedDeltaTable.SCHEMA_2,
+              NonPartitionedDeltaTable.EXPECTED_ROWS
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
-              DeltaTablePartitioned.FULL_SCHEMA,
-              DeltaTablePartitioned.EXPECTED_ROWS
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.FULL_SCHEMA,
+              PartitionedDeltaTable.EXPECTED_ROWS
           },
           };
     }
@@ -145,7 +145,7 @@ public class DeltaInputSourceTest
           "name",
           "Employee2"
       );
-      final List<Map<String, Object>> equalsFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> equalsFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> k.get("name").equals("Employee2"))
           .collect(Collectors.toList());
@@ -154,7 +154,7 @@ public class DeltaInputSourceTest
           "name",
           "Employee3"
       );
-      final List<Map<String, Object>> gtFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> gtFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> ((String) k.get("name")).compareTo("Employee3") > 0)
           .collect(Collectors.toList());
@@ -163,7 +163,7 @@ public class DeltaInputSourceTest
           "name",
           "Employee4"
       );
-      final List<Map<String, Object>> lteFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> lteFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> ((String) k.get("name")).compareTo("Employee4") <= 0)
           .collect(Collectors.toList());
@@ -174,7 +174,7 @@ public class DeltaInputSourceTest
               new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee4")
           )
       );
-      final List<Map<String, Object>> andFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> andFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> k.get("name").equals("Employee1") && k.get("name").equals("Employee4"))
           .collect(Collectors.toList());
@@ -185,7 +185,7 @@ public class DeltaInputSourceTest
               new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
           )
       );
-      final List<Map<String, Object>> orFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> orFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> k.get("name").equals("Employee5") || k.get("name").equals("Employee1"))
           .collect(Collectors.toList());
@@ -193,70 +193,70 @@ public class DeltaInputSourceTest
       final DeltaNotFilter notFilter = new DeltaNotFilter(
           new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee3")
       );
-      final List<Map<String, Object>> notFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> notFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> !k.get("name").equals("Employee3"))
           .collect(Collectors.toList());
 
       final DeltaNotFilter notOfAndFilter = new DeltaNotFilter(andFilter);
-      final List<Map<String, Object>> notofAndFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> notofAndFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> !(k.get("name").equals("Employee1") && k.get("name").equals("Employee4")))
           .collect(Collectors.toList());
 
       final DeltaNotFilter notOfOrFilter = new DeltaNotFilter(orFilter);
-      final List<Map<String, Object>> notofOrFilterExpectedResults = DeltaTablePartitioned.EXPECTED_ROWS
+      final List<Map<String, Object>> notofOrFilterExpectedResults = PartitionedDeltaTable.EXPECTED_ROWS
           .stream()
           .filter(k -> !(k.get("name").equals("Employee5") || k.get("name").equals("Employee1")))
           .collect(Collectors.toList());
 
       return new Object[][]{
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               equalsFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               equalsFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               gtFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               gtFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               lteFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               lteFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               andFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               andFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               orFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               orFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               notFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               notFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               notOfAndFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               notofAndFilterExpectedResults
           },
           {
-              DeltaTablePartitioned.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
               notOfOrFilter,
-              DeltaTablePartitioned.FULL_SCHEMA,
+              PartitionedDeltaTable.FULL_SCHEMA,
               notofOrFilterExpectedResults
           }
       };

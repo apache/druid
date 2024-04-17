@@ -25,8 +25,8 @@ import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.types.StructType;
 
 /**
- * Filters that the underlying Delta Kernel supports. Different implementations should provide an expression
- * tree to provide more flexibility to users.
+ * Filters that translate to the underlying Delta Kernel {@link Predicate}. Implementations should
+ * provide an expression tree syntax to provide more flexibility to users.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -43,7 +43,7 @@ public interface DeltaFilter
 {
   /**
    * Return a Delta predicate expression. The {@code snapshotSchema} should be used to perform any validations
-   * and derive sub-expressions to be used in the resulting predicate.
+   * and derive sub-expressions to be used in the resulting {@link Predicate}.
    */
   Predicate getFilterPredicate(StructType snapshotSchema);
 }

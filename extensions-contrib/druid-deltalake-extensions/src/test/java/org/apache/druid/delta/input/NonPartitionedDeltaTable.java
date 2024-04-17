@@ -42,13 +42,13 @@ import java.util.stream.Collectors;
  * sample Delta Lake table used in the unit tests.
  *
  * <p>
- * For a partitioned delta table sample, see {@link DeltaTablePartitioned}.
+ * For a partitioned delta table sample, see {@link PartitionedDeltaTable}.
  * </p>
  */
-public class DeltaTableUnpartitioned
+public class NonPartitionedDeltaTable
 {
   /**
-   * The Delta table path used by unit tests.
+   * The non-partitioned Delta table path used by unit tests.
    */
   public static final String DELTA_TABLE_PATH = "src/test/resources/employee-delta-table";
   /**
