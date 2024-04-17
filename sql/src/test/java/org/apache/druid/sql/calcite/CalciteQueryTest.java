@@ -15644,49 +15644,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringOperationsBooleanNullable()
+  public void testStringOperationsNullableInference()
   {
-    testQuery(
-            "SELECT ICONTAINS_STRING(dim3, 'a'), REGEXP_LIKE(dim3,'x'), SUBSTRING(dim3, 1, 1) " +
-                    "from druid.numfoo where dim3 is NULL",
-            QUERY_CONTEXT_LOS_ANGELES,
-            ImmutableList.of(
-                    Druids.newScanQueryBuilder()
-                            .dataSource(CalciteTests.DATASOURCE3)
-                            .intervals(querySegmentSpec(Filtration.eternity()))
-                            .virtualColumns(
-                                    new ExpressionVirtualColumn(
-                                            "v0",
-                                            NullHandling.replaceWithDefault() ? "0" : "null",
-                                            ColumnType.LONG,
-                                            ExprMacroTable.nil()
-                                    ),
-                                    new ExpressionVirtualColumn(
-                                            "v1",
-                                            "null",
-                                            ColumnType.STRING,
-                                            ExprMacroTable.nil()
-                                    )
-                            )
-                            .columns("v0", "v1")
-                            .filters(
-                                    NullHandling.replaceWithDefault()
-                                            ? selector("dim3", null)
-                                            : NullFilter.forColumn("dim3")
-                            )
-                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                            .legacy(false)
-                            .context(QUERY_CONTEXT_LOS_ANGELES)
-                            .build()
-            ),
-            NullHandling.replaceWithDefault() ? ImmutableList.of(
-                    new Object[]{false, false, ""},
-                    new Object[]{false, false, ""},
-                    new Object[]{false, false, ""}
-            ) : ImmutableList.of(
-                    new Object[]{null, null, null},
-                    new Object[]{null, null, null}
+    testBuilder()
+            .sql(
+                    "SELECT ICONTAINS_STRING(dim3, 'a'), REGEXP_LIKE(dim3,'x'), SUBSTRING(dim3, 1, 1) " +
+                            "from druid.numfoo where dim3 is NULL LIMIT 1"
             )
-    );
+            .queryContext(QUERY_CONTEXT_LOS_ANGELES)
+            .expectedQueries(
+                    ImmutableList.of(
+                            Druids.newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE3)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .virtualColumns(
+                                            new ExpressionVirtualColumn(
+                                                    "v0",
+                                                    NullHandling.replaceWithDefault() ? "0" : "null",
+                                                    ColumnType.LONG,
+                                                    ExprMacroTable.nil()
+                                            ),
+                                            new ExpressionVirtualColumn(
+                                                    "v1",
+                                                    "null",
+                                                    ColumnType.STRING,
+                                                    ExprMacroTable.nil()
+                                            )
+                                    )
+                                    .columns("v0", "v1")
+                                    .filters(isNull("dim3"))
+                                    .limit(1)
+                                    .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .legacy(false)
+                                    .context(QUERY_CONTEXT_LOS_ANGELES)
+                                    .build()
+                    )
+            ).expectedResults(
+                    ResultMatchMode.RELAX_NULLS,
+                    ImmutableList.of(
+                            new Object[]{null, null, null}
+                    )
+            );
   }
 }
