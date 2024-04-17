@@ -3245,13 +3245,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 The supervisor must be running for this endpoint to be available.
 
-Resets the specified supervisor. This endpoint clears all stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the platform: offsets in Kafka or sequence numbers in Kinesis.
-After clearing all stored offsets in Kafka or sequence numbers in Kinesis, the supervisor kills and recreates active tasks,
+Resets the specified supervisor. This endpoint clears supervisor metadata, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the `useEarliestOffset` setting.
+After clearing all stored offsets, the supervisor kills and recreates active tasks,
 so that tasks begin reading from valid positions.
 
 Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
 
-The indexing service keeps track of the latest persisted offsets in Kafka or sequence numbers in Kinesis to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for Druid to accept the generated segments. If the messages at the expected starting offsets in Kafka or sequence numbers in Kinesis are no longer available, the supervisor refuses to start and in-flight tasks fail. Possible causes for missing messages include the message retention period elapsing or the topic being removed and re-created. Use the `reset` endpoint to recover from this condition.
+The indexing service keeps track of the latest persisted offsets to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for Druid to accept the generated segments. If the messages at the expected starting offsets are no longer available, the supervisor refuses to start and in-flight tasks fail. Possible causes for missing messages include the message retention period elapsing or the topic being removed and re-created. Use the `reset` endpoint to recover from this condition.
 
 #### URL
 
@@ -3320,7 +3320,7 @@ The supervisor must be running for this endpoint to be available.
 
 Resets the specified offsets for partitions without resetting the entire set.
 
-This endpoint clears only the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume reading data from the specified offsets.
+This endpoint clears only the stored offsets, prompting the supervisor to resume reading data from the specified offsets.
 If there are no stored offsets, the specified offsets are set in the metadata store.
 
 After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions,
