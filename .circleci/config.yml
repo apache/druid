@@ -35,7 +35,7 @@ jobs:
             sudo pip install pyyaml
       - run:
           name: Build
-          command: mvn clean package -Pdist #-DskipTests
+          command: mvn clean package -DskipTests -Pdist
 #      - run:
 #          name: Test
 #          command: mvn test
