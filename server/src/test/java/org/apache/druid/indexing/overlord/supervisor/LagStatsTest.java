@@ -17,32 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord;
+package org.apache.druid.indexing.overlord.supervisor;
 
-import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SegmentCreateRequestTest
+public class LagStatsTest
 {
 
   @Test
-  public void testNullPreviousSegmentId()
+  public void lagStatsByMetric()
   {
-    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
-    SegmentCreateRequest request = new SegmentCreateRequest(
-        "sequence",
-        null,
-        "version",
-        partialShardSpec,
-        null,
-        null
-    );
-    Assert.assertEquals("sequence", request.getSequenceName());
-    Assert.assertEquals("", request.getPreviousSegmentId());
-    Assert.assertEquals("version", request.getVersion());
-    Assert.assertEquals(partialShardSpec, request.getPartialShardSpec());
-  }
+    int max = 1;
+    int avg = 2;
+    int total = 3;
+    LagStats lag = new LagStats(max, total, avg);
 
+    Assert.assertEquals(max, lag.get(LagMetric.MAX));
+    Assert.assertEquals(total, lag.get(LagMetric.TOTAL));
+    Assert.assertEquals(avg, lag.get(LagMetric.AVERAGE));
+  }
 }

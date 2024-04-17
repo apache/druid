@@ -17,46 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.supervisor.autoscaler;
+package org.apache.druid.indexing.common.task;
 
-public class LagStats
+/**
+ * An interface to be implemented by every appending task that allocates pending segments.
+ */
+public interface PendingSegmentAllocatingTask
 {
-  private final long maxLag;
-  private final long totalLag;
-  private final long avgLag;
-
-  public LagStats(long maxLag, long totalLag, long avgLag)
-  {
-    this.maxLag = maxLag;
-    this.totalLag = totalLag;
-    this.avgLag = avgLag;
-  }
-
-  public long getMaxLag()
-  {
-    return maxLag;
-  }
-
-  public long getTotalLag()
-  {
-    return totalLag;
-  }
-
-  public long getAvgLag()
-  {
-    return avgLag;
-  }
-
-  public long get(LagMetric metric)
-  {
-    switch (metric) {
-      case AVERAGE:
-        return avgLag;
-      case TOTAL:
-        return totalLag;
-      case MAX:
-        return maxLag;
-    }
-    throw new IllegalStateException("Unknown Metric");
-  }
+  /**
+   * Unique string used by an appending task (or its sub-tasks and replicas) to allocate pending segments
+   * and identify pending segments allocated to it.
+   */
+  String getTaskAllocatorId();
 }

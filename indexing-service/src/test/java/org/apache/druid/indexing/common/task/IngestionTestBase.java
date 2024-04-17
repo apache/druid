@@ -60,6 +60,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -118,6 +119,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
   private File baseDir;
+  private SupervisorManager supervisorManager;
   protected File reportsFile;
 
   @Before
@@ -227,13 +229,14 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null,
+        supervisorManager,
         objectMapper
     );
   }
 
-  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
   {
+    this.supervisorManager = supervisorManager;
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))

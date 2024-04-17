@@ -1896,14 +1896,17 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testUpgradeSegmentsCleanupOnUnlock()
+  public void testCleanupOnUnlock()
   {
-    final Task replaceTask = NoopTask.create();
-    final Task appendTask = NoopTask.create();
+    final Task replaceTask = NoopTask.forDatasource("replace");
+    final Task appendTask = NoopTask.forDatasource("append");
     final IndexerSQLMetadataStorageCoordinator coordinator
         = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
     // Only the replaceTask should attempt a delete on the upgradeSegments table
     EasyMock.expect(coordinator.deleteUpgradeSegmentsForTask(replaceTask.getId())).andReturn(0).once();
+    // Any task may attempt pending segment clean up
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(replaceTask.getId())).andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(appendTask.getId())).andReturn(0).once();
     EasyMock.replay(coordinator);
 
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);
