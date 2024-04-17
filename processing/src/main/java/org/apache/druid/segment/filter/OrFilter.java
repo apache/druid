@@ -81,7 +81,7 @@ public class OrFilter implements BooleanFilter
   public <T> FilterBundle makeFilterBundle(
       ColumnIndexSelector columnIndexSelector,
       BitmapResultFactory<T> bitmapResultFactory,
-      int selectionRowCount,
+      int applyRowCount,
       int totalRowCount,
       boolean includeUnknown
   )
@@ -99,6 +99,8 @@ public class OrFilter implements BooleanFilter
     final List<FilterBundle.IndexBundleInfo> indexOnlyBundlesInfo = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> partialIndexBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> matcherOnlyBundles = new ArrayList<>();
+
+    int indexUnionSize = 0;
     ImmutableBitmap index = null;
     ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
     int emptyCount = 0;
@@ -109,7 +111,7 @@ public class OrFilter implements BooleanFilter
       final FilterBundle bundle = subfilter.makeFilterBundle(
           columnIndexSelector,
           bitmapResultFactory,
-          selectionRowCount,
+          Math.min(applyRowCount, totalRowCount - indexUnionSize),
           totalRowCount,
           includeUnknown
       );
@@ -138,6 +140,7 @@ public class OrFilter implements BooleanFilter
             } else {
               index = index.union(bundle.getIndex().getBitmap());
             }
+            indexUnionSize = index.size();
           }
         }
       } else {
@@ -165,7 +168,7 @@ public class OrFilter implements BooleanFilter
           new FilterBundle.SimpleIndexBundle(
               new FilterBundle.IndexBundleInfo(
                   () -> "OR",
-                  selectionRowCount,
+                  applyRowCount,
                   totalBitmapConstructTimeNs,
                   indexOnlyBundlesInfo
               ),
@@ -185,7 +188,7 @@ public class OrFilter implements BooleanFilter
     if (!indexOnlyBundles.isEmpty()) {
       // translate the indexOnly bundles into a single matcher
       final FilterBundle.MatcherBundle matcherBundle = convertIndexToMatcherBundle(
-          selectionRowCount,
+          applyRowCount,
           indexOnlyBundles,
           indexOnlyBundlesInfo,
           totalBitmapConstructTimeNs,
@@ -284,14 +287,14 @@ public class OrFilter implements BooleanFilter
       @Override
       public <T> T computeBitmapResult(
           BitmapResultFactory<T> bitmapResultFactory,
-          int selectionRowCount,
+          int applyRowCount,
           int totalRowCount,
           boolean includeUnknown
       )
       {
         List<T> results = Lists.newArrayListWithCapacity(bitmapColumnIndices.size());
         for (BitmapColumnIndex index : bitmapColumnIndices) {
-          final T r = index.computeBitmapResult(bitmapResultFactory, selectionRowCount, totalRowCount, includeUnknown);
+          final T r = index.computeBitmapResult(bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
           if (r == null) {
             // all or nothing
             return null;
