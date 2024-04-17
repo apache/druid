@@ -72,8 +72,8 @@ import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -427,8 +427,8 @@ public class IndexTaskTest extends IngestionTestBase
         ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
     );
 
-    Assert.assertEquals(2, segmentWithSchemas.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
-    Assert.assertEquals(1, segmentWithSchemas.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
+    Assert.assertEquals(2, segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
@@ -436,7 +436,7 @@ public class IndexTaskTest extends IngestionTestBase
                     .add("dim", ColumnType.STRING)
                     .add("val", ColumnType.LONG)
                     .build(),
-        segmentWithSchemas.getMinimalSegmentSchemas()
+        segmentWithSchemas.getSegmentSchemaMapping()
                         .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
@@ -446,7 +446,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
     Assert.assertEquals(
         Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val")),
-        segmentWithSchemas.getMinimalSegmentSchemas()
+        segmentWithSchemas.getSegmentSchemaMapping()
                         .getSchemaFingerprintToPayloadMap()
                         .values()
                         .stream()
@@ -2561,8 +2561,8 @@ public class IndexTaskTest extends IngestionTestBase
     final TaskStatus status = taskRunner.run(task).get();
 
     final Set<DataSegment> segments = new TreeSet<>(taskRunner.getPublishedSegments());
-    final MinimalSegmentSchemas minimalSegmentSchemas = taskRunner.getSegmentSchemas();
-    return Pair.of(status, new DataSegmentWithSchemas(segments, minimalSegmentSchemas));
+    final SegmentSchemaMapping segmentSchemaMapping = taskRunner.getSegmentSchemas();
+    return Pair.of(status, new DataSegmentWithSchemas(segments, segmentSchemaMapping));
   }
 
   private static IndexTuningConfig createTuningConfigWithMaxRowsPerSegment(
@@ -2844,11 +2844,11 @@ public class IndexTaskTest extends IngestionTestBase
       Map<String, AggregatorFactory> aggregatorFactoryMap
   )
   {
-    Assert.assertEquals(segmentWithSchemas.getSegments().size(), segmentWithSchemas.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
-    Assert.assertEquals(1, segmentWithSchemas.getMinimalSegmentSchemas().getSchemaFingerprintToPayloadMap().size());
+    Assert.assertEquals(segmentWithSchemas.getSegments().size(), segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         actualRowSignature,
-        segmentWithSchemas.getMinimalSegmentSchemas()
+        segmentWithSchemas.getSegmentSchemaMapping()
                           .getSchemaFingerprintToPayloadMap()
                           .values()
                           .stream()
@@ -2858,7 +2858,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
     Assert.assertEquals(
         aggregatorFactoryMap,
-        segmentWithSchemas.getMinimalSegmentSchemas()
+        segmentWithSchemas.getSegmentSchemaMapping()
                           .getSchemaFingerprintToPayloadMap()
                           .values()
                           .stream()

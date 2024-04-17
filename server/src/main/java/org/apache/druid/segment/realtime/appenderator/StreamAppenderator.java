@@ -59,12 +59,12 @@ import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.DataSegmentWithSchema;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -775,7 +775,7 @@ public class StreamAppenderator implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
-          final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+          final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -803,7 +803,7 @@ public class StreamAppenderator implements Appenderator
               SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithSchema.getSegmentSchemaMetadata();
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
-                minimalSegmentSchemas.addSchema(
+                segmentSchemaMapping.addSchema(
                     segment.getId(),
                     schemaPayloadPlus,
                     fingerprintGenerator.generateFingerprint(schemaPayload)
@@ -816,7 +816,7 @@ public class StreamAppenderator implements Appenderator
 
           log.info("Push complete...");
 
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, minimalSegmentSchemas);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchemaMapping);
         },
         pushExecutor
     );

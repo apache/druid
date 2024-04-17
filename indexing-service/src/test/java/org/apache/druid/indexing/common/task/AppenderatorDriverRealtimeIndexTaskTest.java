@@ -113,7 +113,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -1520,9 +1520,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     )
     {
       @Override
-      public Set<DataSegment> commitSegments(Set<DataSegment> segments, MinimalSegmentSchemas minimalSegmentSchemas) throws IOException
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping) throws IOException
       {
-        Set<DataSegment> result = super.commitSegments(segments, minimalSegmentSchemas);
+        Set<DataSegment> result = super.commitSegments(segments, segmentSchemaMapping);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1540,10 +1540,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
           Set<DataSegment> segments,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata,
-          MinimalSegmentSchemas minimalSegmentSchemas
+          SegmentSchemaMapping segmentSchemaMapping
       ) throws IOException
       {
-        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, minimalSegmentSchemas);
+        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, segmentSchemaMapping);
 
         Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",

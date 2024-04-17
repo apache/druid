@@ -35,22 +35,22 @@ public class DataSegmentWithSchemas
   private final Set<DataSegment> segments;
 
   @Nullable
-  private final MinimalSegmentSchemas minimalSegmentSchemas;
+  private final SegmentSchemaMapping segmentSchemaMapping;
 
   public DataSegmentWithSchemas(int schemaVersion)
   {
     this.segments = new HashSet<>();
-    this.minimalSegmentSchemas = new MinimalSegmentSchemas(schemaVersion);
+    this.segmentSchemaMapping = new SegmentSchemaMapping(schemaVersion);
   }
 
   @JsonCreator
   public DataSegmentWithSchemas(
       @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = segments;
-    this.minimalSegmentSchemas = minimalSegmentSchemas;
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
@@ -61,8 +61,8 @@ public class DataSegmentWithSchemas
 
   @Nullable
   @JsonProperty
-  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  public SegmentSchemaMapping getSegmentSchemaMapping()
   {
-    return minimalSegmentSchemas;
+    return segmentSchemaMapping;
   }
 }

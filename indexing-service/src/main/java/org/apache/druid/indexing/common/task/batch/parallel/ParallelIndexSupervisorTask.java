@@ -65,7 +65,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -1143,15 +1143,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
-          if (report.getMinimalSegmentSchemas() != null) {
-            minimalSegmentSchemas.merge(report.getMinimalSegmentSchemas());
+          if (report.getSegmentSchemaMapping() != null) {
+            segmentSchemaMapping.merge(report.getSegmentSchemaMapping());
           }
         });
     final boolean storeCompactionState = getContextValue(
@@ -1195,10 +1195,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, minimalSegmentSchemas).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping).isSuccess();
 
     if (published) {
-      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), minimalSegmentSchemas.size());
+      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), segmentSchemaMapping.getSchemaCount());
 
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());

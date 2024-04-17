@@ -31,7 +31,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -55,24 +55,24 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   private final Set<DataSegment> segments;
 
   @Nullable
-  private final MinimalSegmentSchemas minimalSegmentSchemas;
+  private final SegmentSchemaMapping segmentSchemaMapping;
 
   public static SegmentTransactionalReplaceAction create(
       Set<DataSegment> segmentsToPublish,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToPublish, minimalSegmentSchemas);
+    return new SegmentTransactionalReplaceAction(segmentsToPublish, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
       @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
-    this.minimalSegmentSchemas = minimalSegmentSchemas;
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
@@ -83,9 +83,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
   @JsonProperty
   @Nullable
-  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  public SegmentSchemaMapping getSegmentSchemaMapping()
   {
-    return minimalSegmentSchemas;
+    return segmentSchemaMapping;
   }
 
   @Override
@@ -116,7 +116,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask, minimalSegmentSchemas)
+                               .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(

@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -193,11 +193,11 @@ public interface IndexerMetadataStorageCoordinator
    * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    *
    * @param segments set of segments to add
-   * @param minimalSegmentSchemas segment schema information to add
+   * @param segmentSchemaMapping segment schema information to add
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable MinimalSegmentSchemas minimalSegmentSchemas) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -294,7 +294,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
    *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                       involve a metadata transaction
-   * @param minimalSegmentSchemas segment schema information to persist.
+   * @param segmentSchemaMapping segment schema information to persist.
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -307,7 +307,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   ) throws IOException;
 
   /**
@@ -331,7 +331,7 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -347,7 +347,7 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -364,12 +364,12 @@ public interface IndexerMetadataStorageCoordinator
    * @param replaceSegments        All segments created by a REPLACE task that
    *                               must be committed in a single transaction.
    * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
-   * @param minimalSegmentSchemas  Segment schema to add.
+   * @param segmentSchemaMapping  Segment schema to add.
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
       Set<ReplaceTaskLock> locksHeldByReplaceTask,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**

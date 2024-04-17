@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -279,7 +279,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testSimpleAnnounce() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     for (DataSegment segment : SEGMENTS) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -350,7 +350,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     final ImmutableSet<DataSegment> segments = ImmutableSet.of(defaultSegment, defaultSegment2, defaultSegment4);
 
-    coordinator.commitSegments(segments, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(segments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
@@ -375,7 +375,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -394,7 +394,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment2)), result2);
 
@@ -453,7 +453,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -475,7 +475,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment2)), result2);
 
@@ -506,7 +506,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
@@ -528,7 +528,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -536,7 +536,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
@@ -606,7 +606,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -614,7 +614,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
@@ -632,7 +632,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testSimpleUsedList() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -648,8 +648,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testMultiIntervalUsedList() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
-    coordinator.commitSegments(ImmutableSet.of(defaultSegment3), new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(ImmutableSet.of(defaultSegment3), new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     Assertions.assertThat(
         coordinator.retrieveUsedSegmentsForIntervals(
@@ -1301,7 +1301,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testSimpleUnusedList() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(
         SEGMENTS,
@@ -1396,7 +1396,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testSimpleUnusedListWithLimit() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     int limit = SEGMENTS.size() - 1;
     Set<DataSegment> retreivedUnusedSegments = ImmutableSet.copyOf(
@@ -1415,7 +1415,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUsedOverlapLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -1433,7 +1433,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUsedOverlapHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1449,7 +1449,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUsedOutOfBoundsLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -1463,7 +1463,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUsedOutOfBoundsHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -1476,7 +1476,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUsedWithinBoundsEnd() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1492,7 +1492,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUsedOverlapEnd() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1508,7 +1508,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedOverlapLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1526,7 +1526,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedUnderlapLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1542,7 +1542,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedUnderlapHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1557,7 +1557,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedOverlapHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1572,7 +1572,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedBigOverlap() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(
         SEGMENTS,
@@ -1590,7 +1590,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedLowRange() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(
         SEGMENTS,
@@ -1619,7 +1619,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUnusedHighRange() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(
         SEGMENTS,
@@ -1654,7 +1654,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             hugeTimeRangeSegment2,
             hugeTimeRangeSegment3
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1678,7 +1678,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             hugeTimeRangeSegment2,
             hugeTimeRangeSegment3
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1702,7 +1702,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             hugeTimeRangeSegment2,
             hugeTimeRangeSegment3
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1724,7 +1724,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(
             eternitySegment
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1747,7 +1747,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             numberedSegment0of0,
             eternitySegment
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1769,7 +1769,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(
             firstHalfEternityRangeSegment
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1792,7 +1792,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             numberedSegment0of0,
             firstHalfEternityRangeSegment
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1814,7 +1814,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(
             secondHalfEternityRangeSegment
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1838,7 +1838,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(
             hugeTimeRangeSegment4
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1861,7 +1861,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             numberedSegment0of0,
             secondHalfEternityRangeSegment
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1883,7 +1883,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -1901,7 +1901,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testDeleteSegmentsInMetaDataStorage() throws IOException
   {
     // Published segments to MetaDataStorage
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // check segments Published
     Assert.assertEquals(
@@ -1934,7 +1934,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testUpdateSegmentsInMetaDataStorage() throws IOException
   {
     // Published segments to MetaDataStorage
-    coordinator.commitSegments(SEGMENTS, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // check segments Published
     Assert.assertEquals(
@@ -1996,7 +1996,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
   private void additionalNumberedShardTest(Set<DataSegment> segments) throws IOException
   {
-    coordinator.commitSegments(segments, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(segments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
@@ -2583,7 +2583,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
               10L
           )
       );
-      final Set<DataSegment> announced = coordinator.commitSegments(toBeAnnounced, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+      final Set<DataSegment> announced = coordinator.commitSegments(toBeAnnounced, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
       Assert.assertEquals(toBeAnnounced, announced);
     }
@@ -2650,7 +2650,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
                 10L
             )
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     id = coordinator.allocatePendingSegment(
@@ -2682,7 +2682,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
                 10L
             )
         ),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     id = coordinator.allocatePendingSegment(
@@ -2731,7 +2731,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           )
       );
     }
-    coordinator.commitSegments(originalSegments, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
         datasource,
         "seq",
@@ -2776,7 +2776,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           )
       );
     }
-    coordinator.commitSegments(originalSegments, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
         datasource,
         "seq",
@@ -2796,7 +2796,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2825,7 +2825,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2851,7 +2851,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2877,7 +2877,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testMarkSegmentsAsUnusedWithinIntervalOneYear() throws IOException
   {
-    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2), new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2), new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // interval covers existingSegment1 and partially overlaps existingSegment2,
     // only existingSegment1 will be dropped
@@ -2914,7 +2914,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testMarkSegmentsAsUnusedWithinIntervalTwoYears() throws IOException
   {
-    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2), new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2), new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // interval covers existingSegment1 and partially overlaps existingSegment2,
     // only existingSegment1 will be dropped
@@ -3079,7 +3079,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
-    Assert.assertTrue(coordinator.commitSegments(tombstones, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
+    Assert.assertTrue(coordinator.commitSegments(tombstones, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
 
     // Allocate and commit a data segment by appending to the same interval
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
@@ -3101,7 +3101,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         identifier.getShardSpec()
     );
     final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
-    Assert.assertTrue(coordinator.commitSegments(dataSegments, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
 
     // Mark the tombstone as unused
     markAllSegmentsUnused(tombstones, DateTimes.nowUtc(), derbyConnectorRule.metadataTablesConfigSupplier().get());
@@ -3133,7 +3133,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
-    Assert.assertTrue(coordinator.commitSegments(tombstones, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
+    Assert.assertTrue(coordinator.commitSegments(tombstones, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
 
     // Allocate and commit a data segment by appending to the same interval
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
@@ -3155,7 +3155,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         identifier.getShardSpec()
     );
     final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
-    Assert.assertTrue(coordinator.commitSegments(dataSegments, new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
 
     // Mark the tombstone as unused
     markAllSegmentsUnused(tombstones, DateTimes.nowUtc(), derbyConnectorRule.metadataTablesConfigSupplier().get());

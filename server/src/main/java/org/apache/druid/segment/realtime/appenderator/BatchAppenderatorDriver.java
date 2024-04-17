@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
@@ -204,7 +204,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
       final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
-      MinimalSegmentSchemas minimalSegmentSchemas
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
     final Map<String, SegmentsForSequence> snapshot;
@@ -229,7 +229,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 )
                 .collect(Collectors.toList()),
             null,
-            minimalSegmentSchemas
+            segmentSchemaMapping
         ),
         publisher,
         outputSegmentsAnnotateFunction

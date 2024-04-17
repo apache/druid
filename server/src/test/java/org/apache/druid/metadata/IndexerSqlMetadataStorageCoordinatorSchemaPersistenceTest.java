@@ -27,9 +27,9 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -130,7 +130,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     );
 
     final Set<DataSegment> appendSegments = new HashSet<>();
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     final Set<DataSegment> expectedSegmentsToUpgrade = new HashSet<>();
 
     Random random = new Random(5);
@@ -150,7 +150,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      minimalSegmentSchemas.addSchema(
+      segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
           fingerprintGenerator.generateFingerprint(schemaPayload)
@@ -184,7 +184,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     // Commit the segment and verify the results
     SegmentPublishResult commitResult
-        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, minimalSegmentSchemas);
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, segmentSchemaMapping);
     Assert.assertTrue(commitResult.isSuccess());
     Assert.assertEquals(appendSegments, commitResult.getSegments());
 
@@ -216,7 +216,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
   public void testAnnounceHistoricalSegments() throws IOException
   {
     Set<DataSegment> segments = new HashSet<>();
-    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     Random random = ThreadLocalRandom.current();
     Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
 
@@ -239,14 +239,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
-      minimalSegmentSchemas.addSchema(
+      segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
           fingerprintGenerator.generateFingerprint(schemaPayload)
       );
     }
 
-    coordinator.commitSegments(segments, minimalSegmentSchemas);
+    coordinator.commitSegments(segments, segmentSchemaMapping);
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -276,7 +276,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
   public void testAnnounceHistoricalSegments_schemaExists() throws IOException
   {
     Set<DataSegment> segments = new HashSet<>();
-    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     Random random = ThreadLocalRandom.current();
     Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
 
@@ -301,7 +301,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
-      minimalSegmentSchemas.addSchema(
+      segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
           fingerprintGenerator.generateFingerprint(schemaPayload)
@@ -315,7 +315,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       return null;
     });
 
-    coordinator.commitSegments(segments, minimalSegmentSchemas);
+    coordinator.commitSegments(segments, segmentSchemaMapping);
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -390,7 +390,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, segmentStatsMap);
     insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
 
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
@@ -407,7 +407,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       int randomNum = random.nextInt();
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      minimalSegmentSchemas.addSchema(
+      segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
           fingerprintGenerator.generateFingerprint(schemaPayload)
@@ -416,7 +416,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       replacingSegments.add(segment);
     }
 
-    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), minimalSegmentSchemas);
+    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), segmentSchemaMapping);
 
     Assert.assertEquals(
         2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),

@@ -22,10 +22,10 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
-import org.apache.druid.segment.MinimalSegmentSchemas;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentMetadata;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
@@ -34,7 +34,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Collections;
 
-public class MinimalSegmentSchemasTest
+public class SegmentSchemaMappingTest
 {
   static {
     NullHandling.initializeForTests();
@@ -51,26 +51,26 @@ public class MinimalSegmentSchemasTest
     SchemaPayload payload = new SchemaPayload(rowSignature, Collections.singletonMap("twosum", factory));
     SchemaPayloadPlus schemaPayloadPlus = new SchemaPayloadPlus(payload, 20L);
 
-    MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(
+    SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(
         Collections.singletonMap(segmentId.toString(), new SegmentMetadata(20L, "fp1")),
         Collections.singletonMap("fp1", payload),
         1
     );
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    byte[] bytes = mapper.writeValueAsBytes(minimalSegmentSchemas);
-    MinimalSegmentSchemas deserialized = mapper.readValue(bytes, MinimalSegmentSchemas.class);
+    byte[] bytes = mapper.writeValueAsBytes(segmentSchemaMapping);
+    SegmentSchemaMapping deserialized = mapper.readValue(bytes, SegmentSchemaMapping.class);
 
-    Assert.assertEquals(minimalSegmentSchemas, deserialized);
+    Assert.assertEquals(segmentSchemaMapping, deserialized);
 
-    MinimalSegmentSchemas copy = new MinimalSegmentSchemas(1);
-    copy.merge(minimalSegmentSchemas);
+    SegmentSchemaMapping copy = new SegmentSchemaMapping(1);
+    copy.merge(segmentSchemaMapping);
 
-    Assert.assertEquals(minimalSegmentSchemas, copy);
+    Assert.assertEquals(segmentSchemaMapping, copy);
 
-    MinimalSegmentSchemas copy2 = new MinimalSegmentSchemas(1);
+    SegmentSchemaMapping copy2 = new SegmentSchemaMapping(1);
     copy2.addSchema(segmentId, schemaPayloadPlus, "fp1");
 
-    Assert.assertEquals(minimalSegmentSchemas, copy2);
+    Assert.assertEquals(segmentSchemaMapping, copy2);
   }
 }

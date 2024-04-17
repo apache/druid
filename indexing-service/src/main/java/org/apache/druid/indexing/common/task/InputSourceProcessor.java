@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -61,7 +61,7 @@ public class InputSourceProcessor
    *
    * @return {@link SegmentsAndCommitMetadata} for the pushed segments.
    */
-  public static Pair<SegmentsAndCommitMetadata, MinimalSegmentSchemas> process(
+  public static Pair<SegmentsAndCommitMetadata, SegmentSchemaMapping> process(
       DataSchema dataSchema,
       BatchAppenderatorDriver driver,
       PartitionsSpec partitionsSpec,
@@ -80,7 +80,7 @@ public class InputSourceProcessor
                                                         ? (DynamicPartitionsSpec) partitionsSpec
                                                         : null;
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     try (
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
@@ -124,7 +124,7 @@ public class InputSourceProcessor
               // If those segments are not pushed here, the remaining available space in appenderator will be kept
               // small which could lead to smaller segments.
               final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-              minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
+              segmentSchemaMapping.merge(pushed.getSegmentSchemaMapping());
               LOG.debugSegments(pushed.getSegments(), "Pushed segments");
             }
           }
@@ -134,10 +134,10 @@ public class InputSourceProcessor
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-      minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
+      segmentSchemaMapping.merge(pushed.getSegmentSchemaMapping());
       LOG.debugSegments(pushed.getSegments(), "Pushed segments");
 
-      return Pair.of(pushed, minimalSegmentSchemas);
+      return Pair.of(pushed, segmentSchemaMapping);
     }
   }
 }

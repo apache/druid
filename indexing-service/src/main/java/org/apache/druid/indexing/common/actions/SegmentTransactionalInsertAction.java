@@ -33,7 +33,7 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -70,16 +70,16 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Nullable
   private final String dataSource;
   @Nullable
-  private final MinimalSegmentSchemas minimalSegmentSchemas;
+  private final SegmentSchemaMapping segmentSchemaMapping;
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null,
-                                                minimalSegmentSchemas
+                                                segmentSchemaMapping
     );
   }
 
@@ -87,10 +87,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, minimalSegmentSchemas);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
@@ -109,7 +109,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
       @JsonProperty("dataSource") @Nullable String dataSource,
-      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
@@ -117,7 +117,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
     this.dataSource = dataSource;
-    this.minimalSegmentSchemas = minimalSegmentSchemas;
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
@@ -156,9 +156,9 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   @JsonProperty
   @Nullable
-  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  public SegmentSchemaMapping getSegmentSchemaMapping()
   {
-    return minimalSegmentSchemas;
+    return segmentSchemaMapping;
   }
 
   @Override
@@ -218,7 +218,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
                       segments,
                       startMetadata,
                       endMetadata,
-                      minimalSegmentSchemas
+                      segmentSchemaMapping
                   )
               )
               .onInvalidLocks(

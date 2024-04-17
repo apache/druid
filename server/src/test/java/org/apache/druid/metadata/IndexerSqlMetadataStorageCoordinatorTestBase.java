@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
@@ -340,7 +340,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       );
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
-    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, new MinimalSegmentSchemas(
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, new SegmentSchemaMapping(
         CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 

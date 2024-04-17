@@ -20,7 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -44,7 +44,7 @@ public interface TransactionalSegmentPublisher
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
       @Nullable Object commitMetadata,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   ) throws IOException;
 
   default SegmentPublishResult publishSegments(
@@ -52,7 +52,7 @@ public interface TransactionalSegmentPublisher
       Set<DataSegment> segmentsToPublish,
       Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
       @Nullable Object commitMetadata,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   ) throws IOException
   {
     final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = outputSegmentsAnnotateFunction
@@ -61,7 +61,7 @@ public interface TransactionalSegmentPublisher
         segmentsToBeOverwritten,
         annotateFunction.apply(segmentsToPublish),
         commitMetadata,
-        minimalSegmentSchemas
+        segmentSchemaMapping
     );
   }
 

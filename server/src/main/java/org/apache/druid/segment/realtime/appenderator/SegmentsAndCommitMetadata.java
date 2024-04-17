@@ -20,7 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
@@ -35,17 +35,17 @@ public class SegmentsAndCommitMetadata
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
-  private final MinimalSegmentSchemas minimalSegmentSchemas;
+  private final SegmentSchemaMapping segmentSchemaMapping;
 
   public SegmentsAndCommitMetadata(
       List<DataSegment> segments,
       @Nullable Object commitMetadata,
-      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = ImmutableList.copyOf(segments);
     this.commitMetadata = commitMetadata;
-    this.minimalSegmentSchemas = minimalSegmentSchemas;
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @Nullable
@@ -59,9 +59,9 @@ public class SegmentsAndCommitMetadata
     return segments;
   }
 
-  public MinimalSegmentSchemas getMinimalSegmentSchemas()
+  public SegmentSchemaMapping getSegmentSchemaMapping()
   {
-    return minimalSegmentSchemas;
+    return segmentSchemaMapping;
   }
 
   @Override

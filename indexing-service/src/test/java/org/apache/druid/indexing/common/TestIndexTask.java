@@ -34,7 +34,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.timeline.DataSegment;
 
@@ -119,10 +119,10 @@ public class TestIndexTask extends IndexTask
   public TaskAction<SegmentPublishResult> testBuildPublishAction(
       Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
-      MinimalSegmentSchemas minimalSegmentSchemas,
+      SegmentSchemaMapping segmentSchemaMapping,
       TaskLockType lockType
   )
   {
-    return buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, minimalSegmentSchemas, lockType);
+    return buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, segmentSchemaMapping, lockType);
   }
 }

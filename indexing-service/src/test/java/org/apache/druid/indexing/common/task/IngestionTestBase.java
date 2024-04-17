@@ -74,7 +74,7 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.DataSegmentWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
-import org.apache.druid.segment.MinimalSegmentSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -343,7 +343,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
-    private MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    private SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     private TestLocalTaskActionClient(Task task)
     {
@@ -356,10 +356,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       final RetType result = super.submit(taskAction);
       if (taskAction instanceof SegmentTransactionalInsertAction) {
         publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
-        minimalSegmentSchemas.merge(((SegmentTransactionalInsertAction) taskAction).getMinimalSegmentSchemas());
+        segmentSchemaMapping.merge(((SegmentTransactionalInsertAction) taskAction).getSegmentSchemaMapping());
       } else if (taskAction instanceof SegmentInsertAction) {
         publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
-        minimalSegmentSchemas.merge(((SegmentInsertAction) taskAction).getMinimalSegmentSchemas());
+        segmentSchemaMapping.merge(((SegmentInsertAction) taskAction).getSegmentSchemaMapping());
       }
       return result;
     }
@@ -369,9 +369,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       return publishedSegments;
     }
 
-    public MinimalSegmentSchemas getSegmentSchemas()
+    public SegmentSchemaMapping getSegmentSchemas()
     {
-      return minimalSegmentSchemas;
+      return segmentSchemaMapping;
     }
   }
 
@@ -421,7 +421,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       return segments;
     }
 
-    public MinimalSegmentSchemas getSegmentSchemas()
+    public SegmentSchemaMapping getSegmentSchemas()
     {
       return taskActionClient.getSegmentSchemas();
     }
@@ -554,11 +554,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         continue;
       }
       nonTombstoneSegments++;
-      Assert.assertTrue(dataSegmentWithSchemas.getMinimalSegmentSchemas()
+      Assert.assertTrue(dataSegmentWithSchemas.getSegmentSchemaMapping()
                                               .getSegmentIdToMetadataMap()
                                               .containsKey(segment.getId().toString()));
     }
-    Assert.assertEquals(nonTombstoneSegments, dataSegmentWithSchemas.getMinimalSegmentSchemas().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(nonTombstoneSegments, dataSegmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
   }
 
   public TaskReport.ReportMap getReports() throws IOException

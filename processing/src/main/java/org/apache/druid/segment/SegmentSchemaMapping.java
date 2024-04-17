@@ -30,7 +30,7 @@ import java.util.Objects;
 /**
  * Compact representation of segment schema for multiple segments.
  */
-public class MinimalSegmentSchemas
+public class SegmentSchemaMapping
 {
   private final Map<String, SegmentMetadata> segmentIdToMetadataMap;
 
@@ -39,7 +39,7 @@ public class MinimalSegmentSchemas
   private final int schemaVersion;
 
   @JsonCreator
-  public MinimalSegmentSchemas(
+  public SegmentSchemaMapping(
       @JsonProperty("segmentIdToMetadataMap") Map<String, SegmentMetadata> segmentIdToMetadataMap,
       @JsonProperty("schemaFingerprintToPayloadMap") Map<String, SchemaPayload> schemaFingerprintToPayloadMap,
       @JsonProperty("schemaVersion") int schemaVersion
@@ -50,7 +50,7 @@ public class MinimalSegmentSchemas
     this.schemaVersion = schemaVersion;
   }
 
-  public MinimalSegmentSchemas(int schemaVersion)
+  public SegmentSchemaMapping(int schemaVersion)
   {
     this.segmentIdToMetadataMap = new HashMap<>();
     this.schemaFingerprintToPayloadMap = new HashMap<>();
@@ -96,13 +96,13 @@ public class MinimalSegmentSchemas
   /**
    * Merge with another instance.
    */
-  public void merge(MinimalSegmentSchemas other)
+  public void merge(SegmentSchemaMapping other)
   {
     this.segmentIdToMetadataMap.putAll(other.getSegmentIdToMetadataMap());
     this.schemaFingerprintToPayloadMap.putAll(other.getSchemaFingerprintToPayloadMap());
   }
 
-  public int size()
+  public int getSchemaCount()
   {
     return schemaFingerprintToPayloadMap.size();
   }
@@ -116,7 +116,7 @@ public class MinimalSegmentSchemas
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    MinimalSegmentSchemas that = (MinimalSegmentSchemas) o;
+    SegmentSchemaMapping that = (SegmentSchemaMapping) o;
     return Objects.equals(segmentIdToMetadataMap, that.segmentIdToMetadataMap)
            && Objects.equals(schemaFingerprintToPayloadMap, that.schemaFingerprintToPayloadMap);
   }
@@ -130,7 +130,7 @@ public class MinimalSegmentSchemas
   @Override
   public String toString()
   {
-    return "MinimalSegmentSchemas{" +
+    return "SegmentSchemaMapping{" +
            "segmentIdToMetadataMap=" + segmentIdToMetadataMap +
            ", schemaFingerprintToPayloadMap=" + schemaFingerprintToPayloadMap +
            ", version='" + schemaVersion + '\'' +
