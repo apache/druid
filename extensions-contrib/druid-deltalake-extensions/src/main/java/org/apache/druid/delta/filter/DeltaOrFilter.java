@@ -39,11 +39,11 @@ public class DeltaOrFilter implements DeltaFilter
   )
   {
     if (filters == null) {
-      throw InvalidInput.exception("Delta or filter filters must be non-empty.");
+      throw InvalidInput.exception("Delta or filter requires 2 filter predicates and must be non-empty.");
     }
     if (filters.size() != 2) {
       throw InvalidInput.exception(
-          "Delta or filter requires 2 filters, but provided [%d].",
+          "Delta or filter requires 2 filter predicates, but provided [%d].",
           filters.size()
       );
     }

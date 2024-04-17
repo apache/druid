@@ -36,7 +36,7 @@ public class DeltaNotFilter implements DeltaFilter
   )
   {
     if (filter == null) {
-      throw InvalidInput.exception("Delta not filter predicate cannot be empty. It requires 1 predicate.");
+      throw InvalidInput.exception("Delta not filter requiers 1 filter predicate and must be non-empty.");
     }
     this.filter = filter;
   }

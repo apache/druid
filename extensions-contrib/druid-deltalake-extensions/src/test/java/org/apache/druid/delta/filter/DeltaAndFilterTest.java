@@ -89,7 +89,7 @@ public class DeltaAndFilterTest
             )
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Delta and filter requires 2 filters, but provided [1]."
+            "Delta and filter requires 2 filter predicates, but provided [1]."
         )
     );
   }
