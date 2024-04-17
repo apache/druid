@@ -44,25 +44,20 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
-import org.apache.calcite.sql.util.IdPair;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
-import org.apache.calcite.sql.validate.OrderByScope;
+import org.apache.calcite.sql.validate.SelectNamespace;
 import org.apache.calcite.sql.validate.SqlNonNullableAccessors;
 import org.apache.calcite.sql.validate.SqlValidatorException;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
-import org.apache.calcite.sql.validate.ValidatorShim;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
-import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts;
@@ -79,8 +74,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -100,39 +93,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   public static final String CTX_ROWS_PER_SEGMENT = "msqRowsPerSegment";
 
   private final PlannerContext plannerContext;
-
-  // This part is a bit sad. By the time we get here, the validator will have created
-  // the ORDER BY namespace if we had a real ORDER BY. We have to "catch up" and do the
-  // work that registerQuery() should have done. That's kind of OK. But, the orderScopes
-  // variable is private, so we have to play dirty tricks to get at it.
-  //
-  // Warning: this may no longer work if Java forbids access to private fields in a
-  // future release.
-  private static final Field CLAUSE_SCOPES_FIELD;
-  private static final Object ORDER_CLAUSE;
-
-  static {
-    try {
-      CLAUSE_SCOPES_FIELD = FieldUtils.getDeclaredField(
-          SqlValidatorImpl.class,
-          "clauseScopes",
-          true
-      );
-    }
-    catch (RuntimeException e) {
-      throw new ISE(e, "SqlValidatorImpl.clauseScopes is not accessible");
-    }
-
-    try {
-      Class<?> innerClass = Class.forName("org.apache.calcite.sql.validate.SqlValidatorImpl$Clause");
-      Method method = innerClass.getMethod("valueOf", Class.class, String.class);
-      method.setAccessible(true);
-      ORDER_CLAUSE = method.invoke(null, innerClass, "ORDER");
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Could not construct ORDER clause instance.");
-    }
-  }
 
   protected DruidSqlValidator(
       SqlOperatorTable opTab,
@@ -250,7 +210,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     );
     final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
     // The target is a new or existing datasource.
-    final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName);
+    final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName, true);
 
     // An existing datasource may have metadata.
     final DatasourceFacade tableMetadata = table == null ? null : table.effectiveMetadata().catalogMetadata();
@@ -275,10 +235,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
 
     // The source must be a SELECT
     final SqlNode source = insert.getSource();
-
-    // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
-    final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
-    rewriteClusteringToOrderBy(source, ingestNode, catalogClustering);
 
     // Validate the source statement.
     // Because of the non-standard Druid semantics, we can't define the target type: we don't know
@@ -330,6 +286,41 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
   }
 
+  @Override
+  protected SelectNamespace createSelectNamespace(
+      SqlSelect select,
+      SqlNode enclosingNode)
+  {
+    if (enclosingNode instanceof DruidSqlIngest) {
+      // The target is a new or existing datasource.
+      // The target namespace is both the target table ID and the row type for that table.
+      final SqlValidatorNamespace targetNamespace = Objects.requireNonNull(
+          getNamespace(enclosingNode),
+          () -> "namespace for " + enclosingNode
+      );
+      final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
+      //validateNamespace(targetNamespace, unknownType);
+      // Try to resolve the table. Will fail if this is an INSERT into a new table.
+      SqlIdentifier identifier = insertNs.getId();
+      SqlValidatorTable table1 = getCatalogReader().getTable(identifier.names);
+      if (table1 == null) {
+        return super.createSelectNamespace(select, enclosingNode);
+      }
+      final DatasourceTable table = table1.unwrap(DatasourceTable.class);
+
+      // An existing datasource may have metadata.
+      final DatasourceFacade tableMetadata = table == null
+          ? null
+          : table.effectiveMetadata().catalogMetadata();
+      // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+      final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
+      rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
+      return new SelectNamespace(this, select, enclosingNode);
+    } else {
+      return super.createSelectNamespace(select, enclosingNode);
+    }
+  }
+
   /**
    * Validate the target table. Druid {@code INSERT/REPLACE} can create a new datasource,
    * or insert into an existing one. If the target exists, it must be a datasource. If it
@@ -338,7 +329,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   private DatasourceTable validateInsertTarget(
       final SqlValidatorNamespace targetNamespace,
       final IdentifierNamespace insertNs,
-      final String operationName
+      final String operationName,
+      final boolean validate
   )
   {
     // Get the target table ID
@@ -365,7 +357,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
     try {
       // Try to resolve the table. Will fail if this is an INSERT into a new table.
-      validateNamespace(targetNamespace, unknownType);
+      if (validate) {
+        validateNamespace(targetNamespace, unknownType);
+      }
+      //validateNamespace(targetNamespace, unknownType);
       SqlValidatorTable target = insertNs.resolve().getTable();
       try {
         return target.unwrap(DatasourceTable.class);
@@ -422,16 +417,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     final SqlSelect select = (SqlSelect) source;
 
     select.setOrderBy(clusteredBy);
-    final OrderByScope orderScope = ValidatorShim.newOrderByScope(scopes.get(select), clusteredBy, select);
-    try {
-      @SuppressWarnings("unchecked")
-      final Map<IdPair<SqlSelect, Object>, Object> orderScopes =
-          (Map<IdPair<SqlSelect, Object>, Object>) CLAUSE_SCOPES_FIELD.get(this);
-      orderScopes.put(IdPair.of(select, ORDER_CLAUSE), orderScope);
-    }
-    catch (Exception e) {
-      throw new ISE(e, "scopes is not accessible");
-    }
   }
 
   /**
