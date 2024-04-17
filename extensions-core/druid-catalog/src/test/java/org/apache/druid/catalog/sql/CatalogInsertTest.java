@@ -80,8 +80,8 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
 
     public void buildDatasources()
     {
-    RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
-      DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
+      RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
+        DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
         TableBuilder tableBuilder = TableBuilder.datasource(datasourceName, catalogMetadata.segmentGranularityString());
         catalogMetadata.columnFacades().forEach(
             columnFacade -> {

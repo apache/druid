@@ -79,8 +79,8 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 
     public void buildDatasources()
     {
-    RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
-      DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
+      RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
+        DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
         TableBuilder tableBuilder = TableBuilder.datasource(datasourceName, catalogMetadata.segmentGranularityString());
         catalogMetadata.columnFacades().forEach(
             columnFacade -> {
@@ -103,7 +103,7 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
         createTableMetadata(tableBuilder.build());
       });
       DatasourceFacade catalogMetadata =
-        RESOLVED_TABLES.get("foo").effectiveMetadata().catalogMetadata();
+          RESOLVED_TABLES.get("foo").effectiveMetadata().catalogMetadata();
       TableBuilder tableBuilder = TableBuilder.datasource("foo", catalogMetadata.segmentGranularityString());
       catalogMetadata.columnFacades().forEach(
           columnFacade -> {
