@@ -40,12 +40,12 @@ public class DeltaBinaryOperatorFilterTest
   @Test
   public void testEqualsFilter()
   {
-    DeltaBinaryOperatorFilter.DeltaEqualsFilter equalsFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+    DeltaBinaryOperatorFilter.DeltaEqualsFilter eqFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
         "name",
         "Employee1"
     );
 
-    Predicate predicate = equalsFilter.getFilterPredicate(SCHEMA);
+    Predicate predicate = eqFilter.getFilterPredicate(SCHEMA);
 
     Assert.assertEquals("=", predicate.getName());
     Assert.assertEquals(2, predicate.getChildren().size());
@@ -54,12 +54,12 @@ public class DeltaBinaryOperatorFilterTest
   @Test
   public void testGreaterThanFilter()
   {
-    DeltaBinaryOperatorFilter.DeltaGreaterThanFilter greaterThanFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanFilter(
+    DeltaBinaryOperatorFilter.DeltaGreaterThanFilter gtFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanFilter(
         "name",
         "Employee1"
     );
 
-    Predicate predicate = greaterThanFilter.getFilterPredicate(SCHEMA);
+    Predicate predicate = gtFilter.getFilterPredicate(SCHEMA);
 
     Assert.assertEquals(">", predicate.getName());
     Assert.assertEquals(2, predicate.getChildren().size());
@@ -68,12 +68,12 @@ public class DeltaBinaryOperatorFilterTest
   @Test
   public void testGreaterThanOrEqualsFilter()
   {
-    DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter greaterThanFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter(
+    DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter gteFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter(
         "name",
         "Employee1"
     );
 
-    Predicate predicate = greaterThanFilter.getFilterPredicate(SCHEMA);
+    Predicate predicate = gteFilter.getFilterPredicate(SCHEMA);
 
     Assert.assertEquals(">=", predicate.getName());
     Assert.assertEquals(2, predicate.getChildren().size());
@@ -82,12 +82,12 @@ public class DeltaBinaryOperatorFilterTest
   @Test
   public void testLessThanFilter()
   {
-    DeltaBinaryOperatorFilter.DeltaLessThanFilter greaterThanFilter = new DeltaBinaryOperatorFilter.DeltaLessThanFilter(
+    DeltaBinaryOperatorFilter.DeltaLessThanFilter ltFilter = new DeltaBinaryOperatorFilter.DeltaLessThanFilter(
         "name",
         "Employee1"
     );
 
-    Predicate predicate = greaterThanFilter.getFilterPredicate(SCHEMA);
+    Predicate predicate = ltFilter.getFilterPredicate(SCHEMA);
 
     Assert.assertEquals("<", predicate.getName());
     Assert.assertEquals(2, predicate.getChildren().size());
@@ -96,15 +96,34 @@ public class DeltaBinaryOperatorFilterTest
   @Test
   public void testLessThanOrEqualsFilter()
   {
-    DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter greaterThanFilter = new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter(
+    DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter lteFilter = new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter(
         "name",
         "Employee1"
     );
 
-    Predicate predicate = greaterThanFilter.getFilterPredicate(SCHEMA);
+    Predicate predicate = lteFilter.getFilterPredicate(SCHEMA);
 
     Assert.assertEquals("<=", predicate.getName());
     Assert.assertEquals(2, predicate.getChildren().size());
+  }
+
+  @Test
+  public void testFilterWithInvalidNumericValue()
+  {
+    DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter gtFilter = new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter(
+        "age",
+        "twentyOne"
+    );
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> gtFilter.getFilterPredicate(SCHEMA)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "column[age] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
+        )
+    );
   }
 
   @Test

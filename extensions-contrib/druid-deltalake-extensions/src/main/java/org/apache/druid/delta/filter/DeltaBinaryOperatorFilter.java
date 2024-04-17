@@ -95,24 +95,35 @@ public abstract class DeltaBinaryOperatorFilter implements DeltaFilter
 
     final StructField structField = snapshotSchema.get(column);
     final DataType dataType = structField.getDataType();
-    if (dataType instanceof StringType) {
-      return Literal.ofString(value);
-    } else if (dataType instanceof IntegerType) {
-      return Literal.ofInt(Integer.parseInt(value));
-    } else if (dataType instanceof ShortType) {
-      return Literal.ofShort(Short.parseShort(value));
-    } else if (dataType instanceof LongType) {
-      return Literal.ofLong(Long.parseLong(value));
-    } else if (dataType instanceof DoubleType) {
-      return Literal.ofDouble(Double.parseDouble(value));
-    } else if (dataType instanceof DateType) {
-      final Date dataVal = Date.valueOf(value);
-      final LocalDate localDate = dataVal.toLocalDate();
-      final LocalDate epoch = LocalDate.ofEpochDay(0);
-      int between = (int) ChronoUnit.DAYS.between(epoch, localDate);
-      return Literal.ofDate(between);
-    } else {
-      throw InvalidInput.exception("Unsupported dataType[%s] for value[%s]", dataType, value);
+    try {
+      if (dataType instanceof StringType) {
+        return Literal.ofString(value);
+      } else if (dataType instanceof IntegerType) {
+        return Literal.ofInt(Integer.parseInt(value));
+      } else if (dataType instanceof ShortType) {
+        return Literal.ofShort(Short.parseShort(value));
+      } else if (dataType instanceof LongType) {
+        return Literal.ofLong(Long.parseLong(value));
+      } else if (dataType instanceof DoubleType) {
+        return Literal.ofDouble(Double.parseDouble(value));
+      } else if (dataType instanceof DateType) {
+        final Date dataVal = Date.valueOf(value);
+        final LocalDate localDate = dataVal.toLocalDate();
+        final LocalDate epoch = LocalDate.ofEpochDay(0);
+        int between = (int) ChronoUnit.DAYS.between(epoch, localDate);
+        return Literal.ofDate(between);
+      } else {
+        throw InvalidInput.exception(
+            "Unsupported data type[%s] for column[%s] with value[%s].",
+            dataType, column, value
+        );
+      }
+    }
+    catch (NumberFormatException e) {
+      throw InvalidInput.exception(
+          "column[%s] has an invalid value[%s]. The value must be a number, as the column's data type is [%s].",
+          column, value, dataType
+      );
     }
   }
 
