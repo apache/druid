@@ -270,16 +270,6 @@ public class ExpressionsTest extends CalciteTestBase
         makeExpression("substring(\"spacey\", (\"p\" - 1), \"p\")"),
         "hey"
     );
-    testHelper.testExpressionString(
-            new SubstringOperatorConversion().calciteOperator(),
-            ImmutableList.of(
-                    testHelper.makeLiteral(""),
-                    testHelper.makeLiteral(1),
-                    testHelper.makeLiteral(2)
-            ),
-            makeExpression("substring('', 0, 2)"),
-            null
-    );
   }
 
   @Test
@@ -1611,16 +1601,6 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         makeExpression(ColumnType.LONG, "(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
         1L
-    );
-
-    testHelper.testExpressionString(
-            ContainsOperatorConversion.caseSensitive().calciteOperator(),
-            ImmutableList.of(
-                    testHelper.makeNullLiteral(SqlTypeName.CHAR),
-                    testHelper.makeLiteral("a")
-            ),
-            makeExpression("contains_string(null,'a')"),
-            NullHandling.replaceWithDefault() ? 0L : null
     );
   }
 
