@@ -368,15 +368,15 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testArrayScalarIn()
+  public void testScalarInArray()
   {
-    assertExpr("scalar_in(2, [1, 2, 3])", 1L);
-    assertExpr("scalar_in(4, [1, 2, 3])", 0L);
-    assertExpr("scalar_in(b, [3, 4])", 0L);
-    assertExpr("scalar_in(1, null)", null);
-    assertExpr("scalar_in(null, null)", null);
-    assertExpr("scalar_in(null, [1, null, 2])", 1L);
-    assertExpr("scalar_in(null, [1, 2])", 0L);
+    assertExpr("scalar_in_array(2, [1, 2, 3])", 1L);
+    assertExpr("scalar_in_array(4, [1, 2, 3])", 0L);
+    assertExpr("scalar_in_array(b, [3, 4])", 0L);
+    assertExpr("scalar_in_array(1, null)", null);
+    assertExpr("scalar_in_array(null, null)", null);
+    assertExpr("scalar_in_array(null, [1, null, 2])", 1L);
+    assertExpr("scalar_in_array(null, [1, 2])", 0L);
   }
 
   @Test

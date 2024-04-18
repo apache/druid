@@ -26,27 +26,25 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
-public class ScalarInOperatorConversion extends DirectOperatorConversion
+public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-          .operatorBuilder("SCALAR_IN")
+          .operatorBuilder("SCALAR_IN_ARRAY")
           .operandTypeChecker(
                   OperandTypes.sequence(
-                          "'SCALAR_IN(expr, array)'",
+                          "'SCALAR_IN_ARRAY(expr, array)'",
                           OperandTypes.or(
                                   OperandTypes.family(SqlTypeFamily.CHARACTER),
                                   OperandTypes.family(SqlTypeFamily.NUMERIC)
                           ),
-                          OperandTypes.or(
-                                  OperandTypes.family(SqlTypeFamily.ARRAY)
-                          )
+                          OperandTypes.family(SqlTypeFamily.ARRAY)
                   )
           )
           .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
           .build();
 
-  public ScalarInOperatorConversion()
+  public ScalarInArrayOperatorConversion()
   {
-    super(SQL_FUNCTION, "scalar_in");
+    super(SQL_FUNCTION, "scalar_in_array");
   }
 }

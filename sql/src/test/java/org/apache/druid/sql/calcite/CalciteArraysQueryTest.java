@@ -1339,16 +1339,17 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayScalarInFilter()
+  public void testScalarInArrayFilter()
   {
+    msqIncompatible();
     testQuery(
-            "SELECT dim2 FROM druid.numfoo WHERE SCALAR_IN(dim2, ARRAY['a', 'd']) LIMIT 5",
+            "SELECT dim2 FROM druid.numfoo WHERE SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd']) LIMIT 5",
             ImmutableList.of(
                     newScanQueryBuilder()
                             .dataSource(CalciteTests.DATASOURCE3)
                             .intervals(querySegmentSpec(Filtration.eternity()))
                             .filters(
-                                    new ExpressionDimFilter("scalar_in(\"dim2\",array('a','d'))", ExprMacroTable.nil())
+                                    new ExpressionDimFilter("scalar_in_array(\"dim2\",array('a','d'))", ExprMacroTable.nil())
                             )
                             .columns("dim2")
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1366,9 +1367,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayScalarInFilter_MVD()
   {
+    msqIncompatible();
     testBuilder()
             .sql(
-                    "SELECT dim3, (CASE WHEN scalar_in(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
+                    "SELECT dim3, (CASE WHEN scalar_in_array(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
                             "FROM druid.numfoo"
             )
             .expectedQueries(
@@ -1379,7 +1381,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                     .virtualColumns(
                                             new ExpressionVirtualColumn(
                                                     "v0",
-                                                    "case_searched(scalar_in(\"dim3\",array('a','b','d')),'abd','not abd')",
+                                                    "case_searched(scalar_in_array(\"dim3\",array('a','b','d')),'abd','not abd')",
                                                     ColumnType.STRING,
                                                     ExprMacroTable.nil()
                                             )

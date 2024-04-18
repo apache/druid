@@ -3729,7 +3729,7 @@ public interface Function extends NamedFunction
     @Override
     public String name()
     {
-      return "scalar_in";
+      return "scalar_in_array";
     }
 
     @Nullable
