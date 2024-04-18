@@ -443,12 +443,12 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   }
 
 
-  protected void markAllSegmentsUnused(MetadataStorageTablesConfig tablesConfig)
+  protected void markAllSegmentsUnused()
   {
-    markAllSegmentsUnused(SEGMENTS, DateTimes.nowUtc(), tablesConfig);
+    markAllSegmentsUnused(SEGMENTS, DateTimes.nowUtc());
   }
 
-  protected void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime, MetadataStorageTablesConfig tablesConfig)
+  protected void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime)
   {
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
