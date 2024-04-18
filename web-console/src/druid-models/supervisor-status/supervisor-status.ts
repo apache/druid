@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
+import { sum } from 'd3-array';
+
 import type { NumberLike } from '../../utils';
+import { compact, deepGet } from '../../utils';
 
 export type SupervisorOffsetMap = Record<string, NumberLike>;
 
@@ -51,4 +54,55 @@ export interface SupervisorStatusTask {
   type: string;
   currentOffsets: SupervisorOffsetMap;
   lag: SupervisorOffsetMap;
+}
+
+export type SupervisorStats = Record<string, Record<string, RowStats>>;
+
+export type RowStatsKey = 'totals' | '1m' | '5m' | '15m';
+
+export interface RowStats {
+  movingAverages: {
+    buildSegments: {
+      '1m': RowStatsCounter;
+      '5m': RowStatsCounter;
+      '15m': RowStatsCounter;
+    };
+  };
+  totals: {
+    buildSegments: RowStatsCounter;
+  };
+}
+
+export interface RowStatsCounter {
+  processed: number;
+  processedBytes: number;
+  processedWithError: number;
+  thrownAway: number;
+  unparseable: number;
+}
+
+function aggregateRowStatsCounter(rowStats: RowStatsCounter[]): RowStatsCounter {
+  return {
+    processed: sum(rowStats, d => d.processed),
+    processedBytes: sum(rowStats, d => d.processedBytes),
+    processedWithError: sum(rowStats, d => d.processedWithError),
+    thrownAway: sum(rowStats, d => d.thrownAway),
+    unparseable: sum(rowStats, d => d.unparseable),
+  };
+}
+
+function getRowStatsCounter(rowStats: RowStats, key: RowStatsKey): RowStatsCounter | undefined {
+  if (key === 'totals') {
+    return deepGet(rowStats, 'totals.buildSegments');
+  } else {
+    return deepGet(rowStats, `movingAverages.buildSegments.${key}`);
+  }
+}
+
+export function getTotalSupervisorStats(stats: SupervisorStats, key: RowStatsKey): RowStatsCounter {
+  return aggregateRowStatsCounter(
+    compact(
+      Object.values(stats).flatMap(s => Object.values(s).map(rs => getRowStatsCounter(rs, key))),
+    ),
+  );
 }

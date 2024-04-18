@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Code, Intent, MenuItem } from '@blueprintjs/core';
+import { Button, Code, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -41,23 +42,34 @@ import {
   SupervisorTableActionDialog,
 } from '../../dialogs';
 import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
-import type { QueryWithContext } from '../../druid-models';
+import type { QueryWithContext, RowStatsKey, SupervisorStatus } from '../../druid-models';
+import { getTotalSupervisorStats } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
-import { Api, AppToaster } from '../../singletons';
 import {
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  sqlQueryCustomTableFilter,
+} from '../../react-table';
+import { Api, AppToaster } from '../../singletons';
+import type { TableState } from '../../utils';
+import {
+  assemble,
+  checkedCircleIcon,
   deepGet,
+  formatByteRate,
+  formatBytes,
+  formatInteger,
+  formatRate,
   getDruidErrorMessage,
-  groupByAsMap,
   hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
-  lookupBy,
   oneOf,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
+  sortedToOrderByClause,
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
@@ -69,11 +81,20 @@ const supervisorTableColumns: string[] = [
   'Type',
   'Topic/Stream',
   'Status',
-  'Running tasks',
+  'Active tasks',
+  'Aggregate lag',
+  'Stats',
   ACTION_COLUMN_LABEL,
 ];
 
-interface SupervisorQuery {
+const ROW_STATS_KEYS: RowStatsKey[] = ['totals', '1m', '5m', '15m'];
+
+function getRowStatsKeyTitle(key: RowStatsKey) {
+  if (key === 'totals') return 'Total';
+  return `Rate over past ${pluralIfNeeded(parseInt(key, 10), 'minute')}`;
+}
+
+interface SupervisorQuery extends TableState {
   capabilities: Capabilities;
   visibleColumns: LocalStorageBackedVisibility;
 }
@@ -84,13 +105,8 @@ interface SupervisorQueryResultRow {
   source: string;
   detailed_state: string;
   suspended: boolean;
-  running_tasks?: number;
-}
-
-interface RunningTaskRow {
-  datasource: string;
-  type: string;
-  num_running_tasks: number;
+  status?: SupervisorStatus;
+  stats?: any;
 }
 
 export interface SupervisorsViewProps {
@@ -106,6 +122,7 @@ export interface SupervisorsViewProps {
 
 export interface SupervisorsViewState {
   supervisorsState: QueryState<SupervisorQueryResultRow[]>;
+  statsKey: RowStatsKey;
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
@@ -165,25 +182,20 @@ export class SupervisorsView extends React.PureComponent<
     SupervisorQueryResultRow[]
   >;
 
-  static SUPERVISOR_SQL = `SELECT
+  static SUPERVISOR_SQL_BASE = `WITH s AS (SELECT
   "supervisor_id",
   "type",
   "source",
   CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",
   "suspended" = 1 AS "suspended"
-FROM "sys"."supervisors"
-ORDER BY "supervisor_id"`;
-
-  static RUNNING_TASK_SQL = `SELECT
-  "datasource", "type", COUNT(*) AS "num_running_tasks"
-FROM "sys"."tasks" WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
-GROUP BY 1, 2`;
+FROM "sys"."supervisors")`;
 
   constructor(props: SupervisorsViewProps) {
     super(props);
 
     this.state = {
       supervisorsState: QueryState.INIT,
+      statsKey: '5m',
 
       showResumeAllSupervisors: false,
       showSuspendAllSupervisors: false,
@@ -199,14 +211,35 @@ GROUP BY 1, 2`;
     };
 
     this.supervisorQueryManager = new QueryManager({
-      processQuery: async ({ capabilities, visibleColumns }) => {
+      processQuery: async (
+        { capabilities, visibleColumns, filtered, sorted, page, pageSize },
+        cancelToken,
+        setIntermediateQuery,
+      ) => {
         let supervisors: SupervisorQueryResultRow[];
         if (capabilities.hasSql()) {
-          supervisors = await queryDruidSql<SupervisorQueryResultRow>({
-            query: SupervisorsView.SUPERVISOR_SQL,
-          });
+          const sqlQuery = assemble(
+            SupervisorsView.SUPERVISOR_SQL_BASE,
+            'SELECT *',
+            'FROM s',
+            filtered.length
+              ? `WHERE ${filtered.map(sqlQueryCustomTableFilter).join(' AND ')}`
+              : undefined,
+            sortedToOrderByClause(sorted),
+            `LIMIT ${pageSize}`,
+            page ? `OFFSET ${page * pageSize}` : undefined,
+          ).join('\n');
+          setIntermediateQuery(sqlQuery);
+          supervisors = await queryDruidSql<SupervisorQueryResultRow>(
+            {
+              query: sqlQuery,
+            },
+            cancelToken,
+          );
         } else if (capabilities.hasOverlordAccess()) {
-          const supervisorList = (await Api.instance.get('/druid/indexer/v1/supervisor?full')).data;
+          const supervisorList = (
+            await Api.instance.get('/druid/indexer/v1/supervisor?full', { cancelToken })
+          ).data;
           if (!Array.isArray(supervisorList)) {
             throw new Error(`Unexpected result from /druid/indexer/v1/supervisor?full`);
           }
@@ -223,45 +256,64 @@ GROUP BY 1, 2`;
               suspended: Boolean(deepGet(sup, 'suspended')),
             };
           });
+
+          const firstSorted = sorted[0];
+          if (firstSorted) {
+            const { id, desc } = firstSorted;
+            supervisors.sort((s1: any, s2: any) => {
+              return (
+                String(s1[id]).localeCompare(String(s2[id]), undefined, { numeric: true }) *
+                (desc ? -1 : 1)
+              );
+            });
+          }
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
 
-        if (visibleColumns.shown('Running tasks')) {
-          try {
-            let runningTaskLookup: Record<string, number>;
-            if (capabilities.hasSql()) {
-              const runningTasks = await queryDruidSql<RunningTaskRow>({
-                query: SupervisorsView.RUNNING_TASK_SQL,
+        if (capabilities.hasOverlordAccess()) {
+          if (visibleColumns.shown('Active tasks') || visibleColumns.shown('Aggregate lag')) {
+            try {
+              for (const supervisor of supervisors) {
+                cancelToken.throwIfRequested();
+                supervisor.status = (
+                  await Api.instance.get(
+                    `/druid/indexer/v1/supervisor/${Api.encodePath(
+                      supervisor.supervisor_id,
+                    )}/status`,
+                    { cancelToken },
+                  )
+                ).data;
+              }
+            } catch (e) {
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'Could not get status',
               });
-
-              runningTaskLookup = lookupBy(
-                runningTasks,
-                ({ datasource, type }) => `${datasource}_${type}`,
-                ({ num_running_tasks }) => num_running_tasks,
-              );
-            } else if (capabilities.hasOverlordAccess()) {
-              const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks?state=running`))
-                .data;
-              runningTaskLookup = groupByAsMap(
-                taskList,
-                (t: any) => `${t.dataSource}_${t.type}`,
-                xs => xs.length,
-              );
-            } else {
-              throw new Error(`must have SQL or overlord access`);
             }
+          }
 
-            supervisors.forEach(supervisor => {
-              supervisor.running_tasks =
-                runningTaskLookup[`${supervisor.supervisor_id}_index_${supervisor.type}`] || 0;
-            });
-          } catch (e) {
-            AppToaster.show({
-              icon: IconNames.ERROR,
-              intent: Intent.DANGER,
-              message: 'Could not get running task counts',
-            });
+          if (visibleColumns.shown('Stats')) {
+            try {
+              for (const supervisor of supervisors) {
+                cancelToken.throwIfRequested();
+                supervisor.stats = (
+                  await Api.instance.get(
+                    `/druid/indexer/v1/supervisor/${Api.encodePath(
+                      supervisor.supervisor_id,
+                    )}/stats`,
+                    { cancelToken },
+                  )
+                ).data;
+              }
+            } catch (e) {
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'Could not get stats',
+              });
+            }
           }
         }
 
@@ -275,16 +327,26 @@ GROUP BY 1, 2`;
     });
   }
 
-  componentDidMount(): void {
-    const { capabilities } = this.props;
-    const { visibleColumns } = this.state;
-
-    this.supervisorQueryManager.runQuery({ capabilities, visibleColumns: visibleColumns });
-  }
+  private lastTableState: TableState | undefined;
 
   componentWillUnmount(): void {
     this.supervisorQueryManager.terminate();
   }
+
+  private readonly fetchData = (tableState?: TableState) => {
+    const { capabilities } = this.props;
+    const { visibleColumns } = this.state;
+    if (tableState) this.lastTableState = tableState;
+    const { page, pageSize, filtered, sorted } = this.lastTableState!;
+    this.supervisorQueryManager.runQuery({
+      page,
+      pageSize,
+      filtered,
+      sorted,
+      visibleColumns,
+      capabilities,
+    });
+  };
 
   private readonly closeSpecDialogs = () => {
     this.setState({
@@ -541,7 +603,7 @@ GROUP BY 1, 2`;
 
   private renderSupervisorTable() {
     const { goToTasks, filters, onFiltersChange } = this.props;
-    const { supervisorsState, visibleColumns } = this.state;
+    const { supervisorsState, statsKey, visibleColumns } = this.state;
 
     const supervisors = supervisorsState.data || [];
     return (
@@ -554,6 +616,9 @@ GROUP BY 1, 2`;
         filtered={filters}
         onFilteredChange={onFiltersChange}
         filterable
+        onFetchData={tableState => {
+          this.fetchData(tableState);
+        }}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
         showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
@@ -562,7 +627,7 @@ GROUP BY 1, 2`;
             Header: twoLines('Supervisor ID', <i>(datasource)</i>),
             id: 'supervisor_id',
             accessor: 'supervisor_id',
-            width: 300,
+            width: 280,
             show: visibleColumns.shown('Supervisor ID'),
             Cell: ({ value, original }) => (
               <TableClickableCell
@@ -576,21 +641,21 @@ GROUP BY 1, 2`;
           {
             Header: 'Type',
             accessor: 'type',
-            width: 100,
+            width: 80,
             Cell: this.renderSupervisorFilterableCell('type'),
             show: visibleColumns.shown('Type'),
           },
           {
             Header: 'Topic/Stream',
             accessor: 'source',
-            width: 300,
+            width: 200,
             Cell: this.renderSupervisorFilterableCell('source'),
             show: visibleColumns.shown('Topic/Stream'),
           },
           {
             Header: 'Status',
-            id: 'status',
-            width: 250,
+            id: 'detailed_state',
+            width: 150,
             accessor: 'detailed_state',
             Cell: ({ value }) => (
               <TableFilterableCell
@@ -608,27 +673,67 @@ GROUP BY 1, 2`;
             show: visibleColumns.shown('Status'),
           },
           {
-            Header: 'Running tasks',
-            id: 'running_tasks',
+            Header: 'Active tasks',
+            id: 'active_tasks',
             width: 150,
-            accessor: 'running_tasks',
+            accessor: 'status.payload.activeTasks',
             filterable: false,
-            Cell: ({ value, original }) => (
-              <TableClickableCell
-                onClick={() => goToTasks(original.supervisor_id, `index_${original.type}`)}
-                hoverIcon={IconNames.ARROW_TOP_RIGHT}
-                title="Go to tasks"
-              >
-                {typeof value === 'undefined'
-                  ? 'n/a'
-                  : value > 0
-                  ? pluralIfNeeded(value, 'running task')
-                  : original.suspended
-                  ? ''
-                  : `No running tasks`}
-              </TableClickableCell>
-            ),
-            show: visibleColumns.shown('Running tasks'),
+            sortable: false,
+            Cell: ({ value, original }) => {
+              if (original.suspended) return;
+              return (
+                <TableClickableCell
+                  onClick={() => goToTasks(original.supervisor_id, `index_${original.type}`)}
+                  hoverIcon={IconNames.ARROW_TOP_RIGHT}
+                  title="Go to tasks"
+                >
+                  {typeof value === 'undefined'
+                    ? 'n/a'
+                    : value.length > 0
+                    ? pluralIfNeeded(value.length, 'running task')
+                    : `No running tasks`}
+                </TableClickableCell>
+              );
+            },
+            show: visibleColumns.shown('Active tasks'),
+          },
+          {
+            Header: 'Aggregate lag',
+            accessor: 'status.aggregateLag',
+            width: 200,
+            filterable: false,
+            sortable: false,
+            className: 'padded',
+            show: visibleColumns.shown('Aggregate lag'),
+            Cell: ({ value }) => formatInteger(value),
+          },
+          {
+            Header: twoLines('Stats', <i>{getRowStatsKeyTitle(statsKey)}</i>),
+            id: 'stats',
+            width: 220,
+            filterable: false,
+            sortable: false,
+            className: 'padded',
+            accessor: 'stats',
+            Cell: ({ value }) => {
+              if (!value) return;
+              const c = getTotalSupervisorStats(value, statsKey);
+              const isRate = statsKey !== 'totals';
+              const formatNumber = isRate ? formatRate : formatInteger;
+              const formatData = isRate ? formatByteRate : formatBytes;
+              const bytes = c.processedBytes ? ` (${formatData(c.processedBytes)})` : '';
+              return (
+                <div>
+                  <div>{`Processed: ${formatNumber(c.processed)}${bytes}`}</div>
+                  {Boolean(c.processedWithError) && (
+                    <div>Processed with error: {formatNumber(c.processedWithError)}</div>
+                  )}
+                  {Boolean(c.thrownAway) && <div>Thrown away: {formatNumber(c.thrownAway)}</div>}
+                  {Boolean(c.unparseable) && <div>Unparseable: {formatNumber(c.unparseable)}</div>}
+                </div>
+              );
+            },
+            show: visibleColumns.shown('Stats'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -636,6 +741,7 @@ GROUP BY 1, 2`;
             accessor: 'supervisor_id',
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: row => {
               const id = row.value;
               const type = row.original.type;
@@ -657,6 +763,7 @@ GROUP BY 1, 2`;
 
   renderBulkSupervisorActions() {
     const { capabilities, goToQuery } = this.props;
+    const lastSupervisorQuery = this.supervisorQueryManager.getLastIntermediateQuery();
 
     return (
       <>
@@ -665,7 +772,7 @@ GROUP BY 1, 2`;
             <MenuItem
               icon={IconNames.APPLICATION}
               text="View SQL query for table"
-              onClick={() => goToQuery({ queryString: SupervisorsView.SUPERVISOR_SQL })}
+              onClick={() => goToQuery({ queryString: lastSupervisorQuery })}
             />
           )}
           <MenuItem
@@ -782,6 +889,7 @@ GROUP BY 1, 2`;
       supervisorTableActionDialogId,
       supervisorTableActionDialogActions,
       visibleColumns,
+      statsKey,
     } = this.state;
 
     return (
@@ -794,6 +902,28 @@ GROUP BY 1, 2`;
               this.supervisorQueryManager.rerunLastQuery(auto);
             }}
           />
+          <Popover2
+            position={Position.BOTTOM}
+            content={
+              <Menu>
+                {ROW_STATS_KEYS.map(k => (
+                  <MenuItem
+                    key={k}
+                    icon={checkedCircleIcon(k === statsKey)}
+                    text={getRowStatsKeyTitle(k)}
+                    onClick={() => {
+                      this.setState({ statsKey: k });
+                    }}
+                  />
+                ))}
+              </Menu>
+            }
+          >
+            <Button
+              text={`Stats: ${getRowStatsKeyTitle(statsKey)}`}
+              rightIcon={IconNames.CARET_DOWN}
+            />
+          </Popover2>
           {this.renderBulkSupervisorActions()}
           <TableColumnSelector
             columns={supervisorTableColumns}

@@ -53,7 +53,7 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
-import type { NumberLike } from '../../utils';
+import type { NumberLike, TableState } from '../../utils';
 import {
   compact,
   countBy,
@@ -69,6 +69,7 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  sortedToOrderByClause,
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
@@ -132,23 +133,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
 
 function formatRangeDimensionValue(dimension: any, value: any): string {
   return `${C(String(dimension))}=${L(String(value))}`;
-}
-
-interface Sorted {
-  id: string;
-  desc: boolean;
-}
-
-function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
-  if (!sorted.length) return;
-  return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
-}
-
-interface TableState {
-  page: number;
-  pageSize: number;
-  filtered: Filter[];
-  sorted: Sorted[];
 }
 
 interface SegmentsQuery extends TableState {

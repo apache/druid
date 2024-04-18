@@ -22,33 +22,21 @@ import type { CellInfo, Column } from 'react-table';
 import ReactTable from 'react-table';
 
 import { Loader } from '../../../components/loader/loader';
+import type { RowStats, RowStatsCounter, SupervisorStats } from '../../../druid-models';
 import { useQueryManager } from '../../../hooks';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
-import { deepGet } from '../../../utils';
+import { deepGet, formatByteRate, formatBytes, formatInteger, formatRate } from '../../../utils';
 
 import './supervisor-statistics-table.scss';
 
-export interface TaskSummary {
-  totals: Record<string, StatsEntry>;
-  movingAverages: Record<string, Record<string, StatsEntry>>;
-}
-
-export interface StatsEntry {
-  processed?: number;
-  processedWithError?: number;
-  thrownAway?: number;
-  unparseable?: number;
-  [key: string]: number | undefined;
-}
-
 export interface SupervisorStatisticsTableRow {
   taskId: string;
-  summary: TaskSummary;
+  summary: RowStats;
 }
 
 export function normalizeSupervisorStatisticsResults(
-  data: Record<string, Record<string, TaskSummary>>,
+  data: SupervisorStats,
 ): SupervisorStatisticsTableRow[] {
   return Object.values(data).flatMap(v => Object.keys(v).map(k => ({ taskId: k, summary: v[k] })));
 }
@@ -66,21 +54,29 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
 
   const [supervisorStatisticsState] = useQueryManager<null, SupervisorStatisticsTableRow[]>({
     processQuery: async () => {
-      const resp = await Api.instance.get(endpoint);
+      const resp = await Api.instance.get<SupervisorStats>(endpoint);
       return normalizeSupervisorStatisticsResults(resp.data);
     },
     initQuery: null,
   });
 
-  function renderCell(cell: CellInfo) {
-    const cellValue = cell.value;
-    if (!cellValue) {
-      return <div>No data found</div>;
-    }
+  function renderCounters(cell: CellInfo, isRate: boolean) {
+    const c: RowStatsCounter = cell.value;
+    if (!c) return null;
 
-    return Object.keys(cellValue)
-      .sort()
-      .map(key => <div key={key}>{`${key}: ${Number(cellValue[key]).toFixed(1)}`}</div>);
+    const formatNumber = isRate ? formatRate : formatInteger;
+    const formatData = isRate ? formatByteRate : formatBytes;
+    const bytes = c.processedBytes ? ` (${formatData(c.processedBytes)})` : '';
+    return (
+      <div>
+        <div>{`Processed: ${formatNumber(c.processed)}${bytes}`}</div>
+        {Boolean(c.processedWithError) && (
+          <div>Processed with error: {formatNumber(c.processedWithError)}</div>
+        )}
+        {Boolean(c.thrownAway) && <div>Thrown away: {formatNumber(c.thrownAway)}</div>}
+        {Boolean(c.unparseable) && <div>Unparseable: {formatNumber(c.unparseable)}</div>}
+      </div>
+    );
   }
 
   function renderTable() {
@@ -98,9 +94,9 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
         className: 'padded',
         width: 200,
         accessor: d => {
-          return deepGet(d, 'summary.totals.buildSegments') as StatsEntry;
+          return deepGet(d, 'summary.totals.buildSegments') as RowStatsCounter;
         },
-        Cell: renderCell,
+        Cell: c => renderCounters(c, false),
       },
     ];
 
@@ -118,10 +114,8 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
               id: interval,
               className: 'padded',
               width: 200,
-              accessor: d => {
-                return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
-              },
-              Cell: renderCell,
+              accessor: `summary.movingAverages.buildSegments.${interval}`,
+              Cell: c => renderCounters(c, true),
             };
           }),
       );
