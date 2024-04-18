@@ -28,7 +28,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Encapsulates segment metadata and corresponding schema.
+ * Encapsulates segments metadata and corresponding schema.
  */
 public class DataSegmentsWithSchemas
 {

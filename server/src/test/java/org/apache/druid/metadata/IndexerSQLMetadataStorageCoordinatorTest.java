@@ -3025,6 +3025,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
   }
 
+  @Test
   public void testRetrieveUsedSegmentsAndCreatedDates()
   {
     segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(defaultSegment), Collections.emptyMap());

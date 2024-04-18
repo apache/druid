@@ -161,6 +161,7 @@ public class SegmentSchemaManager
 
   /**
    * Persist unique segment schema in the DB.
+   * There is a possibility of race
    */
   public void persistSegmentSchema(
       Handle handle,
@@ -172,6 +173,9 @@ public class SegmentSchemaManager
     try {
       // Filter already existing schema
       Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(handle, dataSource, schemaVersion, fingerprintSchemaPayloadMap.keySet());
+
+      // Used schema can also be marked as unused by the schema cleanup duty in parallel.
+      // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
       Set<String> usedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(true) ? existingFingerprintsAndUsedStatus.get(true) : new HashSet<>();
       Set<String> unusedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(false) ? existingFingerprintsAndUsedStatus.get(false) : new HashSet<>();
       Set<String> existingFingerprints = Sets.union(usedExistingFingerprints, unusedExistingFingerprints);
@@ -184,15 +188,8 @@ public class SegmentSchemaManager
         );
       }
 
-      // There is a possibility of race with schema cleanup Coordinator duty.
-      // The duty could delete the unused schema. We try to mark them used.
-      // However, if the duty succeeds in deleting it the transaction fails due to consistency guarantees.
-      // The failed transaction is retried.
-      // Since the deletion period would be at least > 1h, we are sure that the race wouldn't arise on retry.
-      // There is another race, wherein used schema could be marked as unused by the cleanup duty.
-      // The implication is that a segment could reference an unused schema. Since there is a significant gap
-      // between marking the segment as unused and deletion, the schema won't be lost during retry.
-      // There is no functional problem as such, since the duty would itself mark those schema as used.
+      // Unused schema can be deleted by the schema cleanup duty in parallel.
+      // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
       if (unusedExistingFingerprints.size() > 0) {
         // make the unused schema as used to prevent deletion
         String inClause = unusedExistingFingerprints.stream()

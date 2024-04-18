@@ -46,8 +46,8 @@ import java.util.List;
  * <p>
  * Possible race conditions:
  *    <ol type="a">
- *    <li> Between ops 1 and 3b: In other words, we might end up with a segment that points to a schema that has just been marked as unused. This can be repaired by the coordinator duty. </li>
- *    <li> Between 2 and 3c: This can be handled. Either 2 will fail to update any rows (good case) or 3c will fail to update any rows and thus return 0 (bad case). In the bad case, we need to recreate the schema, same as step 3a. </li>
+ *    <li> Between ops 1 and 3b: In other words, we might end up with a segment that points to a schema that has just been marked as unused. This is repaired by the coordinator duty.</li>
+ *    <li> Between 2 and 3c: This can be handled. Either 2 will fail to update any rows (good case) or 3c will fail to update any rows (bad case). In the bad case, we need to recreate the schema, same as step 3a. </li>
  *    </ol>
  * </p>
  */
