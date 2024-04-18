@@ -3260,7 +3260,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                       supervisor before starting it.
                     </p>
                     <p>
-                      You can configure the exact offsets that the supervisor will read from from
+You can configure the exact offsets that the supervisor will read from using the Actions menu on the Supervisors tab.
                       the action menu on the Supervisor tab after submitting a supervisor in a
                       suspended state.
                     </p>
