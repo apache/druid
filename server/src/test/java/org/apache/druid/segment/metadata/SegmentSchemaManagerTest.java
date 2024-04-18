@@ -77,7 +77,7 @@ public class SegmentSchemaManagerTest
     derbyConnector.createSegmentTable();
 
     fingerprintGenerator = new FingerprintGenerator(mapper);
-    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector, fingerprintGenerator);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
   }
 

@@ -100,7 +100,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     segmentTableDropUpdateCounter.set(0);
 
     fingerprintGenerator = new FingerprintGenerator(mapper);
-    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector, fingerprintGenerator);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
 
     coordinator = new IndexerSQLMetadataStorageCoordinator(

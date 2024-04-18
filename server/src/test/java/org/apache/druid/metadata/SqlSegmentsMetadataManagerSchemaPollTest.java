@@ -60,8 +60,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
-        connector,
-        new FingerprintGenerator(jsonMapper)
+        connector
     );
 
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(

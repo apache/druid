@@ -1467,6 +1467,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
+            fingerprintGenerator,
             new NoopServiceEmitter(),
             config
         );
@@ -1651,10 +1652,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
 
+    segmentStatsMap = new ImmutableMap.Builder<>();
     segmentStatsMap.put(
         existingSegment.getId(),
         new SegmentSchemaCache.SegmentStats(1L, 5L)
     );
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap.build());
 
     // find a druidServer holding existingSegment
     final Pair<DruidServer, DataSegment> pair = druidServers

@@ -94,7 +94,6 @@ public class CliRouter extends ServerRunnable
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),
         binder -> {
-          validateCentralizedDatasourceSchemaConfig(getProperties());
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);

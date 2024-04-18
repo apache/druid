@@ -348,7 +348,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
     if (!config.isDisableSegmentMetadataQueries()) {
       refreshed = refreshSegments(segmentsToRefresh);
-      log.info("Refreshed segments are [%s]", refreshed);
+      log.debug("Refreshed segments are [%s]", refreshed);
     }
 
     synchronized (lock) {
@@ -399,10 +399,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       for (SegmentId id : segmentIds) {
         if (segmentSchemaCache.isSchemaCached(id)) {
           cachedSegments.add(id);
-          segmentIds.remove(id);
         }
       }
     }
+
+    segmentIds.removeAll(cachedSegments);
 
     return cachedSegments;
   }

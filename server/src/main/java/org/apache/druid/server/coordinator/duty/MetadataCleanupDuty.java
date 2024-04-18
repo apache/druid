@@ -144,6 +144,6 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
 
   protected DateTime getCurrentTime()
   {
-    return DateTime.now();
+    return DateTimes.nowUtc();
   }
 }

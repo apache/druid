@@ -287,11 +287,11 @@ public class SegmentSchemaCache
     inTransitSMQResults.remove(segmentId);
     inTransitSMQPublishedResults.remove(segmentId);
 
-    // Stale schema payload from {@code finalizedSegmentSchema} is not removed
+    // Stale schema payload from finalizedSegmentSchema is not removed
     // as it could be referenced by other segments.
     // Stale schema from the cache would get cleared on full schema refresh from the DB,
     // which would be triggered after any stale schema is deleted from the DB.
-    finalizedSegmentStats.remove(segmentId);
+    // Also, segment is not cleared from finalizedSegmentStats since it updated on each DB poll.
     return true;
   }
 

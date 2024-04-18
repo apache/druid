@@ -98,8 +98,7 @@ public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCach
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
-        derbyConnector,
-        fingerprintGenerator
+        derbyConnector
     );
 
     segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
@@ -113,6 +112,7 @@ public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCach
             segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
+            fingerprintGenerator,
             new NoopServiceEmitter(),
             config
         );

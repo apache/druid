@@ -39,7 +39,6 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -89,7 +88,7 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(metadataStorageTablesConfig)
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
-    segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector, new FingerprintGenerator(objectMapper));
+    segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         metadataStorageTablesConfig,
