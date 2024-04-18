@@ -215,7 +215,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
             .first()
     );
     if (update == null) {
-      LOG.info("Lookup table is empty. No rows returned for the query: %s", query);
+      LOG.info("Lookup table[%s] is empty. No rows returned for the query[%s].", table, query);
       return null;
     }
     return update.getTime();
