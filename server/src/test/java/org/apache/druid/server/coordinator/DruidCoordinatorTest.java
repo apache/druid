@@ -183,7 +183,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        null,
         CentralizedDatasourceSchemaConfig.create()
     );
   }
@@ -196,6 +195,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         null,
         metadataRuleManager,
+        null,
         null
     );
   }
@@ -612,7 +612,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        null,
         CentralizedDatasourceSchemaConfig.create()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -654,7 +653,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        null,
         CentralizedDatasourceSchemaConfig.create()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -694,7 +692,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null,
         null,
         null,
         CentralizedDatasourceSchemaConfig.create()
@@ -801,7 +798,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null,
         null,
         null,
         CentralizedDatasourceSchemaConfig.create()

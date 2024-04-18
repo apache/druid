@@ -53,7 +53,6 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
-import org.apache.druid.segment.metadata.KillUnreferencedSegmentSchemas;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
@@ -155,7 +154,7 @@ public class DruidCoordinator
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-  private final KillUnreferencedSegmentSchemas killUnreferencedSegmentSchemas;
+
 
   private volatile boolean started = false;
 
@@ -194,7 +193,6 @@ public class DruidCoordinator
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
-      KillUnreferencedSegmentSchemas killUnreferencedSegmentSchemas,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
@@ -218,7 +216,6 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.killUnreferencedSegmentSchemas = killUnreferencedSegmentSchemas;
   }
 
   public boolean isLeader()
@@ -594,7 +591,7 @@ public class DruidCoordinator
     duties.add(new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()));
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      duties.add(new KillUnreferencedSegmentSchemaDuty(config, killUnreferencedSegmentSchemas));
+      duties.add(new KillUnreferencedSegmentSchemaDuty(config, metadataManager.schemas(), metadataManager.segments()));
     }
     return duties;
   }
