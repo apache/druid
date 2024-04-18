@@ -83,7 +83,6 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -146,8 +145,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         objectMapper,
-        derbyConnectorRule.getConnector(),
-        new FingerprintGenerator(objectMapper)
+        derbyConnectorRule.getConnector()
     );
 
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(

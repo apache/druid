@@ -65,6 +65,7 @@ public class SegmentSchemaBackFillQueue
 
   private final SegmentSchemaManager segmentSchemaManager;
   private final SegmentSchemaCache segmentSchemaCache;
+  private final FingerprintGenerator fingerprintGenerator;
   private final ServiceEmitter emitter;
   private final CentralizedDatasourceSchemaConfig config;
   private final ScheduledExecutorService executor;
@@ -75,12 +76,14 @@ public class SegmentSchemaBackFillQueue
       SegmentSchemaManager segmentSchemaManager,
       ScheduledExecutorFactory scheduledExecutorFactory,
       SegmentSchemaCache segmentSchemaCache,
+      FingerprintGenerator fingerprintGenerator,
       ServiceEmitter emitter,
       CentralizedDatasourceSchemaConfig config
   )
   {
     this.segmentSchemaManager = segmentSchemaManager;
     this.segmentSchemaCache = segmentSchemaCache;
+    this.fingerprintGenerator = fingerprintGenerator;
     this.emitter = emitter;
     this.config = config;
     this.executionPeriod = config.getBackFillPeriod();
@@ -120,7 +123,7 @@ public class SegmentSchemaBackFillQueue
     queue.add(
         new SegmentSchemaMetadataPlus(
             segmentId,
-            segmentSchemaManager.generateSchemaPayloadFingerprint(schemaMetadata.getSchemaPayload()),
+            fingerprintGenerator.generateFingerprint(schemaMetadata.getSchemaPayload()),
             schemaMetadata
         )
     );

@@ -61,23 +61,20 @@ public class SegmentSchemaManager
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
   private final SQLMetadataConnector connector;
-  private final FingerprintGenerator fingerprintGenerator;
 
   @Inject
   public SegmentSchemaManager(
       MetadataStorageTablesConfig dbTables,
       ObjectMapper jsonMapper,
-      SQLMetadataConnector connector,
-      FingerprintGenerator fingerprintGenerator
+      SQLMetadataConnector connector
   )
   {
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
     this.connector = connector;
-    this.fingerprintGenerator = fingerprintGenerator;
   }
 
-  public List<Long> identifyReferencedUnusedSchema()
+  public List<Long> findReferencedSchemaIdsMarkedAsUnused()
   {
     return connector.retryWithHandle(
         handle ->
@@ -92,8 +89,11 @@ public class SegmentSchemaManager
     );
   }
 
-  public int markSchemaUsed(List<Long> schemaIds)
+  public int markSchemaIdsAsUsed(List<Long> schemaIds)
   {
+    if (schemaIds.isEmpty()) {
+      return 0;
+    }
     String inClause = schemaIds.stream().map(Object::toString).collect(Collectors.joining(","));
 
     return connector.retryWithHandle(
@@ -122,7 +122,7 @@ public class SegmentSchemaManager
                         .execute());
   }
 
-  public int identifyAndMarkSchemaUnused()
+  public int markUnreferencedSchemasAsUnused()
   {
     return connector.retryWithHandle(
         handle ->
@@ -136,11 +136,6 @@ public class SegmentSchemaManager
                   )
                   .bind("now", DateTimes.nowUtc().toString())
                   .execute());
-  }
-
-  public String generateSchemaPayloadFingerprint(SchemaPayload payload)
-  {
-    return fingerprintGenerator.generateFingerprint(payload);
   }
 
   /**

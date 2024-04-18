@@ -123,7 +123,6 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -292,7 +291,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     baseDir = tempFolder.newFolder();
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory(baseDir);
-    segmentSchemaManager = new SegmentSchemaManager(MetadataStorageTablesConfig.fromBase(null), mapper, derbyConnector, new FingerprintGenerator(mapper));
+    segmentSchemaManager = new SegmentSchemaManager(MetadataStorageTablesConfig.fromBase(null), mapper, derbyConnector);
   }
 
   @After

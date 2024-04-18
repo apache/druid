@@ -137,8 +137,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
-        derbyConnectorRule.getConnector(),
-        new FingerprintGenerator(mapper)
+        derbyConnectorRule.getConnector()
     );
 
     backFillQueue =
@@ -146,6 +145,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
             segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
+            new FingerprintGenerator(mapper),
             new NoopServiceEmitter(),
             config
         );

@@ -364,7 +364,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
     private Duration coordinatorKillBufferPeriod;
-    private boolean segmentSchemaKillEnabled;
     private Duration segmentSchemaKillPeriod;
     private Duration segmentSchemaKillDurationToRetain;
 
