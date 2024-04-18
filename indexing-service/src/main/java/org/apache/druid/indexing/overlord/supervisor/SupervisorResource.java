@@ -396,6 +396,25 @@ public class SupervisorResource
   }
 
   @POST
+  @Path("/{id}/{taskGroupId}/stopEarly")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response stopTaskEarly(@PathParam("id") final String id, @PathParam("taskGroupId") final int taskGroupId)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          if (manager.stopTaskGroupEarly(id, taskGroupId)) {
+            return Response.ok(ImmutableMap.of("id", id, "taskGroupId", taskGroupId)).build();
+          } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(ImmutableMap.of("error", StringUtils.format("taskGroupId [%s] for [%s] does not exist", taskGroupId, id)))
+                .build();
+          }
+        }
+    );
+  }
+
+  @POST
   @Path("/{id}/terminate")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
