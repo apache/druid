@@ -3255,7 +3255,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <>
                     <p>Create a supervisor in a suspended state.</p>
                     <p>
-                      Adding a suspended supervisor is useful if you are not ready to start
+Creating a supervisor in a suspended state can be helpful if you are not yet ready to begin ingesting data or if you prefer to configure the supervisor's metadata before submitting it.
                       inserting data yet or if you want to precisely configure the metadata for the
                       supervisor before starting it.
                     </p>
