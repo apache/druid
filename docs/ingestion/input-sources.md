@@ -1154,22 +1154,22 @@ a Delta table. This input source provides the following filters: `and`, `or`, `n
 
 When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta Kernel solely relies
 on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
-data that doesn't match the filter. For guaranteed filtering behavior, use it only on partitioned columns.
+data that doesn't match the filter. For guaranteed filtering behavior, only use filters on on partitioned columns.
 
 
-`and` Filter:
+`and` filter:
 
 | Property | Description                                                                                           | Required |
 |----------|-------------------------------------------------------------------------------------------------------|----------|
 | type     | Set this value to `and`.                                                                              | yes      |
-| filters  | List of Delta filter predicates that needs to be AND-ed. `and` filter requires two filter predicates. | yes      |
+| filters  | List of Delta filter predicates that get evaluated using AND logic where both conditions need to be true. `and` filter requires two filter predicates. | yes      |
 
 `or` Filter:
 
 | Property | Description                                                                                         | Required |
 |----------|-----------------------------------------------------------------------------------------------------|----------|
 | type     | Set this value to `or`.                                                                             | yes      |
-| filters  | List of Delta filter predicates that needs to be OR-ed. `or` filter requires two filter predicates. | yes      |
+| filters  | List of Delta filter predicates that get evaluated using OR logic where only one condition needs to be true. `or` filter requires two filter predicates. | yes      |
 
 `not` Filter:
 
