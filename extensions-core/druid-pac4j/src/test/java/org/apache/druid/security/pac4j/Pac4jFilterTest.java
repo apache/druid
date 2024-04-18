@@ -19,8 +19,6 @@
 
 package org.apache.druid.security.pac4j;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,12 +32,9 @@ import org.pac4j.core.exception.http.FoundAction;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.exception.http.WithLocationAction;
 import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
-import org.pac4j.core.profile.BasicUserProfile;
-import org.pac4j.core.profile.UserProfile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -79,18 +74,4 @@ public class Pac4jFilterTest
     Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_FORBIDDEN);
   }
 
-  @Test
-  public void testUserProfileInContext()
-  {
-    Map<String, Object> someAttributes = ImmutableMap.<String, Object>builder().put("email", "test@example.com").build();
-    BasicUserProfile userProfile = new BasicUserProfile();
-    userProfile.build("someid", someAttributes);
-
-    Assert.assertEquals(userProfile.getId(), "someid");
-    AuthenticationResult authenticationResult = new AuthenticationResult(userProfile.getId(), "authorizerName", "name", ImmutableMap.of("profile", userProfile));
-
-    UserProfile resultProfile = (UserProfile) authenticationResult.getContext().get("profile");
-    Assert.assertEquals(resultProfile.getAttribute("email"), "test@example.com");
-
-  }
 }
