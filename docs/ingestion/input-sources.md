@@ -1154,7 +1154,7 @@ a Delta table. This input source provides the following filters: `and`, `or`, `n
 
 When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta Kernel solely relies
 on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
-data that doesn't match the filter. For guaranteed filtering behavior, only use filters on on partitioned columns.
+data that doesn't match the filter. For guaranteed filtering behavior, only use filters on partitioned columns.
 
 
 `and` filter:
@@ -1164,21 +1164,21 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 | type     | Set this value to `and`.                                                                              | yes      |
 | filters  | List of Delta filter predicates that get evaluated using AND logic where both conditions need to be true. `and` filter requires two filter predicates. | yes      |
 
-`or` Filter:
+`or` filter:
 
 | Property | Description                                                                                         | Required |
 |----------|-----------------------------------------------------------------------------------------------------|----------|
 | type     | Set this value to `or`.                                                                             | yes      |
 | filters  | List of Delta filter predicates that get evaluated using OR logic where only one condition needs to be true. `or` filter requires two filter predicates. | yes      |
 
-`not` Filter:
+`not` filter:
 
 | Property | Description                                                          |Required|
 |----------|----------------------------------------------------------------------|---------|
 | type     | Set this value to `not`.                                             |yes|
 | filter   | The Delta filter predicate on which logical NOT needs to be applied. |yes|
 
-`=` Filter:
+`=` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
@@ -1186,7 +1186,7 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 | column   | The table column to apply the filter on. | Yes      |
 | value    | The value to use in the filter.          | Yes      |
 
-`>` Filter:
+`>` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
@@ -1194,7 +1194,7 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 | column   | The table column to apply the filter on. | Yes      |
 | value    | The value to use in the filter.          | Yes      |
 
-`>=` Filter:
+`>=` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
@@ -1202,7 +1202,7 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 | column   | The table column to apply the filter on. | Yes      |
 | value    | The value to use in the filter.          | Yes      |
 
-`<` Filter:
+`<` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
@@ -1210,7 +1210,7 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 | column   | The table column to apply the filter on. | Yes      |
 | value    | The value to use in the filter.          | Yes      |
 
-`<=` Filter:
+`<=` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
@@ -1219,7 +1219,7 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 | value    | The value to use in the filter.          | Yes      |
 
 
-The following is a sample spec to read all records from the Delta table `/delta-table/directory`:
+The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
 
 ```json
 ...
@@ -1227,12 +1227,12 @@ The following is a sample spec to read all records from the Delta table `/delta-
       "type": "index_parallel",
       "inputSource": {
         "type": "delta",
-        "tablePath": "/delta-table/directory"
+        "tablePath": "/delta-table/foo"
       },
     }
 ```
 
-The following is a sample spec to read records from the Delta table `/delta-table/directory` that match the `and` filter
+The following is a sample spec to read records from the Delta table `/delta-table/foo` that match the `and` filter
 to select records where `name = 'Employee4'` and `age >= 30`:
 
 ```json
@@ -1241,7 +1241,7 @@ to select records where `name = 'Employee4'` and `age >= 30`:
       "type": "index_parallel",
       "inputSource": {
         "type": "delta",
-        "tablePath": "/delta-table/directory",
+        "tablePath": "/delta-table/foo",
         "filter": {
           "type": "and",
           "filters": [
