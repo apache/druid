@@ -1159,48 +1159,48 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 
 `and` filter:
 
-| Property | Description                                                                                           | Required |
-|----------|-------------------------------------------------------------------------------------------------------|----------|
-| type     | Set this value to `and`.                                                                              | yes      |
-| filters  | List of Delta filter predicates that get evaluated using AND logic where both conditions need to be true. `and` filter requires two filter predicates. | yes      |
+| Property | Description                                                                                                                                                   | Required |
+|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `and`.                                                                                                                                      | yes      |
+| filters  | List of Delta filter predicates that get evaluated using logical AND where both conditions need to be true. `and` filter requires two filter predicates.      | yes      |
 
 `or` filter:
 
-| Property | Description                                                                                         | Required |
-|----------|-----------------------------------------------------------------------------------------------------|----------|
-| type     | Set this value to `or`.                                                                             | yes      |
-| filters  | List of Delta filter predicates that get evaluated using OR logic where only one condition needs to be true. `or` filter requires two filter predicates. | yes      |
+| Property | Description                                                                                                                                                     | Required |
+|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `or`.                                                                                                                                         | yes      |
+| filters  | List of Delta filter predicates that get evaluated using logical OR where only one condition needs to be true. `or` filter requires two filter predicates.      | yes      |
 
 `not` filter:
 
-| Property | Description                                                          |Required|
-|----------|----------------------------------------------------------------------|---------|
-| type     | Set this value to `not`.                                             |yes|
-| filter   | The Delta filter predicate on which logical NOT needs to be applied. |yes|
+| Property | Description                                                                                                   | Required |
+|----------|---------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `not`.                                                                                      | yes      |
+| filter   | The Delta filter predicate that gets evaluated using logical NOT. `not` filter requires one filter predicate. | yes      |
 
 `=` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
-| type     | Set this value to `=`.                   | Yes      |
-| column   | The table column to apply the filter on. | Yes      |
-| value    | The value to use in the filter.          | Yes      |
+| type     | Set this value to `=`.                   | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
 
 `>` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
-| type     | Set this value to `>`.                   | Yes      |
-| column   | The table column to apply the filter on. | Yes      |
-| value    | The value to use in the filter.          | Yes      |
+| type     | Set this value to `>`.                   | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
 
 `>=` filter:
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
-| type     | Set this value to `>=`.                  | Yes      |
-| column   | The table column to apply the filter on. | Yes      |
-| value    | The value to use in the filter.          | Yes      |
+| type     | Set this value to `>=`.                  | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
 
 `<` filter:
 
@@ -1214,9 +1214,9 @@ data that doesn't match the filter. For guaranteed filtering behavior, only use 
 
 | Property | Description                              | Required |
 |----------|------------------------------------------|----------|
-| type     | Set this value to `<=`.                  | Yes      |
-| column   | The table column to apply the filter on. | Yes      |
-| value    | The value to use in the filter.          | Yes      |
+| type     | Set this value to `<=`.                  | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
 
 
 The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
