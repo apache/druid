@@ -45,7 +45,7 @@ import java.nio.ByteBuffer;
  * {@code null} can be represented by either -1 or the position of null in the dictionary it was stored when it was
  * encountered. This is fine, because most of the time, the dictionary id has no value of its own, and is converted back to
  * the value it represents, before doing further operations. The only place where it would matter would be when
- * {@link IdToDimensionConverter#canCompareIds()} is true, and we compare directly on the dictionary ids for prebuilt
+ * {@link DimensionIdCodec#canCompareIds()} is true, and we compare directly on the dictionary ids for prebuilt
  * dictionaries (we can't compare ids for the dictionaries built on the fly in the grouping strategy). However, in that case,
  * it is guaranteed that the dictionaryId of null represented by the pre-built dictionary would be the lowest (most likely 0)
  * and therefore nulls (-1) would be adjacent to nulls (represented by the lowest non-negative dictionary id), and would get
@@ -58,8 +58,7 @@ import java.nio.ByteBuffer;
  * and the string primitives are handled by the {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
  *
  * @param <DimensionType>>     Class of the dimension
- * @see DimensionToIdConverter encoding logic for converting value to dictionary
- * @see IdToDimensionConverter decoding logic for converting back dictionary to value
+ * @see DimensionIdCodec encoding decoding logic for converting value to dictionary
  */
 @NotThreadSafe
 class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByColumnSelectorStrategy
@@ -67,7 +66,7 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
   /**
    * Converts the dimension to equivalent dictionaryId.
    */
-  final DimensionToIdConverter<DimensionType> dimensionToIdConverter;
+  final DimensionIdCodec<DimensionType> dimensionIdCodec;
 
   /**
    * Type of the dimension on which the grouping strategy is used
@@ -84,21 +83,17 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
    */
   final DimensionType defaultValue;
 
-  final IdToDimensionConverter<DimensionType> idToDimensionConverter;
-
   KeyMappingGroupByColumnSelectorStrategy(
-      final DimensionToIdConverter<DimensionType> dimensionToIdConverter,
+      final DimensionIdCodec<DimensionType> dimensionIdCodec,
       final ColumnType columnType,
       final NullableTypeStrategy<DimensionType> nullableTypeStrategy,
-      final DimensionType defaultValue,
-      final IdToDimensionConverter<DimensionType> idToDimensionConverter
+      final DimensionType defaultValue
   )
   {
-    this.dimensionToIdConverter = dimensionToIdConverter;
+    this.dimensionIdCodec = dimensionIdCodec;
     this.columnType = columnType;
     this.nullableTypeStrategy = nullableTypeStrategy;
     this.defaultValue = defaultValue;
-    this.idToDimensionConverter = idToDimensionConverter;
   }
 
   /**
@@ -120,7 +115,7 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
   {
     final int id = key.getInt(keyBufferPosition);
     if (id != GROUP_BY_MISSING_VALUE) {
-      resultRow.set(selectorPlus.getResultRowPosition(), idToDimensionConverter.idToKey(id));
+      resultRow.set(selectorPlus.getResultRowPosition(), dimensionIdCodec.idToKey(id));
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), defaultValue);
     }
@@ -138,7 +133,7 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
       valuess[columnIndex] = GROUP_BY_MISSING_VALUE;
       return 0;
     } else {
-      MemoryEstimate<Integer> idAndMemoryEstimate = dimensionToIdConverter.lookupId(value);
+      MemoryEstimate<Integer> idAndMemoryEstimate = dimensionIdCodec.lookupId(value);
       valuess[columnIndex] = idAndMemoryEstimate.value();
       return idAndMemoryEstimate.memoryIncrease();
     }
@@ -190,7 +185,7 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
       keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
       return 0;
     } else {
-      MemoryEstimate<Integer> idAndMemoryIncrease = dimensionToIdConverter.lookupId(value);
+      MemoryEstimate<Integer> idAndMemoryIncrease = dimensionIdCodec.lookupId(value);
       keyBuffer.putInt(keyBufferPosition, idAndMemoryIncrease.value());
       memoryIncrease = idAndMemoryIncrease.memoryIncrease();
     }
@@ -203,7 +198,7 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
     boolean usesNaturalComparator =
         stringComparator == null
         || DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator);
-    if (idToDimensionConverter.canCompareIds() && usesNaturalComparator) {
+    if (dimensionIdCodec.canCompareIds() && usesNaturalComparator) {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Integer.compare(
           lhsBuffer.getInt(lhsPosition + keyBufferPosition),
           rhsBuffer.getInt(rhsPosition + keyBufferPosition)
@@ -213,8 +208,8 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
         int lhsDictId = lhsBuffer.getInt(lhsPosition + keyBufferPosition);
         int rhsDictId = rhsBuffer.getInt(rhsPosition + keyBufferPosition);
 
-        Object lhsObject = lhsDictId == GROUP_BY_MISSING_VALUE ? null : idToDimensionConverter.idToKey(lhsDictId);
-        Object rhsObject = rhsDictId == GROUP_BY_MISSING_VALUE ? null : idToDimensionConverter.idToKey(rhsDictId);
+        Object lhsObject = lhsDictId == GROUP_BY_MISSING_VALUE ? null : dimensionIdCodec.idToKey(lhsDictId);
+        Object rhsObject = rhsDictId == GROUP_BY_MISSING_VALUE ? null : dimensionIdCodec.idToKey(rhsDictId);
         if (usesNaturalComparator) {
           return nullableTypeStrategy.compare(
               (DimensionType) DimensionHandlerUtils.convertObjectToType(lhsObject, columnType),
@@ -230,6 +225,6 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
   @Override
   public void reset()
   {
-    // Nothing to do here. Implementations which build dictionaries should clean them in the reset method.
+    dimensionIdCodec.reset();
   }
 }

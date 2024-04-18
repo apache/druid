@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuildingUtils;
@@ -26,6 +28,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,36 +46,14 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     extends KeyMappingGroupByColumnSelectorStrategy<DimensionType>
 {
 
-  /**
-   * Dictionary for mapping the dimension value to an index. i-th position in the dictionary holds the value represented
-   * by the dictionaryId "i".
-   * Therefore, if a value has a dictionary id "i", dictionary.get(i) = value
-   */
-  private final List<DimensionType> dictionary;
-
-  /**
-   * Reverse dictionary for faster lookup into the dictionary, and reusing pre-existing dictionary ids.
-   * <p>
-   * An entry of form (value, i) in the reverse dictionary represents that "value" is present at the i-th location in the
-   * {@link #dictionary}.
-   * Absence of mapping of a "value" (denoted by returning {@link GroupByColumnSelectorStrategy#GROUP_BY_MISSING_VALUE})
-   * represents that the value is absent in the dictionary
-   */
-  private final Object2IntMap<DimensionType> reverseDictionary;
-
   private DictionaryBuildingGroupByColumnSelectorStrategy(
-      DimensionToIdConverter<DimensionType> dimensionToIdConverter,
+      DimensionIdCodec<DimensionType> dimensionIdCodec,
       ColumnType columnType,
       NullableTypeStrategy<DimensionType> nullableTypeStrategy,
-      DimensionType defaultValue,
-      IdToDimensionConverter<DimensionType> idToDimensionConverter,
-      List<DimensionType> dictionary,
-      Object2IntMap<DimensionType> reverseDictionary
+      DimensionType defaultValue
   )
   {
-    super(dimensionToIdConverter, columnType, nullableTypeStrategy, defaultValue, idToDimensionConverter);
-    this.dictionary = dictionary;
-    this.reverseDictionary = reverseDictionary;
+    super(dimensionIdCodec, columnType, nullableTypeStrategy, defaultValue);
   }
 
   /**
@@ -89,6 +70,10 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
         || columnType.equals(ColumnType.FLOAT)
         || columnType.equals(ColumnType.LONG)) {
       throw DruidException.defensive("Could used a fixed width strategy");
+    }
+
+    if (ColumnType.STRING_ARRAY.equals(columnType)) {
+      forStringArrays();
     }
 
     // Catch-all for all other types, that can only have single-valued dimensions
@@ -111,24 +96,48 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     final Object2IntMap<Object> reverseDictionary =
         DictionaryBuildingUtils.createReverseDictionary(columnType.getNullableStrategy());
     return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
-        new UniValueDimensionToIdConverter(dictionary, reverseDictionary, columnType.getNullableStrategy()),
+        new UniValueDimensionIdCodec(dictionary, reverseDictionary, columnType.getNullableStrategy()),
         columnType,
         columnType.getNullableStrategy(),
-        null,
-        new DictionaryIdToDimensionConverter<>(dictionary),
-        dictionary,
-        reverseDictionary
+        null
     );
   }
 
-  private static class UniValueDimensionToIdConverter implements DimensionToIdConverter<Object>
+  private static GroupByColumnSelectorStrategy forStringArrays()
   {
+    final BiMap<String, Integer> elementBiDictionary = HashBiMap.create();
+    final BiMap<ArrayList<Integer>, Integer> arrayBiDictionary = HashBiMap.create();
+    return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
+        new StringArrayDimensionIdCodec(elementBiDictionary, arrayBiDictionary),
+        ColumnType.STRING_ARRAY,
+        ColumnType.STRING_ARRAY.getNullableStrategy(),
+        null
+    );
+  }
+
+  private static class UniValueDimensionIdCodec implements DimensionIdCodec<Object>
+  {
+    /**
+     * Dictionary for mapping the dimension value to an index. i-th position in the dictionary holds the value represented
+     * by the dictionaryId "i".
+     * Therefore, if a value has a dictionary id "i", dictionary.get(i) = value
+     */
     private final List<Object> dictionary;
+
+    /**
+     * Reverse dictionary for faster lookup into the dictionary, and reusing pre-existing dictionary ids.
+     * <p>
+     * An entry of form (value, i) in the reverse dictionary represents that "value" is present at the i-th location in the
+     * {@link #dictionary}.
+     * Absence of mapping of a "value" (denoted by returning {@link GroupByColumnSelectorStrategy#GROUP_BY_MISSING_VALUE})
+     * represents that the value is absent in the dictionary
+     */
     private final Object2IntMap<Object> reverseDictionary;
+
     @SuppressWarnings("rawtypes")
     private final NullableTypeStrategy nullableTypeStrategy;
 
-    public UniValueDimensionToIdConverter(
+    public UniValueDimensionIdCodec(
         final List<Object> dictionary,
         final Object2IntMap<Object> reverseDictionary,
         final NullableTypeStrategy nullableTypeStrategy
@@ -140,44 +149,30 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     }
 
     @Override
-    public MemoryEstimate<Integer> lookupId(Object multiValueHolder)
+    public MemoryEstimate<Integer> lookupId(Object dimension)
     {
-      int dictId = reverseDictionary.getInt(multiValueHolder);
+      int dictId = reverseDictionary.getInt(dimension);
       int footprintIncrease = 0;
       // Even if called again, then this is no-op
       if (dictId < 0) {
         final int size = dictionary.size();
-        dictionary.add(multiValueHolder);
-        reverseDictionary.put(multiValueHolder, size);
+        dictionary.add(dimension);
+        reverseDictionary.put(dimension, size);
         dictId = size;
         // MultiValueHOlder is always expected to handle the type, once the coercion is complete
         //noinspection unchecked
         footprintIncrease = DictionaryBuildingUtils.estimateEntryFootprint(
-            nullableTypeStrategy.estimateSizeBytes(multiValueHolder)
+            nullableTypeStrategy.estimateSizeBytes(dimension)
         );
       }
       return new MemoryEstimate<>(dictId, footprintIncrease);
-
-    }
-  }
-
-  /**
-   * Defers to the dictionary we have built to decode the dictionary id
-   */
-  private static class DictionaryIdToDimensionConverter<DimensionType> implements IdToDimensionConverter<DimensionType>
-  {
-    private final List<DimensionType> dictionary;
-
-    public DictionaryIdToDimensionConverter(List<DimensionType> dictionary)
-    {
-      this.dictionary = dictionary;
     }
 
     @Override
-    public DimensionType idToKey(int id)
+    public Object idToKey(int id)
     {
       if (id >= dictionary.size()) {
-        throw DruidException.defensive("Unknown dictionary id");
+        throw DruidException.defensive("Unknown dictionary id [%d]", id);
       }
       // No need to handle GROUP_BY_MISSING_VALUE, by contract
       return dictionary.get(id);
@@ -190,14 +185,93 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
       // dictionary.
       return false;
     }
+
+    @Override
+    public void reset()
+    {
+      dictionary.clear();
+      reverseDictionary.clear();
+    }
   }
 
-  @Override
-  public void reset()
+  /**
+   * {@link DimensionIdCodec} for string arrays. Dictionary building for string arrays is optimised to have a dual
+   * dictionary - one that maps the string values to an id, and another which maps an array of these ids, to the returned
+   * dictionary id. This reduces the amount of heap memory required to build the dictionaries
+   */
+  private static class StringArrayDimensionIdCodec implements DimensionIdCodec<Object>
   {
-    super.reset();
-    // Clean up the dictionaries
-    dictionary.clear();
-    reverseDictionary.clear();
+    // contains string <-> id for each element of the multi value grouping column
+    // for eg : [a,b,c] is the col value. dictionaryToInt will contain { a <-> 1, b <-> 2, c <-> 3}
+    private final BiMap<String, Integer> elementBiDictionary;
+
+    // stores each row as an integer array where the int represents the value in dictionaryToInt
+    // for eg : [a,b,c] would be converted to [1,2,3] and assigned a integer value 1.
+    // [1,2,3] <-> 1
+    private final BiMap<ArrayList<Integer>, Integer> arrayBiDictionary;
+
+    public StringArrayDimensionIdCodec(
+        BiMap<String, Integer> elementBiDictionary,
+        BiMap<ArrayList<Integer>, Integer> arrayBiDictionary
+    )
+    {
+      this.elementBiDictionary = elementBiDictionary;
+      this.arrayBiDictionary = arrayBiDictionary;
+    }
+
+    @Override
+    public MemoryEstimate<Integer> lookupId(Object dimension)
+    {
+      // dimension IS non-null, by contract of this method
+      Object[] stringArray = (Object[]) dimension;
+      ArrayList<Integer> dictionaryEncodedStringArray = new ArrayList<>();
+      int estimatedFootprint = 0;
+      for (Object element : stringArray) {
+        String elementCasted = (String) element;
+        Integer elementDictId = elementBiDictionary.get(elementCasted);
+        if (elementDictId == null) {
+          elementDictId = elementBiDictionary.size();
+          elementBiDictionary.put(elementCasted, elementDictId);
+          // We're not using the dictionary and reverseDictionary from DictionaryBuilding, but the BiMap is close enough
+          // that we expect this footprint calculation to still be useful.
+          estimatedFootprint +=
+              DictionaryBuildingUtils.estimateEntryFootprint(elementCasted == null ? 0 : elementCasted.length() * Character.BYTES);
+        }
+        dictionaryEncodedStringArray.add(elementDictId);
+      }
+
+      Integer arrayDictId = arrayBiDictionary.get(dictionaryEncodedStringArray);
+      if (arrayDictId == null) {
+        arrayDictId = arrayBiDictionary.size();
+        arrayBiDictionary.put(dictionaryEncodedStringArray, arrayDictId);
+        estimatedFootprint +=
+            DictionaryBuildingUtils.estimateEntryFootprint(dictionaryEncodedStringArray.size() * Integer.BYTES);
+      }
+      return new MemoryEstimate<>(arrayDictId, estimatedFootprint);
+    }
+
+    @Override
+    public Object idToKey(int id)
+    {
+      ArrayList<Integer> dictionaryEncodedStringArray = arrayBiDictionary.inverse().get(id);
+      final Object[] stringRepresentation = new Object[dictionaryEncodedStringArray.size()];
+      for (int i = 0; i < dictionaryEncodedStringArray.size(); ++i) {
+        stringRepresentation[i] = elementBiDictionary.inverse().get(dictionaryEncodedStringArray.get(i));
+      }
+      return stringRepresentation;
+    }
+
+    @Override
+    public boolean canCompareIds()
+    {
+      return false;
+    }
+
+    @Override
+    public void reset()
+    {
+      arrayBiDictionary.clear();
+      elementBiDictionary.clear();
+    }
   }
 }
