@@ -114,7 +114,7 @@ public class SegmentSchemaBackFillQueueTest
     aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
 
     segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20));
-    segmentSchemaBackFillQueue.add(segment.getId(), rowSignature, 20, aggregatorFactoryMap);
+    segmentSchemaBackFillQueue.add(segment.getId(), rowSignature, aggregatorFactoryMap, 20);
     segmentSchemaBackFillQueue.leaderStart();
     latch.await();
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);

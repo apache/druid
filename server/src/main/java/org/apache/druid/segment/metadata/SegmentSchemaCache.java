@@ -25,12 +25,14 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -173,9 +175,14 @@ public class SegmentSchemaCache
   /**
    * Cache SMQ result. This entry is cleared when SMQ result is published to the DB.
    */
-  public void addInTransitSMQResult(SegmentId segmentId, RowSignature rowSignature, long numRows)
+  public void addInTransitSMQResult(
+      SegmentId segmentId,
+      RowSignature rowSignature,
+      Map<String, AggregatorFactory> aggregatorFactories,
+      long numRows
+  )
   {
-    inTransitSMQResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
+    inTransitSMQResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregatorFactories), numRows));
   }
 
   /**

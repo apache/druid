@@ -157,7 +157,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   @LifecycleStart
   @Override
-  public void start() throws InterruptedException
+  public void start()
   {
     // noop, refresh is started only on leader node
   }
@@ -175,7 +175,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   public void leaderStart()
   {
-    log.info("%s starting cache initialization.", getClass().getSimpleName());
+    log.info("Initializing cache.");
     try {
       segmentSchemaBackfillQueue.leaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
@@ -190,7 +190,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   public void leaderStop()
   {
-    log.info("%s stopping cache.", getClass().getSimpleName());
+    log.info("Stopping cache.");
     cacheExecFuture.cancel(true);
     segmentSchemaCache.uninitialize();
     segmentSchemaBackfillQueue.leaderStop();
@@ -224,7 +224,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
-  protected boolean smqAction(
+  protected boolean segmentMetadataQueryResultHandler(
       String dataSource,
       SegmentId segmentId,
       RowSignature rowSignature,
@@ -255,9 +255,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     log.debug("Publishing segment schema. SegmentId [%s], RowSignature [%s], numRows [%d]", segmentId, rowSignature, numRows);
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
                     // cache the signature
-                    segmentSchemaCache.addInTransitSMQResult(segmentId, rowSignature, numRows);
+                    segmentSchemaCache.addInTransitSMQResult(segmentId, rowSignature, aggregators, numRows);
                     // queue the schema for publishing to the DB
-                    segmentSchemaBackfillQueue.add(segmentId, rowSignature, numRows, aggregators);
+                    segmentSchemaBackfillQueue.add(segmentId, rowSignature, aggregators, numRows);
                     added.set(true);
                     return segmentMetadata;
                   }

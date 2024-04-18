@@ -735,7 +735,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
           final RowSignature rowSignature = analysisToRowSignature(analysis);
           log.info("Segment[%s] has signature[%s].", segmentId, rowSignature);
 
-          if (smqAction(dataSource, segmentId, rowSignature, analysis)) {
+          if (segmentMetadataQueryResultHandler(dataSource, segmentId, rowSignature, analysis)) {
             retVal.add(segmentId);
           }
         }
@@ -766,7 +766,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Action to be executed on the result of Segment metadata query.
    * Returns if the segment metadata was updated.
    */
-  protected boolean smqAction(
+  protected boolean segmentMetadataQueryResultHandler(
       String dataSource,
       SegmentId segmentId,
       RowSignature rowSignature,

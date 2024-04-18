@@ -114,8 +114,8 @@ public class SegmentSchemaBackFillQueue
   public void add(
       SegmentId segmentId,
       RowSignature rowSignature,
-      long numRows,
-      Map<String, AggregatorFactory> aggregators
+      Map<String, AggregatorFactory> aggregators,
+      long numRows
   )
   {
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);

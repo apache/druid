@@ -29,6 +29,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Optional;
 
 public class SegmentSchemaCacheTest
@@ -61,7 +62,7 @@ public class SegmentSchemaCacheTest
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
-    cache.addInTransitSMQResult(id, rowSignature, 20);
+    cache.addInTransitSMQResult(id, rowSignature, Collections.emptyMap(), 20);
 
     Assert.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
