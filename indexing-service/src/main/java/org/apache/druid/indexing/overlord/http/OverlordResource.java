@@ -84,7 +84,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -391,17 +390,6 @@ public class OverlordResource
                                    : Response.Status.OK;
 
     return Response.status(status).entity(response).build();
-  }
-
-  @Deprecated
-  @GET
-  @Path("/task/{taskid}/segments")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(TaskResourceFilter.class)
-  public Response getTaskSegments(@PathParam("taskid") String taskid)
-  {
-    final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
-    return Response.ok().entity(segments).build();
   }
 
   @POST

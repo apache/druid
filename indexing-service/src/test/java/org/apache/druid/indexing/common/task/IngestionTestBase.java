@@ -43,7 +43,6 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -334,8 +333,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       final RetType result = super.submit(taskAction);
       if (taskAction instanceof SegmentTransactionalInsertAction) {
         publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
-      } else if (taskAction instanceof SegmentInsertAction) {
-        publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
       }
       return result;
     }

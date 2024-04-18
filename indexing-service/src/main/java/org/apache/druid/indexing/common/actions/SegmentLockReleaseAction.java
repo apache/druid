@@ -69,12 +69,6 @@ public class SegmentLockReleaseAction implements TaskAction<Void>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentLockReleaseAction{" +

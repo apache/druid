@@ -319,24 +319,6 @@ public class MetadataTaskStorage implements TaskStorage
     );
   }
 
-  @Deprecated
-  @Override
-  public <T> void addAuditLog(final Task task, final TaskAction<T> taskAction)
-  {
-    Preconditions.checkNotNull(taskAction, "taskAction");
-
-    log.info("Logging action for task[%s]: %s", task.getId(), taskAction);
-
-    handler.addLog(task.getId(), taskAction);
-  }
-
-  @Deprecated
-  @Override
-  public List<TaskAction> getAuditLogs(final String taskId)
-  {
-    return handler.getLogs(taskId);
-  }
-
   private Map<Long, TaskLock> getLocksWithIds(final String taskid)
   {
     return handler.getLocks(taskid);

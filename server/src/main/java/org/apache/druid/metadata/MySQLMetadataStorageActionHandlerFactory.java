@@ -36,9 +36,9 @@ public class MySQLMetadataStorageActionHandlerFactory extends SQLMetadataStorage
 
   @Override
   public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
+      MetadataStorageActionHandler<EntryType, StatusType, LockType> create(
           String entryType,
-          MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
+          MetadataStorageActionHandlerTypes<EntryType, StatusType, LockType> payloadTypes
   )
   {
     return new MySQLMetadataStorageActionHandler<>(
@@ -47,7 +47,6 @@ public class MySQLMetadataStorageActionHandlerFactory extends SQLMetadataStorage
         payloadTypes,
         entryType,
         config.getEntryTable(entryType),
-        config.getLogTable(entryType),
         config.getLockTable(entryType)
     );
   }

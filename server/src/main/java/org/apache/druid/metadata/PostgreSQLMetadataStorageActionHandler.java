@@ -20,7 +20,6 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 
 public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -31,26 +30,16 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
       MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
       String entryTypeName,
       String entryTable,
-      String logTable,
       String lockTable
   )
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    super(connector, jsonMapper, types, entryTypeName, entryTable, lockTable);
   }
 
   @Override
   protected String decorateSqlWithLimit(String sql)
   {
     return sql + " LIMIT :n";
-  }
-
-  @Deprecated
-  @Override
-  public String getSqlRemoveLogsOlderThan()
-  {
-    return StringUtils.format("DELETE FROM %s USING %s "
-                              + "WHERE %s_id = %s.id AND created_date < :date_time and active = false",
-                              getLogTable(), getEntryTable(), getEntryTypeName(), getEntryTable());
   }
 
 }

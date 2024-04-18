@@ -65,11 +65,10 @@ import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
-import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -601,7 +600,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
     tac = new LocalTaskActionClientFactory(
-        taskStorage,
         new TaskActionToolbox(
             taskLockbox,
             taskStorage,
@@ -609,8 +607,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             emitter,
             EasyMock.createMock(SupervisorManager.class),
             mapper
-        ),
-        new TaskAuditLogConfig(true)
+        )
     );
     taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.newFolder().toString())
@@ -776,12 +773,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
     final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = BY_INTERVAL_ORDERING.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, mergedStatus.getStatusCode());
-    Assert.assertEquals("segments logged vs published", loggedSegments, publishedSegments);
     Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
 
@@ -1154,7 +1149,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(
+            SegmentTransactionalInsertAction.appendAction(ImmutableSet.of(segment), null, null)
+        );
         return TaskStatus.success(getId());
       }
     };
@@ -1195,7 +1192,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(
+            SegmentTransactionalInsertAction.appendAction(ImmutableSet.of(segment), null, null)
+        );
         return TaskStatus.success(getId());
       }
     };
@@ -1237,7 +1236,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(
+            SegmentTransactionalInsertAction.appendAction(ImmutableSet.of(segment), null, null)
+        );
         return TaskStatus.success(getId());
       }
     };
@@ -1425,11 +1426,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
     final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = BY_INTERVAL_ORDERING.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("segments logged vs published", loggedSegments, publishedSegments);
     Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
 

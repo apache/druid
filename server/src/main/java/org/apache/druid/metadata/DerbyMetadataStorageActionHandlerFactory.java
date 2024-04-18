@@ -35,9 +35,9 @@ public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorage
   }
 
   @Override
-  public <A, B, C, D> MetadataStorageActionHandler<A, B, C, D> create(
+  public <A, B, C, D> MetadataStorageActionHandler<A, B, D> create(
       final String entryType,
-      MetadataStorageActionHandlerTypes<A, B, C, D> payloadTypes
+      MetadataStorageActionHandlerTypes<A, B, D> payloadTypes
   )
   {
     return new DerbyMetadataStorageActionHandler<>(
@@ -46,7 +46,6 @@ public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorage
         payloadTypes,
         entryType,
         config.getEntryTable(entryType),
-        config.getLogTable(entryType),
         config.getLockTable(entryType)
     );
   }

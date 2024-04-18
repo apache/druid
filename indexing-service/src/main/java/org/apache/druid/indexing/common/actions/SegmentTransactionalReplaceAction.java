@@ -204,12 +204,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentTransactionalReplaceAction{" +
