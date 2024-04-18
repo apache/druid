@@ -110,6 +110,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ScalarInOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
@@ -262,6 +263,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArrayToStringOperatorConversion())
                    .add(new StringToArrayOperatorConversion())
                    .add(new ArrayToMultiValueStringOperatorConversion())
+                   .add(new ScalarInOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> MULTIVALUE_STRING_OPERATOR_CONVERSIONS =
