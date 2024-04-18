@@ -83,7 +83,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
-import org.apache.druid.segment.DataSegmentWithSchemas;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -534,13 +534,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public DataSegmentWithSchemas getPublishedSegments(String taskId)
+    public DataSegmentsWithSchemas getPublishedSegments(String taskId)
     {
       final TaskContainer taskContainer = tasks.get(taskId);
       if (taskContainer == null || taskContainer.actionClient == null) {
-        return new DataSegmentWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+        return new DataSegmentsWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
       } else {
-        return new DataSegmentWithSchemas(taskContainer.actionClient.getPublishedSegments(), taskContainer.actionClient.getSegmentSchemas());
+        return new DataSegmentsWithSchemas(taskContainer.actionClient.getPublishedSegments(), taskContainer.actionClient.getSegmentSchemas());
       }
     }
   }
@@ -665,7 +665,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public DataSegmentWithSchemas getSegmentAndSchemas(Task task)
+    public DataSegmentsWithSchemas getSegmentAndSchemas(Task task)
     {
       return taskRunner.getPublishedSegments(task.getId());
     }

@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
-import org.apache.druid.segment.DataSegmentWithSchemas;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -192,7 +192,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
     FileUtils.mkdirp(persistDir);
 
-    final DataSegmentWithSchemas dataSegmentWithSchemas = mergeAndPushSegments(
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = mergeAndPushSegments(
         toolbox,
         getDataSchema(),
         getTuningConfig(),
@@ -205,9 +205,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         new PushedSegmentsReport(
             getId(),
             Collections.emptySet(),
-            dataSegmentWithSchemas.getSegments(),
+            dataSegmentsWithSchemas.getSegments(),
             new TaskReport.ReportMap(),
-            dataSegmentWithSchemas.getSegmentSchemaMapping()
+            dataSegmentsWithSchemas.getSegmentSchemaMapping()
         )
     );
 
@@ -252,7 +252,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
    */
   abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int bucketId);
 
-  private DataSegmentWithSchemas mergeAndPushSegments(
+  private DataSegmentsWithSchemas mergeAndPushSegments(
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
@@ -340,7 +340,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       LOG.info("SegmentSchema for the pushed segments is [%s]", segmentSchemaMapping);
     }
-    return new DataSegmentWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
+    return new DataSegmentsWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(

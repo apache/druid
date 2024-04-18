@@ -36,7 +36,7 @@ import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.DataSegmentWithSchemas;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -97,25 +97,25 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testPartialCompactHashAndDynamicPartitionedSegments()
   {
-    DataSegmentWithSchemas dataSegmentWithSchemas =
+    DataSegmentsWithSchemas dataSegmentsWithSchemas =
         runTestTask(
             new HashedPartitionsSpec(null, 3, null),
             TaskState.SUCCESS,
             false
         );
-    verifySchema(dataSegmentWithSchemas);
+    verifySchema(dataSegmentsWithSchemas);
     final Map<Interval, List<DataSegment>> hashPartitionedSegments =
-        SegmentUtils.groupSegmentsByInterval(dataSegmentWithSchemas.getSegments());
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
 
-    dataSegmentWithSchemas =
+    dataSegmentsWithSchemas =
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
             true
         );
-    verifySchema(dataSegmentWithSchemas);
+    verifySchema(dataSegmentsWithSchemas);
     final Map<Interval, List<DataSegment>> linearlyPartitionedSegments =
-        SegmentUtils.groupSegmentsByInterval(dataSegmentWithSchemas.getSegments());
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
     // Pick half of each partition lists to compact together
     hashPartitionedSegments.values().forEach(
         segmentsInInterval -> segmentsInInterval.sort(
@@ -142,10 +142,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .build();
-    dataSegmentWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
-    verifySchema(dataSegmentWithSchemas);
+    dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
+    verifySchema(dataSegmentsWithSchemas);
     final Map<Interval, List<DataSegment>> compactedSegments = SegmentUtils.groupSegmentsByInterval(
-        dataSegmentWithSchemas.getSegments()
+        dataSegmentsWithSchemas.getSegments()
     );
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
@@ -158,23 +158,23 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testPartialCompactRangeAndDynamicPartitionedSegments()
   {
-    DataSegmentWithSchemas dataSegmentWithSchemas =
+    DataSegmentsWithSchemas dataSegmentsWithSchemas =
         runTestTask(
             new SingleDimensionPartitionsSpec(10, null, "dim1", false),
             TaskState.SUCCESS,
             false
         );
     final Map<Interval, List<DataSegment>> rangePartitionedSegments =
-        SegmentUtils.groupSegmentsByInterval(dataSegmentWithSchemas.getSegments());
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
 
-    dataSegmentWithSchemas =
+    dataSegmentsWithSchemas =
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
             true
         );
     final Map<Interval, List<DataSegment>> linearlyPartitionedSegments =
-        SegmentUtils.groupSegmentsByInterval(dataSegmentWithSchemas.getSegments());
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
 
     // Pick half of each partition lists to compact together
     rangePartitionedSegments.values().forEach(
@@ -203,9 +203,9 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .build();
 
-    dataSegmentWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
+    dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     final Map<Interval, List<DataSegment>> compactedSegments = SegmentUtils.groupSegmentsByInterval(
-        dataSegmentWithSchemas.getSegments()
+        dataSegmentsWithSchemas.getSegments()
     );
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
@@ -215,7 +215,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     }
   }
 
-  private DataSegmentWithSchemas runTestTask(
+  private DataSegmentsWithSchemas runTestTask(
       PartitionsSpec partitionsSpec,
       TaskState expectedTaskState,
       boolean appendToExisting

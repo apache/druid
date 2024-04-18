@@ -52,7 +52,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.DataSegmentWithSchemas;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -276,7 +276,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
       ingestionState = IngestionState.BUILD_SEGMENTS;
-      final DataSegmentWithSchemas dataSegmentWithSchemas = generateAndPushSegments(
+      final DataSegmentsWithSchemas dataSegmentsWithSchemas = generateAndPushSegments(
           toolbox,
           taskClient,
           inputSource,
@@ -285,7 +285,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
-      allSegments.addAll(dataSegmentWithSchemas.getSegments());
+      allSegments.addAll(dataSegmentsWithSchemas.getSegments());
       final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
       final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
                                                          .transformAndConcat(TimelineObjectHolder::getObject)
@@ -293,7 +293,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .toSet();
 
       TaskReport.ReportMap taskReport = getTaskCompletionReports();
-      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, dataSegmentWithSchemas.getSegments(), taskReport, dataSegmentWithSchemas.getSegmentSchemaMapping()));
+      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, dataSegmentsWithSchemas.getSegments(), taskReport, dataSegmentsWithSchemas.getSegmentSchemaMapping()));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
 
@@ -366,7 +366,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
    *
    * @return true if generated segments are successfully published, otherwise false
    */
-  private DataSegmentWithSchemas generateAndPushSegments(
+  private DataSegmentsWithSchemas generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexSupervisorTaskClient taskClient,
       final InputSource inputSource,
@@ -480,7 +480,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       LOG.info("SegmentSchema is [%s]", segmentSchemaMapping);
       appenderator.close();
 
-      return new DataSegmentWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
+      return new DataSegmentsWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
     }
     catch (TimeoutException | ExecutionException e) {
       exceptionOccurred = true;

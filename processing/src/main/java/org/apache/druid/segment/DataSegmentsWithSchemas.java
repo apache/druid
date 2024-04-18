@@ -30,21 +30,21 @@ import java.util.Set;
 /**
  * Encapsulates segment metadata and corresponding schema.
  */
-public class DataSegmentWithSchemas
+public class DataSegmentsWithSchemas
 {
   private final Set<DataSegment> segments;
 
   @Nullable
   private final SegmentSchemaMapping segmentSchemaMapping;
 
-  public DataSegmentWithSchemas(int schemaVersion)
+  public DataSegmentsWithSchemas(int schemaVersion)
   {
     this.segments = new HashSet<>();
     this.segmentSchemaMapping = new SegmentSchemaMapping(schemaVersion);
   }
 
   @JsonCreator
-  public DataSegmentWithSchemas(
+  public DataSegmentsWithSchemas(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )

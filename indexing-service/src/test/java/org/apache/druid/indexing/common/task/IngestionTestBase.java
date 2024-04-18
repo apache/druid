@@ -72,7 +72,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.segment.DataSegmentWithSchemas;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -547,19 +547,19 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
   }
 
-  public void verifySchema(DataSegmentWithSchemas dataSegmentWithSchemas)
+  public void verifySchema(DataSegmentsWithSchemas dataSegmentsWithSchemas)
   {
     int nonTombstoneSegments = 0;
-    for (DataSegment segment : dataSegmentWithSchemas.getSegments()) {
+    for (DataSegment segment : dataSegmentsWithSchemas.getSegments()) {
       if (segment.isTombstone()) {
         continue;
       }
       nonTombstoneSegments++;
-      Assert.assertTrue(dataSegmentWithSchemas.getSegmentSchemaMapping()
-                                              .getSegmentIdToMetadataMap()
-                                              .containsKey(segment.getId().toString()));
+      Assert.assertTrue(dataSegmentsWithSchemas.getSegmentSchemaMapping()
+                                               .getSegmentIdToMetadataMap()
+                                               .containsKey(segment.getId().toString()));
     }
-    Assert.assertEquals(nonTombstoneSegments, dataSegmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(nonTombstoneSegments, dataSegmentsWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
   }
 
   public TaskReport.ReportMap getReports() throws IOException
