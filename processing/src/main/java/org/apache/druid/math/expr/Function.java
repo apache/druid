@@ -3606,7 +3606,7 @@ public interface Function extends NamedFunction
       final Object[] array = arrayExpr.asArray();
       final int position = scalarExpr.asInt();
 
-      if (array.length > position) {
+      if (array.length > position && position >= 0) {
         return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
@@ -3634,7 +3634,7 @@ public interface Function extends NamedFunction
       final Object[] array = arrayExpr.asArray();
       final int position = scalarExpr.asInt() - 1;
 
-      if (array.length > position) {
+      if (array.length > position && position >= 0) {
         return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
