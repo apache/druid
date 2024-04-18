@@ -325,7 +325,7 @@ that is, once it has completed a full execution without encountering any issues,
 state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
 
 :::info
-For the Kafka indexing service, the consumer lag per partition may be reported as negative values if the supervisor hasn't received the latest offset response from Kafka. The aggregate lag value will always be >= 0.
+For the Kafka indexing service, Druid may report the consumer lag per partition as a negative value if the supervisor hasn't received the latest offset response from Kafka. The aggregate lag value is always >= 0.
 :::
 
 ## SUPERVISORS system table
@@ -339,18 +339,20 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 
 For more information on the supervisors system table, see [SUPERVISORS table](../querying/sql-metadata-tables.md#supervisors-table).
 
-## Supervisor actions
- 
-To view available supervisor actions in the web console, navigate to the **Supervisors** view and click the ellipsis in the **Actions** column. Select the desired action from the menu that appears.
+## Manage a supervisor
+
+You can manage a supervisor from the web console or using the [Supervisor API](../api-reference/supervisor-api.md).
+In the web console, navigate to the **Supervisors** view and click the ellipsis in the **Actions** column. Select the desired action from the menu that appears.
 
 ![Actions menu](../assets/supervisor-actions.png)
 
 The supervisor must be running for some of these actions to be available.
 
-### Suspend a supervisor
+### Suspend
 
-**Suspend** pauses the specified running supervisor. The suspended supervisor continues to emit logs and metrics. Indexing tasks remain suspended until you resume the supervisor.
-
+**Suspend** pauses a running supervisor.
+The suspended supervisor continues to emit logs and metrics.
+Indexing tasks remain suspended until you resume the supervisor.
 For information on how to suspend a supervisor by API, see [Supervisors: Suspend a running supervisor](../api-reference/supervisor-api.md#suspend-a-running-supervisor).
 
 ### Set offsets
@@ -359,10 +361,10 @@ For information on how to suspend a supervisor by API, see [Supervisors: Suspend
 Perform this action with caution as it may result in skipped messages and lead to data loss or duplicate data.
 :::
 
-**Set offsets** resets offsets for specific partitions without resetting the entire supervisor.
-It clears the stored offsets and prompts the supervisor to read data from the specified offsets. If there are no stored offsets, Druid sets the new offsets in the metadata store.
-
-After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions, so that tasks begin reading from the specified offsets. For partitions that are not specified in this operation, the supervisor resumes from the last stored offset.
+**Set offsets** resets the offsets for supervisor partitions.
+This action clears the stored offsets and instructs the supervisor to resume reading data from the specified offsets. If there are no stored offsets, Druid saves the specified offsets in the metadata store.
+**Set offsets** terminates and recreates active tasks for the specified partitions to begin reading from the reset offsets.
+For partitions not specified in this operation, the supervisor resumes from the last stored offset.
 
 For information on how to reset offsets by API, see [Supervisors: Reset offsets for a supervisor](../api-reference/supervisor-api.md#reset-offsets-for-a-supervisor).
 
@@ -372,16 +374,15 @@ For information on how to reset offsets by API, see [Supervisors: Reset offsets 
 Perform this action with caution as it may result in skipped messages and lead to data loss or duplicate data.
 :::
 
-**Hard reset** clears supervisor metadata, prompting the supervisor to resume data reading from the earliest or latest available position, depending on the `useEarliestOffset` setting. After clearing all stored offsets, the supervisor kills and recreates active tasks, so that tasks begin reading from valid positions.
+**Hard reset** clears supervisor metadata, causing the supervisor to resume data reading from either the earliest or latest available position, depending on the `useEarliestOffset` setting. **Hard reset** terminates and recreates active tasks, so that tasks begin reading from valid positions.
 
 Use this action to recover from a stopped state due to missing offsets.
 
 For information on how to reset a supervisor by API, see [Supervisors: Reset a supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).
 
-### Terminate a supervisor
+### Terminate
 
-**Terminate** stops a supervisor and its indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart.
-
+**Terminate** stops a supervisor and its indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, a tombstone marker is placed in the database to prevent reloading on restart.
 The terminated supervisor still exists in the metadata store and its history can be retrieved.
 
 For information on how to terminate a supervisor by API, see [Supervisors: Terminate a supervisor](../api-reference/supervisor-api.md#terminate-a-supervisor).
