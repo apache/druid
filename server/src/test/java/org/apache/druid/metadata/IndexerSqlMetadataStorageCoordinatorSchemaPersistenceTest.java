@@ -62,7 +62,8 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     IndexerSqlMetadataStorageCoordinatorTestBase
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   @Before
   public void setUp()
@@ -471,12 +472,5 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     }
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
-  }
-
-  private CentralizedDatasourceSchemaConfig getEnabledConfig()
-  {
-    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
-    config.setEnabled(true);
-    return config;
   }
 }

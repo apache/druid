@@ -328,7 +328,7 @@ public class SegmentSchemaManager
       if (failedUpdates.isEmpty()) {
         log.infoSegmentIds(
             partition.stream().map(SegmentSchemaMetadataPlus::getSegmentId),
-            "Updated segments with schema information in the DB."
+            "Updated segments with schema information in the DB"
         );
       } else {
         throw new ISE(

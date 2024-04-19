@@ -99,7 +99,7 @@ public class SegmentSchemaCacheTest
     cache.updateFinalizedSegmentSchemaReference(schemaPayload);
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
-    segmentMetadataBuilder.put(id, new SegmentMetadata(0L, "fp1"));
+    segmentMetadataBuilder.put(id, new SegmentMetadata(20L, "fp1"));
     cache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
 
     Assert.assertTrue(cache.isSchemaCached(id));

@@ -1605,17 +1605,18 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     verifyFoo2DSSchema(schema);
 
     derbyConnector.retryWithHandle(handle -> {
-      handle.createQuery(StringUtils.format(
-          "select s2.payload "
-          + "from %1$s as s1 inner join %2$s as s2 on s1.schema_id = s2.id where s1.id = '%3$s'",
-          tablesConfig.getSegmentsTable(),
-          tablesConfig.getSegmentSchemasTable(),
-          segment3.getId().toString()
-            ))
+      handle.createQuery(
+                StringUtils.format(
+                    "select s2.payload, s1.num_rows "
+                    + "from %1$s as s1 inner join %2$s as s2 on s1.schema_fingerprint = s2.fingerprint where s1.id = '%3$s'",
+                    tablesConfig.getSegmentsTable(),
+                    tablesConfig.getSegmentSchemasTable(),
+                    segment3.getId().toString()
+                ))
             .map((int index, ResultSet r, StatementContext ctx) -> {
               try {
                 SchemaPayload schemaPayload = mapper.readValue(r.getBytes(1), SchemaPayload.class);
-                long numRows = r.getLong(1);
+                long numRows = r.getLong(2);
                 QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
                 Assert.assertEquals(adapter.getRowSignature(), schemaPayload.getRowSignature());
                 Assert.assertEquals(adapter.getNumRows(), numRows);

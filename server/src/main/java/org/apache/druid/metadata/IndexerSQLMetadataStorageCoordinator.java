@@ -1944,13 +1944,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("used_status_last_updated", now);
 
           if (schemaPublishEnabled) {
-            SegmentMetadata segmentMetadata = new SegmentMetadata(null, null);
+            Long numRows = null;
+            String schemaFingerprint = null;
             if (shouldPersistSchema && segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId)) {
-              segmentMetadata = segmentSchemaMapping.getSegmentIdToMetadataMap().get(segmentId);
+              SegmentMetadata segmentMetadata = segmentSchemaMapping.getSegmentIdToMetadataMap().get(segmentId);
+              numRows = segmentMetadata.getNumRows();
+              schemaFingerprint = segmentMetadata.getSchemaFingerprint();
             }
             preparedBatchPart
-                .bind("schema_fingerprint", segmentMetadata.getSchemaFingerprint())
-                .bind("num_rows", segmentMetadata.getNumRows());
+                .bind("num_rows", numRows)
+                .bind("schema_fingerprint", schemaFingerprint);
           }
         }
         final int[] affectedRows = preparedBatch.execute();
@@ -2168,9 +2171,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   newVersionForAppendToParent,
                   upgradeSegmentMetadata
               );
+          Long numRows = null;
+          String schemaFingerprint = null;
+          if (segmentMetadata != null) {
+            numRows = segmentMetadata.getNumRows();
+            schemaFingerprint = segmentMetadata.getSchemaFingerprint();
+          }
           preparedBatchPart
-              .bind("schema_fingerprint", segmentMetadata.getSchemaFingerprint())
-              .bind("num_rows", segmentMetadata.getNumRows());
+              .bind("num_rows", numRows)
+              .bind("schema_fingerprint", schemaFingerprint);
         }
       }
 
@@ -2202,12 +2211,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata
   )
   {
-    SegmentMetadata segmentMetadata = new SegmentMetadata(null, null);
-
     if (!shouldPublishSchema(segmentSchemaMapping)) {
-      return segmentMetadata;
+      return null;
     }
 
+    SegmentMetadata segmentMetadata = null;
     boolean presentInSchemaMetadata =
         segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId.toString());
     boolean presentInUpgradeMetadata =
