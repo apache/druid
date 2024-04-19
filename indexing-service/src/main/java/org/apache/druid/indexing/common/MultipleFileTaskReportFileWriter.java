@@ -20,6 +20,9 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -37,7 +40,7 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
   private ObjectMapper objectMapper;
 
   @Override
-  public void write(String taskId, Map<String, TaskReport> reports)
+  public void write(String taskId, TaskReport.ReportMap reports)
   {
     final File reportsFile = taskReportFiles.get(taskId);
     if (reportsFile == null) {

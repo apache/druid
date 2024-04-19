@@ -103,7 +103,8 @@ public class DruidCoordinatorConfig
     validateKillConfig(killConfigs.supervisors(), "supervisor");
 
     // Validate config for killing unused segments
-    final KillUnusedSegmentsConfig killUnusedConfig = killConfigs.unusedSegments();
+    final KillUnusedSegmentsConfig killUnusedConfig
+        = killConfigs.unusedSegments(getCoordinatorIndexingPeriod());
     if (killUnusedConfig.getCleanupPeriod().getMillis() <= getCoordinatorIndexingPeriod().getMillis()) {
       throw newInvalidInputExceptionForOperator(
           "'druid.coordinator.kill.period'[%s] must be greater than or equal to"

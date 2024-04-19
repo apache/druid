@@ -546,7 +546,9 @@ public class DruidCoordinator
   List<CoordinatorDuty> makeIndexingServiceDuties()
   {
     final List<CoordinatorDuty> duties = new ArrayList<>();
-    final KillUnusedSegmentsConfig killUnusedConfig = config.getKillConfigs().unusedSegments();
+    final KillUnusedSegmentsConfig killUnusedConfig = config.getKillConfigs().unusedSegments(
+        config.getCoordinatorIndexingPeriod()
+    );
     if (killUnusedConfig.isCleanupEnabled()) {
       duties.add(new KillUnusedSegments(metadataManager.segments(), overlordClient, killUnusedConfig));
     }

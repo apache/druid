@@ -41,9 +41,6 @@ import org.junit.Test;
 
 import java.util.Properties;
 
-/**
- *
- */
 public class DruidCoordinatorConfigTest
 {
 
@@ -151,7 +148,7 @@ public class DruidCoordinatorConfigTest
   public void testKillUnusedSegmentsConfigDefaultValues()
   {
     CoordinatorKillConfigs killConfigs = createKillConfig().build();
-    final KillUnusedSegmentsConfig config = killConfigs.unusedSegments();
+    final KillUnusedSegmentsConfig config = killConfigs.unusedSegments(null);
 
     Assert.assertFalse(config.isCleanupEnabled());
     Assert.assertFalse(config.isIgnoreDurationToRetain());
@@ -174,7 +171,7 @@ public class DruidCoordinatorConfigTest
     );
     CoordinatorKillConfigs killConfigs = createKillConfig().unusedSegments(inputConfig).build();
 
-    final KillUnusedSegmentsConfig config = killConfigs.unusedSegments();
+    final KillUnusedSegmentsConfig config = killConfigs.unusedSegments(null);
     Assert.assertTrue(config.isCleanupEnabled());
     Assert.assertTrue(config.isIgnoreDurationToRetain());
     Assert.assertEquals(Duration.standardMinutes(30), config.getCleanupPeriod());

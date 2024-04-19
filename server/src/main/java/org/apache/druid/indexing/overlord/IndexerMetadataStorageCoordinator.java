@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -159,7 +160,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
    * @param versions    An optional list of segment versions to retrieve in the given {@code interval}. If unspecified, all
-   *                    versions of unused segments in the {@code interval} must be retrieved.
+   *                    versions of unused segments in the {@code interval} must be retrieved. If an empty list is passed,
+   *                    no segments are retrieved.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                     with {@code used_status_last_updated} no later than this time will be included in the
@@ -237,7 +239,7 @@ public interface IndexerMetadataStorageCoordinator
    *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
-   *
+   * @param taskAllocatorId         The task allocator id with which the pending segment is associated
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
   SegmentIdWithShardSpec allocatePendingSegment(
@@ -247,7 +249,8 @@ public interface IndexerMetadataStorageCoordinator
       Interval interval,
       PartialShardSpec partialShardSpec,
       String maxVersion,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      String taskAllocatorId
   );
 
   /**
@@ -321,10 +324,12 @@ public interface IndexerMetadataStorageCoordinator
    *                                   must be committed in a single transaction.
    * @param appendSegmentToReplaceLock Map from append segment to the currently
    *                                   active REPLACE lock (if any) covering it
+   * @param taskAllocatorId            allocator id of the task committing the segments to be appended
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
-      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String taskAllocatorId
   );
 
   /**
@@ -339,7 +344,8 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      String taskGroup
   );
 
   /**
@@ -372,13 +378,10 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task groups
-   *                                       of the supervisor (if any) for this datasource
    * @return Map from originally allocated pending segment to its new upgraded ID.
    */
   Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments,
-      Set<String> activeRealtimeSequencePrefixes
+      Set<DataSegment> replaceSegments
   );
 
   /**
@@ -475,4 +478,19 @@ public interface IndexerMetadataStorageCoordinator
    * @return number of deleted entries from the metadata store
    */
   int deleteUpgradeSegmentsForTask(String taskId);
+
+  /**
+   * Delete pending segment for a give task group after all the tasks belonging to it have completed.
+   * @param taskAllocatorId task id / task group / replica group for an appending task
+   * @return number of pending segments deleted from the metadata store
+   */
+  int deletePendingSegmentsForTaskGroup(String taskAllocatorId);
+
+  /**
+   * Fetches all the pending segments of the datasource that overlap with a given interval.
+   * @param datasource datasource to be queried
+   * @param interval interval with which segments overlap
+   * @return List of pending segment records
+   */
+  List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
 }

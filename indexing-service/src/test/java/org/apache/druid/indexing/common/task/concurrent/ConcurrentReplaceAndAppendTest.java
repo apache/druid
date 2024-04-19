@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
@@ -142,7 +143,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         taskRunner,
         taskActionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     runningTasks.clear();
     taskQueue.start();
@@ -725,6 +728,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Append segment for Oct-Dec
     final DataSegment segmentV02 = asSegment(pendingSegment02);
     appendTask2.commitAppendSegments(segmentV02);
+    appendTask2.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(YEAR_23, segmentV02);
     verifyIntervalHasVisibleSegments(YEAR_23, segmentV02);
 
@@ -744,12 +748,14 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Append segment for Jan 1st
     final DataSegment segmentV01 = asSegment(pendingSegment01);
     appendTask.commitAppendSegments(segmentV01);
+    appendTask.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(YEAR_23, segmentV01, segmentV02);
     verifyIntervalHasVisibleSegments(YEAR_23, segmentV01, segmentV02);
 
     // Replace segment for whole year
     final DataSegment segmentV10 = createSegment(YEAR_23, v1);
     replaceTask.commitReplaceSegments(segmentV10);
+    replaceTask.finishRunAndGetStatus();
 
     final DataSegment segmentV11 = DataSegment.builder(segmentV01)
                                               .version(v1)
@@ -764,6 +770,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Append segment for quarter
     final DataSegment segmentV03 = asSegment(pendingSegment03);
     appendTask3.commitAppendSegments(segmentV03);
+    appendTask3.finishRunAndGetStatus();
 
     final DataSegment segmentV13 = DataSegment.builder(segmentV03)
                                               .version(v1)
@@ -1018,7 +1025,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       @Override
       public TaskToolbox build(TaskConfig config, Task task)
       {
-        return createTaskToolbox(config, task);
+        return createTaskToolbox(config, task, null);
       }
     };
   }

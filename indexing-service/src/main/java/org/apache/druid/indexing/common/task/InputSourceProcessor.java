@@ -84,7 +84,7 @@ public class InputSourceProcessor
             dataSchema,
             inputSource,
             inputFormat,
-            AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
+            AbstractBatchIndexTask.allowNonNullRowsStrictlyWithinInputIntervalsOf(granularitySpec),
             buildSegmentsMeters,
             parseExceptionHandler
         );

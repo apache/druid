@@ -47,10 +47,8 @@ public class CoordinatorKillConfigs
   @JsonProperty("pendingSegments")
   private final MetadataCleanupConfig pendingSegments;
 
-  private final KillUnusedSegmentsConfig unusedSegments;
-
   // Raw configs for killing unused segments
-  // These have been added as fields just to keep JsonConfigurator happy
+  // These have been added as fields because KillUnusedSegmentsConfig is initialized lazily
   @JsonProperty("on")
   private final Boolean killUnusedEnabled;
 
@@ -99,20 +97,6 @@ public class CoordinatorKillConfigs
     this.killUnusedBufferPeriod = killUnusedBufferPeriod;
     this.killUnusedIgnoreDurationToRetain = killUnusedIgnoreDurationToRetain;
     this.killUnusedMaxSegments = killUnusedMaxSegments;
-
-    this.unusedSegments = createUnusedSegmentsConfig();
-  }
-
-  private KillUnusedSegmentsConfig createUnusedSegmentsConfig()
-  {
-    return new KillUnusedSegmentsConfig(
-        killUnusedEnabled,
-        killUnusedPeriod,
-        killUnusedDurationToRetain,
-        killUnusedIgnoreDurationToRetain,
-        killUnusedBufferPeriod,
-        killUnusedMaxSegments
-    );
   }
 
   public MetadataCleanupConfig audit()
@@ -145,8 +129,18 @@ public class CoordinatorKillConfigs
     return supervisors;
   }
 
-  public KillUnusedSegmentsConfig unusedSegments()
+  /**
+   * Creates a KillUnusedSegmentsConfig.
+   */
+  public KillUnusedSegmentsConfig unusedSegments(Duration indexingPeriod)
   {
-    return unusedSegments;
+    return new KillUnusedSegmentsConfig(
+        killUnusedEnabled,
+        Configs.valueOrDefault(killUnusedPeriod, indexingPeriod),
+        killUnusedDurationToRetain,
+        killUnusedIgnoreDurationToRetain,
+        killUnusedBufferPeriod,
+        killUnusedMaxSegments
+    );
   }
 }

@@ -91,7 +91,7 @@ public class KillUnusedSegmentsTest
   
   private static final String VERSION = "v1";
 
-  private final CoordinatorDynamicConfig.Builder dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
+  private CoordinatorDynamicConfig.Builder dynamicConfigBuilder;
   private TestOverlordClient overlordClient;
   private KillUnusedSegmentsConfig.Builder configBuilder;
   private DruidCoordinatorRuntimeParams.Builder paramsBuilder;
@@ -130,6 +130,8 @@ public class KillUnusedSegmentsTest
         .withDurationToRetain(Duration.standardHours(36))
         .withMaxSegmentsToKill(10)
         .withBufferPeriod(Duration.standardSeconds(1));
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
+        .withKillTaskSlotRatio(1.0);
     paramsBuilder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
   }
 
@@ -137,6 +139,7 @@ public class KillUnusedSegmentsTest
   public void testKillWithDefaultCoordinatorConfig()
   {
     configBuilder = KillUnusedSegmentsConfig.builder();
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
 
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
 
@@ -151,9 +154,9 @@ public class KillUnusedSegmentsTest
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
@@ -515,13 +518,29 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testKillTaskSlotStat()
+  public void testDefaultKillTaskSlotStats()
   {
-    initDuty();
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
-                        .withMaxKillTaskSlots(Integer.MAX_VALUE);
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
+                        .withMaxKillTaskSlots(Integer.MAX_VALUE);
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
+  }
+
+  @Test
+  public void testKillTaskSlotStats1()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -532,11 +551,13 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats2()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.0)
                         .withMaxKillTaskSlots(Integer.MAX_VALUE);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -547,11 +568,13 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats3()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
                         .withMaxKillTaskSlots(0);
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(0);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -562,11 +585,13 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats4()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.1)
                         .withMaxKillTaskSlots(3);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.1);
+    dynamicConfigBuilder.withMaxKillTaskSlots(3);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -793,6 +818,7 @@ public class KillUnusedSegmentsTest
 
   private CoordinatorRunStats runDutyAndGetStats()
   {
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
     final DruidCoordinatorRuntimeParams params = killDuty.run(paramsBuilder.build());
     return params.getCoordinatorStats();
   }

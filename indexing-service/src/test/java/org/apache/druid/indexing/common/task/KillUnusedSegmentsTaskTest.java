@@ -19,15 +19,14 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexing.common.KillTaskReport;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -212,6 +211,54 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         );
 
     Assert.assertEquals(ImmutableSet.of(segment5V3), new HashSet<>(observedUnusedSegments));
+  }
+
+  @Test
+  public void testKillSegmentsWithEmptyVersions() throws Exception
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final String v1 = now.toString();
+    final String v2 = now.minusHours(2).toString();
+    final String v3 = now.minusHours(3).toString();
+
+    final DataSegment segment1V1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v1);
+    final DataSegment segment2V1 = newSegment(Intervals.of("2019-02-01/2019-03-01"), v1);
+    final DataSegment segment3V1 = newSegment(Intervals.of("2019-03-01/2019-04-01"), v1);
+    final DataSegment segment4V2 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v2);
+    final DataSegment segment5V3 = newSegment(Intervals.of("2019-01-01/2019-02-01"), v3);
+
+    final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V1, segment3V1, segment4V2, segment5V3);
+
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(
+        segments.size(),
+        getSegmentsMetadataManager().markSegmentsAsUnused(
+            segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
+        )
+    );
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2018/2020"))
+        .versions(ImmutableList.of())
+        .batchSize(3)
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+    Assert.assertEquals(
+        new KillTaskReport.Stats(0, 1, 0),
+        getReportedStats()
+    );
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.of("2018/2020"),
+            null,
+            null
+        );
+
+    Assert.assertEquals(segments, new HashSet<>(observedUnusedSegments));
   }
 
   @Test
@@ -1086,9 +1133,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     try {
       Object payload = getObjectMapper().readValue(
           taskRunner.getTaskReportsFile(),
-          new TypeReference<Map<String, TaskReport>>()
-          {
-          }
+          TaskReport.ReportMap.class
       ).get(KillTaskReport.REPORT_KEY).getPayload();
       return getObjectMapper().convertValue(payload, KillTaskReport.Stats.class);
     }

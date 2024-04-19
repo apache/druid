@@ -336,6 +336,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("array_offset([1, 2, 3], 2)", 3L);
     assertArrayExpr("array_offset([1, 2, 3], 3)", null);
+    assertArrayExpr("array_offset([1, 2, 3], -1)", null);
     assertExpr("array_offset(a, 2)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
     assertExpr("array_offset(nestedArray, 1)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
@@ -346,6 +347,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("array_ordinal([1, 2, 3], 3)", 3L);
     assertArrayExpr("array_ordinal([1, 2, 3], 4)", null);
+    assertArrayExpr("array_ordinal([1, 2, 3], 0)", null);
     assertExpr("array_ordinal(a, 3)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
     assertExpr("array_ordinal(nestedArray, 2)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);

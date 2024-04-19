@@ -267,6 +267,7 @@ export class DruidError extends Error {
   public startRowColumn?: RowColumn;
   public endRowColumn?: RowColumn;
   public suggestion?: QuerySuggestion;
+  public queryDuration?: number;
 
   // Deprecated
   public error?: string;

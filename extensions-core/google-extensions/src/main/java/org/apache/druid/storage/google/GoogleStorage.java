@@ -44,6 +44,9 @@ import java.util.stream.Collectors;
 
 public class GoogleStorage
 {
+  private static final Logger log = new Logger(GoogleStorage.class);
+  private static final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
+
   /**
    * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
    * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
@@ -53,20 +56,34 @@ public class GoogleStorage
    * <p>
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
-  private static final Logger log = new Logger(GoogleStorage.class);
-
   private final Supplier<Storage> storage;
-
-  private final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
 
   public GoogleStorage(final Supplier<Storage> storage)
   {
     this.storage = storage;
   }
 
-  public void insert(final String bucket, final String path, AbstractInputStreamContent mediaContent) throws IOException
+  /**
+   * Upload an object. From {@link Storage#createFrom(BlobInfo, InputStream, int, Storage.BlobWriteOption...)},
+   * "larger buffer sizes might improve the upload performance but require more memory."
+   *
+   * @param bucket       target bucket
+   * @param path         target path
+   * @param mediaContent content to upload
+   * @param bufferSize   size of upload buffer, or null to use the upstream default (15 MB as of this writing)
+   */
+  public void insert(
+      final String bucket,
+      final String path,
+      final AbstractInputStreamContent mediaContent,
+      @Nullable final Integer bufferSize
+  ) throws IOException
   {
-    storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream());
+    if (bufferSize == null) {
+      storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream());
+    } else {
+      storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream(), bufferSize);
+    }
   }
 
   public InputStream getInputStream(final String bucket, final String path) throws IOException
@@ -148,13 +165,13 @@ public class GoogleStorage
 
   /**
    * Deletes an object in a bucket on the specified path
-
+   *
    * A false response from GCS delete API is indicative of file not found. Any other error is raised as a StorageException
    * and should be explicitly handled.
-   Ref: <a href="https://github.com/googleapis/java-storage/blob/v2.29.1/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java">HttpStorageRpc.java</a>
+   * Ref: <a href="https://github.com/googleapis/java-storage/blob/v2.29.1/google-cloud-storage/src/main/java/com/google/cloud/storage/spi/v1/HttpStorageRpc.java">HttpStorageRpc.java</a>
    *
    * @param bucket GCS bucket
-   * @param path  Object path
+   * @param path   Object path
    */
   public void delete(final String bucket, final String path)
   {
@@ -202,9 +219,12 @@ public class GoogleStorage
    * Return the etag for an object. This is a value that changes whenever the object's data or metadata changes and is
    * typically but not always the MD5 hash of the object. Ref:
    * <a href="https://cloud.google.com/storage/docs/hashes-etags#etags">ETags</a>
+   *
    * @param bucket
    * @param path
+   *
    * @return
+   *
    * @throws IOException
    */
   public String version(final String bucket, final String path) throws IOException

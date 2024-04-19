@@ -39,7 +39,7 @@ import java.util.UUID;
 
 /**
  */
-public class NoopTask extends AbstractTask
+public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   private static final int DEFAULT_RUN_TIME = 2500;
 
@@ -109,6 +109,12 @@ public class NoopTask extends AbstractTask
   public int getPriority()
   {
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getId();
   }
 
   public static NoopTask create()

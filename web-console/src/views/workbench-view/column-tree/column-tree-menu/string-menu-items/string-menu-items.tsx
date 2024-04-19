@@ -140,7 +140,8 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
           `filtered_dist_${columnName}`,
           false,
         )}
-        {aggregateMenuItem(F('LATEST', column, 100), `latest_${columnName}`)}
+        {aggregateMenuItem(F('ANY_VALUE', column), columnName)}
+        {aggregateMenuItem(F('LATEST', column), `latest_${columnName}`)}
       </MenuItem>
     );
   }
