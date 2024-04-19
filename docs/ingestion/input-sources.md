@@ -1232,8 +1232,7 @@ The following is a sample spec to read all records from the Delta table `/delta-
     }
 ```
 
-The following is a sample spec to read records from the Delta table `/delta-table/foo` that match the `and` filter
-to select records where `name = 'Employee4'` and `age >= 30`:
+The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4'` 'and' `age >= 30`:
 
 ```json
 ...
