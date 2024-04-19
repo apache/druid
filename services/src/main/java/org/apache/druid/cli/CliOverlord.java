@@ -62,6 +62,8 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
@@ -237,6 +239,18 @@ public class CliOverlord extends ServerRunnable
                 .to(DropwizardRowIngestionMetersFactory.class)
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+
+            PolyBind.optionBinder(binder, Key.get(TaskContextEnricher.class))
+                    .addBinding(NoopTaskContextEnricher.TYPE)
+                    .to(NoopTaskContextEnricher.class)
+                    .in(LazySingleton.class);
+
+            PolyBind.createChoiceWithDefault(
+                binder,
+                "druid.indexer.task.contextenricher.type",
+                Key.get(TaskContextEnricher.class),
+                NoopTaskContextEnricher.TYPE
+            );
 
             configureTaskStorage(binder);
             configureIntermediaryData(binder);

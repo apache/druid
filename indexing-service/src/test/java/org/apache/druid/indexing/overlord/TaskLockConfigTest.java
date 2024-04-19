@@ -24,6 +24,7 @@ import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
@@ -122,7 +123,8 @@ public class TaskLockConfigTest
         actionClientFactory,
         lockbox,
         emitter,
-        new DefaultObjectMapper()
+        new DefaultObjectMapper(),
+        new NoopTaskContextEnricher()
     );
   }
 }

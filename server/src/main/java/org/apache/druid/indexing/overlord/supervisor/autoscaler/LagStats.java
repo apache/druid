@@ -46,4 +46,17 @@ public class LagStats
   {
     return avgLag;
   }
+
+  public long get(LagMetric metric)
+  {
+    switch (metric) {
+      case AVERAGE:
+        return avgLag;
+      case TOTAL:
+        return totalLag;
+      case MAX:
+        return maxLag;
+    }
+    throw new IllegalStateException("Unknown Metric");
+  }
 }
