@@ -118,7 +118,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final SQLMetadataConnector connector;
   private final SegmentSchemaManager segmentSchemaManager;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-  private final boolean shouldPublishSchema;
+  private final boolean schemaPublishEnabled;
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
@@ -134,7 +134,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.connector = connector;
     this.segmentSchemaManager = segmentSchemaManager;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.shouldPublishSchema =
+    this.schemaPublishEnabled =
         centralizedDatasourceSchemaConfig.isEnabled()
         && !centralizedDatasourceSchemaConfig.isTaskSchemaPublishDisabled();
   }
@@ -1858,9 +1858,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  private boolean isSchemaPresent(SegmentSchemaMapping segmentSchemaMapping)
+  private boolean shouldPublishSchema(SegmentSchemaMapping segmentSchemaMapping)
   {
-    return shouldPublishSchema
+    return schemaPublishEnabled
            && segmentSchemaMapping != null
            && segmentSchemaMapping.isNonEmpty();
   }
@@ -1902,7 +1902,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
     try {
-      boolean shouldPersistSchema = isSchemaPresent(segmentSchemaMapping);
+      boolean shouldPersistSchema = shouldPublishSchema(segmentSchemaMapping);
 
       if (shouldPersistSchema) {
         persistSchema(handle, segments, segmentSchemaMapping);
@@ -1930,11 +1930,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
           String segmentId = segment.getId().toString();
-          SegmentMetadata segmentMetadata = new SegmentMetadata(null, null);
-
-          if (shouldPersistSchema && segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId)) {
-            segmentMetadata = segmentSchemaMapping.getSegmentIdToMetadataMap().get(segmentId);
-          }
 
           PreparedBatchPart preparedBatchPart = preparedBatch.add()
               .bind("id", segmentId)
@@ -1948,7 +1943,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("payload", jsonMapper.writeValueAsBytes(segment))
               .bind("used_status_last_updated", now);
 
-          if (shouldPublishSchema) {
+          if (schemaPublishEnabled) {
+            SegmentMetadata segmentMetadata = new SegmentMetadata(null, null);
+            if (shouldPersistSchema && segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId)) {
+              segmentMetadata = segmentSchemaMapping.getSegmentIdToMetadataMap().get(segmentId);
+            }
             preparedBatchPart
                 .bind("schema_fingerprint", segmentMetadata.getSchemaFingerprint())
                 .bind("num_rows", segmentMetadata.getNumRows());
@@ -2116,7 +2115,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Map<SegmentId, SegmentId> newVersionForAppendToParent
   ) throws IOException
   {
-    boolean shouldPersistSchema = isSchemaPresent(segmentSchemaMapping);
+    boolean shouldPersistSchema = shouldPublishSchema(segmentSchemaMapping);
 
     if (shouldPersistSchema) {
       persistSchema(handle, segments, segmentSchemaMapping);
@@ -2146,27 +2145,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final PreparedBatch batch = handle.prepareBatch(buildSqlToInsertSegments());
     for (List<DataSegment> partition : partitionedSegments) {
       for (DataSegment segment : partition) {
-        String segmentId = segment.getId().toString();
-        SegmentMetadata segmentMetadata = new SegmentMetadata(null, null);
-
-        if (shouldPersistSchema &&
-            (segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId) ||
-             (newVersionForAppendToParent.containsKey(segment.getId())
-              && segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(newVersionForAppendToParent.get(segment.getId()).toString())))) {
-          String segmentIdToUse;
-          if (segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId)) {
-            segmentIdToUse = segmentId;
-          } else {
-            segmentIdToUse = newVersionForAppendToParent.get(segment.getId()).toString();
-          }
-          segmentMetadata = segmentSchemaMapping.getSegmentIdToMetadataMap().get(segmentIdToUse);
-        } else if (upgradeSegmentMetadata.containsKey(segment.getId())) {
-          segmentMetadata = upgradeSegmentMetadata.get(segment.getId());
-        }
-
         PreparedBatchPart preparedBatchPart =
             batch.add()
-                 .bind("id", segmentId)
+                 .bind("id", segment.getId().toString())
                  .bind("dataSource", segment.getDataSource())
                  .bind("created_date", now)
                  .bind("start", segment.getInterval().getStart().toString())
@@ -2177,7 +2158,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("payload", jsonMapper.writeValueAsBytes(segment))
                  .bind("used_status_last_updated", now);
 
-        if (shouldPublishSchema) {
+        if (schemaPublishEnabled) {
+          SegmentMetadata segmentMetadata =
+              getSegmentMetadataFromSchemaMappingOrUpgradeMetadata(
+                  segment.getId(),
+                  segmentSchemaMapping,
+                  newVersionForAppendToParent,
+                  upgradeSegmentMetadata
+              );
           preparedBatchPart
               .bind("schema_fingerprint", segmentMetadata.getSchemaFingerprint())
               .bind("num_rows", segmentMetadata.getNumRows());
@@ -2203,6 +2191,41 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     return segmentsToInsert;
+  }
+
+  private SegmentMetadata getSegmentMetadataFromSchemaMappingOrUpgradeMetadata(
+      final SegmentId segmentId,
+      final SegmentSchemaMapping segmentSchemaMapping,
+      final Map<SegmentId, SegmentId> newVersionForAppendToParent,
+      final Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata
+  )
+  {
+    SegmentMetadata segmentMetadata = new SegmentMetadata(null, null);
+
+    if (!shouldPublishSchema(segmentSchemaMapping)) {
+      return segmentMetadata;
+    }
+
+    boolean presentInSchemaMetadata =
+        segmentSchemaMapping.getSegmentIdToMetadataMap().containsKey(segmentId.toString());
+    boolean presentInUpgradeMetadata =
+        newVersionForAppendToParent.containsKey(segmentId)
+        && segmentSchemaMapping.getSegmentIdToMetadataMap()
+                               .containsKey(newVersionForAppendToParent.get(segmentId).toString());
+
+    if (presentInSchemaMetadata || presentInUpgradeMetadata) {
+      String segmentIdToUse;
+      if (presentInSchemaMetadata) {
+        segmentIdToUse = segmentId.toString();
+      } else {
+        segmentIdToUse = newVersionForAppendToParent.get(segmentId).toString();
+      }
+      segmentMetadata = segmentSchemaMapping.getSegmentIdToMetadataMap().get(segmentIdToUse);
+    } else if (upgradeSegmentMetadata.containsKey(segmentId)) {
+      segmentMetadata = upgradeSegmentMetadata.get(segmentId);
+    }
+
+    return segmentMetadata;
   }
 
   /**
@@ -2262,7 +2285,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyList();
     }
 
-    if (shouldPublishSchema) {
+    if (schemaPublishEnabled) {
       return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
                                      .retrieveSegmentsWithSchemaById(datasource, segmentIds);
     } else {
@@ -2273,23 +2296,27 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private String buildSqlToInsertSegments()
   {
-    if (shouldPublishSchema) {
+    String insertStatement =
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
+        + " partitioned, version, used, payload, used_status_last_updated %3$s) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end,"
+        + " :partitioned, :version, :used, :payload, :used_status_last_updated %4$s)";
+
+    if (schemaPublishEnabled) {
       return StringUtils.format(
-          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
-          + " partitioned, version, used, payload, used_status_last_updated, schema_fingerprint, num_rows) "
-          + "VALUES (:id, :dataSource, :created_date, :start, :end,"
-          + " :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_fingerprint, :num_rows)",
+          insertStatement,
           dbTables.getSegmentsTable(),
-          connector.getQuoteString()
+          connector.getQuoteString(),
+          ", schema_fingerprint, num_rows",
+          ", :schema_fingerprint, :num_rows"
       );
     } else {
       return StringUtils.format(
-          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
-          + " partitioned, version, used, payload, used_status_last_updated) "
-          + "VALUES (:id, :dataSource, :created_date, :start, :end,"
-          + " :partitioned, :version, :used, :payload, :used_status_last_updated)",
+          insertStatement,
           dbTables.getSegmentsTable(),
-          connector.getQuoteString()
+          connector.getQuoteString(),
+          "",
+          ""
       );
     }
   }
