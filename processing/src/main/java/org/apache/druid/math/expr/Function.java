@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -3724,8 +3725,11 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArrayScalarInFunction extends ArrayScalarFunction
+  class ScalarInArrayFunction extends ArrayScalarFunction
   {
+    private static final int SCALAR_ARG = 0;
+    private static final int ARRAY_ARG = 1;
+
     @Override
     public String name()
     {
@@ -3742,23 +3746,95 @@ public interface Function extends NamedFunction
     @Override
     Expr getScalarArgument(List<Expr> args)
     {
-      return args.get(0);
+      return args.get(SCALAR_ARG);
     }
 
     @Override
     Expr getArrayArgument(List<Expr> args)
     {
-      return args.get(1);
+      return args.get(ARRAY_ARG);
     }
 
     @Override
-    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    ExprEval doApply(ExprEval arrayEval, ExprEval scalarEval)
     {
-      final Object[] array = arrayExpr.castTo(scalarExpr.asArrayType()).asArray();
+      final Object[] array = arrayEval.asArray();
       if (array == null) {
         return ExprEval.ofLong(null);
       }
-      return ExprEval.ofLongBoolean(Arrays.asList(array).contains(scalarExpr.value()));
+
+      if (scalarEval.value() == null) {
+        return Arrays.asList(array).contains(null) ? ExprEval.ofLongBoolean(true) : ExprEval.ofLong(null);
+      }
+
+      final ExpressionType matchType = arrayEval.elementType();
+      final ExprEval<?> scalarEvalForComparison = ExprEval.castForEqualityComparison(scalarEval, matchType);
+
+      if (scalarEvalForComparison == null) {
+        return ExprEval.ofLongBoolean(false);
+      } else {
+        return ExprEval.ofLongBoolean(Arrays.asList(array).contains(scalarEvalForComparison.value()));
+      }
+    }
+
+    @Override
+    public Function asSingleThreaded(List<Expr> args, Expr.InputBindingInspector inspector)
+    {
+      if (args.get(ARRAY_ARG).isLiteral()) {
+        final ExpressionType lhsType = args.get(SCALAR_ARG).getOutputType(inspector);
+        if (lhsType == null) {
+          return this;
+        }
+
+        final ExprEval<?> rhsEval = args.get(ARRAY_ARG).eval(InputBindings.nilBindings());
+        return new WithConstantArray(rhsEval);
+      }
+      return this;
+    }
+
+    /**
+     * Specialization of {@link ScalarInArrayFunction} for constant {@link #ARRAY_ARG}.
+     */
+    private static final class WithConstantArray extends ScalarInArrayFunction
+    {
+      private final Set<Object> matchValues;
+
+      @Nullable
+      private final ExpressionType matchType;
+
+      public WithConstantArray(final ExprEval<?> arrayEval)
+      {
+        final Object[] arrayValues = arrayEval.asArray();
+
+        if (arrayValues == null) {
+          matchValues = Collections.emptySet();
+          matchType = null;
+        } else {
+          matchValues = new HashSet<>();
+          Collections.addAll(matchValues, arrayValues);
+          matchType = arrayEval.elementType();
+        }
+      }
+
+      @Override
+      ExprEval doApply(final ExprEval arrayExpr, final ExprEval scalarEval)
+      {
+        if (matchType == null) {
+          return ExprEval.ofLong(null);
+        }
+
+        if (scalarEval.value() == null) {
+          return matchValues.contains(null) ? ExprEval.ofLongBoolean(true) : ExprEval.ofLong(null);
+        }
+
+        final ExprEval<?> scalarEvalForComparison = ExprEval.castForEqualityComparison(scalarEval, matchType);
+
+        if (scalarEvalForComparison == null) {
+          return ExprEval.ofLongBoolean(false);
+        } else {
+          return ExprEval.ofLongBoolean(matchValues.contains(scalarEvalForComparison.value()));
+        }
+      }
     }
   }
 
