@@ -286,7 +286,7 @@ public class SqlSegmentsMetadataQuery
     if (includeSchemaInfo) {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, schema_id, num_rows FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, schema_fingerprint, num_rows FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -298,14 +298,14 @@ public class SqlSegmentsMetadataQuery
           .setFetchSize(connector.getStreamingFetchSize())
           .map(
               (index, r, ctx) -> {
-                Long schemaId = (Long) r.getObject(3);
+                String schemaFingerprint = (String) r.getObject(3);
                 Long numRows = (Long) r.getObject(4);
                 return new DataSegmentPlus(
                     JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                     null,
                     null,
                     r.getBoolean(2),
-                    schemaId,
+                    schemaFingerprint,
                     numRows
                 );
               }

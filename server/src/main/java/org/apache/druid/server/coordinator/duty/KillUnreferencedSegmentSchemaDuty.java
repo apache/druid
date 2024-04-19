@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -55,12 +54,10 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedSegmentSchemaDuty.class);
   private final SegmentSchemaManager segmentSchemaManager;
-  private final SegmentsMetadataManager segmentsMetadataManager;
 
   public KillUnreferencedSegmentSchemaDuty(
       DruidCoordinatorConfig config,
-      SegmentSchemaManager segmentSchemaManager,
-      SegmentsMetadataManager segmentsMetadataManager
+      SegmentSchemaManager segmentSchemaManager
   )
   {
     super(
@@ -73,7 +70,6 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
         config
     );
     this.segmentSchemaManager = segmentSchemaManager;
-    this.segmentsMetadataManager = segmentsMetadataManager;
   }
 
   @Override
@@ -87,20 +83,13 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
     // 2 (repair step): Identify unused schema which are still referenced by segments, make them used.
     // This case would arise when segment is associated with a schema which turned unused by the previous statement
     // or the previous run of this duty.
-    List<Long> schemaIdsToUpdate = segmentSchemaManager.findReferencedSchemaIdsMarkedAsUnused();
-    if (schemaIdsToUpdate.size() > 0) {
-      segmentSchemaManager.markSchemaIdsAsUsed(schemaIdsToUpdate);
-      log.info("Identified [%s] unused schemas still referenced by used segments and marking them as used.", schemaIdsToUpdate.size());
+    List<String> schemaFingerprintsToUpdate = segmentSchemaManager.findReferencedSchemaMarkedAsUnused();
+    if (schemaFingerprintsToUpdate.size() > 0) {
+      segmentSchemaManager.markSchemaAsUsed(schemaFingerprintsToUpdate);
+      log.info("Identified [%s] unused schemas still referenced by used segments and marking them as used.", schemaFingerprintsToUpdate.size());
     }
 
     // 3: Delete unused schema older than timestamp.
-    int deleted = segmentSchemaManager.deleteSchemasOlderThan(minCreatedTime.getMillis());
-
-    if (deleted > 0) {
-      log.info("Deleted [%s] schemas older than [%s].", deleted, minCreatedTime);
-      // Reset latest segment schema Id to trigger full schema refresh.
-      segmentsMetadataManager.refreshSegmentSchema();
-    }
-    return deleted;
+    return segmentSchemaManager.deleteSchemasOlderThan(minCreatedTime.getMillis());
   }
 }

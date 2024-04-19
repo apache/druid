@@ -20,13 +20,17 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SchemaPayload;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * Utility to generate fingerprint for an object.
@@ -34,6 +38,8 @@ import java.security.NoSuchAlgorithmException;
 @LazySingleton
 public class FingerprintGenerator
 {
+  private static final Logger log = new Logger(FingerprintGenerator.class);
+
   private final ObjectMapper objectMapper;
 
   @Inject
@@ -45,18 +51,27 @@ public class FingerprintGenerator
   /**
    * Generates fingerprint or hash string for an object using SHA-256 hash algorithm.
    */
-  public String generateFingerprint(Object payload)
+  @SuppressWarnings("UnstableApiUsage")
+  public String generateFingerprint(SchemaPayload schemaPayload, String dataSource, int version)
   {
     try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] serializedObj = objectMapper.writeValueAsBytes(payload);
+      final Hasher hasher = Hashing.sha256().newHasher()
+                                   .putBytes(objectMapper.writeValueAsBytes(schemaPayload))
+                                   .putByte((byte) 0xff);
 
-      digest.update(serializedObj);
-      byte[] hashBytes = digest.digest();
-      return Hex.encodeHexString(hashBytes);
+      hasher.putBytes(StringUtils.toUtf8(dataSource));
+      hasher.putBytes(Ints.toByteArray(version));
+      return BaseEncoding.base16().encode(hasher.hash().asBytes());
     }
-    catch (NoSuchAlgorithmException | IOException e) {
-      throw new RuntimeException("Error generating object fingerprint.", e);
+    catch (IOException e) {
+      log.error(
+          "Exception generating fingerprint for payload [%s], datasource [%s], version [%s] with stacktrace [%s].",
+          schemaPayload,
+          dataSource,
+          version,
+          e
+      );
+      throw new RuntimeException(e);
     }
   }
 }

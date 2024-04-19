@@ -153,7 +153,11 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
-          fingerprintGenerator.generateFingerprint(schemaPayload)
+          fingerprintGenerator.generateFingerprint(
+              schemaPayload,
+              segment.getDataSource(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          )
       );
 
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
@@ -242,7 +246,11 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
-          fingerprintGenerator.generateFingerprint(schemaPayload)
+          fingerprintGenerator.generateFingerprint(
+              schemaPayload,
+              segment.getDataSource(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          )
       );
     }
 
@@ -301,17 +309,23 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      String fingerprint =
+          fingerprintGenerator.generateFingerprint(
+              schemaPayload,
+              segment.getDataSource(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          );
       segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
-          fingerprintGenerator.generateFingerprint(schemaPayload)
+          fingerprint
       );
 
-      schemaPayloadMapToPerist.put(fingerprintGenerator.generateFingerprint(schemaPayload), schemaPayload);
+      schemaPayloadMapToPerist.put(fingerprint, schemaPayload);
     }
 
     derbyConnector.retryWithHandle(handle -> {
-      segmentSchemaManager.persistSegmentSchema(handle, "fooDataSource", schemaPayloadMapToPerist, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+      segmentSchemaManager.persistSegmentSchema(handle, "fooDataSource", CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaPayloadMapToPerist);
       return null;
     });
 
@@ -349,7 +363,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
 
     final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
-    final Map<String, Pair<Long, Long>> segmentStatsMap = new HashMap<>();
+    final Map<String, Pair<String, Long>> segmentStatsMap = new HashMap<>();
     Random random = new Random(5);
 
     Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
@@ -370,21 +384,27 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      schemaPayloadMap.put(fingerprintGenerator.generateFingerprint(schemaPayload), schemaPayload);
+      schemaPayloadMap.put(
+          fingerprintGenerator.generateFingerprint(
+              schemaPayload,
+              segment.getDataSource(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          ),
+          schemaPayload
+      );
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, 6));
 
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
 
-    Map<String, Long> fingerprintSchemaMap = segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMap, schemaPayloadMap.keySet());
+    segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMap, schemaPayloadMap.keySet());
 
     for (Map.Entry<String, Pair<SchemaPayload, Integer>> entry : segmentIdSchemaMap.entrySet()) {
       String segmentId = entry.getKey();
-      String fingerprint = fingerprintGenerator.generateFingerprint(entry.getValue().lhs);
+      String fingerprint = fingerprintGenerator.generateFingerprint(entry.getValue().lhs, "foo", CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
       long numRows = entry.getValue().rhs;
-      long schemaId = fingerprintSchemaMap.get(fingerprint);
-      segmentStatsMap.put(segmentId, Pair.of(schemaId, numRows));
+      segmentStatsMap.put(segmentId, Pair.of(fingerprint, numRows));
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, segmentStatsMap);
@@ -410,7 +430,11 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
-          fingerprintGenerator.generateFingerprint(schemaPayload)
+          fingerprintGenerator.generateFingerprint(
+              schemaPayload,
+              segment.getDataSource(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          )
       );
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
       replacingSegments.add(segment);

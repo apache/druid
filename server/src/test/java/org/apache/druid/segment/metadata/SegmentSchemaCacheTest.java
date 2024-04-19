@@ -22,6 +22,7 @@ package org.apache.druid.segment.metadata;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -31,6 +32,8 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class SegmentSchemaCacheTest
 {
@@ -60,7 +63,7 @@ public class SegmentSchemaCacheTest
     SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
-    SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
+    SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature, Collections.emptyMap()), 20L);
     SegmentId id = SegmentId.dummy("ds");
     cache.addInTransitSMQResult(id, rowSignature, Collections.emptyMap(), 20);
 
@@ -90,10 +93,14 @@ public class SegmentSchemaCacheTest
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
-    cache.addFinalizedSegmentSchema(0L, new SchemaPayload(rowSignature));
-    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ImmutableMap.Builder<>();
-    segmentStats.put(id, new SegmentSchemaCache.SegmentStats(0L, 20L));
-    cache.updateFinalizedSegmentStatsReference(segmentStats.build());
+
+    ConcurrentMap<String, SchemaPayload> schemaPayload = new ConcurrentHashMap<>();
+    schemaPayload.put("fp1", new SchemaPayload(rowSignature));
+    cache.updateFinalizedSegmentSchemaReference(schemaPayload);
+
+    ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
+    segmentMetadataBuilder.put(id, new SegmentMetadata(0L, "fp1"));
+    cache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
 
     Assert.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);

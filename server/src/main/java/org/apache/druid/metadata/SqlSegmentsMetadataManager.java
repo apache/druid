@@ -51,9 +51,9 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
-import org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -95,7 +95,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -221,14 +220,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * #useLatestIfWithinDelayOrPerformNewDatabasePoll()}.
    */
   private volatile @Nullable DatabasePoll latestDatabasePoll = null;
-
-  /**
-   * Last schema id polled from the DB.
-   * It is updated after each poll in {@code doPollSegmentAndSchema}.
-   * The schema cleanup duty {@link KillUnreferencedSegmentSchemaDuty} can reset it to trigger a full schema refresh on next DB poll.
-   * This is set to null on leadership change.
-   */
-  private final AtomicReference<Long> latestSchemaId = new AtomicReference<>(null);
 
   /** Used to cancel periodic poll task in {@link #stopPollingDatabasePeriodically}. */
   @GuardedBy("startStopPollLock")
@@ -527,7 +518,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
       periodicPollTaskFuture.cancel(false);
       latestDatabasePoll = null;
-      latestSchemaId.set(null);
 
       // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadataManager
       // object is stopped.
@@ -933,12 +923,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return latestDatabasePoll;
   }
 
-  @VisibleForTesting
-  Long getLatestSchemaId()
-  {
-    return latestSchemaId.get();
-  }
-
   @Override
   public Iterable<DataSegment> iterateAllUsedSegments()
   {
@@ -1097,16 +1081,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
-    // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
-    // segments are marked as used or unused directly (via markAs...() methods in SegmentsMetadataManager), the
-    // dataSourcesSnapshot can become invalid until the next database poll.
-    // DataSourcesSnapshot computes the overshadowed segments, which makes it an expensive operation if the
-    // snapshot was invalidated on each segment mark as unused or used, especially if a user issues a lot of single
-    // segment mark calls in rapid succession. So the snapshot update is not done outside of database poll at this time.
-    // Updates outside of database polls were primarily for the user experience, so users would immediately see the
-    // effect of a segment mark call reflected in MetadataResource API calls.
-
-    ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
     if (segments.isEmpty()) {
       log.info("No segments found in the database!");
     } else {
@@ -1114,22 +1088,15 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     stopwatch.restart();
 
-    dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
-        Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        dataSourceProperties
-    );
-    log.info(
-        "Successfully created snapshot from polled segments in [%d] ms. Found [%d] overshadowed segments.",
-        stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
-    );
+    createDatasourcesSnapshot(stopwatch, segments);
   }
 
   private void doPollSegmentAndSchema()
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    log.info("Starting polling of segment and schema table. latestSchemaId is [%s].", latestSchemaId.get());
+    log.info("Starting polling of segment and schema table.");
 
-    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsBuilder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
 
     // We are emitting the stats here since this method is called periodically.
     // Secondly, the stats are emitted before polling the schema,
@@ -1148,7 +1115,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT payload, schema_id, num_rows FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format("SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()
@@ -1158,11 +1125,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          segmentStatsBuilder.put(
+                          segmentMetadataBuilder.put(
                               segment.getId(),
-                              new SegmentSchemaCache.SegmentStats(
-                                  (Long) r.getObject("schema_id"),
-                                  (Long) r.getObject("num_rows")
+                              new SegmentMetadata(
+                                  (Long) r.getObject("num_rows"),
+                                  r.getString("schema_fingerprint")
                               )
                           );
                           return replaceWithExistingSegmentIfPresent(segment);
@@ -1181,67 +1148,68 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         }
     );
 
-    ConcurrentMap<Long, SchemaPayload> schemaMap = new ConcurrentHashMap<>();
+    ConcurrentMap<String, SchemaPayload> schemaMap = new ConcurrentHashMap<>();
 
-    final String schemaPollQuery;
+    final String schemaPollQuery =
+        StringUtils.format(
+            "SELECT fingerprint, payload FROM %s WHERE version = %s",
+            getSegmentSchemaTable(),
+            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+        );
 
-    Long lastSchemaIdPrePoll = latestSchemaId.get();
-    if (lastSchemaIdPrePoll == null) {
-      log.info("Executing full schema refresh.");
-      schemaPollQuery =
-          StringUtils.format(
-              "SELECT id, payload FROM %s WHERE version = %s",
-              getSegmentSchemaTable(),
-              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
-          );
-    } else {
-      schemaPollQuery = StringUtils.format(
-          "SELECT id, payload FROM %s WHERE version = %s AND id > %s",
-          getSegmentSchemaTable(),
-          CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
-          lastSchemaIdPrePoll
-      );
-    }
-
-    Long maxPolledSchemaId = connector.inReadOnlyTransaction(
+    connector.inReadOnlyTransaction(
         (handle, status) -> {
-          SchemaPollResultMapper schemaPollResultMapper = new SchemaPollResultMapper(schemaMap, lastSchemaIdPrePoll);
-
           handle.createQuery(schemaPollQuery)
                 .setFetchSize(connector.getStreamingFetchSize())
-                .map(schemaPollResultMapper)
+                .map(
+                    new ResultSetMapper<Void>()
+                    {
+                      @Override
+                      public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
+                      {
+                        try {
+                          schemaMap.put(
+                              r.getString("fingerprint"),
+                              jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
+                          );
+                        }
+                        catch (IOException e) {
+                          log.makeAlert(e, "Failed to read schema from db.").emit();
+                        }
+                        return null;
+                      }
+                    })
                 .list();
 
           segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
-
-          return schemaPollResultMapper.getMaxSchemaId();
+          return null;
         });
 
-    log.debug("SchemaMap polled from the database is [%s]", schemaMap);
-
-    if (lastSchemaIdPrePoll == null || lastSchemaIdPrePoll == 0L) {
-      // full refresh
-      log.info("Executing full segment schema refresh.");
-      segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
-    } else {
-      // delta update
-      schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
-    }
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsBuilder.build());
-
-    if (lastSchemaIdPrePoll == null) {
-      segmentSchemaCache.setInitialized();
-    }
-
-    // It is possible that the schema cleanup duty resets the {@code latestSchemaId}.
-    // In that case, we shouldn't update this value with the latest polled schemaId.
-    latestSchemaId.compareAndSet(lastSchemaIdPrePoll, maxPolledSchemaId);
+    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
+    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
 
     Preconditions.checkNotNull(
         segments,
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
+    if (segments.isEmpty() && schemaMap.isEmpty()) {
+      log.info("No segments found in the database!");
+    } else {
+      log.info(
+          "Polled and found total %,d segments and [%d] schema in the database in [%,d] ms.",
+          segments.size(),
+          schemaMap.size(),
+          stopwatch.millisElapsed()
+      );
+    }
+    stopwatch.restart();
+
+    createDatasourcesSnapshot(stopwatch, segments);
+  }
+
+  private void createDatasourcesSnapshot(Stopwatch stopwatch, List<DataSegment> segments)
+  {
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
     // segments are marked as used or unused directly (via markAs...() methods in SegmentsMetadataManager), the
     // dataSourcesSnapshot can become invalid until the next database poll.
@@ -1250,18 +1218,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // segment mark calls in rapid succession. So the snapshot update is not done outside of database poll at this time.
     // Updates outside of database polls were primarily for the user experience, so users would immediately see the
     // effect of a segment mark call reflected in MetadataResource API calls.
-
     ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
-    if (segments.isEmpty()) {
-      log.info("No segments found in the database! latestSchemaId is [%s]", latestSchemaId);
-    } else {
-      log.info(
-          "Polled and found total %,d segments and [%d] new schema since schemaId [%s] in the database",
-          segments.size(),
-          schemaMap.size(),
-          latestSchemaId.get()
-      );
-    }
+
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties
@@ -1373,49 +1331,5 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
         }
     );
-  }
-
-  @Override
-  public void refreshSegmentSchema()
-  {
-    latestSchemaId.set(0L);
-  }
-
-  private class SchemaPollResultMapper implements ResultSetMapper<Void>
-  {
-    private final ConcurrentMap<Long, SchemaPayload> schemaMap;
-    private long maxSchemaId;
-
-    public SchemaPollResultMapper(ConcurrentMap<Long, SchemaPayload> schemaMap, Long previousSchemaId)
-    {
-      this.schemaMap = schemaMap;
-      this.maxSchemaId = previousSchemaId == null ? 0 : previousSchemaId;
-    }
-
-    public long getMaxSchemaId()
-    {
-      return maxSchemaId;
-    }
-
-    @Override
-    public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
-    {
-      try {
-        long id = r.getLong("id");
-
-        if (id > maxSchemaId) {
-          maxSchemaId = id;
-        }
-
-        schemaMap.put(
-            r.getLong("id"),
-            jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
-        );
-      }
-      catch (IOException e) {
-        log.makeAlert(e, "Failed to read schema from db.").emit();
-      }
-      return null;
-    }
   }
 }

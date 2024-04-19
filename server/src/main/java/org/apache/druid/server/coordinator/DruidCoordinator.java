@@ -591,7 +591,7 @@ public class DruidCoordinator
     duties.add(new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()));
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      duties.add(new KillUnreferencedSegmentSchemaDuty(config, metadataManager.schemas(), metadataManager.segments()));
+      duties.add(new KillUnreferencedSegmentSchemaDuty(config, metadataManager.schemas()));
     }
     return duties;
   }

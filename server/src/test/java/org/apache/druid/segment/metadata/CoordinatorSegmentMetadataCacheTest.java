@@ -54,6 +54,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -92,6 +93,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1489,7 +1492,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> pluses = new ArrayList<>();
     pluses.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(
         segment1.getId(),
-        fingerprintGenerator.generateFingerprint(new SchemaPayload(index1StorageAdaptor.getRowSignature())),
+        fingerprintGenerator.generateFingerprint(
+            new SchemaPayload(index1StorageAdaptor.getRowSignature()),
+            segment1.getDataSource(),
+            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+        ),
         new SchemaPayloadPlus(
             new SchemaPayload(
                 index1StorageAdaptor.getRowSignature()),
@@ -1498,7 +1505,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     ));
     pluses.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(
         segment2.getId(),
-        fingerprintGenerator.generateFingerprint(new SchemaPayload(index2StorageAdaptor.getRowSignature())),
+        fingerprintGenerator.generateFingerprint(
+            new SchemaPayload(index2StorageAdaptor.getRowSignature()),
+            segment1.getDataSource(),
+            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+        ),
         new SchemaPayloadPlus(
             new SchemaPayload(
                 index2StorageAdaptor.getRowSignature()),
@@ -1511,12 +1522,13 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(DATASOURCE1, pluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataMap = new ImmutableMap.Builder<>();
+    ConcurrentMap<String, SchemaPayload> schemaPayloadMap = new ConcurrentHashMap<>();
 
     derbyConnector.retryWithHandle(handle -> {
       handle.createQuery(StringUtils.format(
-                "select s1.id, s1.dataSource, s1.schema_id, s1.num_rows, s2.payload "
-                + "from %1$s as s1 inner join %2$s as s2 on s1.schema_id = s2.id",
+                "select s1.id, s1.dataSource, s1.schema_fingerprint, s1.num_rows, s2.payload "
+                + "from %1$s as s1 inner join %2$s as s2 on s1.schema_fingerprint = s2.fingerprint",
                 tablesConfig.getSegmentsTable(),
                 tablesConfig.getSegmentSchemasTable()
             ))
@@ -1524,11 +1536,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
               try {
                 String segmentId = r.getString(1);
                 String dataSource = r.getString(2);
-                long schemaId = r.getLong(3);
+                String schemaFingerprint = r.getString(3);
                 long numRows = r.getLong(4);
                 SchemaPayload schemaPayload = mapper.readValue(r.getBytes(5), SchemaPayload.class);
-                segmentSchemaCache.addFinalizedSegmentSchema(schemaId, schemaPayload);
-                segmentStatsMap.put(SegmentId.tryParse(dataSource, segmentId), new SegmentSchemaCache.SegmentStats(schemaId, numRows));
+                schemaPayloadMap.put(schemaFingerprint, schemaPayload);
+                segmentMetadataMap.put(SegmentId.tryParse(dataSource, segmentId), new SegmentMetadata(numRows, schemaFingerprint));
               }
               catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1538,7 +1550,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       return null;
     });
 
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap.build());
+    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap);
+    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataMap.build());
     segmentSchemaCache.setInitialized();
 
     serverView = new TestCoordinatorServerView(Collections.emptyList(), Collections.emptyList());
@@ -1632,10 +1645,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
 
-    ImmutableMap.Builder<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(segment3.getId(), new SegmentSchemaCache.SegmentStats(1L, (long) adapter.getNumRows()));
-    segmentSchemaCache.addFinalizedSegmentSchema(1L, new SchemaPayload(adapter.getRowSignature()));
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap.build());
+    ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
+    segmentStatsMap.put(segment3.getId(), new SegmentMetadata((long) adapter.getNumRows(), "fp"));
+    ConcurrentMap<String, SchemaPayload> schemaPayloadMap = new ConcurrentHashMap<>();
+    schemaPayloadMap.put("fp", new SchemaPayload(adapter.getRowSignature()));
+    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap);
+    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentStatsMap.build());
 
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     List<DataSegment> segments = segmentsMetadata.values()
@@ -1655,9 +1670,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentStatsMap = new ImmutableMap.Builder<>();
     segmentStatsMap.put(
         existingSegment.getId(),
-        new SegmentSchemaCache.SegmentStats(1L, 5L)
+        new SegmentMetadata(5L, "fp")
     );
-    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap.build());
+    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentStatsMap.build());
 
     // find a druidServer holding existingSegment
     final Pair<DruidServer, DataSegment> pair = druidServers

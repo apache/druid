@@ -117,14 +117,16 @@ public class SegmentSchemaMapping
       return false;
     }
     SegmentSchemaMapping that = (SegmentSchemaMapping) o;
-    return Objects.equals(segmentIdToMetadataMap, that.segmentIdToMetadataMap)
-           && Objects.equals(schemaFingerprintToPayloadMap, that.schemaFingerprintToPayloadMap);
+    return schemaVersion == that.schemaVersion && Objects.equals(
+        segmentIdToMetadataMap,
+        that.segmentIdToMetadataMap
+    ) && Objects.equals(schemaFingerprintToPayloadMap, that.schemaFingerprintToPayloadMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentIdToMetadataMap, schemaFingerprintToPayloadMap);
+    return Objects.hash(segmentIdToMetadataMap, schemaFingerprintToPayloadMap, schemaVersion);
   }
 
   @Override

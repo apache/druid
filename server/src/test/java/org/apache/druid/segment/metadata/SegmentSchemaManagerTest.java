@@ -115,7 +115,11 @@ public class SegmentSchemaManagerTest
       SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
           new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
-              fingerprintGenerator.generateFingerprint(schemaPayload),
+              fingerprintGenerator.generateFingerprint(
+                  schemaPayload,
+                  segment.getDataSource(),
+                  CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+              ),
               schemaMetadata
           );
       schemaMetadataPluses.add(plus);
@@ -151,7 +155,11 @@ public class SegmentSchemaManagerTest
     SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
         new SegmentSchemaManager.SegmentSchemaMetadataPlus(
             newSegment.getId(),
-            fingerprintGenerator.generateFingerprint(schemaPayloadIntegerPair.lhs),
+            fingerprintGenerator.generateFingerprint(
+                schemaPayloadIntegerPair.lhs,
+                newSegment.getDataSource(),
+                CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            ),
             schemaMetadata
         );
 
@@ -200,7 +208,11 @@ public class SegmentSchemaManagerTest
       SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
           new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
-              fingerprintGenerator.generateFingerprint(schemaPayload),
+              fingerprintGenerator.generateFingerprint(
+                  schemaPayload,
+                  segment.getDataSource(),
+                  CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+              ),
               schemaMetadata
           );
       schemaMetadataPluses.add(plus);

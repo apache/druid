@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
@@ -42,6 +41,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -54,6 +54,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.skife.jdbi.v2.Update;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -104,7 +105,6 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
-    SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withMetadataStoreManagementPeriod(Period.parse("PT1H").toStandardDuration())
         .withSegmentSchemaKillPeriod(Period.parse("PT1H").toStandardDuration())
@@ -112,7 +112,7 @@ public class KillUnreferencedSegmentSchemaDutyTest
         .build();
 
     KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, segmentsMetadataManager, dateTimes);
+        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, dateTimes);
 
     Set<DataSegment> segments = new HashSet<>();
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
@@ -149,10 +149,17 @@ public class KillUnreferencedSegmentSchemaDutyTest
     segments.add(segment1);
     segments.add(segment2);
 
+    String fingerprint =
+        fingerprintGenerator.generateFingerprint(
+            schemaPayload,
+            segment1.getDataSource(),
+            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+        );
+
     SegmentSchemaManager.SegmentSchemaMetadataPlus plus1 =
         new SegmentSchemaManager.SegmentSchemaMetadataPlus(
             segment1.getId(),
-            fingerprintGenerator.generateFingerprint(schemaPayload),
+            fingerprint,
             schemaMetadata
         );
     schemaMetadataPluses.add(plus1);
@@ -160,83 +167,39 @@ public class KillUnreferencedSegmentSchemaDutyTest
     SegmentSchemaManager.SegmentSchemaMetadataPlus plus2 =
         new SegmentSchemaManager.SegmentSchemaMetadataPlus(
             segment2.getId(),
-            fingerprintGenerator.generateFingerprint(schemaPayload),
+            fingerprint,
             schemaMetadata
         );
     schemaMetadataPluses.add(plus2);
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("foo", schemaMetadataPluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
-
-    List<Long> schemaIds = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(StringUtils.format(
-            "SELECT schema_id from %s where id = '%s'",
-            tablesConfig.getSegmentsTable(), schemaMetadataPluses.get(0).getSegmentId().toString()
-        )).mapTo(Long.class).list());
-
-    long schemaIdToDelete = schemaIds.get(0);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(
+        "foo",
+        schemaMetadataPluses,
+        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
 
     // delete segment1
-    derbyConnector.retryWithHandle(handle -> {
-      Update deleteStatement = handle.createStatement(
-          StringUtils.format(
-              "DELETE FROM %s WHERE id = '%s'",
-              tablesConfig.getSegmentsTable(),
-              schemaMetadataPluses.get(0).getSegmentId().toString()
-          )
-      );
-      deleteStatement.execute();
-      return null;
-    });
+    deleteSegment(schemaMetadataPluses.get(0).getSegmentId());
 
     // this call should do nothing
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    List<Boolean> usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(StringUtils.format(
-            "SELECT used from %s where id = %s",
-            tablesConfig.getSegmentSchemasTable(), schemaIdToDelete
-        )).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertTrue(usedStatus.get(0));
+    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
 
     // delete segment2
-    derbyConnector.retryWithHandle(handle -> {
-      Update deleteStatement = handle.createStatement(
-          StringUtils.format(
-              "DELETE FROM %s WHERE id = '%s'",
-              tablesConfig.getSegmentsTable(),
-              schemaMetadataPluses.get(1).getSegmentId().toString()
-          )
-      );
-      deleteStatement.execute();
-      return null;
-    });
+    deleteSegment(schemaMetadataPluses.get(1).getSegmentId());
 
     // this call should mark the schema unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(StringUtils.format(
-            "SELECT used from %s where id = %s",
-            tablesConfig.getSegmentSchemasTable(), schemaIdToDelete
-        )).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertFalse(usedStatus.get(0));
+    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // this call should delete the schema
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(StringUtils.format(
-            "SELECT used from %s where id = %s",
-            tablesConfig.getSegmentSchemasTable(), schemaIdToDelete
-        )).mapTo(Boolean.class).list()
-    );
 
-    Assert.assertTrue(usedStatus.isEmpty());
+    Assert.assertNull(getSchemaUsedStatus(fingerprint));
   }
 
   @Test
@@ -248,7 +211,6 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now);
     dateTimes.add(now.plusMinutes(61));
 
-    SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withMetadataStoreManagementPeriod(Period.parse("PT1H").toStandardDuration())
         .withSegmentSchemaKillPeriod(Period.parse("PT1H").toStandardDuration())
@@ -256,59 +218,31 @@ public class KillUnreferencedSegmentSchemaDutyTest
         .build();
 
     KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, segmentsMetadataManager, dateTimes);
+        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, dateTimes);
 
     RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-    String fingerprint = fingerprintGenerator.generateFingerprint(schemaPayload);
+    String fingerprint = fingerprintGenerator.generateFingerprint(schemaPayload, "foo", CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-    derbyConnector.retryWithHandle(
+    inHandle(
         handle -> {
           segmentSchemaManager.persistSegmentSchema(
               handle,
               "foo",
-              Collections.singletonMap(fingerprint, schemaPayload),
-              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
+              Collections.singletonMap(fingerprint, schemaPayload)
           );
           return null;
         }
     );
 
-    List<Long> schemaIds = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo'",
-                tablesConfig.getSegmentSchemasTable(), fingerprint
-            )).mapTo(Long.class).list()
-    );
-
-    long schemaId = schemaIds.get(0);
-
-    List<Boolean> usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT used from %s where id = %s",
-                tablesConfig.getSegmentSchemasTable(), schemaId
-            )
-        ).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertTrue(usedStatus.get(0));
+    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
 
     // this call should mark the schema as unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT used from %s where id = %s",
-                tablesConfig.getSegmentSchemasTable(), schemaId
-            )
-        ).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertFalse(usedStatus.get(0));
+    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // associate a segment to the schema
     DataSegment segment1 = new DataSegment(
@@ -325,26 +259,18 @@ public class KillUnreferencedSegmentSchemaDutyTest
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
 
-    derbyConnector.retryWithHandle(
+    inHandle(
         handle -> handle.createStatement(
             StringUtils.format(
-                "UPDATE %s SET schema_id = %s, num_rows = 100 WHERE id = '%s'",
-                tablesConfig.getSegmentsTable(), schemaId, segment1.getId().toString()
+                "UPDATE %s SET schema_fingerprint = '%s', num_rows = 100 WHERE id = '%s'",
+                tablesConfig.getSegmentsTable(), fingerprint, segment1.getId().toString()
             )).execute()
     );
 
     // this call should make the schema used
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT used from %s where id = %s",
-                tablesConfig.getSegmentSchemasTable(), schemaId
-            )).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertTrue(usedStatus.get(0));
+    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
   }
 
   @Test
@@ -357,7 +283,6 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
-    SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withMetadataStoreManagementPeriod(Period.parse("PT1H").toStandardDuration())
         .withSegmentSchemaKillPeriod(Period.parse("PT1H").toStandardDuration())
@@ -365,72 +290,45 @@ public class KillUnreferencedSegmentSchemaDutyTest
         .build();
 
     KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, segmentsMetadataManager, dateTimes);
+        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, dateTimes);
 
     // create 2 versions of same schema
     // unreferenced one should get deleted
     RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-    String fingerprint = fingerprintGenerator.generateFingerprint(schemaPayload);
+    String fingerprintOldVersion = fingerprintGenerator.generateFingerprint(schemaPayload, "foo", 0);
+    String fingerprintNewVersion = fingerprintGenerator.generateFingerprint(schemaPayload, "foo", 1);
 
-    derbyConnector.retryWithHandle(
+    inHandle(
         handle -> {
           segmentSchemaManager.persistSegmentSchema(
               handle,
               "foo",
-              Collections.singletonMap(fingerprint, schemaPayload),
-              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+              0,
+              Collections.singletonMap(fingerprintOldVersion, schemaPayload)
           );
           return null;
         }
     );
 
-    derbyConnector.retryWithHandle(
+    inHandle(
         handle -> {
           segmentSchemaManager.persistSegmentSchema(
               handle,
               "foo",
-              Collections.singletonMap(fingerprint, schemaPayload),
-              0
+              1,
+              Collections.singletonMap(fingerprintNewVersion, schemaPayload)
           );
           return null;
         }
     );
-
-    List<Long> schemaIds = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = %s",
-                tablesConfig.getSegmentSchemasTable(), fingerprint, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
-            )).mapTo(Long.class).list()
-    );
-
-    long schemaIdNewVersion = schemaIds.get(0);
-
-    schemaIds = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT id from %s where fingerprint = '%s' and datasource = 'foo' and version = %s",
-                tablesConfig.getSegmentSchemasTable(), fingerprint, 0
-            )).mapTo(Long.class).list()
-    );
-
-    long schemaIdOldVersion = schemaIds.get(0);
 
     // this call should mark both the schema as unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    List<Boolean> usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT used from %s where id = %s",
-                tablesConfig.getSegmentSchemasTable(), schemaIdNewVersion
-            )
-        ).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertFalse(usedStatus.get(0));
+    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintOldVersion));
+    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // associate a segment to the schema
     DataSegment segment1 = new DataSegment(
@@ -447,39 +345,22 @@ public class KillUnreferencedSegmentSchemaDutyTest
 
     segmentSchemaTestUtils.insertUsedSegments(Collections.singleton(segment1), Collections.emptyMap());
 
-    derbyConnector.retryWithHandle(
+    inHandle(
         handle -> handle.createStatement(
             StringUtils.format(
-                "UPDATE %s SET schema_id = %s, num_rows = 100 WHERE id = '%s'",
-                tablesConfig.getSegmentsTable(), schemaIdNewVersion, segment1.getId().toString()
+                "UPDATE %s SET schema_fingerprint = '%s', num_rows = 100 WHERE id = '%s'",
+                tablesConfig.getSegmentsTable(), fingerprintNewVersion, segment1.getId().toString()
             )).execute()
     );
 
     // this call should make the referenced schema used
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT used from %s where id = %s",
-                tablesConfig.getSegmentSchemasTable(), schemaIdNewVersion
-            )).mapTo(Boolean.class).list()
-    );
-
-    Assert.assertTrue(usedStatus.get(0));
+    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // this call should kill the schema
     duty.run(mockDruidCoordinatorRuntimeParams);
-
-    List<Integer> counts = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT count(*) from %s where id = %s",
-                tablesConfig.getSegmentSchemasTable(), schemaIdOldVersion
-            )).mapTo(Integer.class).list()
-    );
-
-    Assert.assertEquals(0, counts.get(0).intValue());
+    Assert.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
   }
 
   private static class TestKillUnreferencedSegmentSchemasDuty extends KillUnreferencedSegmentSchemaDuty
@@ -490,11 +371,10 @@ public class KillUnreferencedSegmentSchemaDutyTest
     public TestKillUnreferencedSegmentSchemasDuty(
         DruidCoordinatorConfig config,
         SegmentSchemaManager segmentSchemaManager,
-        SegmentsMetadataManager segmentsMetadataManager,
         List<DateTime> dateTimes
     )
     {
-      super(config, segmentSchemaManager, segmentsMetadataManager);
+      super(config, segmentSchemaManager);
       this.dateTimes = dateTimes;
     }
 
@@ -504,5 +384,37 @@ public class KillUnreferencedSegmentSchemaDutyTest
       index++;
       return dateTimes.get(index);
     }
+  }
+
+  private <T> T inHandle(HandleCallback<T> callback)
+  {
+    return derbyConnector.retryWithHandle(callback);
+  }
+
+  private void deleteSegment(SegmentId id)
+  {
+    inHandle(handle -> {
+      Update deleteStatement = handle.createStatement(
+          StringUtils.format(
+              "DELETE FROM %s WHERE id = '%s'",
+              tablesConfig.getSegmentsTable(),
+              id.toString()
+          )
+      );
+      deleteStatement.execute();
+      return null;
+    });
+  }
+
+  private Boolean getSchemaUsedStatus(String fingerprint)
+  {
+    List<Boolean> usedStatus = inHandle(
+        handle -> handle.createQuery(StringUtils.format(
+            "SELECT used from %s where fingerprint = '%s'",
+            tablesConfig.getSegmentSchemasTable(), fingerprint
+        )).mapTo(Boolean.class).list()
+    );
+
+    return usedStatus.isEmpty() ? null : usedStatus.get(0);
   }
 }

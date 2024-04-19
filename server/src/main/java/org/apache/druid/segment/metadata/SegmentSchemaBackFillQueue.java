@@ -123,7 +123,11 @@ public class SegmentSchemaBackFillQueue
     queue.add(
         new SegmentSchemaMetadataPlus(
             segmentId,
-            fingerprintGenerator.generateFingerprint(schemaMetadata.getSchemaPayload()),
+            fingerprintGenerator.generateFingerprint(
+                schemaMetadata.getSchemaPayload(),
+                segmentId.getDataSource(),
+                CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            ),
             schemaMetadata
         )
     );

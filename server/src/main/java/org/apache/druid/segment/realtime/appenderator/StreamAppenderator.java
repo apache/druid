@@ -806,7 +806,11 @@ public class StreamAppenderator implements Appenderator
                 segmentSchemaMapping.addSchema(
                     segment.getId(),
                     schemaPayloadPlus,
-                    fingerprintGenerator.generateFingerprint(schemaPayload)
+                    fingerprintGenerator.generateFingerprint(
+                        schemaPayload,
+                        segment.getDataSource(),
+                        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+                    )
                 );
               }
             } else {

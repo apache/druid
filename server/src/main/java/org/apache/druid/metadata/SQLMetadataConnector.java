@@ -331,7 +331,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      columns.add("schema_id BIGINT");
+      columns.add("schema_fingerprint VARCHAR(255)");
       columns.add("num_rows BIGINT");
     }
 
@@ -758,7 +758,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     validateSegmentsTable();
   }
 
-
   @Override
   public void createUpgradeSegmentsTable()
   {
@@ -989,11 +988,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
                 + "  version INTEGER NOT NULL,\n"
                 + "  PRIMARY KEY (id),\n"
-                + "  UNIQUE (datasource, version, fingerprint) \n"
+                + "  UNIQUE (fingerprint) \n"
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(datasource, version, fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
         )
     );

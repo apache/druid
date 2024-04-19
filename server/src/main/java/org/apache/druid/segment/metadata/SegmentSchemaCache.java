@@ -22,16 +22,16 @@ package org.apache.druid.segment.metadata;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * In-memory cache of segment schema.
  * <p>
  * Internally, mapping of segmentId to segment level information like schemaId & numRows is maintained.
- * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentStats}.
+ * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentMetadata}.
  * Segment schema created since last DB poll is also fetched and updated in the cache {@code finalizedSegmentSchema}.
  * <p>
  * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchemaMap}. This mapping
@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @LazySingleton
 public class SegmentSchemaCache
 {
-  private static final EmittingLogger log = new EmittingLogger(SegmentSchemaCache.class);
+  private static final Logger log = new Logger(SegmentSchemaCache.class);
 
   // Cache is marked initialized after first DB poll.
   private final AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
@@ -70,12 +70,12 @@ public class SegmentSchemaCache
    * Mapping from segmentId to segment level information which includes numRows and schemaId.
    * This mapping is updated on each database poll.
    */
-  private volatile ImmutableMap<SegmentId, SegmentStats> finalizedSegmentStats = ImmutableMap.of();
+  private volatile ImmutableMap<SegmentId, SegmentMetadata> finalizedSegmentMetadata = ImmutableMap.of();
 
   /**
    * Mapping from schemaId to payload. Gets updated after DB poll.
    */
-  private volatile ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
+  private volatile ConcurrentMap<String, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
 
   /**
    * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
@@ -125,7 +125,7 @@ public class SegmentSchemaCache
     log.info("[%s] is uninitializing.", getClass().getSimpleName());
     initialized.set(new CountDownLatch(1));
 
-    finalizedSegmentStats = ImmutableMap.of();
+    finalizedSegmentMetadata = ImmutableMap.of();
     finalizedSegmentSchema.clear();
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
@@ -143,23 +143,15 @@ public class SegmentSchemaCache
   /**
    * This method is called after each DB poll.
    */
-  public void updateFinalizedSegmentStatsReference(ImmutableMap<SegmentId, SegmentStats> segmentStatsMap)
+  public void updateFinalizedSegmentMetadataReference(ImmutableMap<SegmentId, SegmentMetadata> segmentStatsMap)
   {
-    this.finalizedSegmentStats = segmentStatsMap;
-  }
-
-  /**
-   * This method is called after new schema is polled from the DB.
-   */
-  public void addFinalizedSegmentSchema(long schemaId, SchemaPayload schemaPayload)
-  {
-    finalizedSegmentSchema.put(schemaId, schemaPayload);
+    this.finalizedSegmentMetadata = segmentStatsMap;
   }
 
   /**
    * This method is called on full schema refresh from the DB.
    */
-  public void updateFinalizedSegmentSchemaReference(ConcurrentMap<Long, SchemaPayload> schemaPayloadMap)
+  public void updateFinalizedSegmentSchemaReference(ConcurrentMap<String, SchemaPayload> schemaPayloadMap)
   {
     finalizedSegmentSchema = schemaPayloadMap;
   }
@@ -224,7 +216,7 @@ public class SegmentSchemaCache
     }
 
     // it is important to lookup {@code inTransitSMQResults} before {@code inTransitSMQPublishedResults}
-    // in the other way round, if a segment schema is just published it is possible that the schema is missing
+    // other way round, if a segment schema is just published it is possible that the schema is missing
     // in {@code inTransitSMQPublishedResults} and by the time we check {@code inTransitSMQResults} it is removed.
 
     // segment schema has been fetched via SMQ
@@ -238,21 +230,21 @@ public class SegmentSchemaCache
     }
 
     // segment schema has been polled from the DB
-    if (finalizedSegmentStats.containsKey(segmentId)) {
-      SegmentStats segmentStats = finalizedSegmentStats.get(segmentId);
-      Long schemaId = segmentStats.getSchemaId();
-      if (schemaId == null || segmentStats.getNumRows() == null) {
-        log.error(
-            "Missing schemaId or numRows for segmentId [%s]. SchemaId present [%s], numRows present [%s]",
-            segmentId, schemaId != null, segmentStats.getNumRows() != null
+    if (finalizedSegmentMetadata.get(segmentId) != null) {
+      SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
+      String schemaFingerprint = segmentMetadata.getSchemaFingerprint();
+      if (schemaFingerprint == null || segmentMetadata.getNumRows() == null) {
+        log.debug(
+            "Missing schemaFingerprint or numRows for segmentId [%s]. SchemaFingerprint present [%s], numRows present [%s]",
+            segmentId, schemaFingerprint != null, segmentMetadata.getNumRows() != null
         );
       }
 
-      if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {
+      if (schemaFingerprint != null && finalizedSegmentSchema.containsKey(schemaFingerprint)) {
         return Optional.of(
             new SchemaPayloadPlus(
-                finalizedSegmentSchema.get(schemaId),
-                segmentStats.getNumRows() == null ? 0 : segmentStats.getNumRows()
+                finalizedSegmentSchema.get(schemaFingerprint),
+                segmentMetadata.getNumRows() == null ? 0 : segmentMetadata.getNumRows()
             )
         );
       }
@@ -274,9 +266,9 @@ public class SegmentSchemaCache
 
   private boolean isFinalizedSegmentSchemaCached(SegmentId segmentId)
   {
-    if (finalizedSegmentStats.containsKey(segmentId)) {
-      Long schemaId = finalizedSegmentStats.get(segmentId).getSchemaId();
-      return schemaId != null && finalizedSegmentSchema.containsKey(schemaId);
+    if (finalizedSegmentMetadata.get(segmentId) != null) {
+      String schemaFingerprint = finalizedSegmentMetadata.get(segmentId).getSchemaFingerprint();
+      return schemaFingerprint != null && finalizedSegmentSchema.containsKey(schemaFingerprint);
     }
     return false;
   }
@@ -313,48 +305,9 @@ public class SegmentSchemaCache
   public void emitStats()
   {
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchemaMap.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedStats/size", finalizedSegmentStats.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedStats/size", finalizedSegmentMetadata.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", finalizedSegmentSchema.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", inTransitSMQResults.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/size", inTransitSMQPublishedResults.size()));
-  }
-
-  /**
-   * Encapsulates segment level information like numRows, schemaId.
-   */
-  public static class SegmentStats
-  {
-    @Nullable
-    private final Long schemaId;
-    @Nullable
-    private final Long numRows;
-
-    public SegmentStats(
-        @Nullable Long schemaId,
-        @Nullable Long numRows
-    )
-    {
-      this.schemaId = schemaId;
-      this.numRows = numRows;
-    }
-
-    public Long getSchemaId()
-    {
-      return schemaId;
-    }
-
-    public Long getNumRows()
-    {
-      return numRows;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "SegmentStats{" +
-             "schemaId=" + schemaId +
-             ", numRows=" + numRows +
-             '}';
-    }
   }
 }

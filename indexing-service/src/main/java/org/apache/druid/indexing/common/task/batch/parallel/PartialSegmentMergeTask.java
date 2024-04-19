@@ -321,7 +321,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
           segmentSchemaMapping.addSchema(
               segment.getId(),
               schemaPayloadPlus,
-              fingerprintGenerator.generateFingerprint(schemaPayloadPlus.getSchemaPayload())
+              fingerprintGenerator.generateFingerprint(
+                  schemaPayloadPlus.getSchemaPayload(),
+                  getDataSource(),
+                  CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+              )
           );
         }
 

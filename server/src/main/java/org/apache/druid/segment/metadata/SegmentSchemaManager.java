@@ -28,7 +28,6 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -49,6 +48,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Handles segment schema persistence and cleanup.
@@ -74,34 +74,37 @@ public class SegmentSchemaManager
     this.connector = connector;
   }
 
-  public List<Long> findReferencedSchemaIdsMarkedAsUnused()
+  /**
+   * Return a list of schema fingerprints
+   */
+  public List<String> findReferencedSchemaMarkedAsUnused()
   {
     return connector.retryWithHandle(
         handle ->
             handle.createQuery(
                       StringUtils.format(
-                          "SELECT DISTINCT(schema_id) FROM %s WHERE used = true AND schema_id IN (SELECT id FROM %s WHERE used = false)",
+                          "SELECT DISTINCT(schema_fingerprint) FROM %s WHERE used = true AND schema_fingerprint IN (SELECT fingerprint FROM %s WHERE used = false)",
                           dbTables.getSegmentsTable(),
                           dbTables.getSegmentSchemasTable()
                       ))
-                  .mapTo(Long.class)
+                  .mapTo(String.class)
                   .list()
     );
   }
 
-  public int markSchemaIdsAsUsed(List<Long> schemaIds)
+  public int markSchemaAsUsed(List<String> schemaFingerprints)
   {
-    if (schemaIds.isEmpty()) {
+    if (schemaFingerprints.isEmpty()) {
       return 0;
     }
-    String inClause = schemaIds.stream().map(Object::toString).collect(Collectors.joining(","));
+    String inClause = getInClause(schemaFingerprints.stream());
 
     return connector.retryWithHandle(
         handle ->
             handle.createStatement(
                       StringUtils.format(
                           "UPDATE %s SET used = true, used_status_last_updated = :now"
-                          + " WHERE id IN (%s)",
+                          + " WHERE fingerprint IN (%s)",
                           dbTables.getSegmentSchemasTable(), inClause
                       )
                   )
@@ -129,7 +132,7 @@ public class SegmentSchemaManager
             handle.createStatement(
                       StringUtils.format(
                           "UPDATE %s SET used = false, used_status_last_updated = :now  WHERE used != false "
-                          + "AND id NOT IN (SELECT DISTINCT(schema_id) FROM %s WHERE used=true AND schema_id IS NOT NULL)",
+                          + "AND fingerprint NOT IN (SELECT DISTINCT(schema_fingerprint) FROM %s WHERE used=true AND schema_fingerprint IS NOT NULL)",
                           dbTables.getSegmentSchemasTable(),
                           dbTables.getSegmentsTable()
                       )
@@ -152,8 +155,8 @@ public class SegmentSchemaManager
             segmentSchema.getSegmentSchemaMetadata().getSchemaPayload()
         );
       }
-      persistSegmentSchema(handle, dataSource, schemaPayloadMap, schemaVersion);
-      updateSegmentWithSchemaInformation(handle, dataSource, schemaVersion, segmentSchemas);
+      persistSegmentSchema(handle, dataSource, schemaVersion, schemaPayloadMap);
+      updateSegmentWithSchemaInformation(handle, segmentSchemas);
 
       return null;
     }, 1, 3);
@@ -161,18 +164,17 @@ public class SegmentSchemaManager
 
   /**
    * Persist unique segment schema in the DB.
-   * There is a possibility of race
    */
   public void persistSegmentSchema(
       Handle handle,
       String dataSource,
-      Map<String, SchemaPayload> fingerprintSchemaPayloadMap,
-      int schemaVersion
+      int schemaVersion,
+      Map<String, SchemaPayload> fingerprintSchemaPayloadMap
   ) throws JsonProcessingException
   {
     try {
       // Filter already existing schema
-      Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(handle, dataSource, schemaVersion, fingerprintSchemaPayloadMap.keySet());
+      Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(handle, fingerprintSchemaPayloadMap.keySet());
 
       // Used schema can also be marked as unused by the schema cleanup duty in parallel.
       // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
@@ -192,19 +194,15 @@ public class SegmentSchemaManager
       // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
       if (unusedExistingFingerprints.size() > 0) {
         // make the unused schema as used to prevent deletion
-        String inClause = unusedExistingFingerprints.stream()
-                                .map(value -> "'" + StringEscapeUtils.escapeSql(value) + "'")
-                                .collect(Collectors.joining(","));
+        String inClause = getInClause(unusedExistingFingerprints.stream());
 
         handle.createStatement(
                   StringUtils.format(
                       "UPDATE %s SET used = true, used_status_last_updated = :now"
-                      + " WHERE datasource = :datasource AND version = :version AND fingerprint IN (%s)",
+                      + " WHERE fingerprint IN (%s)",
                       dbTables.getSegmentSchemasTable(), inClause)
               )
               .bind("now", DateTimes.nowUtc().toString())
-              .bind("datasource", dataSource)
-              .bind("version", schemaVersion)
               .execute();
       }
 
@@ -269,28 +267,14 @@ public class SegmentSchemaManager
   /**
    * Update segment with schemaId and numRows information.
    */
-  public void updateSegmentWithSchemaInformation(Handle handle, String dataSource, int schemaVersion, List<SegmentSchemaMetadataPlus> batch)
+  public void updateSegmentWithSchemaInformation(Handle handle, List<SegmentSchemaMetadataPlus> batch)
   {
     log.debug("Updating segment with schema and numRows information: [%s].", batch);
-
-    // fetch schemaId
-    Map<String, Long> fingerprintSchemaIdMap =
-        schemaIdFetchBatch(
-            handle,
-            dataSource,
-            schemaVersion,
-            batch
-                .stream()
-                .map(SegmentSchemaMetadataPlus::getFingerprint)
-                .collect(Collectors.toSet())
-        );
-
-    log.debug("FingerprintSchemaIdMap: [%s].", fingerprintSchemaIdMap);
 
     // update schemaId and numRows in segments table
     String updateSql =
         StringUtils.format(
-            "UPDATE %s SET schema_id = :schema_id, num_rows = :num_rows WHERE id = :id",
+            "UPDATE %s SET schema_fingerprint = :schema_fingerprint, num_rows = :num_rows WHERE id = :id",
             dbTables.getSegmentsTable()
         );
 
@@ -303,19 +287,12 @@ public class SegmentSchemaManager
         );
 
     for (List<SegmentSchemaMetadataPlus> partition : partitionedSegmentIds) {
-      for (SegmentSchemaMetadataPlus segmentSchema : batch) {
+      for (SegmentSchemaMetadataPlus segmentSchema : partition) {
         String fingerprint = segmentSchema.getFingerprint();
-        if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
-          log.error(
-              "Fingerprint [%s] for segmentId [%s] and datasource [%s] is not associated with any schemaId.",
-                    fingerprint, dataSource, segmentSchema.getSegmentId()
-          );
-          continue;
-        }
 
         segmentUpdateBatch.add()
                           .bind("id", segmentSchema.getSegmentId().toString())
-                          .bind("schema_id", fingerprintSchemaIdMap.get(fingerprint))
+                          .bind("schema_fingerprint", fingerprint)
                           .bind("num_rows", segmentSchema.getSegmentSchemaMetadata().getNumRows());
       }
 
@@ -340,7 +317,7 @@ public class SegmentSchemaManager
    * Query the metadata DB to filter the fingerprints that exists.
    * It returns separate set for used and unused fingerprints in a map.
    */
-  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, String dataSource, int schemaVersion, Set<String> fingerprintsToInsert)
+  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, Set<String> fingerprintsToInsert)
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToInsert),
@@ -354,12 +331,10 @@ public class SegmentSchemaManager
                                            .collect(Collectors.joining(","));
       handle.createQuery(
                 StringUtils.format(
-                    "SELECT used, fingerprint FROM %s WHERE datasource = :datasource AND version = :version AND fingerprint IN (%s)",
+                    "SELECT used, fingerprint FROM %s WHERE fingerprint IN (%s)",
                     dbTables.getSegmentSchemasTable(), fingerprints
                 )
             )
-            .bind("datasource", dataSource)
-            .bind("version", schemaVersion)
             .map((index, r, ctx) -> existingFingerprints.computeIfAbsent(
                 r.getBoolean(1), value -> new HashSet<>()).add(r.getString(2)))
             .list();
@@ -367,37 +342,11 @@ public class SegmentSchemaManager
     return existingFingerprints;
   }
 
-  public Map<String, Long> schemaIdFetchBatch(Handle handle, String dataSource, int schemaVersion, Set<String> fingerprintsToQuery)
+  private String getInClause(Stream<String> ids)
   {
-    List<List<String>> partitionedFingerprints = Lists.partition(
-        new ArrayList<>(fingerprintsToQuery),
-        DB_ACTION_PARTITION_SIZE
-    );
-
-    Map<String, Long> fingerprintIdMap = new HashMap<>();
-    for (List<String> fingerprintList : partitionedFingerprints) {
-      String fingerprints = fingerprintList.stream()
-                                           .map(fingerprint -> "'" + StringEscapeUtils.escapeSql(fingerprint) + "'")
-                                           .collect(Collectors.joining(","));
-      Map<String, Long> partitionFingerprintIdMap =
-          handle.createQuery(
-                    StringUtils.format(
-                        "SELECT fingerprint, id FROM %s WHERE fingerprint IN (%s) AND datasource = :datasource AND version = :version",
-                        dbTables.getSegmentSchemasTable(), fingerprints
-                    )
-                )
-                .bind("datasource", dataSource)
-                .bind("version", schemaVersion)
-                .map((index, r, ctx) -> Pair.of(r.getString("fingerprint"), r.getLong("id")))
-                .fold(
-                    new HashMap<>(), (accumulator, rs, control, ctx) -> {
-                      accumulator.put(rs.lhs, rs.rhs);
-                      return accumulator;
-                    }
-                );
-      fingerprintIdMap.putAll(partitionFingerprintIdMap);
-    }
-    return fingerprintIdMap;
+    return ids
+        .map(value -> "'" + StringEscapeUtils.escapeSql(value) + "'")
+        .collect(Collectors.joining(","));
   }
 
   /**

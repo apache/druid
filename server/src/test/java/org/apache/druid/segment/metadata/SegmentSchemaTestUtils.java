@@ -55,16 +55,16 @@ public class SegmentSchemaTestUtils
     this.mapper = mapper;
   }
 
-  public Boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<String, Pair<Long, Long>> segmentStats)
+  public Boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<String, Pair<String, Long>> segmentMetadata)
   {
-    if (!segmentStats.isEmpty()) {
+    if (!segmentMetadata.isEmpty()) {
       final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
       return derbyConnector.retryWithHandle(
           handle -> {
             PreparedBatch preparedBatch = handle.prepareBatch(
                 StringUtils.format(
-                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, schema_id, num_rows) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_id, :num_rows)",
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, schema_fingerprint, num_rows) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_fingerprint, :num_rows)",
                     table,
                     derbyConnector.getQuoteString()
                 )
@@ -82,8 +82,8 @@ public class SegmentSchemaTestUtils
                            .bind("used", true)
                            .bind("payload", mapper.writeValueAsBytes(segment))
                            .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-                           .bind("schema_id", segmentStats.containsKey(id) ? segmentStats.get(id).lhs : null)
-                           .bind("num_rows", segmentStats.containsKey(id) ? segmentStats.get(id).rhs : null);
+                           .bind("schema_fingerprint", segmentMetadata.containsKey(id) ? segmentMetadata.get(id).lhs : null)
+                           .bind("num_rows", segmentMetadata.containsKey(id) ? segmentMetadata.get(id).rhs : null);
             }
 
             final int[] affectedRows = preparedBatch.execute();
@@ -132,7 +132,7 @@ public class SegmentSchemaTestUtils
     }
   }
 
-  public Map<String, Long> insertSegmentSchema(
+  public void insertSegmentSchema(
       String dataSource,
       Map<String, SchemaPayload> schemaPayloadMap,
       Set<String> usedFingerprints
@@ -171,50 +171,41 @@ public class SegmentSchemaTestUtils
           return true;
         }
     );
-
-    Map<String, Long> fingerprintSchemaIdMap = new HashMap<>();
-    derbyConnector.retryWithHandle(
-        handle ->
-            handle.createQuery("SELECT fingerprint, id FROM " + table)
-                  .map((index, result, context) -> fingerprintSchemaIdMap.put(result.getString(1), result.getLong(2)))
-                  .list()
-    );
-    return fingerprintSchemaIdMap;
   }
 
   public void verifySegmentSchema(Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap)
   {
     final String segmentsTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    // segmentId -> schemaId, numRows
-    Map<String, Pair<Long, Long>> segmentStats = new HashMap<>();
+    // segmentId -> schemaFingerprint, numRows
+    Map<String, Pair<String, Long>> segmentStats = new HashMap<>();
 
     derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id, schema_id, num_rows FROM " + segmentsTable + " WHERE used = true ORDER BY id")
-                        .map((index, result, context) -> segmentStats.put(result.getString(1), Pair.of(result.getLong(2), result.getLong(3))))
+        handle -> handle.createQuery("SELECT id, schema_fingerprint, num_rows FROM " + segmentsTable + " WHERE used = true ORDER BY id")
+                        .map((index, result, context) -> segmentStats.put(result.getString(1), Pair.of(result.getString(2), result.getLong(3))))
                         .list()
     );
 
-    // schemaId -> schema details
-    Map<Long, SegmentSchemaRecord> schemaRepresentationMap = new HashMap<>();
+    // schemaFingerprint -> schema details
+    Map<String, SegmentSchemaRecord> schemaRepresentationMap = new HashMap<>();
 
     final String schemaTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemasTable();
 
     derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id, fingerprint, payload, created_date, used, version FROM "
+        handle -> handle.createQuery("SELECT fingerprint, payload, created_date, used, version FROM "
                                      + schemaTable)
                         .map(((index, r, ctx) ->
                             schemaRepresentationMap.put(
-                                r.getLong(1),
+                                r.getString(1),
                                 new SegmentSchemaRecord(
-                                    r.getString(2),
+                                    r.getString(1),
                                     JacksonUtils.readValue(
                                         mapper,
-                                        r.getBytes(3),
+                                        r.getBytes(2),
                                         SchemaPayload.class
                                     ),
-                                    r.getString(4),
-                                    r.getBoolean(5),
-                                    r.getInt(6)
+                                    r.getString(3),
+                                    r.getBoolean(4),
+                                    r.getInt(5)
                                 )
                             )))
                         .list());

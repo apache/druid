@@ -50,7 +50,7 @@ public class DataSegmentPlus
   private final DateTime usedStatusLastUpdatedDate;
   private final Boolean used;
 
-  private final Long schemaId;
+  private final String schemaFingerprint;
   private final Long numRows;
 
   @JsonCreator
@@ -59,7 +59,7 @@ public class DataSegmentPlus
       @JsonProperty("createdDate") @Nullable final DateTime createdDate,
       @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate,
       @JsonProperty("used") @Nullable final Boolean used,
-      @JsonProperty("schemaId") @Nullable final Long schemaId,
+      @JsonProperty("schemaFingerprint") @Nullable final String schemaFingerprint,
       @JsonProperty("numRows") @Nullable final Long numRows
   )
   {
@@ -67,7 +67,7 @@ public class DataSegmentPlus
     this.createdDate = createdDate;
     this.usedStatusLastUpdatedDate = usedStatusLastUpdatedDate;
     this.used = used;
-    this.schemaId = schemaId;
+    this.schemaFingerprint = schemaFingerprint;
     this.numRows = numRows;
   }
 
@@ -100,9 +100,9 @@ public class DataSegmentPlus
 
   @Nullable
   @JsonProperty
-  public Long getSchemaId()
+  public String getSchemaFingerprint()
   {
-    return schemaId;
+    return schemaFingerprint;
   }
 
   @Nullable
@@ -126,7 +126,7 @@ public class DataSegmentPlus
            && Objects.equals(createdDate, that.getCreatedDate())
            && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate())
            && Objects.equals(used, that.getUsed())
-           && Objects.equals(schemaId, that.getSchemaId())
+           && Objects.equals(schemaFingerprint, that.getSchemaFingerprint())
            && Objects.equals(numRows, that.getNumRows());
   }
 
@@ -138,7 +138,7 @@ public class DataSegmentPlus
         createdDate,
         usedStatusLastUpdatedDate,
         used,
-        schemaId,
+        schemaFingerprint,
         numRows
     );
   }
@@ -151,7 +151,7 @@ public class DataSegmentPlus
            ", usedStatusLastUpdatedDate=" + getUsedStatusLastUpdatedDate() +
            ", dataSegment=" + getDataSegment() +
            ", used=" + getUsed() +
-           ", schemaId=" + getSchemaId() +
+           ", schemaFingerprint=" + getSchemaFingerprint() +
            ", numRows=" + getNumRows() +
            '}';
   }

@@ -103,11 +103,31 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     SchemaPayload payload1 = new SchemaPayload(
         RowSignature.builder().add("c1", ColumnType.FLOAT).build());
     SchemaPayloadPlus schemaMetadata1 = new SchemaPayloadPlus(payload1, 20L);
-    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), fingerprintGenerator.generateFingerprint(payload1), schemaMetadata1));
+    list.add(
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            segment1.getId(),
+            fingerprintGenerator.generateFingerprint(
+                payload1,
+                "wikipedia",
+                CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            ),
+            schemaMetadata1
+        )
+    );
     SchemaPayload payload2 = new SchemaPayload(
         RowSignature.builder().add("c2", ColumnType.FLOAT).build());
     SchemaPayloadPlus schemaMetadata2 = new SchemaPayloadPlus(payload2, 40L);
-    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
+    list.add(
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            segment2.getId(),
+            fingerprintGenerator.generateFingerprint(
+                payload2,
+                "wikipedia",
+                CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            ),
+            schemaMetadata2
+        )
+    );
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
@@ -171,11 +191,29 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     SchemaPayload payload1 = new SchemaPayload(
         RowSignature.builder().add("c1", ColumnType.FLOAT).build());
     SchemaPayloadPlus schemaMetadata1 = new SchemaPayloadPlus(payload1, 20L);
-    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), fingerprintGenerator.generateFingerprint(payload1), schemaMetadata1));
+    list.add(
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            segment1.getId(),
+            fingerprintGenerator.generateFingerprint(
+                payload1,
+                segment1.getDataSource(),
+                0
+            ),
+            schemaMetadata1)
+    );
     SchemaPayload payload2 = new SchemaPayload(
         RowSignature.builder().add("c2", ColumnType.FLOAT).build());
     SchemaPayloadPlus schemaMetadata2 = new SchemaPayloadPlus(payload2, 40L);
-    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
+    list.add(
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            segment2.getId(),
+            fingerprintGenerator.generateFingerprint(
+                payload2,
+                segment2.getDataSource(),
+                0
+            ),
+            schemaMetadata2)
+    );
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, 0);
 
@@ -197,6 +235,28 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
 
+
+    list.clear();
+    list.add(
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            segment1.getId(),
+            fingerprintGenerator.generateFingerprint(
+                payload1,
+                segment1.getDataSource(),
+                CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            ),
+            schemaMetadata1)
+    );
+    list.add(
+        new SegmentSchemaManager.SegmentSchemaMetadataPlus(
+            segment2.getId(),
+            fingerprintGenerator.generateFingerprint(
+                payload2,
+                segment2.getDataSource(),
+                CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+            ),
+            schemaMetadata2)
+    );
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     sqlSegmentsMetadataManager.poll();
