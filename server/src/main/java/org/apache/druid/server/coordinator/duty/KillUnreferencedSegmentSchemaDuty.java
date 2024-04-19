@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
@@ -75,10 +74,9 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
   @Override
   protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
-    log.info("MinCreatedTime is [%s], currentTime is [%s]", minCreatedTime, DateTimes.nowUtc().toString());
     // 1: Identify unreferenced schema and mark them as unused. These will get deleted after a fixed period.
     int unused = segmentSchemaManager.markUnreferencedSchemasAsUnused();
-    log.info("Identified [%s] unreferenced schema and marking them as unused.", unused);
+    log.info("Marked [%s] unreferenced schemas as unused.", unused);
 
     // 2 (repair step): Identify unused schema which are still referenced by segments, make them used.
     // This case would arise when segment is associated with a schema which turned unused by the previous statement
@@ -86,7 +84,7 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
     List<String> schemaFingerprintsToUpdate = segmentSchemaManager.findReferencedSchemaMarkedAsUnused();
     if (schemaFingerprintsToUpdate.size() > 0) {
       segmentSchemaManager.markSchemaAsUsed(schemaFingerprintsToUpdate);
-      log.info("Identified [%s] unused schemas still referenced by used segments and marking them as used.", schemaFingerprintsToUpdate.size());
+      log.info("Marked [%s] unused schemas referenced by used segments as used.", schemaFingerprintsToUpdate.size());
     }
 
     // 3: Delete unused schema older than timestamp.

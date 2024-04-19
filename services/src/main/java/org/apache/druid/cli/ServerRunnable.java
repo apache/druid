@@ -53,7 +53,8 @@ import java.util.Set;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
+  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
+      CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
 
   private static final EmittingLogger log = new EmittingLogger(ServerRunnable.class);
 
