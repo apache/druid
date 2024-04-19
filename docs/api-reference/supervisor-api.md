@@ -26,6 +26,7 @@ import TabItem from '@theme/TabItem';
   -->
 
 This topic describes the API endpoints to manage and monitor supervisors for Apache Druid.
+The topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -3249,7 +3250,7 @@ Resets the specified supervisor. This endpoint clears supervisor metadata, promp
 After clearing all stored offsets, the supervisor kills and recreates active tasks,
 so that tasks begin reading from valid positions.
 
-Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
+Use this endpoint to recover from a stopped state due to missing offsets. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
 
 The indexing service keeps track of the latest persisted offsets to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for Druid to accept the generated segments. If the messages at the expected starting offsets are no longer available, the supervisor refuses to start and in-flight tasks fail. Possible causes for missing messages include the message retention period elapsing or the topic being removed and re-created. Use the `reset` endpoint to recover from this condition.
 
