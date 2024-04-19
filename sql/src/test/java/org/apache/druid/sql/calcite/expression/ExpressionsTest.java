@@ -365,7 +365,7 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
-            "regexp_extract(\"s\",'')"
+            NullHandling.sqlCompatible() ? "regexp_extract(\"s\",'')" : "regexp_extract(\"s\",null)"
         ),
         NullHandling.emptyToNullIfNeeded("")
     );
@@ -507,7 +507,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        makeExpression("regexp_like(\"s\",'')"),
+        makeExpression(NullHandling.sqlCompatible() ? "regexp_like(\"s\",'')" : "regexp_like(\"s\",null)"),
         1L
     );
 
