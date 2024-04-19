@@ -1154,7 +1154,7 @@ a Delta table. This input source provides the following filters: `and`, `or`, `n
 
 When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta Kernel solely relies
 on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
-data that doesn't match the filter. For guaranteed filtering behavior, only use filters on partitioned columns.
+data that doesn't match the filter. To guarantee that the Delta Kernel prunes out the unnecessary columns, only use filters on partitioned columns.
 
 
 `and` filter:
