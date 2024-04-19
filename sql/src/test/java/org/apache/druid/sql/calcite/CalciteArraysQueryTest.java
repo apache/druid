@@ -1405,7 +1405,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
                 new Object[]{"d", "abd"},
                 new Object[]{"", "not abd"},
-                new Object[]{null, "not abd"},
+                // In the following row, dim3 is an empty list; MSQ currently treats this differently from native.
+                new Object[]{null, queryFramework().engine().name().equals("msq-task") ? null : "not abd"},
                 new Object[]{null, "not abd"}
             )
         )
