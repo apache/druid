@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -155,6 +156,20 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
     Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
     Assert.assertEquals("'abcdé\\u000A \\u005C\\u0022 \\u0027 \\uD83E\\uDD20 \\u0009xyz'", expression.getExpression());
     Assert.assertEquals(s, Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue());
+  }
+
+  @Test
+  public void test_ofLiteral_emptyString()
+  {
+    final String s = "";
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(s));
+
+    Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
+    Assert.assertEquals(NullHandling.sqlCompatible() ? "''" : "null", expression.getExpression());
+    Assert.assertEquals(
+        NullHandling.emptyToNullIfNeeded(s),
+        Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue()
+    );
   }
 
   @Test

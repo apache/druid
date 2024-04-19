@@ -2835,6 +2835,38 @@ public class ExpressionsTest extends CalciteTestBase
     Mockito.when(plannerContext.getTimeZone()).thenReturn(DateTimeZone.UTC);
 
     assertExprEval(
+        ExprEval.of(null),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR))
+        )
+    );
+
+    assertExprEval(
+        ExprEval.of(""),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeLiteral("")
+        )
+    );
+
+    assertExprEval(
+        ExprEval.ofLong(null),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BIGINT))
+        )
+    );
+
+    assertExprEval(
+        ExprEval.of(null),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.NULL))
+        )
+    );
+
+    assertExprEval(
         ExprEval.of("abc"),
         Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral("abc"))
     );
