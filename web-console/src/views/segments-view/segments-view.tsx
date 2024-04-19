@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Code, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -919,7 +919,7 @@ END AS "time_span"`,
           );
           return resp.data;
         }}
-        confirmButtonText="Drop Segment"
+        confirmButtonText="Drop segment"
         successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
@@ -931,7 +931,7 @@ END AS "time_span"`,
         }}
       >
         <p>
-          Are you sure you want to drop segment <Code>{terminateSegmentId}</Code>?
+          Are you sure you want to drop segment <Tag minimal>{terminateSegmentId}</Tag>?
         </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -310,7 +310,9 @@ ORDER BY
           this.taskQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to kill task '${killTaskId}'?`}</p>
+        <p>
+          Are you sure you want to kill task <Tag minimal>{killTaskId}</Tag>?
+        </p>
       </AsyncActionDialog>
     );
   }

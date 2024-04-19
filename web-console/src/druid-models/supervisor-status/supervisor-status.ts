@@ -42,18 +42,25 @@ export interface SupervisorStatus {
     healthy: boolean;
     state: string;
     detailedState: string;
-    recentErrors: any[];
+    recentErrors: SupervisorError[];
   };
 }
 
 export interface SupervisorStatusTask {
   id: string;
   startingOffsets: SupervisorOffsetMap;
-  startTime: '2024-04-12T21:35:34.834Z';
+  startTime: string;
   remainingSeconds: number;
   type: string;
   currentOffsets: SupervisorOffsetMap;
   lag: SupervisorOffsetMap;
+}
+
+export interface SupervisorError {
+  timestamp: string;
+  exceptionClass: string;
+  message: string;
+  streamException: boolean;
 }
 
 export type SupervisorStats = Record<string, Record<string, RowStats>>;

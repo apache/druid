@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Code, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { Icon, Intent, Menu, MenuItem, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import * as JSONBig from 'json-bigint-native';
+import type { JSX } from 'react';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -42,7 +44,12 @@ import {
   SupervisorTableActionDialog,
 } from '../../dialogs';
 import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
-import type { QueryWithContext, RowStatsKey, SupervisorStatus } from '../../druid-models';
+import type {
+  IngestionSpec,
+  QueryWithContext,
+  RowStatsKey,
+  SupervisorStatus,
+} from '../../druid-models';
 import { getTotalSupervisorStats } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
@@ -64,6 +71,7 @@ import {
   hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
+  nonEmptyArray,
   oneOf,
   pluralIfNeeded,
   queryDruidSql,
@@ -81,16 +89,16 @@ const supervisorTableColumns: string[] = [
   'Type',
   'Topic/Stream',
   'Status',
-  'Active tasks',
+  'Configured tasks',
+  'Running tasks',
   'Aggregate lag',
   'Stats',
   ACTION_COLUMN_LABEL,
 ];
 
-const ROW_STATS_KEYS: RowStatsKey[] = ['totals', '1m', '5m', '15m'];
+const ROW_STATS_KEYS: RowStatsKey[] = ['1m', '5m', '15m'];
 
 function getRowStatsKeyTitle(key: RowStatsKey) {
-  if (key === 'totals') return 'Total';
   return `Rate over past ${pluralIfNeeded(parseInt(key, 10), 'minute')}`;
 }
 
@@ -104,6 +112,7 @@ interface SupervisorQueryResultRow {
   type: string;
   source: string;
   detailed_state: string;
+  spec?: IngestionSpec;
   suspended: boolean;
   status?: SupervisorStatus;
   stats?: any;
@@ -182,14 +191,6 @@ export class SupervisorsView extends React.PureComponent<
     SupervisorQueryResultRow[]
   >;
 
-  static SUPERVISOR_SQL_BASE = `WITH s AS (SELECT
-  "supervisor_id",
-  "type",
-  "source",
-  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",
-  "suspended" = 1 AS "suspended"
-FROM "sys"."supervisors")`;
-
   constructor(props: SupervisorsViewProps) {
     super(props);
 
@@ -219,7 +220,14 @@ FROM "sys"."supervisors")`;
         let supervisors: SupervisorQueryResultRow[];
         if (capabilities.hasSql()) {
           const sqlQuery = assemble(
-            SupervisorsView.SUPERVISOR_SQL_BASE,
+            'WITH s AS (SELECT',
+            '  "supervisor_id",',
+            '  "type",',
+            '  "source",',
+            `  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",`,
+            visibleColumns.shown('Configured tasks') ? '  "spec",' : undefined,
+            '  "suspended" = 1 AS "suspended"',
+            'FROM "sys"."supervisors")',
             'SELECT *',
             'FROM s',
             filtered.length
@@ -236,6 +244,13 @@ FROM "sys"."supervisors")`;
             },
             cancelToken,
           );
+
+          for (const supervisor of supervisors) {
+            const spec: any = supervisor.spec;
+            if (typeof spec === 'string') {
+              supervisor.spec = JSONBig.parse(spec);
+            }
+          }
         } else if (capabilities.hasOverlordAccess()) {
           const supervisorList = (
             await Api.instance.get('/druid/indexer/v1/supervisor?full', { cancelToken })
@@ -253,6 +268,7 @@ FROM "sys"."supervisors")`;
                 'n/a',
               state: deepGet(sup, 'state'),
               detailed_state: deepGet(sup, 'detailedState'),
+              spec: sup.spec,
               suspended: Boolean(deepGet(sup, 'suspended')),
             };
           });
@@ -272,7 +288,7 @@ FROM "sys"."supervisors")`;
         }
 
         if (capabilities.hasOverlordAccess()) {
-          if (visibleColumns.shown('Active tasks') || visibleColumns.shown('Aggregate lag')) {
+          if (visibleColumns.shown('Running tasks') || visibleColumns.shown('Aggregate lag')) {
             try {
               for (const supervisor of supervisors) {
                 cancelToken.throwIfRequested();
@@ -451,7 +467,7 @@ FROM "sys"."supervisors")`;
         }}
       >
         <p>
-          Are you sure you want to resume supervisor <Code>{resumeSupervisorId}</Code>?
+          Are you sure you want to resume supervisor <Tag minimal>{resumeSupervisorId}</Tag>?
         </p>
       </AsyncActionDialog>
     );
@@ -482,7 +498,7 @@ FROM "sys"."supervisors")`;
         }}
       >
         <p>
-          Are you sure you want to suspend supervisor <Code>{suspendSupervisorId}</Code>?
+          Are you sure you want to suspend supervisor <Tag minimal>{suspendSupervisorId}</Tag>?
         </p>
       </AsyncActionDialog>
     );
@@ -527,17 +543,20 @@ FROM "sys"."supervisors")`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
         warningChecks={[
-          `I understand that resetting ${resetSupervisorId} will clear checkpoints and therefore lead to data loss or duplication.`,
+          <>
+            I understand that resetting <Tag minimal>{resetSupervisorId}</Tag> will clear
+            checkpoints and may lead to data loss or duplication.
+          </>,
           'I understand that this operation cannot be undone.',
         ]}
       >
         <p>
-          Are you sure you want to hard reset supervisor <Code>{resetSupervisorId}</Code>?
+          Are you sure you want to hard reset supervisor <Tag minimal>{resetSupervisorId}</Tag>?
         </p>
-        <p>Hard resetting a supervisor will lead to data loss or data duplication.</p>
+        <p>Hard resetting a supervisor may lead to data loss or data duplication.</p>
         <p>
-          The reason for using this operation is to recover from a state in which the supervisor
-          ceases operating due to missing offsets.
+          Use this operation to restore functionality when the supervisor stops operating due to
+          missing offsets.
         </p>
       </AsyncActionDialog>
     );
@@ -568,7 +587,7 @@ FROM "sys"."supervisors")`;
         }}
       >
         <p>
-          Are you sure you want to terminate supervisor <Code>{terminateSupervisorId}</Code>?
+          Are you sure you want to terminate supervisor <Tag minimal>{terminateSupervisorId}</Tag>?
         </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>
@@ -673,29 +692,69 @@ FROM "sys"."supervisors")`;
             show: visibleColumns.shown('Status'),
           },
           {
-            Header: 'Active tasks',
-            id: 'active_tasks',
+            Header: 'Configured tasks',
+            id: 'configured_tasks',
             width: 150,
-            accessor: 'status.payload.activeTasks',
+            accessor: 'spec',
+            filterable: false,
+            sortable: false,
+            className: 'padded',
+            Cell: ({ value }) => {
+              if (!value) return null;
+              const taskCount = deepGet(value, 'spec.ioConfig.taskCount');
+              const replicas = deepGet(value, 'spec.ioConfig.replicas');
+              if (typeof taskCount !== 'number' || typeof replicas !== 'number') return null;
+              return (
+                <div>
+                  <div>{formatInteger(taskCount * replicas)}</div>
+                  <div>
+                    {replicas === 1
+                      ? '(no replication)'
+                      : `(${pluralIfNeeded(taskCount, 'task')} × ${pluralIfNeeded(
+                          replicas,
+                          'replica',
+                        )})`}
+                  </div>
+                </div>
+              );
+            },
+            show: visibleColumns.shown('Configured tasks'),
+          },
+          {
+            Header: 'Running tasks',
+            id: 'running_tasks',
+            width: 150,
+            accessor: 'status.payload',
             filterable: false,
             sortable: false,
             Cell: ({ value, original }) => {
               if (original.suspended) return;
+              let label: string | JSX.Element;
+              const { activeTasks, publishingTasks } = value || {};
+              if (Array.isArray(activeTasks)) {
+                label = pluralIfNeeded(activeTasks.length, 'active task');
+                if (nonEmptyArray(publishingTasks)) {
+                  label = (
+                    <>
+                      <div>{label}</div>
+                      <div>{pluralIfNeeded(publishingTasks.length, 'publishing task')}</div>
+                    </>
+                  );
+                }
+              } else {
+                label = 'n/a';
+              }
               return (
                 <TableClickableCell
                   onClick={() => goToTasks(original.supervisor_id, `index_${original.type}`)}
                   hoverIcon={IconNames.ARROW_TOP_RIGHT}
                   title="Go to tasks"
                 >
-                  {typeof value === 'undefined'
-                    ? 'n/a'
-                    : value.length > 0
-                    ? pluralIfNeeded(value.length, 'running task')
-                    : `No running tasks`}
+                  {label}
                 </TableClickableCell>
               );
             },
-            show: visibleColumns.shown('Active tasks'),
+            show: visibleColumns.shown('Running tasks'),
           },
           {
             Header: 'Aggregate lag',
@@ -708,7 +767,30 @@ FROM "sys"."supervisors")`;
             Cell: ({ value }) => formatInteger(value),
           },
           {
-            Header: twoLines('Stats', <i>{getRowStatsKeyTitle(statsKey)}</i>),
+            Header: twoLines(
+              'Stats',
+              <Popover2
+                position={Position.BOTTOM}
+                content={
+                  <Menu>
+                    {ROW_STATS_KEYS.map(k => (
+                      <MenuItem
+                        key={k}
+                        icon={checkedCircleIcon(k === statsKey)}
+                        text={getRowStatsKeyTitle(k)}
+                        onClick={() => {
+                          this.setState({ statsKey: k });
+                        }}
+                      />
+                    ))}
+                  </Menu>
+                }
+              >
+                <i className="title-button">
+                  {getRowStatsKeyTitle(statsKey)} <Icon icon={IconNames.CARET_DOWN} />
+                </i>
+              </Popover2>,
+            ),
             id: 'stats',
             width: 220,
             filterable: false,
@@ -889,7 +971,6 @@ FROM "sys"."supervisors")`;
       supervisorTableActionDialogId,
       supervisorTableActionDialogActions,
       visibleColumns,
-      statsKey,
     } = this.state;
 
     return (
@@ -902,28 +983,6 @@ FROM "sys"."supervisors")`;
               this.supervisorQueryManager.rerunLastQuery(auto);
             }}
           />
-          <Popover2
-            position={Position.BOTTOM}
-            content={
-              <Menu>
-                {ROW_STATS_KEYS.map(k => (
-                  <MenuItem
-                    key={k}
-                    icon={checkedCircleIcon(k === statsKey)}
-                    text={getRowStatsKeyTitle(k)}
-                    onClick={() => {
-                      this.setState({ statsKey: k });
-                    }}
-                  />
-                ))}
-              </Menu>
-            }
-          >
-            <Button
-              text={`Stats: ${getRowStatsKeyTitle(statsKey)}`}
-              rightIcon={IconNames.CARET_DOWN}
-            />
-          </Popover2>
           {this.renderBulkSupervisorActions()}
           <TableColumnSelector
             columns={supervisorTableColumns}
