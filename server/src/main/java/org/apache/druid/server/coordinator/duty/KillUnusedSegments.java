@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -97,15 +96,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     this.period = killConfig.getCleanupPeriod();
 
     this.maxSegmentsToKill = killConfig.getMaxSegments();
-    if (maxSegmentsToKill < 0) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "druid.coordinator.kill.maxSegments[%s] must be a positive integer.",
-                              maxSegmentsToKill
-                          );
-    }
-
     this.ignoreDurationToRetain = killConfig.isIgnoreDurationToRetain();
     this.durationToRetain = killConfig.getDurationToRetain();
     if (this.ignoreDurationToRetain) {

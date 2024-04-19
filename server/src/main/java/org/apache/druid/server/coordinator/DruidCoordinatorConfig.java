@@ -112,6 +112,12 @@ public class DruidCoordinatorConfig
           killUnusedConfig.getCleanupPeriod(), getCoordinatorIndexingPeriod()
       );
     }
+    if (killUnusedConfig.getMaxSegments() < 0) {
+      throw newInvalidInputExceptionForOperator(
+          "'druid.coordinator.kill.maxSegments'[%s] must be a positive integer.",
+          killUnusedConfig.getMaxSegments()
+      );
+    }
   }
 
   private void validateKillConfig(MetadataCleanupConfig config, String propertyPrefix)

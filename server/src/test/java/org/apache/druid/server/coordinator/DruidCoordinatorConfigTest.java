@@ -196,6 +196,20 @@ public class DruidCoordinatorConfigTest
   }
 
   @Test
+  public void testKillUnusedSegmentsMaxSegmentsNegative()
+  {
+    KillUnusedSegmentsConfig killUnusedConfig
+        = KillUnusedSegmentsConfig.builder()
+                                  .withMaxSegmentsToKill(-5)
+                                  .build();
+    verifyCoordinatorConfigFailsWith(
+        createKillConfig().unusedSegments(killUnusedConfig).build(),
+        new CoordinatorPeriodConfig(null, Duration.standardSeconds(10)),
+        "'druid.coordinator.kill.maxSegments'[-5] must be a positive integer."
+    );
+  }
+
+  @Test
   public void testCoordinatorKillConfigDefaultValues()
   {
     final CoordinatorKillConfigs killConfigs
