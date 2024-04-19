@@ -707,7 +707,7 @@ export class SupervisorsView extends React.PureComponent<
               return (
                 <div>
                   <div>{formatInteger(taskCount * replicas)}</div>
-                  <div>
+                  <div className="detail-line">
                     {replicas === 1
                       ? '(no replication)'
                       : `(${pluralIfNeeded(taskCount, 'task')} × ${pluralIfNeeded(
