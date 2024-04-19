@@ -124,7 +124,7 @@ public class SQLMetadataConnectorSchemaPersistenceTest
 
     // Drop column used_status_last_updated to bring us in line with pre-upgrade state
     derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED");
-    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN SCHEMA_ID");
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN SCHEMA_FINGERPRINT");
     derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN NUM_ROWS");
 
     connector.alterSegmentTable();
@@ -134,7 +134,7 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     ));
     Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-        "SCHEMA_ID"
+        "SCHEMA_FINGERPRINT"
     ));
     Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),

@@ -569,8 +569,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "varchar(255)");
+
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      columnNameTypes.put("schema_id", "BIGINT");
+      columnNameTypes.put("schema_fingerprint", "BIGINT");
       columnNameTypes.put("num_rows", "BIGINT");
     }
 
@@ -1139,7 +1140,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     boolean schemaPersistenceRequirementMet =
         !centralizedDatasourceSchemaConfig.isEnabled() ||
-        (tableHasColumn(segmentsTables, "schema_id")
+        (tableHasColumn(segmentsTables, "schema_fingerprint")
          && tableHasColumn(segmentsTables, "num_rows"));
 
     if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet) {
@@ -1147,7 +1148,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     } else {
       throw new ISE(
           "Cannot start Druid as table[%s] has an incompatible schema."
-          + " Reason: One or all of these columns [used_status_last_updated, schema_id, num_rows] does not exist in table."
+          + " Reason: One or all of these columns [used_status_last_updated, schema_fingerprint, num_rows] does not exist in table."
           + " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation.",
           tablesConfigSupplier.get().getSegmentsTable()
       );

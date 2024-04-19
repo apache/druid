@@ -183,7 +183,7 @@ public class SQLMetadataConnectorTest
 
     Assert.assertFalse(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-        "SCHEMA_ID"
+        "SCHEMA_FINGERPRINT"
     ));
 
     Assert.assertFalse(connector.tableHasColumn(
