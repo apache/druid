@@ -17,17 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.config;
 
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
-import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
-import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
-import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
-import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
-import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.joda.time.Duration;
 
 /**

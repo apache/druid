@@ -447,8 +447,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotAtCapacity()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.3)
-                        .withMaxKillTaskSlots(2);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
@@ -478,8 +478,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillWithOverlordTaskSlotsFull()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.10)
-                        .withMaxKillTaskSlots(10);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.10);
+    dynamicConfigBuilder.withMaxKillTaskSlots(10);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     overlordClient = new TestOverlordClient(1, 5);
@@ -497,8 +497,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillWithOverlordTaskSlotAvailable()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
-                        .withMaxKillTaskSlots(3);
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(3);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     overlordClient = new TestOverlordClient(3, 10);
@@ -530,8 +530,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats1()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
-                        .withMaxKillTaskSlots(Integer.MAX_VALUE);
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -545,8 +545,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats2()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.0)
-                        .withMaxKillTaskSlots(Integer.MAX_VALUE);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -560,8 +560,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats3()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
-                        .withMaxKillTaskSlots(0);
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(0);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -575,8 +575,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats4()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.1)
-                        .withMaxKillTaskSlots(3);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.1);
+    dynamicConfigBuilder.withMaxKillTaskSlots(3);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -590,8 +590,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats5()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.3)
-                        .withMaxKillTaskSlots(2);
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
