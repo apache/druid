@@ -74,7 +74,6 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
 
   public static class Builder
   {
-    private Boolean cleanupEnabled;
     private Duration durationToRetain;
     private Duration cleanupPeriod;
     private Boolean ignoreDurationToRetain;
@@ -89,7 +88,7 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
     public KillUnusedSegmentsConfig build()
     {
       return new KillUnusedSegmentsConfig(
-          cleanupEnabled,
+          true,
           cleanupPeriod,
           durationToRetain,
           ignoreDurationToRetain,

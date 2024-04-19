@@ -59,7 +59,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -523,8 +522,6 @@ public class KillUnusedSegmentsTest
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
-                        .withMaxKillTaskSlots(Integer.MAX_VALUE);
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
@@ -536,8 +533,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats1()
   {
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
-    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
+                        .withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -553,8 +550,6 @@ public class KillUnusedSegmentsTest
   {
     dynamicConfigBuilder.withKillTaskSlotRatio(0.0)
                         .withMaxKillTaskSlots(Integer.MAX_VALUE);
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.0);
-    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -570,8 +565,6 @@ public class KillUnusedSegmentsTest
   {
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0)
                         .withMaxKillTaskSlots(0);
-    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
-    dynamicConfigBuilder.withMaxKillTaskSlots(0);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -587,8 +580,6 @@ public class KillUnusedSegmentsTest
   {
     dynamicConfigBuilder.withKillTaskSlotRatio(0.1)
                         .withMaxKillTaskSlots(3);
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.1);
-    dynamicConfigBuilder.withMaxKillTaskSlots(3);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
@@ -633,17 +624,6 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, firstHalfEternity);
   }
 
-  /**
-   * <p>
-   * Regardless of {@link KillUnusedSegmentsConfig#isIgnoreDurationToRetain()} configuration,
-   * auto-kill doesn't delete unused segments that end at {@link DateTimes#MAX}.
-   * This is because the kill duty uses {@link DateTimes#COMPARE_DATE_AS_STRING_MAX} as the
-   * datetime string comparison for the end endpoint when retrieving unused segment intervals.
-   * </p><p>
-   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
-   * </p>
-   */
-  @Ignore
   @Test
   public void testKillEternitySegment()
   {
@@ -662,18 +642,6 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
   }
 
-  /**
-   * Similar to {@link #testKillEternitySegment()}
-   * <p>
-   * Regardless of {@link KillUnusedSegmentsConfig#isIgnoreDurationToRetain()} configuration,
-   * auto-kill doesn't delete unused segments that end at {@link DateTimes#MAX}.
-   * This is because the kill duty uses {@link DateTimes#COMPARE_DATE_AS_STRING_MAX} as the
-   * datetime string comparison for the end endpoint when retrieving unused segment intervals.
-   * </p><p>
-   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
-   * </p>
-   */
-  @Ignore
   @Test
   public void testKillSecondHalfEternitySegment()
   {
