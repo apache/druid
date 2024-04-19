@@ -22,16 +22,16 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 /**
  * Holder for a value and the memory increase in the internal dictionary associated with the increase
  */
-public class MemoryEstimate<T>
+public class MemoryFootprint<T>
 {
   private final T value;
-  private final int memoryIncrease;
+  private final int footprintIncrease;
 
   // Reduced visibility
-  MemoryEstimate(T value, int memoryIncrease)
+  MemoryFootprint(T value, int footprintIncrease)
   {
     this.value = value;
-    this.memoryIncrease = memoryIncrease;
+    this.footprintIncrease = footprintIncrease;
   }
 
   public T value()
@@ -41,6 +41,6 @@ public class MemoryEstimate<T>
 
   public int memoryIncrease()
   {
-    return memoryIncrease;
+    return footprintIncrease;
   }
 }

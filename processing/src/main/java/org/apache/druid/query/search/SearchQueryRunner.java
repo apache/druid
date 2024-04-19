@@ -87,7 +87,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     @Override
-    public boolean supportsNestedArraysAndComplexTypes()
+    public boolean supportsComplexTypes()
     {
       return false;
     }

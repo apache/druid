@@ -121,6 +121,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
      * Dictionary for mapping the dimension value to an index. i-th position in the dictionary holds the value represented
      * by the dictionaryId "i".
      * Therefore, if a value has a dictionary id "i", dictionary.get(i) = value
+     * If a -> 0, b -> 1, c -> 2 (value -> dictionaryId), then the dictionary would be laid out like: [a, b, c]
      */
     private final List<Object> dictionary;
 
@@ -131,6 +132,8 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
      * {@link #dictionary}.
      * Absence of mapping of a "value" (denoted by returning {@link GroupByColumnSelectorStrategy#GROUP_BY_MISSING_VALUE})
      * represents that the value is absent in the dictionary
+     * If a -> 0, b -> 1, c -> 2 (value -> dictionaryId), then the reverse dictionary would have the entries (a, 0), (b, 1),
+     * (c, 2)
      */
     private final Object2IntMap<Object> reverseDictionary;
 
@@ -149,7 +152,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     }
 
     @Override
-    public MemoryEstimate<Integer> lookupId(Object dimension)
+    public MemoryFootprint<Integer> lookupId(Object dimension)
     {
       int dictId = reverseDictionary.getInt(dimension);
       int footprintIncrease = 0;
@@ -165,7 +168,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
             nullableTypeStrategy.estimateSizeBytes(dimension)
         );
       }
-      return new MemoryEstimate<>(dictId, footprintIncrease);
+      return new MemoryFootprint<>(dictId, footprintIncrease);
     }
 
     @Override
@@ -220,7 +223,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     }
 
     @Override
-    public MemoryEstimate<Integer> lookupId(Object dimension)
+    public MemoryFootprint<Integer> lookupId(Object dimension)
     {
       // dimension IS non-null, by contract of this method
       Object[] stringArray = (Object[]) dimension;
@@ -247,7 +250,7 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
         estimatedFootprint +=
             DictionaryBuildingUtils.estimateEntryFootprint(dictionaryEncodedStringArray.size() * Integer.BYTES);
       }
-      return new MemoryEstimate<>(arrayDictId, estimatedFootprint);
+      return new MemoryFootprint<>(arrayDictId, estimatedFootprint);
     }
 
     @Override

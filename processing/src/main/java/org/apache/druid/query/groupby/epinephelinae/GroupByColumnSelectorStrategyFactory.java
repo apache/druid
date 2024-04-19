@@ -112,7 +112,7 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
   }
 
   @Override
-  public boolean supportsNestedArraysAndComplexTypes()
+  public boolean supportsComplexTypes()
   {
     return true;
   }

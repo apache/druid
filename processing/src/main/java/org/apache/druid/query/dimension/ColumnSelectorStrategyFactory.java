@@ -26,6 +26,9 @@ public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass exten
 {
   ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector, String dimension);
 
-  // TODO(laksh): Javadoc
-  boolean supportsNestedArraysAndComplexTypes();
+  /**
+   * Whether the strategy supports complex types. If a strategy doesn't support the complex types, they can either throw an
+   * unsupported exception or treat them like strings.
+   */
+  boolean supportsComplexTypes();
 }

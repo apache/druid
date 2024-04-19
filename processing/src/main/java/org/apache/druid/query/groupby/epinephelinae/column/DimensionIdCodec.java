@@ -41,7 +41,7 @@ public interface DimensionIdCodec<DimensionType>
   /**
    * @return DictionaryId of the object at the given index and the memory increase associated with it
    */
-  MemoryEstimate<Integer> lookupId(DimensionType dimension);
+  MemoryFootprint<Integer> lookupId(DimensionType dimension);
 
   DimensionType idToKey(int id);
 

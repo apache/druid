@@ -166,7 +166,6 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     return new ObjectStrategyComplexTypeStrategy<>(
         getObjectStrategy(),
         ColumnType.ofComplex(TYPE_NAME),
-        true,
         new Hash.Strategy<Object>()
         {
           @Override

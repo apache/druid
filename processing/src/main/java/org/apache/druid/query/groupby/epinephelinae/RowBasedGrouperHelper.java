@@ -787,7 +787,7 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public boolean supportsNestedArraysAndComplexTypes()
+    public boolean supportsComplexTypes()
     {
       return true;
     }

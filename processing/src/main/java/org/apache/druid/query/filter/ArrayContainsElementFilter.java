@@ -111,7 +111,12 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     final ByteBuffer valueBuffer = ByteBuffer.allocate(size);
     if (typeStrategy.write(valueBuffer, elementMatchValueEval.value(), size) < 0) {
       // Defensive check, since the size had already been estimated from the same type strategy
-      throw DruidException.defensive("Unable to write the value");
+      throw DruidException.defensive(
+          "Unable to write the for the column [%s] with value [%s] and size [%d]",
+          elementMatchValueEval.value(),
+          column,
+          size
+      );
     }
     return new CacheKeyBuilder(DimFilterUtils.ARRAY_CONTAINS_CACHE_ID)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)

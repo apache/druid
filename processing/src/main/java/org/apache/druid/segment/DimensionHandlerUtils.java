@@ -203,7 +203,7 @@ public final class DimensionHandlerUtils
       final ColumnValueSelector<?> selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
           columnSelectorFactory,
-          strategyFactory.supportsNestedArraysAndComplexTypes()
+          strategyFactory.supportsComplexTypes()
       );
       Strategy strategy = makeStrategy(
           strategyFactory,
@@ -293,7 +293,7 @@ public final class DimensionHandlerUtils
       ColumnValueSelector<?> selector
   )
   {
-    capabilities = getEffectiveCapabilities(dimSpec, capabilities, strategyFactory.supportsNestedArraysAndComplexTypes());
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities, strategyFactory.supportsComplexTypes());
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector, dimSpec.getDimension());
   }
 

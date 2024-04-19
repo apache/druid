@@ -81,7 +81,7 @@ public class TopNColumnAggregatesProcessorFactory
   }
 
   @Override
-  public boolean supportsNestedArraysAndComplexTypes()
+  public boolean supportsComplexTypes()
   {
     return false;
   }

@@ -133,9 +133,9 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
       valuess[columnIndex] = GROUP_BY_MISSING_VALUE;
       return 0;
     } else {
-      MemoryEstimate<Integer> idAndMemoryEstimate = dimensionIdCodec.lookupId(value);
-      valuess[columnIndex] = idAndMemoryEstimate.value();
-      return idAndMemoryEstimate.memoryIncrease();
+      MemoryFootprint<Integer> idAndMemoryFootprint = dimensionIdCodec.lookupId(value);
+      valuess[columnIndex] = idAndMemoryFootprint.value();
+      return idAndMemoryFootprint.memoryIncrease();
     }
   }
 
@@ -185,7 +185,7 @@ class KeyMappingGroupByColumnSelectorStrategy<DimensionType> implements GroupByC
       keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
       return 0;
     } else {
-      MemoryEstimate<Integer> idAndMemoryIncrease = dimensionIdCodec.lookupId(value);
+      MemoryFootprint<Integer> idAndMemoryIncrease = dimensionIdCodec.lookupId(value);
       keyBuffer.putInt(keyBufferPosition, idAndMemoryIncrease.value());
       memoryIncrease = idAndMemoryIncrease.memoryIncrease();
     }

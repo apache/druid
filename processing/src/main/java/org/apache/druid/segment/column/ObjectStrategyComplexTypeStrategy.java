@@ -37,25 +37,22 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
 {
   private final ObjectStrategy<T> objectStrategy;
   private final TypeSignature<?> typeSignature;
-  private final boolean groupable;
   @Nullable
   private final Hash.Strategy<T> hashStrategy;
 
   public ObjectStrategyComplexTypeStrategy(ObjectStrategy<T> objectStrategy, TypeSignature<?> signature)
   {
-    this(objectStrategy, signature, false, null);
+    this(objectStrategy, signature, null);
   }
 
   public ObjectStrategyComplexTypeStrategy(
       ObjectStrategy<T> objectStrategy,
       TypeSignature<?> signature,
-      boolean groupable,
       @Nullable final Hash.Strategy<T> hashStrategy
   )
   {
     this.objectStrategy = objectStrategy;
     this.typeSignature = signature;
-    this.groupable = groupable;
     this.hashStrategy = hashStrategy;
 
   }
@@ -116,7 +113,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   @Override
   public boolean groupable()
   {
-    return groupable;
+    return hashStrategy != null;
   }
 
   @Override

@@ -49,7 +49,7 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
   }
 
   @Override
-  public boolean supportsNestedArraysAndComplexTypes()
+  public boolean supportsComplexTypes()
   {
     return false;
   }
