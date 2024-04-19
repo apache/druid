@@ -229,22 +229,14 @@ public class SegmentSchemaCache
       return Optional.of(inTransitSMQPublishedResults.get(segmentId));
     }
 
+    SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
     // segment schema has been polled from the DB
-    if (finalizedSegmentMetadata.get(segmentId) != null) {
-      SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
-      String schemaFingerprint = segmentMetadata.getSchemaFingerprint();
-      if (schemaFingerprint == null || segmentMetadata.getNumRows() == null) {
-        log.debug(
-            "Missing schemaFingerprint or numRows for segmentId [%s]. SchemaFingerprint present [%s], numRows present [%s]",
-            segmentId, schemaFingerprint != null, segmentMetadata.getNumRows() != null
-        );
-      }
-
-      if (schemaFingerprint != null && finalizedSegmentSchema.containsKey(schemaFingerprint)) {
+    if (segmentMetadata != null) {
+      if (finalizedSegmentSchema.containsKey(segmentMetadata.getSchemaFingerprint())) {
         return Optional.of(
             new SchemaPayloadPlus(
-                finalizedSegmentSchema.get(schemaFingerprint),
-                segmentMetadata.getNumRows() == null ? 0 : segmentMetadata.getNumRows()
+                finalizedSegmentSchema.get(segmentMetadata.getSchemaFingerprint()),
+                segmentMetadata.getNumRows()
             )
         );
       }
@@ -266,9 +258,9 @@ public class SegmentSchemaCache
 
   private boolean isFinalizedSegmentSchemaCached(SegmentId segmentId)
   {
-    if (finalizedSegmentMetadata.get(segmentId) != null) {
-      String schemaFingerprint = finalizedSegmentMetadata.get(segmentId).getSchemaFingerprint();
-      return schemaFingerprint != null && finalizedSegmentSchema.containsKey(schemaFingerprint);
+    SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
+    if (segmentMetadata != null) {
+      return finalizedSegmentSchema.containsKey(segmentMetadata.getSchemaFingerprint());
     }
     return false;
   }

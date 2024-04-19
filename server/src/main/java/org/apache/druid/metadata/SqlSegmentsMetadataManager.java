@@ -1118,28 +1118,26 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .createQuery(StringUtils.format("SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
-                    new ResultSetMapper<DataSegment>()
-                    {
-                      @Override
-                      public DataSegment map(int index, ResultSet r, StatementContext ctx) throws SQLException
-                      {
-                        try {
-                          DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                    (index, r, ctx) -> {
+                      try {
+                        DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+
+                        Long numRows = (Long) r.getObject("num_rows");
+                        String schemaFingerprint = r.getString("schema_fingerprint");
+
+                        if (schemaFingerprint != null && numRows != null) {
                           segmentMetadataBuilder.put(
                               segment.getId(),
-                              new SegmentMetadata(
-                                  (Long) r.getObject("num_rows"),
-                                  r.getString("schema_fingerprint")
-                              )
+                              new SegmentMetadata(numRows, schemaFingerprint)
                           );
-                          return replaceWithExistingSegmentIfPresent(segment);
                         }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to read segment from db.").emit();
-                          // If one entry in database is corrupted doPoll() should continue to work overall. See
-                          // filter by `Objects::nonNull` below in this method.
-                          return null;
-                        }
+                        return replaceWithExistingSegmentIfPresent(segment);
+                      }
+                      catch (IOException e) {
+                        log.makeAlert(e, "Failed to read segment from db.").emit();
+                        // If one entry in database is corrupted doPoll() should continue to work overall. See
+                        // filter by `Objects::nonNull` below in this method.
+                        return null;
                       }
                     }
                 )

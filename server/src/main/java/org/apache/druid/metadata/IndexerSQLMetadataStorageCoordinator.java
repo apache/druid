@@ -2123,11 +2123,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata = new HashMap<>();
     for (DataSegmentPlus dataSegmentPlus : upgradedSegments) {
-      segments.add(dataSegmentPlus.getDataSegment());
-      upgradeSegmentMetadata.put(
-          dataSegmentPlus.getDataSegment().getId(),
-          new SegmentMetadata(dataSegmentPlus.getNumRows(), dataSegmentPlus.getSchemaFingerprint())
-      );
+      if (dataSegmentPlus.getSchemaFingerprint() != null && dataSegmentPlus.getNumRows() != null) {
+        segments.add(dataSegmentPlus.getDataSegment());
+        upgradeSegmentMetadata.put(
+            dataSegmentPlus.getDataSegment().getId(),
+            new SegmentMetadata(dataSegmentPlus.getNumRows(), dataSegmentPlus.getSchemaFingerprint())
+        );
+      }
     }
     // Do not insert segment IDs which already exist
     Set<String> existingSegmentIds = segmentExistsBatch(handle, segments);

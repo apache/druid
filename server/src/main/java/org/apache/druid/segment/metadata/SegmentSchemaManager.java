@@ -21,6 +21,8 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Functions;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -40,14 +42,13 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.TransactionCallback;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -144,7 +145,11 @@ public class SegmentSchemaManager
   /**
    * Persist segment schema and update segments in a transaction.
    */
-  public void persistSchemaAndUpdateSegmentsTable(String dataSource, List<SegmentSchemaMetadataPlus> segmentSchemas, int schemaVersion)
+  public void persistSchemaAndUpdateSegmentsTable(
+      final String dataSource,
+      final List<SegmentSchemaMetadataPlus> segmentSchemas,
+      final int version
+  )
   {
     connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
       Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
@@ -155,7 +160,7 @@ public class SegmentSchemaManager
             segmentSchema.getSegmentSchemaMetadata().getSchemaPayload()
         );
       }
-      persistSegmentSchema(handle, dataSource, schemaVersion, schemaPayloadMap);
+      persistSegmentSchema(handle, dataSource, version, schemaPayloadMap);
       updateSegmentWithSchemaInformation(handle, segmentSchemas);
 
       return null;
@@ -166,108 +171,124 @@ public class SegmentSchemaManager
    * Persist unique segment schema in the DB.
    */
   public void persistSegmentSchema(
-      Handle handle,
-      String dataSource,
-      int schemaVersion,
-      Map<String, SchemaPayload> fingerprintSchemaPayloadMap
+      final Handle handle,
+      final String dataSource,
+      final int version,
+      final Map<String, SchemaPayload> fingerprintSchemaPayloadMap
   ) throws JsonProcessingException
   {
-    try {
-      // Filter already existing schema
-      Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(handle, fingerprintSchemaPayloadMap.keySet());
+    // Filter already existing schema
+    Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(
+        handle,
+        fingerprintSchemaPayloadMap.keySet()
+    );
 
-      // Used schema can also be marked as unused by the schema cleanup duty in parallel.
-      // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
-      Set<String> usedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(true) ? existingFingerprintsAndUsedStatus.get(true) : new HashSet<>();
-      Set<String> unusedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(false) ? existingFingerprintsAndUsedStatus.get(false) : new HashSet<>();
-      Set<String> existingFingerprints = Sets.union(usedExistingFingerprints, unusedExistingFingerprints);
-      if (existingFingerprints.size() > 0) {
-        log.info(
-            "Found already existing schema in the DB for dataSource [%1$s]. Used fingeprints: [%2$s], Unused fingerprints: [%3$s]",
-            dataSource,
-            usedExistingFingerprints,
-            unusedExistingFingerprints
-        );
-      }
-
-      // Unused schema can be deleted by the schema cleanup duty in parallel.
-      // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
-      if (unusedExistingFingerprints.size() > 0) {
-        // make the unused schema as used to prevent deletion
-        String inClause = getInClause(unusedExistingFingerprints.stream());
-
-        handle.createStatement(
-                  StringUtils.format(
-                      "UPDATE %s SET used = true, used_status_last_updated = :now"
-                      + " WHERE fingerprint IN (%s)",
-                      dbTables.getSegmentSchemasTable(), inClause)
-              )
-              .bind("now", DateTimes.nowUtc().toString())
-              .execute();
-      }
-
-      Map<String, SchemaPayload> schemaPayloadToCreate = new HashMap<>();
-
-      for (Map.Entry<String, SchemaPayload> entry : fingerprintSchemaPayloadMap.entrySet()) {
-        if (!existingFingerprints.contains(entry.getKey())) {
-          schemaPayloadToCreate.put(entry.getKey(), entry.getValue());
-        }
-      }
-
-      if (schemaPayloadToCreate.isEmpty()) {
-        log.info("No schema to persist for dataSource [%s].", dataSource);
-        return;
-      }
-
-      final List<List<String>> partitionedFingerprints = Lists.partition(
-          new ArrayList<>(schemaPayloadToCreate.keySet()),
-          DB_ACTION_PARTITION_SIZE
+    // Used schema can also be marked as unused by the schema cleanup duty in parallel.
+    // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
+    Set<String> usedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(true)
+                                           ? existingFingerprintsAndUsedStatus.get(true)
+                                           : new HashSet<>();
+    Set<String> unusedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(false)
+                                             ? existingFingerprintsAndUsedStatus.get(false)
+                                             : new HashSet<>();
+    Set<String> existingFingerprints = Sets.union(usedExistingFingerprints, unusedExistingFingerprints);
+    if (existingFingerprints.size() > 0) {
+      log.info(
+          "Found already existing schema in the DB for dataSource [%1$s]. "
+          + "Used fingeprints: [%2$s], Unused fingerprints: [%3$s].",
+          dataSource,
+          usedExistingFingerprints,
+          unusedExistingFingerprints
       );
+    }
 
-      String insertSql = StringUtils.format(
-          "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated, version) "
-          + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated, :version)",
-          dbTables.getSegmentSchemasTable()
-      );
+    // Unused schema can be deleted by the schema cleanup duty in parallel.
+    // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
+    if (unusedExistingFingerprints.size() > 0) {
+      // make the unused schema as used to prevent deletion
+      String inClause = getInClause(unusedExistingFingerprints.stream());
 
-      // insert schemas
-      PreparedBatch schemaInsertBatch = handle.prepareBatch(insertSql);
-      for (List<String> partition : partitionedFingerprints) {
-        for (String fingerprint : partition) {
-          final String now = DateTimes.nowUtc().toString();
-          schemaInsertBatch.add()
-                           .bind("created_date", now)
-                           .bind("datasource", dataSource)
-                           .bind("fingerprint", fingerprint)
-                           .bind("payload", jsonMapper.writeValueAsBytes(fingerprintSchemaPayloadMap.get(fingerprint)))
-                           .bind("used", true)
-                           .bind("used_status_last_updated", now)
-                           .bind("version", schemaVersion);
-        }
-        final int[] affectedRows = schemaInsertBatch.execute();
-        final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-        if (succeeded) {
-          log.info("Published schemas to DB: %s", partition);
-        } else {
-          final List<String> failedToPublish =
-              IntStream.range(0, partition.size())
-                       .filter(i -> affectedRows[i] != 1)
-                       .mapToObj(partition::get)
-                       .collect(Collectors.toList());
-          throw new ISE("Failed to publish schemas to DB: %s", failedToPublish);
-        }
+      handle.createStatement(
+                StringUtils.format(
+                    "UPDATE %s SET used = true, used_status_last_updated = :now"
+                    + " WHERE fingerprint IN (%s)",
+                    dbTables.getSegmentSchemasTable(), inClause
+                )
+            )
+            .bind("now", DateTimes.nowUtc().toString())
+            .execute();
+    }
+
+    Map<String, SchemaPayload> schemaPayloadToCreate = new HashMap<>();
+
+    for (Map.Entry<String, SchemaPayload> entry : fingerprintSchemaPayloadMap.entrySet()) {
+      if (!existingFingerprints.contains(entry.getKey())) {
+        schemaPayloadToCreate.put(entry.getKey(), entry.getValue());
       }
     }
-    catch (Exception e) {
-      log.error("Exception inserting schemas to DB: %s", fingerprintSchemaPayloadMap);
-      throw e;
+
+    if (schemaPayloadToCreate.isEmpty()) {
+      log.info("No schema to persist for dataSource [%s] and version [%s].", dataSource, version);
+      return;
+    }
+
+    final List<List<String>> partitionedFingerprints = Lists.partition(
+        new ArrayList<>(schemaPayloadToCreate.keySet()),
+        DB_ACTION_PARTITION_SIZE
+    );
+
+    String insertSql = StringUtils.format(
+        "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated, version) "
+        + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated, :version)",
+        dbTables.getSegmentSchemasTable()
+    );
+
+    // insert schemas
+    PreparedBatch schemaInsertBatch = handle.prepareBatch(insertSql);
+    for (List<String> partition : partitionedFingerprints) {
+      for (String fingerprint : partition) {
+        final String now = DateTimes.nowUtc().toString();
+        schemaInsertBatch.add()
+                         .bind("created_date", now)
+                         .bind("datasource", dataSource)
+                         .bind("fingerprint", fingerprint)
+                         .bind("payload", jsonMapper.writeValueAsBytes(fingerprintSchemaPayloadMap.get(fingerprint)))
+                         .bind("used", true)
+                         .bind("used_status_last_updated", now)
+                         .bind("version", version);
+      }
+      final int[] affectedRows = schemaInsertBatch.execute();
+      final List<String> failedInserts = new ArrayList<>();
+      for (int i = 0; i < partition.size(); ++i) {
+        if (affectedRows[i] != 1) {
+          failedInserts.add(partition.get(i));
+        }
+      }
+      if (failedInserts.isEmpty()) {
+        log.info(
+            "Published schemas [%s] to DB for datasource [%s] and version [%s]",
+            partition,
+            dataSource,
+            version
+        );
+      } else {
+        throw new ISE(
+            "Failed to publish schemas [%s] to DB for datasource [%s] and version [%s]",
+            failedInserts,
+            dataSource,
+            version
+        );
+      }
     }
   }
 
   /**
    * Update segment with schemaId and numRows information.
    */
-  public void updateSegmentWithSchemaInformation(Handle handle, List<SegmentSchemaMetadataPlus> batch)
+  public void updateSegmentWithSchemaInformation(
+      final Handle handle,
+      final List<SegmentSchemaMetadataPlus> batch
+  )
   {
     log.debug("Updating segment with schema and numRows information: [%s].", batch);
 
@@ -297,27 +318,43 @@ public class SegmentSchemaManager
       }
 
       final int[] affectedRows = segmentUpdateBatch.execute();
-      final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+      final List<SegmentId> failedUpdates = new ArrayList<>();
+      for (int i = 0; i < partition.size(); ++i) {
+        if (affectedRows[i] != 1) {
+          failedUpdates.add(partition.get(i).getSegmentId());
+        }
+      }
 
-      if (succeeded) {
-        log.info("Updated segments with schemaId & numRows in the DB: %s", partition);
+      if (failedUpdates.size() == 0) {
+        log.infoSegmentIds(
+            partition.stream().map(SegmentSchemaMetadataPlus::getSegmentId),
+            "Updated segments with schema information in the DB."
+        );
       } else {
-        final List<String> failedToUpdate =
-            IntStream.range(0, partition.size())
-                     .filter(i -> affectedRows[i] != 1)
-                     .mapToObj(partition::get)
-                     .map(plus -> plus.getSegmentId().toString())
-                     .collect(Collectors.toList());
-        throw new ISE("Failed to update segments with schema information: %s", failedToUpdate);
+        throw new ISE(
+            "Failed to update segments with schema information: %s",
+            getCommaSeparatedIdentifiers(failedUpdates));
       }
     }
+  }
+
+  private Object getCommaSeparatedIdentifiers(final Collection<SegmentId> ids)
+  {
+    if (ids == null || ids.isEmpty()) {
+      return null;
+    }
+
+    return Collections2.transform(ids, Functions.identity());
   }
 
   /**
    * Query the metadata DB to filter the fingerprints that exists.
    * It returns separate set for used and unused fingerprints in a map.
    */
-  private Map<Boolean, Set<String>> fingerprintExistBatch(Handle handle, Set<String> fingerprintsToInsert)
+  private Map<Boolean, Set<String>> fingerprintExistBatch(
+      final Handle handle,
+      final Set<String> fingerprintsToInsert
+  )
   {
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToInsert),
@@ -342,7 +379,7 @@ public class SegmentSchemaManager
     return existingFingerprints;
   }
 
-  private String getInClause(Stream<String> ids)
+  private String getInClause(final Stream<String> ids)
   {
     return ids
         .map(value -> "'" + StringEscapeUtils.escapeSql(value) + "'")
@@ -390,7 +427,7 @@ public class SegmentSchemaManager
       return "SegmentSchemaMetadataPlus{" +
              "segmentId='" + segmentId + '\'' +
              ", fingerprint='" + fingerprint + '\'' +
-             ", segmentSchemaMetadata=" + schemaPayloadPlus +
+             ", schemaPayloadPlus=" + schemaPayloadPlus +
              '}';
     }
   }

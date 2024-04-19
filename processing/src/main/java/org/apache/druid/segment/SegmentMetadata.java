@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -30,15 +29,13 @@ import java.util.Objects;
  */
 public class SegmentMetadata
 {
-  @Nullable
   private final Long numRows;
-  @Nullable
   private final String schemaFingerprint;
 
   @JsonCreator
   public SegmentMetadata(
-      @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("schemaFingerprint") @Nullable String schemaFingerprint
+      @JsonProperty("numRows") Long numRows,
+      @JsonProperty("schemaFingerprint") String schemaFingerprint
   )
   {
     this.numRows = numRows;
@@ -46,14 +43,12 @@ public class SegmentMetadata
   }
 
   @JsonProperty
-  @Nullable
-  public Long getNumRows()
+  public long getNumRows()
   {
     return numRows;
   }
 
   @JsonProperty
-  @Nullable
   public String getSchemaFingerprint()
   {
     return schemaFingerprint;
@@ -69,7 +64,10 @@ public class SegmentMetadata
       return false;
     }
     SegmentMetadata that = (SegmentMetadata) o;
-    return Objects.equals(numRows, that.numRows) && Objects.equals(schemaFingerprint, that.schemaFingerprint);
+    return Objects.equals(numRows, that.numRows) && Objects.equals(
+        schemaFingerprint,
+        that.schemaFingerprint
+    );
   }
 
   @Override
