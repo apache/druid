@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
@@ -33,6 +34,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -65,12 +68,17 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -104,29 +112,32 @@ public class ExpressionsTest extends CalciteTestBase
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
-      .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
-      .put("a", 10)
-      .put("b", 25)
-      .put("p", 3)
-      .put("x", 2.25)
-      .put("y", 3.0)
-      .put("z", -2.25)
-      .put("o", 0)
-      .put("nan", Double.NaN)
-      .put("inf", Double.POSITIVE_INFINITY)
-      .put("-inf", Double.NEGATIVE_INFINITY)
-      .put("fnan", Float.NaN)
-      .put("finf", Float.POSITIVE_INFINITY)
-      .put("-finf", Float.NEGATIVE_INFINITY)
-      .put("s", "foo")
-      .put("hexstr", "EF")
-      .put("intstr", "-100")
-      .put("spacey", "  hey there  ")
-      .put("newliney", "beep\nboop")
-      .put("tstr", "2000-02-03 04:05:06")
-      .put("dstr", "2000-02-03")
-      .put("timezone", "America/Los_Angeles")
-      .build();
+                                                                  .put(
+                                                                      "t",
+                                                                      DateTimes.of("2000-02-03T04:05:06").getMillis()
+                                                                  )
+                                                                  .put("a", 10)
+                                                                  .put("b", 25)
+                                                                  .put("p", 3)
+                                                                  .put("x", 2.25)
+                                                                  .put("y", 3.0)
+                                                                  .put("z", -2.25)
+                                                                  .put("o", 0)
+                                                                  .put("nan", Double.NaN)
+                                                                  .put("inf", Double.POSITIVE_INFINITY)
+                                                                  .put("-inf", Double.NEGATIVE_INFINITY)
+                                                                  .put("fnan", Float.NaN)
+                                                                  .put("finf", Float.POSITIVE_INFINITY)
+                                                                  .put("-finf", Float.NEGATIVE_INFINITY)
+                                                                  .put("s", "foo")
+                                                                  .put("hexstr", "EF")
+                                                                  .put("intstr", "-100")
+                                                                  .put("spacey", "  hey there  ")
+                                                                  .put("newliney", "beep\nboop")
+                                                                  .put("tstr", "2000-02-03 04:05:06")
+                                                                  .put("dstr", "2000-02-03")
+                                                                  .put("timezone", "America/Los_Angeles")
+                                                                  .build();
 
   private ExpressionTestHelper testHelper;
 
@@ -1923,7 +1934,7 @@ public class ExpressionsTest extends CalciteTestBase
             (args) -> "(" + args.get(0).getExpression() + " - " + args.get(1).getExpression() + ")",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                DruidExpression.ofLiteral(ColumnType.STRING, "90060000")
+                DruidExpression.ofLiteral(ColumnType.LONG, "90060000")
             )
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
@@ -2813,6 +2824,143 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         makeExpression("human_readable_decimal_byte_format(45678,3)"),
         "45.678 KB"
+    );
+  }
+
+  @Test
+  public void testLiteralToExprEval()
+  {
+    final RexBuilder rexBuilder = new RexBuilder(DruidTypeSystem.TYPE_FACTORY);
+    final PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
+    Mockito.when(plannerContext.getTimeZone()).thenReturn(DateTimeZone.UTC);
+
+    assertExprEval(
+        ExprEval.of("abc"),
+        Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral("abc"))
+    );
+
+    assertExprEval(
+        ExprEval.ofLongBoolean(true),
+        Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral(true))
+    );
+
+    assertExprEval(
+        ExprEval.ofLong(123L),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeExactLiteral(
+                BigDecimal.valueOf(123L),
+                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.INTEGER)
+            )
+        )
+    );
+
+    assertExprEval(
+        ExprEval.ofDouble(123.0),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeExactLiteral(
+                BigDecimal.valueOf(123L),
+                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DECIMAL)
+            )
+        )
+    );
+
+    assertExprEval(
+        ExprEval.ofLong(DateTimes.of("2000").getMillis()),
+        Expressions.literalToExprEval(
+            plannerContext,
+            Calcites.jodaToCalciteTimestampLiteral(
+                rexBuilder,
+                DateTimes.of("2000"),
+                DateTimeZone.UTC,
+                DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION
+            )
+        )
+    );
+
+    assertExprEval(
+        ExprEval.ofLong(DateTimes.of("2000").getMillis()),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeDateLiteral(Calcites.jodaToCalciteDateString(DateTimes.of("2000"), DateTimeZone.UTC))
+        )
+    );
+
+    assertExprEval(
+        ExprEval.ofLong(3),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeIntervalLiteral(
+                BigDecimal.valueOf(3),
+                new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.HOUR, SqlParserPos.ZERO)
+            )
+        )
+    );
+
+    assertExprEval(
+        ExprEval.ofLong(3),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeIntervalLiteral(
+                BigDecimal.valueOf(3),
+                new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
+            )
+        )
+    );
+
+    assertExprEval(
+        ExprEval.of("123"),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeCast(
+                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR),
+                rexBuilder.makeExactLiteral(
+                    BigDecimal.valueOf(123.7),
+                    rexBuilder.getTypeFactory().createSqlType(SqlTypeName.INTEGER)
+                )
+            )
+        )
+    );
+
+    assertExprEval(
+        ExprEval.of(123.0),
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeCast(
+                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DOUBLE),
+                rexBuilder.makeExactLiteral(
+                    BigDecimal.valueOf(123L),
+                    rexBuilder.getTypeFactory().createSqlType(SqlTypeName.INTEGER)
+                )
+            )
+        )
+    );
+
+    Assert.assertNull(
+        Expressions.literalToExprEval(
+            plannerContext,
+            rexBuilder.makeCast(
+                rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DATE),
+                Calcites.jodaToCalciteTimestampLiteral(
+                    rexBuilder,
+                    DateTimes.of("2000-01-02T03:04:05"),
+                    DateTimeZone.UTC,
+                    DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION
+                )
+            )
+        )
+    );
+  }
+
+  private void assertExprEval(
+      final ExprEval<?> expected,
+      final ExprEval<?> actual
+  )
+  {
+    Assert.assertEquals(
+        StringUtils.format("%s: %s", expected.type(), expected.value()),
+        StringUtils.format("%s: %s", actual.type(), actual.value())
     );
   }
 }

@@ -20,8 +20,10 @@
 package org.apache.druid.sql.calcite.expression;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -90,7 +92,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void longLiteral_roundTrip()
+  public void test_longLiteral_roundTrip()
   {
     final long[] longs = {
         0,
@@ -106,5 +108,108 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
       MatcherAssert.assertThat(expr.getLiteralValue(), CoreMatchers.instanceOf(Number.class));
       Assert.assertEquals(n, ((Number) expr.getLiteralValue()).longValue());
     }
+  }
+
+  @Test
+  public void test_ofLiteral_nullString()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(null));
+
+    Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
+    Assert.assertEquals("null", expression.getExpression());
+  }
+
+  @Test
+  public void test_ofLiteral_nullLong()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.ofLong(null));
+
+    Assert.assertEquals(ColumnType.LONG, expression.getDruidType());
+    Assert.assertEquals("null", expression.getExpression());
+  }
+
+  @Test
+  public void test_ofLiteral_nullDouble()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.ofDouble(null));
+
+    Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
+    Assert.assertEquals("null", expression.getExpression());
+  }
+
+  @Test
+  public void test_ofLiteral_nullArray()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.ofStringArray(null));
+
+    Assert.assertEquals(ColumnType.STRING_ARRAY, expression.getDruidType());
+    Assert.assertEquals("null", expression.getExpression());
+  }
+
+  @Test
+  public void test_ofLiteral_string()
+  {
+    final String s = "abcdé\n \\\" ' \uD83E\uDD20 \txyz";
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(s));
+
+    Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
+    Assert.assertEquals("'abcdé\\u000A \\u005C\\u0022 \\u0027 \\uD83E\\uDD20 \\u0009xyz'", expression.getExpression());
+    Assert.assertEquals(s, Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue());
+  }
+
+  @Test
+  public void test_ofLiteral_long()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(-123));
+
+    Assert.assertEquals(ColumnType.LONG, expression.getDruidType());
+    Assert.assertEquals("-123", expression.getExpression());
+    Assert.assertEquals(-123L, Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue());
+  }
+
+  @Test
+  public void test_ofLiteral_double()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(-123.4));
+
+    Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
+    Assert.assertEquals("-123.4", expression.getExpression());
+    Assert.assertEquals(-123.4, Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue());
+  }
+
+  @Test
+  public void test_ofLiteral_doubleNan()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(Double.NaN));
+
+    Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
+    Assert.assertEquals("NaN", expression.getExpression());
+    Assert.assertEquals(Double.NaN, Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue());
+  }
+
+  @Test
+  public void test_ofLiteral_doubleNegativeInfinity()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(Double.NEGATIVE_INFINITY));
+
+    Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
+    Assert.assertEquals("-Infinity", expression.getExpression());
+    Assert.assertEquals(
+        Double.NEGATIVE_INFINITY,
+        Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue()
+    );
+  }
+
+  @Test
+  public void test_ofLiteral_doublePositiveInfinity()
+  {
+    final DruidExpression expression = DruidExpression.ofLiteral(ExprEval.of(Double.POSITIVE_INFINITY));
+
+    Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
+    Assert.assertEquals("Infinity", expression.getExpression());
+    Assert.assertEquals(
+        Double.POSITIVE_INFINITY,
+        Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue()
+    );
   }
 }

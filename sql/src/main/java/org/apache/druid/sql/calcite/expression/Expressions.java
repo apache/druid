@@ -38,6 +38,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -240,7 +242,8 @@ public class Expressions
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
-      return literalToDruidExpression(plannerContext, rexNode);
+      final ExprEval<?> exprEval = literalToExprEval(plannerContext, rexNode);
+      return exprEval != null ? DruidExpression.ofLiteral(exprEval) : null;
     } else {
       // Can't translate.
       return null;
@@ -306,57 +309,66 @@ public class Expressions
     }
   }
 
+  /**
+   * Create an {@link ExprEval} from a literal {@link RexNode}.
+   */
   @Nullable
-  static DruidExpression literalToDruidExpression(
+  public static ExprEval<?> literalToExprEval(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
   {
-    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+    if (rexNode.isA(SqlKind.CAST)) {
+      if (SqlTypeFamily.DATE.contains(rexNode.getType())) {
+        // Cast to DATE suggests some timestamp flooring. We don't deal with that here, so return null.
+        return null;
+      }
+
+      final ExprEval<?> innerEval = literalToExprEval(plannerContext, ((RexCall) rexNode).getOperands().get(0));
+      final ColumnType castToColumnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+      if (castToColumnType == null) {
+        return null;
+      }
+
+      final ExpressionType castToExprType = ExpressionType.fromColumnType(castToColumnType);
+      if (castToExprType == null) {
+        return null;
+      }
+
+      return innerEval.castTo(castToExprType);
+    }
 
     // Translate literal.
-    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+
     if (RexLiteral.isNullLiteral(rexNode)) {
-      return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
+      final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+      final ExpressionType expressionType = columnType == null ? null : ExpressionType.fromColumnTypeStrict(columnType);
+      return ExprEval.ofType(expressionType, null);
     } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
       final Number number = (Number) RexLiteral.value(rexNode);
-      return DruidExpression.ofLiteral(
-          columnType,
-          number == null ? DruidExpression.nullLiteral() : DruidExpression.longLiteral(number.longValue())
-      );
+      return ExprEval.ofType(ExpressionType.LONG, number == null ? null : number.longValue());
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
       // Numeric, non-INT, means we represent it as a double.
       final Number number = (Number) RexLiteral.value(rexNode);
-      return DruidExpression.ofLiteral(
-          columnType,
-          number == null ? DruidExpression.nullLiteral() : DruidExpression.doubleLiteral(number.doubleValue())
-      );
+      return ExprEval.ofType(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(milliseconds));
+      return ExprEval.ofType(ExpressionType.LONG, milliseconds);
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(months));
+      return ExprEval.ofType(ExpressionType.LONG, months);
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
+      return ExprEval.ofType(ExpressionType.STRING, RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
-      if (RexLiteral.isNullLiteral(rexNode)) {
-        return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
-      } else {
-        return DruidExpression.ofLiteral(
-            columnType,
-            DruidExpression.longLiteral(
-                Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
-            )
-        );
-      }
-    } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.ofLiteral(
-          columnType,
-          DruidExpression.longLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0)
+      return ExprEval.ofType(
+          ExpressionType.LONG,
+          Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
       );
+    } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
+      return ExprEval.ofType(ExpressionType.LONG, RexLiteral.booleanValue(rexNode) ? 1 : 0);
     } else {
       // Can't translate other literals.
       return null;
