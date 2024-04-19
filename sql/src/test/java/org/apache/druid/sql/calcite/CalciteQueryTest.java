@@ -10717,7 +10717,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10781,7 +10781,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10937,7 +10937,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -10999,7 +10999,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             expressionVirtualColumn(
                                 "v1",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             )
                         )
@@ -11053,7 +11053,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11116,7 +11116,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11180,7 +11180,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11235,7 +11235,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11310,7 +11310,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -11381,7 +11381,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -13147,7 +13147,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
@@ -13216,7 +13216,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "nvl(\"dim2\",'')",
+                                NullHandling.sqlCompatible() ? "nvl(\"dim2\",'')" : "nvl(\"dim2\",null)",
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(

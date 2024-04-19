@@ -3604,7 +3604,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            expressionVirtualColumn("v0", "concat(\"k\",'')", ColumnType.STRING)
+                            expressionVirtualColumn(
+                                "v0",
+                                NullHandling.sqlCompatible() ? "concat(\"k\",'')" : "concat(\"k\",null)",
+                                ColumnType.STRING
+                            )
                         )
                         .setDimensions(new DefaultDimensionSpec("v0", "d0"))
                         .build()
@@ -3630,7 +3634,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            expressionVirtualColumn("v0", "concat(\"k\",'')", ColumnType.STRING)
+                            expressionVirtualColumn("v0", "concat(\"k\",null)", ColumnType.STRING)
                         )
                         .setDimensions(new DefaultDimensionSpec("v0", "d0"))
                         .build()
@@ -3701,7 +3705,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .setInterval(querySegmentSpec(Filtration.eternity()))
                                 .setGranularity(Granularities.ALL)
                                 .setVirtualColumns(
-                                    expressionVirtualColumn("v0", "concat(\"k\",'')", ColumnType.STRING)
+                                    expressionVirtualColumn(
+                                        "v0",
+                                        NullHandling.sqlCompatible() ? "concat(\"k\",'')" : "concat(\"k\",null)",
+                                        ColumnType.STRING
+                                    )
                                 )
                                 .setDimensions(new DefaultDimensionSpec("v0", "d0"))
                                 .build()
@@ -3900,7 +3908,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .setInterval(querySegmentSpec(Filtration.eternity()))
                                 .setGranularity(Granularities.ALL)
                                 .setVirtualColumns(
-                                    expressionVirtualColumn("v0", "concat(\"k\",'')", ColumnType.STRING)
+                                    expressionVirtualColumn(
+                                        "v0",
+                                        NullHandling.sqlCompatible() ? "concat(\"k\",'')" : "concat(\"k\",null)",
+                                        ColumnType.STRING
+                                    )
                                 )
                                 .setDimensions(new DefaultDimensionSpec("v0", "d0"))
                                 .build()
