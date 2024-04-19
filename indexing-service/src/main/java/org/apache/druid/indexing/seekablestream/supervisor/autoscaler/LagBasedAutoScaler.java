@@ -154,7 +154,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       LOCK.lock();
       try {
         if (!spec.isSuspended()) {
-          lagMetricsQueue.offer(supervisor.computeLagForAutoScaler());
+          long lag = supervisor.computeLagForAutoScaler();
+          lagMetricsQueue.offer(lag > 0 ? lag : 0L);
           log.debug("Current lags for dataSource[%s] are [%s].", dataSource, lagMetricsQueue);
         } else {
           log.warn("[%s] supervisor is suspended, skipping lag collection", dataSource);
