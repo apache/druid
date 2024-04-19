@@ -25,9 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.Stats;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 /**
@@ -40,11 +39,11 @@ import org.joda.time.Duration;
  * duties. All production clusters should continue using {@link KillSupervisors}.
  */
 @UnstableApi
-public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements CoordinatorCustomDuty
+public class KillSupervisorsCustomDuty implements CoordinatorCustomDuty
 {
   private static final Logger log = new Logger(KillSupervisorsCustomDuty.class);
 
-  private final MetadataSupervisorManager metadataSupervisorManager;
+  private final KillSupervisors delegate;
 
   @JsonCreator
   public KillSupervisorsCustomDuty(
@@ -52,20 +51,18 @@ public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements Co
       @JacksonInject MetadataSupervisorManager metadataSupervisorManager
   )
   {
-    super(
-        "supervisors",
-        // Pass null here, actual period of custom duties is configured separately
-        new MetadataCleanupConfig(true, null, retainDuration),
-        Stats.Kill.SUPERVISOR_SPECS
+    this.delegate = new KillSupervisors(
+        // Pass period as zero here, actual period of custom duties is configured at the duty group level
+        new MetadataCleanupConfig(true, Duration.ZERO, retainDuration),
+        metadataSupervisorManager
     );
-    this.metadataSupervisorManager = metadataSupervisorManager;
     log.warn("This is only an example implementation of a custom duty and"
              + " must not be used in production. Use KillSupervisors duty instead.");
   }
 
   @Override
-  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
+  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    return metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(minCreatedTime.getMillis());
+    return delegate.run(params);
   }
 }
