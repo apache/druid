@@ -207,11 +207,8 @@ public abstract class ServerRunnable extends GuiceRunnable
   protected void validateCentralizedDatasourceSchemaConfig(Properties properties)
   {
     if (isSegmentMetadataCacheEnabled(properties)) {
-      String serverViewType = (String) properties.getOrDefault(
-          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-          ServerViewModule.DEFAULT_SERVERVIEW_TYPE
-      );
-      if (!serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
+      String serverViewType = properties.getProperty(ServerViewModule.SERVERVIEW_TYPE_PROPERTY);
+      if (serverViewType != null && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
         throw DruidException
             .forPersona(DruidException.Persona.ADMIN)
             .ofCategory(DruidException.Category.UNSUPPORTED)
