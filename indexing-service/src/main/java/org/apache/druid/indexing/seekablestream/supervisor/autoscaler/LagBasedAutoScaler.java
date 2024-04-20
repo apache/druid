@@ -159,8 +159,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
           if (lagStats == null) {
             lagMetricsQueue.offer(0L);
           } else {
-            long totalLags = lagStats.getTotalLag();
-            lagMetricsQueue.offer(totalLags > 0 ? totalLags : 0L);
+            long lag = lagStats.get(supervisor.getLagMetricForAutoScaler());
+            lagMetricsQueue.offer(lag > 0 ? lag : 0L);
           }
           log.debug("Current lags for dataSource[%s] are [%s].", dataSource, lagMetricsQueue);
         } else {

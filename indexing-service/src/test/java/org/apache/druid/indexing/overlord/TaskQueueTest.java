@@ -298,12 +298,13 @@ public class TaskQueueTest extends IngestionTestBase
   @Test
   public void testExceptionInIsReadyFailsTask()
   {
+    final String exceptionMsg = "isReady failure test";
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"))
     {
       @Override
       public boolean isReady(TaskActionClient taskActionClient)
       {
-        throw new RuntimeException("isReady failure test");
+        throw new RuntimeException(exceptionMsg);
       }
     };
     taskQueue.add(task);
@@ -314,7 +315,7 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
     Assert.assertNotNull(statusOptional.get().getErrorMsg());
     Assert.assertTrue(
-        statusOptional.get().getErrorMsg().startsWith("Failed while waiting for the task to be ready to run")
+        statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
   }
 
