@@ -601,7 +601,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("")
         ),
-        makeExpression("regexp_like(null,'')"),
+        makeExpression(NullHandling.sqlCompatible() ? "regexp_like(null,'')" : "regexp_like(null,null)"),
 
         // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
         NullHandling.sqlCompatible() ? null : 1L
