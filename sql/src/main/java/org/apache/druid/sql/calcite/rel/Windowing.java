@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -34,6 +35,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
+import org.apache.calcite.util.mapping.MappingType;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -241,17 +243,18 @@ public class Windowing
 
     // Apply windowProject, if present.
     if (partialQuery.getWindowProject() != null) {
-      // We know windowProject is a mapping due to the isMapping() check in DruidRules. Check for null anyway,
-      // as defensive programming.
+      // We know windowProject is a mapping due to the isMapping() check in DruidRules.
+      // check anyway as defensive programming.
+      Preconditions.checkArgument(partialQuery.getWindowProject().isMapping());
+      int maxFieldCount = 1 + partialQuery.getWindowProject()
+                                          .getProjects()
+                                          .stream()
+                                          .map(node -> ((RexInputRef) node).getIndex())
+                                          .reduce(0, Integer::max);
       final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
-              partialQuery.getWindowProject().getProjects().stream().map(RexNode::toString).collect(Collectors.toSet()).size()
-                      < partialQuery.getWindowProject().getProjects().size()
-                      ? Project.getPartialMapping(
-                              partialQuery.getWindowProject().getRowType().getFieldCount(),
-                              partialQuery.getWindowProject().getProjects()
-                      )
-                      : partialQuery.getWindowProject().getMapping(),
-              "mapping for windowProject[%s]", partialQuery.getWindowProject()
+          Project.getPartialMapping(maxFieldCount, partialQuery.getWindowProject().getProjects()),
+          "mapping for windowProject[%s]",
+          partialQuery.getWindowProject()
       );
 
       final List<String> windowProjectOutputColumns = new ArrayList<>();
