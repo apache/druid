@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
@@ -95,11 +94,12 @@ public interface Supervisor
   LagStats computeLagStats();
 
   /**
-   * Used by AutoScaler to either scale by max/total/avg.
+   * Used by AutoScaler to make scaling decisions.
    */
-  default LagMetric getLagMetricForAutoScaler()
+  default long computeLagForAutoScaler()
   {
-    return LagMetric.TOTAL;
+    LagStats lagStats = computeLagStats();
+    return lagStats == null ? 0L : lagStats.getTotalLag();
   }
 
   int getActiveTaskGroupsCount();

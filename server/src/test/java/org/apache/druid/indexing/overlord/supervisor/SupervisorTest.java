@@ -19,24 +19,22 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
-public class LagStatsTest
+public class SupervisorTest
 {
-
   @Test
-  public void lagStatsByMetric()
+  public void testAutoScalerLagComputation()
   {
-    int max = 1;
-    int avg = 2;
-    int total = 3;
-    LagStats lag = new LagStats(max, total, avg);
+    Supervisor supervisor = Mockito.spy(Supervisor.class);
 
-    Assert.assertEquals(max, lag.get(LagMetric.MAX));
-    Assert.assertEquals(total, lag.get(LagMetric.TOTAL));
-    Assert.assertEquals(avg, lag.get(LagMetric.AVERAGE));
+    Mockito.when(supervisor.computeLagStats()).thenReturn(new LagStats(1, 2, 3));
+    Assert.assertEquals(2, supervisor.computeLagForAutoScaler());
+
+    Mockito.when(supervisor.computeLagStats()).thenReturn(null);
+    Assert.assertEquals(0, supervisor.computeLagForAutoScaler());
   }
 }
