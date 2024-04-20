@@ -212,7 +212,7 @@ Returns true if `arr1` and `arr2` have any elements in common, else false.
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns true if the scalar `expr` is present in `arr`. Otherwise, returns false if the scalar `expr` is nonnull or
+Returns true if the scalar `expr` is present in `arr`. Otherwise, returns false if the scalar `expr` is non-null or
 `UNKNOWN` if the scalar `expr` is `NULL`.
 
 Returns `UNKNOWN` if `arr` is `NULL`.
