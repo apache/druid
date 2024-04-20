@@ -56,7 +56,7 @@ public class DeltaInputSourceTest
   }
 
   @RunWith(Parameterized.class)
-  public static class TableParameterTests
+  public static class TablePathParameterTests
   {
     @Parameterized.Parameters
     public static Object[][] data()
@@ -201,17 +201,6 @@ public class DeltaInputSourceTest
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
               new DeltaNotFilter(
-                  new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee3")
-              ),
-              PartitionedDeltaTable.FULL_SCHEMA,
-              filterExpectedRows(
-                  PartitionedDeltaTable.EXPECTED_ROWS,
-                  row -> !row.get("name").equals("Employee3")
-              )
-          },
-          {
-              PartitionedDeltaTable.DELTA_TABLE_PATH,
-              new DeltaNotFilter(
                   new DeltaOrFilter(
                       Arrays.asList(
                           new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee5"),
@@ -239,6 +228,22 @@ public class DeltaInputSourceTest
               filterExpectedRows(
                   PartitionedDeltaTable.EXPECTED_ROWS,
                   row -> (!(row.get("name").equals("Employee1") && row.get("name").equals("Employee4")))
+              )
+          },
+          {
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
+              new DeltaNotFilter(
+                  new DeltaOrFilter(
+                      Arrays.asList(
+                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
+                          new DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter("name", "Employee4")
+                      )
+                  )
+              ),
+              PartitionedDeltaTable.FULL_SCHEMA,
+              filterExpectedRows(
+                  PartitionedDeltaTable.EXPECTED_ROWS,
+                  row -> (!(row.get("name").equals("Employee1") || ((String) row.get("name")).compareTo("Employee4") >= 0))
               )
           }
       };
@@ -305,7 +310,7 @@ public class DeltaInputSourceTest
     }
   }
 
-  public static class InvalidTableTests
+  public static class InvalidInputTests
   {
     @Test
     public void testNullTable()
