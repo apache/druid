@@ -65,6 +65,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -1345,29 +1346,75 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         "SELECT dim2 FROM druid.numfoo\n"
         + "WHERE\n"
         + "  SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd'])\n"
-        + "  OR SCALAR_IN_ARRAY(dim1, ARRAY[NULL, 'foo', 'bar'])\n"
-        + "  OR SCALAR_IN_ARRAY(cnt, ARRAY[2])"
-        + "LIMIT 5",
+        + "  OR SCALAR_IN_ARRAY(SUBSTRING(dim1, 1, 1), ARRAY[NULL, 'foo', 'bar'])\n"
+        + "  OR SCALAR_IN_ARRAY(cnt * 2, ARRAY[3])\n",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    VirtualColumns.create(
+                        NullHandling.sqlCompatible()
+                        ? ImmutableList.of(
+                            expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
+                            expressionVirtualColumn("v1", "(\"cnt\" * 2)", ColumnType.LONG)
+                        )
+                        : ImmutableList.of(
+                            expressionVirtualColumn("v0", "(\"cnt\" * 2)", ColumnType.LONG)
+                        )
+                    )
+                )
                 .filters(
-                    or(
+                    NullHandling.sqlCompatible()
+                    ? or(
                         in("dim2", Arrays.asList("a", "d")),
-                        in("dim1", Arrays.asList(null, "foo", "bar")),
-                        in("cnt", ColumnType.LONG, Collections.singletonList(2L))
+                        in("v0", Arrays.asList(null, "foo", "bar")),
+                        in("v1", ColumnType.LONG, Collections.singletonList(3L))
+                    )
+                    : or(
+                        in("dim2", Arrays.asList("a", "d")),
+                        in("dim1", Arrays.asList(null, "foo", "bar"), new SubstringDimExtractionFn(0, 1)),
+                        in("v0", ColumnType.LONG, Collections.singletonList(3L))
                     )
                 )
                 .columns("dim2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"a"}
+        )
+    );
+  }
+
+  @Test
+  public void testNotScalarInArrayFilter()
+  {
+    testQuery(
+        "SELECT dim2 FROM druid.numfoo\n"
+        + "WHERE NOT SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd'])\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(not(in("dim2", Arrays.asList("a", "d"))))
+                .columns("dim2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"abc"}
+        )
+        : ImmutableList.of(
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{"abc"},
+            new Object[]{""}
         )
     );
   }
