@@ -186,15 +186,15 @@ public class DruidExpression
   /**
    * Create a literal expression from an {@link ExprEval}.
    */
-  public static DruidExpression ofLiteral(final ExprEval<?> eval)
+  public static DruidExpression ofLiteral(final ExprEvalWrapper evalWrapper)
   {
+    final ExprEval<?> eval = evalWrapper.exprEval();
     final ColumnType evalColumnType = ExpressionType.toColumnType(eval.type());
-    final Expr evalAsExpr = eval.toExpr();
 
     if (eval.type().is(ExprType.STRING)) {
-      return ofStringLiteral((String) eval.value());
+      return ofStringLiteral((String) evalWrapper.trueValue());
     } else {
-      return ofLiteral(evalColumnType, evalAsExpr.stringify());
+      return ofLiteral(evalColumnType, eval.toExpr().stringify());
     }
   }
 

@@ -242,8 +242,8 @@ public class Expressions
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
-      final ExprEval<?> exprEval = literalToExprEval(plannerContext, rexNode);
-      return exprEval != null ? DruidExpression.ofLiteral(exprEval) : null;
+      final ExprEvalWrapper eval = literalToExprEval(plannerContext, rexNode);
+      return eval != null ? DruidExpression.ofLiteral(eval) : null;
     } else {
       // Can't translate.
       return null;
@@ -313,7 +313,7 @@ public class Expressions
    * Create an {@link ExprEval} from a literal {@link RexNode}.
    */
   @Nullable
-  public static ExprEval<?> literalToExprEval(
+  public static ExprEvalWrapper literalToExprEval(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
@@ -324,7 +324,7 @@ public class Expressions
         return null;
       }
 
-      final ExprEval<?> innerEval = literalToExprEval(plannerContext, ((RexCall) rexNode).getOperands().get(0));
+      final ExprEvalWrapper innerEval = literalToExprEval(plannerContext, ((RexCall) rexNode).getOperands().get(0));
       final ColumnType castToColumnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
       if (castToColumnType == null) {
         return null;
@@ -335,44 +335,53 @@ public class Expressions
         return null;
       }
 
-      return innerEval.castTo(castToExprType);
+      return new ExprEvalWrapper(
+          innerEval.exprEval().castTo(castToExprType),
+          false
+      );
     }
 
     // Translate literal.
     final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+    final ExprEval<?> retVal;
+    boolean isEmptyString = false;
 
     if (RexLiteral.isNullLiteral(rexNode)) {
       final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
       final ExpressionType expressionType = columnType == null ? null : ExpressionType.fromColumnTypeStrict(columnType);
-      return ExprEval.ofType(expressionType, null);
+      retVal = ExprEval.ofType(expressionType, null);
     } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
       final Number number = (Number) RexLiteral.value(rexNode);
-      return ExprEval.ofType(ExpressionType.LONG, number == null ? null : number.longValue());
+      retVal = ExprEval.ofType(ExpressionType.LONG, number == null ? null : number.longValue());
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
       // Numeric, non-INT, means we represent it as a double.
       final Number number = (Number) RexLiteral.value(rexNode);
-      return ExprEval.ofType(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
+      retVal = ExprEval.ofType(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return ExprEval.ofType(ExpressionType.LONG, milliseconds);
+      retVal = ExprEval.ofType(ExpressionType.LONG, milliseconds);
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return ExprEval.ofType(ExpressionType.LONG, months);
+      retVal = ExprEval.ofType(ExpressionType.LONG, months);
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return ExprEval.ofType(ExpressionType.STRING, RexLiteral.stringValue(rexNode));
+      final String s = RexLiteral.stringValue(rexNode);
+      retVal = ExprEval.ofType(ExpressionType.STRING, s);
+      isEmptyString = "".equals(s);
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
-      return ExprEval.ofType(
+      retVal = ExprEval.ofType(
           ExpressionType.LONG,
           Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
       );
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return ExprEval.ofType(ExpressionType.LONG, RexLiteral.booleanValue(rexNode) ? 1 : 0);
+      retVal = ExprEval.ofType(ExpressionType.LONG, RexLiteral.booleanValue(rexNode) ? 1 : 0);
     } else {
       // Can't translate other literals.
       return null;
     }
+
+    return new ExprEvalWrapper(retVal, isEmptyString);
   }
 
   /**

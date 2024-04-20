@@ -1547,7 +1547,13 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), dim1 || '') = 'x6'"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "nvl(lookup(\"dim1\",'lookyloo'),concat(\"dim1\",''))", ColumnType.STRING),
+            expressionVirtualColumn(
+                "v0",
+                NullHandling.sqlCompatible()
+                ? "nvl(lookup(\"dim1\",'lookyloo'),concat(\"dim1\",''))"
+                : "nvl(lookup(\"dim1\",'lookyloo'),concat(\"dim1\",null))",
+                ColumnType.STRING
+            ),
             equality("v0", "x6", ColumnType.STRING)
         ),
         Collections.emptyList()

@@ -27,7 +27,6 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.math.expr.Evals;
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -36,6 +35,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.ExprEvalWrapper;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -108,12 +108,12 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
       final List<Object> arrayElementLiteralValues = new ArrayList<>(arrayElements.size());
 
       for (final RexNode arrayElement : arrayElements) {
-        final ExprEval<?> arrayElementEval = Expressions.literalToExprEval(plannerContext, arrayElement);
+        final ExprEvalWrapper arrayElementEval = Expressions.literalToExprEval(plannerContext, arrayElement);
         if (arrayElementEval == null) {
           return null;
         }
 
-        arrayElementLiteralValues.add(arrayElementEval.value());
+        arrayElementLiteralValues.add(arrayElementEval.trueValue());
       }
 
       return makeInFilter(

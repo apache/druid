@@ -365,7 +365,7 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
-            NullHandling.sqlCompatible() ? "regexp_extract(\"s\",'')" : "regexp_extract(\"s\",null)"
+            "regexp_extract(\"s\",'')"
         ),
         NullHandling.emptyToNullIfNeeded("")
     );
@@ -507,7 +507,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        makeExpression(NullHandling.sqlCompatible() ? "regexp_like(\"s\",'')" : "regexp_like(\"s\",null)"),
+        makeExpression("regexp_like(\"s\",'')"),
         1L
     );
 
@@ -601,7 +601,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("")
         ),
-        makeExpression(NullHandling.sqlCompatible() ? "regexp_like(null,'')" : "regexp_like(null,null)"),
+        makeExpression("regexp_like(null,'')"),
 
         // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
         NullHandling.sqlCompatible() ? null : 1L
@@ -2835,7 +2835,7 @@ public class ExpressionsTest extends CalciteTestBase
     Mockito.when(plannerContext.getTimeZone()).thenReturn(DateTimeZone.UTC);
 
     assertExprEval(
-        ExprEval.of(null),
+        new ExprEvalWrapper(ExprEval.of(null), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR))
@@ -2843,7 +2843,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.of(""),
+        new ExprEvalWrapper(ExprEval.of(""), true),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeLiteral("")
@@ -2851,7 +2851,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.ofLong(null),
+        new ExprEvalWrapper(ExprEval.ofLong(null), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BIGINT))
@@ -2859,7 +2859,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.of(null),
+        new ExprEvalWrapper(ExprEval.of(null), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.NULL))
@@ -2867,17 +2867,17 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.of("abc"),
+        new ExprEvalWrapper(ExprEval.of("abc"), false),
         Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral("abc"))
     );
 
     assertExprEval(
-        ExprEval.ofLongBoolean(true),
+        new ExprEvalWrapper(ExprEval.ofLongBoolean(true), false),
         Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral(true))
     );
 
     assertExprEval(
-        ExprEval.ofLong(123L),
+        new ExprEvalWrapper(ExprEval.ofLong(123L), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeExactLiteral(
@@ -2888,7 +2888,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.ofDouble(123.0),
+        new ExprEvalWrapper(ExprEval.ofDouble(123.0), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeExactLiteral(
@@ -2899,7 +2899,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.ofLong(DateTimes.of("2000").getMillis()),
+        new ExprEvalWrapper(ExprEval.ofLong(DateTimes.of("2000").getMillis()), false),
         Expressions.literalToExprEval(
             plannerContext,
             Calcites.jodaToCalciteTimestampLiteral(
@@ -2912,7 +2912,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.ofLong(DateTimes.of("2000").getMillis()),
+        new ExprEvalWrapper(ExprEval.ofLong(DateTimes.of("2000").getMillis()), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeDateLiteral(Calcites.jodaToCalciteDateString(DateTimes.of("2000"), DateTimeZone.UTC))
@@ -2920,7 +2920,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.ofLong(3),
+        new ExprEvalWrapper(ExprEval.ofLong(3), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeIntervalLiteral(
@@ -2931,7 +2931,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.ofLong(3),
+        new ExprEvalWrapper(ExprEval.ofLong(3), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeIntervalLiteral(
@@ -2942,7 +2942,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.of("123"),
+        new ExprEvalWrapper(ExprEval.of("123"), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeCast(
@@ -2956,7 +2956,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertExprEval(
-        ExprEval.of(123.0),
+        new ExprEvalWrapper(ExprEval.of(123.0), false),
         Expressions.literalToExprEval(
             plannerContext,
             rexBuilder.makeCast(
@@ -2986,13 +2986,13 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   private void assertExprEval(
-      final ExprEval<?> expected,
-      final ExprEval<?> actual
+      final ExprEvalWrapper expected,
+      final ExprEvalWrapper actual
   )
   {
     Assert.assertEquals(
-        StringUtils.format("%s: %s", expected.type(), expected.value()),
-        StringUtils.format("%s: %s", actual.type(), actual.value())
+        StringUtils.format("%s: %s", expected.exprEval().type(), expected.exprEval().type()),
+        StringUtils.format("%s: %s", actual.trueValue(), actual.trueValue())
     );
   }
 }
