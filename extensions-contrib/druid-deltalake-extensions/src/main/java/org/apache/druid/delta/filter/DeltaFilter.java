@@ -25,8 +25,13 @@ import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.types.StructType;
 
 /**
- * Filters that translate to the underlying Delta Kernel {@link Predicate}. Implementations should
+ * Druid filters that translate to the underlying Delta Kernel {@link Predicate}s. Implementations should
  * provide an expression tree syntax to provide more flexibility to users.
+ *
+ * <p>
+ * A user-facing Druid {@link DeltaFilter} should be translated to a canonical Delta Kernel {@link Predicate}.
+ * Implementations should provide this one-to-one translation.
+ * </p>
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

@@ -31,6 +31,8 @@ import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class DeltaNotFilterTest
 {
   private static final StructType SCHEMA = new StructType()
@@ -39,13 +41,36 @@ public class DeltaNotFilterTest
       .add(new StructField("bar", StringType.STRING, true));
 
   @Test
-  public void testNotFilter()
+  public void testNotFilterWithEqualsExpression()
   {
     DeltaBinaryOperatorFilter.DeltaEqualsFilter equalsFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
         "name",
         "Employee1"
     );
     DeltaNotFilter notFilter = new DeltaNotFilter(equalsFilter);
+
+    Predicate predicate = notFilter.getFilterPredicate(SCHEMA);
+
+    Assert.assertEquals(predicate.getName(), "NOT");
+    Assert.assertEquals(1, predicate.getChildren().size());
+  }
+
+  @Test
+  public void testNotFilterWithAndExpression()
+  {
+    DeltaAndFilter andFilter = new DeltaAndFilter(
+        Arrays.asList(
+          new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+              "name",
+              "Employee1"
+          ),
+          new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+              "name",
+              "Employee2"
+          )
+        )
+    );
+    DeltaNotFilter notFilter = new DeltaNotFilter(andFilter);
 
     Predicate predicate = notFilter.getFilterPredicate(SCHEMA);
 
@@ -66,6 +91,20 @@ public class DeltaNotFilterTest
         Assert.assertThrows(DruidException.class, () -> notFilter.getFilterPredicate(SCHEMA)),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format("column[name2] doesn't exist in schema[%s]", SCHEMA)
+        )
+    );
+  }
+
+  @Test
+  public void testNotFilterWithNoFilterPredicates()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new DeltaNotFilter(null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Delta not filter requiers 1 filter predicate and must be non-empty. None provided."
         )
     );
   }

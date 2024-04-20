@@ -77,7 +77,21 @@ public class DeltaOrFilterTest
   }
 
   @Test
-  public void testOrFilterWithMissingFilters()
+  public void testOrFilterWithNoFilterPredicates()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new DeltaOrFilter(null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Delta or filter requires 2 filter predicates and must be non-empty. None provided."
+        )
+    );
+  }
+
+  @Test
+  public void testOrFilterWithOneFilterPredicate()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(

@@ -134,10 +134,9 @@ public class DeltaInputSourceSerdeTest
         () -> OBJECT_MAPPER.readValue(payload, DeltaInputSource.class)
     );
 
-    Assert.assertTrue(
-        exception.getCause().getMessage().contains(
-            "column is required for Delta filters."
-        )
+    Assert.assertEquals(
+        "column is a required field. None provided for Delta filter type[>=].",
+        exception.getCause().getMessage()
     );
   }
 }

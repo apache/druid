@@ -25,6 +25,9 @@ import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.types.StructType;
 import org.apache.druid.error.InvalidInput;
 
+/**
+ * Druid {@link DeltaFilter} that maps to a canonical NOT {@link Predicate}.
+ */
 public class DeltaNotFilter implements DeltaFilter
 {
   @JsonProperty
@@ -34,7 +37,9 @@ public class DeltaNotFilter implements DeltaFilter
   public DeltaNotFilter(@JsonProperty("filter") final DeltaFilter filter)
   {
     if (filter == null) {
-      throw InvalidInput.exception("Delta not filter requiers 1 filter predicate and must be non-empty.");
+      throw InvalidInput.exception(
+          "Delta not filter requiers 1 filter predicate and must be non-empty. None provided."
+      );
     }
     this.filter = filter;
   }

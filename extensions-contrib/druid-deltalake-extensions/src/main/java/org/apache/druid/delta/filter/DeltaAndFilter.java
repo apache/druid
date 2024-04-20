@@ -28,6 +28,11 @@ import org.apache.druid.error.InvalidInput;
 
 import java.util.List;
 
+/**
+ * Druid {@link DeltaFilter} that maps to a canonical {@link And} predicate.
+ * @implNote currently this filter only allows 2 filter predicates. However, this can be relaxed by recursively
+ * flattening the filters to allow complex expressions.
+ */
 public class DeltaAndFilter implements DeltaFilter
 {
   @JsonProperty
@@ -37,7 +42,9 @@ public class DeltaAndFilter implements DeltaFilter
   public DeltaAndFilter(@JsonProperty("filters") final List<DeltaFilter> filters)
   {
     if (filters == null) {
-      throw InvalidInput.exception("Delta and filter requires 2 filter predicates and must be non-empty.");
+      throw InvalidInput.exception(
+          "Delta and filter requires 2 filter predicates and must be non-empty. None provided."
+      );
     }
     if (filters.size() != 2) {
       throw InvalidInput.exception(

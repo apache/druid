@@ -28,18 +28,25 @@ import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.types.DataType;
 import io.delta.kernel.types.DateType;
 import io.delta.kernel.types.DoubleType;
+import io.delta.kernel.types.FloatType;
 import io.delta.kernel.types.IntegerType;
 import io.delta.kernel.types.LongType;
 import io.delta.kernel.types.ShortType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
+/**
+ * An abstract factory class that translate a Druid {@link DeltaFilter} with binary operators
+ * like '=', '>', '<', '>=', '<=' into a Delta {@link Predicate}. The child classes share the same translation logic and don't require any
+ * special handling, so they extend this base class.
+ */
 public abstract class DeltaBinaryOperatorFilter implements DeltaFilter
 {
   @JsonProperty
@@ -56,13 +63,17 @@ public abstract class DeltaBinaryOperatorFilter implements DeltaFilter
   )
   {
     if (operator == null) {
-      throw InvalidInput.exception("operator is required for Delta filters.");
+      throw DruidException.defensive().build("operator is a required field for Delta filter.");
     }
     if (column == null) {
-      throw InvalidInput.exception("column is required for Delta filters.");
+      throw InvalidInput.exception(
+          "column is a required field. None provided for Delta filter type[%s].", operator
+      );
     }
     if (value == null) {
-      throw InvalidInput.exception("value is required for Delta filters.");
+      throw InvalidInput.exception(
+          "value is a required field. None provided for Delta filter type[%s] and column[%s].", operator, column
+      );
     }
     this.operator = operator;
     this.column = column;
@@ -104,14 +115,16 @@ public abstract class DeltaBinaryOperatorFilter implements DeltaFilter
         return Literal.ofShort(Short.parseShort(value));
       } else if (dataType instanceof LongType) {
         return Literal.ofLong(Long.parseLong(value));
+      } else if (dataType instanceof FloatType) {
+        return Literal.ofFloat(Float.parseFloat(value));
       } else if (dataType instanceof DoubleType) {
         return Literal.ofDouble(Double.parseDouble(value));
       } else if (dataType instanceof DateType) {
         final Date dataVal = Date.valueOf(value);
-        final LocalDate localDate = dataVal.toLocalDate();
-        final LocalDate epoch = LocalDate.ofEpochDay(0);
-        int between = (int) ChronoUnit.DAYS.between(epoch, localDate);
-        return Literal.ofDate(between);
+        final int daysSinceEpoch = (int) ChronoUnit.DAYS.between(
+            LocalDate.ofEpochDay(0), dataVal.toLocalDate()
+        );
+        return Literal.ofDate(daysSinceEpoch);
       } else {
         throw InvalidInput.exception(
             "Unsupported data type[%s] for column[%s] with value[%s].",

@@ -1154,7 +1154,8 @@ a Delta table. This input source provides the following filters: `and`, `or`, `n
 
 When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta Kernel solely relies
 on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
-data that doesn't match the filter. To guarantee that the Delta Kernel prunes out the unnecessary columns, only use filters on partitioned columns.
+data that doesn't match the filter. To guarantee that the Delta Kernel prunes out unnecessary column values, only use
+filters on partitioned columns.
 
 
 `and` filter:
@@ -1232,7 +1233,7 @@ The following is a sample spec to read all records from the Delta table `/delta-
     }
 ```
 
-The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4'` 'and' `age >= 30`:
+The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4' and age >= 30`:
 
 ```json
 ...
