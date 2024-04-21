@@ -1523,7 +1523,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(DATASOURCE1, pluses, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataMap = new ImmutableMap.Builder<>();
-    ConcurrentMap<String, SchemaPayload> schemaPayloadMap = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
 
     derbyConnector.retryWithHandle(handle -> {
       handle.createQuery(StringUtils.format(
@@ -1550,7 +1550,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       return null;
     });
 
-    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap);
+    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap.build());
     segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataMap.build());
     segmentSchemaCache.setInitialized();
 
@@ -1648,9 +1648,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
     segmentStatsMap.put(segment3.getId(), new SegmentMetadata((long) adapter.getNumRows(), "fp"));
-    ConcurrentMap<String, SchemaPayload> schemaPayloadMap = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put("fp", new SchemaPayload(adapter.getRowSignature()));
-    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap);
+    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap.build());
     segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentStatsMap.build());
 
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();

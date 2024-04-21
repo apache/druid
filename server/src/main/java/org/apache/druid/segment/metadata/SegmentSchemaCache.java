@@ -75,7 +75,7 @@ public class SegmentSchemaCache
   /**
    * Mapping from schemaId to payload. Gets updated after DB poll.
    */
-  private volatile ConcurrentMap<String, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
+  private volatile ImmutableMap<String, SchemaPayload> finalizedSegmentSchema = ImmutableMap.of();
 
   /**
    * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
@@ -126,7 +126,7 @@ public class SegmentSchemaCache
     initialized.set(new CountDownLatch(1));
 
     finalizedSegmentMetadata = ImmutableMap.of();
-    finalizedSegmentSchema.clear();
+    finalizedSegmentSchema = ImmutableMap.of();
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
   }
@@ -151,7 +151,7 @@ public class SegmentSchemaCache
   /**
    * This method is called on full schema refresh from the DB.
    */
-  public void updateFinalizedSegmentSchemaReference(ConcurrentMap<String, SchemaPayload> schemaPayloadMap)
+  public void updateFinalizedSegmentSchemaReference(ImmutableMap<String, SchemaPayload> schemaPayloadMap)
   {
     finalizedSegmentSchema = schemaPayloadMap;
   }
@@ -232,10 +232,11 @@ public class SegmentSchemaCache
     SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
     // segment schema has been polled from the DB
     if (segmentMetadata != null) {
-      if (finalizedSegmentSchema.containsKey(segmentMetadata.getSchemaFingerprint())) {
+      SchemaPayload schemaPayload = finalizedSegmentSchema.get(segmentMetadata.getSchemaFingerprint());
+      if (schemaPayload != null) {
         return Optional.of(
             new SchemaPayloadPlus(
-                finalizedSegmentSchema.get(segmentMetadata.getSchemaFingerprint()),
+                schemaPayload,
                 segmentMetadata.getNumRows()
             )
         );

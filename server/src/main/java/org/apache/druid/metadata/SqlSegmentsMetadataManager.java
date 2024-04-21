@@ -1146,7 +1146,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         }
     );
 
-    ConcurrentMap<String, SchemaPayload> schemaMap = new ConcurrentHashMap<>();
+    ImmutableMap.Builder<String, SchemaPayload> schemaMapBuilder = new ImmutableMap.Builder<>();
 
     final String schemaPollQuery =
         StringUtils.format(
@@ -1166,7 +1166,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
                       {
                         try {
-                          schemaMap.put(
+                          schemaMapBuilder.put(
                               r.getString("fingerprint"),
                               jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
                           );
@@ -1183,6 +1183,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           return null;
         });
 
+    ImmutableMap<String, SchemaPayload> schemaMap = schemaMapBuilder.build();
     segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
     segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
 

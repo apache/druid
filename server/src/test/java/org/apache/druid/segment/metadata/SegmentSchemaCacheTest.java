@@ -94,9 +94,9 @@ public class SegmentSchemaCacheTest
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
 
-    ConcurrentMap<String, SchemaPayload> schemaPayload = new ConcurrentHashMap<>();
-    schemaPayload.put("fp1", new SchemaPayload(rowSignature));
-    cache.updateFinalizedSegmentSchemaReference(schemaPayload);
+    ImmutableMap.Builder<String, SchemaPayload> schemaPayloadBuilder = new ImmutableMap.Builder<>();
+    schemaPayloadBuilder.put("fp1", new SchemaPayload(rowSignature));
+    cache.updateFinalizedSegmentSchemaReference(schemaPayloadBuilder.build());
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
     segmentMetadataBuilder.put(id, new SegmentMetadata(20L, "fp1"));
