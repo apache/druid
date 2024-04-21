@@ -368,7 +368,7 @@ public class Expressions
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
       final String s = RexLiteral.stringValue(rexNode);
       retVal = ExprEval.ofType(ExpressionType.STRING, s);
-      isEmptyString = "".equals(s);
+      isEmptyString = s != null && s.isEmpty();
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
       retVal = ExprEval.ofType(
           ExpressionType.LONG,
