@@ -297,7 +297,7 @@ public class SegmentSchemaCache
   public void emitStats()
   {
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchemaMap.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedStats/size", finalizedSegmentMetadata.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSegmentMetadata/size", finalizedSegmentMetadata.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", finalizedSegmentSchema.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", inTransitSMQResults.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/size", inTransitSMQPublishedResults.size()));
