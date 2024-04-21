@@ -32,8 +32,6 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 public class SegmentSchemaCacheTest
 {
