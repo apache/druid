@@ -29,10 +29,10 @@ import org.junit.runners.Parameterized;
 
 import java.util.Properties;
 
-//@RunWith(Parameterized.class)
+@RunWith(Parameterized.class)
 public class TestValidateIncompatibleCentralizedDatasourceSchemaConfig
 {
-  //@Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -51,10 +51,10 @@ public class TestValidateIncompatibleCentralizedDatasourceSchemaConfig
     this.runnable = runnable;
   }
 
-  //@Test(expected = RuntimeException.class)
+  @Test(expected = RuntimeException.class)
   public void testSimpleInjection_centralizedDatasourceSchemaEnabled()
   {
-    Properties properties = new Properties();
+    Properties properties = System.getProperties();
     properties.put("druid.centralizedDatasourceSchema.enabled", "true");
     properties.put("druid.serverview.type", "batch");
     properties.put("druid.server.http.numThreads", "2");
