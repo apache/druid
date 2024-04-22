@@ -213,6 +213,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -1765,6 +1766,16 @@ public class ControllerImpl implements Controller
                                                  );
 
       if (!segments.isEmpty() && storeCompactionState) {
+        if (!(task.getQuerySpec().getDestination() instanceof DataSourceMSQDestination)) {
+          throw new MSQException(
+              UnknownFault.forMessage(
+                  StringUtils.format(
+                      "Query[%s] cannot store compaction state in segments as destination[%s] not a datasource.",
+                      queryDef.getQueryId(),
+                      task.getQuerySpec().getDestination().getClass()
+                  )));
+        }
+
         DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
         if (!destination.isReplaceTimeChunks()) {
           // Store compaction state only for replace queries.
@@ -1831,9 +1842,9 @@ public class ControllerImpl implements Controller
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        dataSchema.getGranularitySpec().getQueryGranularity(),
+        QueryContext.of(task.getContext()).getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
-        dataSchema.getGranularitySpec().inputIntervals()
+        ((DataSourceMSQDestination) task.getQuerySpec().getDestination()).getReplaceTimeChunks()
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();

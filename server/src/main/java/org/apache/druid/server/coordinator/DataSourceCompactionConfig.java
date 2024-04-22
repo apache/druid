@@ -232,22 +232,22 @@ public class DataSourceCompactionConfig
     return result;
   }
 
-  public static DataSourceCompactionConfig from(Engine defaultEngine, DataSourceCompactionConfig currentConfig)
+  public static DataSourceCompactionConfig from(Engine defaultEngine, DataSourceCompactionConfig newConfig)
   {
-    Engine newEngine = currentConfig.getEngine();
+    Engine newEngine = newConfig.getEngine();
     String engineSourceLog = "specified in spec";
     if (newEngine == null) {
       newEngine = defaultEngine;
       engineSourceLog = "set as default";
     }
     if (newEngine == Engine.MSQ) {
-      if (currentConfig.getTuningConfig() != null) {
-        PartitionsSpec partitionsSpec = currentConfig.getTuningConfig().getPartitionsSpec();
+      if (newConfig.getTuningConfig() != null) {
+        PartitionsSpec partitionsSpec = newConfig.getTuningConfig().getPartitionsSpec();
 
         if (partitionsSpec != null && !(partitionsSpec instanceof DimensionRangePartitionsSpec
                                         || partitionsSpec instanceof DynamicPartitionsSpec)) {
           throw InvalidInput.exception(
-              "Invalid partition spec type[%s] for MSQ compaction engine %s."
+              "Invalid partition spec type[%s] for MSQ compaction engine[%s]."
               + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
               partitionsSpec.getClass(),
               engineSourceLog
@@ -261,20 +261,26 @@ public class DataSourceCompactionConfig
           );
         }
       }
+      if (newConfig.getMetricsSpec() != null
+          && newConfig.getGranularitySpec() != null
+          && !newConfig.getGranularitySpec()
+                       .isRollup()) {
+        throw InvalidInput.exception("rollup in granularitySpec must be set to True if metricsSpec is specifed.");
+      }
     }
     return new DataSourceCompactionConfig(
-        currentConfig.getDataSource(),
-        currentConfig.getTaskPriority(),
-        currentConfig.getInputSegmentSizeBytes(),
-        currentConfig.getMaxRowsPerSegment(),
-        currentConfig.getSkipOffsetFromLatest(),
-        currentConfig.getTuningConfig(),
-        currentConfig.getGranularitySpec(),
-        currentConfig.getDimensionsSpec(),
-        currentConfig.getMetricsSpec(),
-        currentConfig.getTransformSpec(),
-        currentConfig.getIoConfig(),
-        newEngine, currentConfig.getTaskContext()
+        newConfig.getDataSource(),
+        newConfig.getTaskPriority(),
+        newConfig.getInputSegmentSizeBytes(),
+        newConfig.getMaxRowsPerSegment(),
+        newConfig.getSkipOffsetFromLatest(),
+        newConfig.getTuningConfig(),
+        newConfig.getGranularitySpec(),
+        newConfig.getDimensionsSpec(),
+        newConfig.getMetricsSpec(),
+        newConfig.getTransformSpec(),
+        newConfig.getIoConfig(),
+        newEngine, newConfig.getTaskContext()
     );
   }
 

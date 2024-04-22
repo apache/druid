@@ -34,13 +34,14 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -52,17 +53,22 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.Interval;
 
@@ -81,6 +87,10 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
   final OverlordClient overlordClient;
   final ObjectMapper jsonMapper;
 
+  private static final String TIME_VIRTUAL_COLUMN = "v0";
+  private static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
+
+
   public CompactionToMSQTaskImpl(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
   {
     this.overlordClient = overlordClient;
@@ -95,6 +105,51 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
       rowSignatureBuilder.add(ds.getName(), ColumnType.fromString(ds.getTypeName()));
     }
     return rowSignatureBuilder.build();
+  }
+
+  private static List<DimensionSpec> getAggregateDimensions(DataSchema ds)
+  {
+    List<DimensionSpec> dimensionSpecs = ds.getDimensionsSpec().getDimensions().stream()
+                                           .map(dim -> new DefaultDimensionSpec(
+                                               dim.getName(),
+                                               dim.getName(),
+                                               dim.getColumnType()
+                                           ))
+                                           .collect(Collectors.toList());
+
+
+
+    // Dimensions in group-by aren't allowed to have time column as the output name.
+    if (isQueryGranularityEmpty(ds)){
+      dimensionSpecs.add(new DefaultDimensionSpec(TIME_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+    } else {
+      // The changed granularity would result in a new virtual column that needs to be aggregated upon.
+      dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+    }
+    return dimensionSpecs;
+  }
+
+  private static ColumnMappings getColumnMappings(DataSchema dataSchema)
+  {
+    List<ColumnMapping> columnMappings = dataSchema.getDimensionsSpec()
+                                                   .getDimensions()
+                                                   .stream()
+                                                   .map(dim -> new ColumnMapping(
+                                                       dim.getName(), dim.getName()))
+                                                   .collect(Collectors.toList());
+    columnMappings.addAll(Arrays.stream(dataSchema.getAggregators())
+                                .map(agg -> new ColumnMapping(agg.getName(), agg.getName()))
+                                .collect(
+                                    Collectors.toList()));
+    if (isGroupBy(dataSchema)) {
+      // For group-by queries, time will always be one of the dimension. Since dimensions in groupby aren't allowed to
+      // have time column as the output name, we map time dimension to a fixed column name in dimensions, and map it
+      // back to the time column here.
+      columnMappings.add(new ColumnMapping(TIME_VIRTUAL_COLUMN, TIME_COLUMN));
+    } else {
+      columnMappings.add(new ColumnMapping(TIME_COLUMN, TIME_COLUMN));
+    }
+    return new ColumnMappings(columnMappings);
   }
 
   private static MultipleIntervalSegmentSpec createMultipleIntervalSpec(Interval interval)
@@ -126,26 +181,50 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
                                         .build();
   }
 
-  private static Query<?> buildGroupByQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema)
+  private static boolean isGroupBy(DataSchema ds)
   {
+    return ds.getAggregators().length > 0;
+  }
 
+  private static boolean isQueryGranularityEmpty(DataSchema ds)
+  {
+    return ds.getGranularitySpec() == null
+           || ds.getGranularitySpec().getQueryGranularity() == null;
+  }
+  private static VirtualColumns getVirtualColumns(DataSchema ds) {
+    VirtualColumns virtualColumns = VirtualColumns.EMPTY;
+
+    if (!isQueryGranularityEmpty(ds) && !ds.getGranularitySpec().getQueryGranularity().equals(Granularities.ALL)) {
+      PeriodGranularity periodQueryGranularity = (PeriodGranularity) ds.getGranularitySpec()
+                                                                       .getQueryGranularity();
+      VirtualColumn virtualColumn = new ExpressionVirtualColumn(
+          TIME_VIRTUAL_COLUMN,
+          StringUtils.format(
+              "timestamp_floor(\"%s\", '%s')",
+              TIME_COLUMN,
+              periodQueryGranularity.getPeriod()
+                                    .toString()
+          ),
+          ColumnType.LONG,
+          new ExprMacroTable(Collections.singletonList(new TimestampFloorExprMacro()))
+      );
+      virtualColumns = VirtualColumns.create(virtualColumn);
+    }
+    return virtualColumns;
+  }
+
+  private static Query<?> buildGroupByQuery(
+      CompactionTask compactionTask, Interval interval, DataSchema dataSchema
+  )
+  {
     DimFilter dimFilter = dataSchema.getTransformSpec().getFilter();
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(new TableDataSource(compactionTask.getDataSource()))
-        .setVirtualColumns(VirtualColumns.EMPTY)
+        .setVirtualColumns(getVirtualColumns(dataSchema))
         .setDimFilter(dimFilter)
-        .setGranularity(dataSchema.getGranularitySpec().getQueryGranularity() != null
-                        ? dataSchema.getGranularitySpec()
-                                    .getQueryGranularity()
-                        : new AllGranularity()
-        )
-        .setDimensions(dataSchema.getDimensionsSpec()
-                                 .getDimensions()
-                                 .stream()
-                                 .map(d -> new DefaultDimensionSpec(d.getName(), d.getName()))
-                                 .collect(Collectors.toList())
-        )
+        .setGranularity(new AllGranularity())
+        .setDimensions(getAggregateDimensions(dataSchema))
         .setAggregatorSpecs(Arrays.asList(dataSchema.getAggregators()))
         .setContext(compactionTask.getContext())
         .setInterval(interval);
@@ -164,8 +243,14 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
   ) throws Exception
   {
 
+
     List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
     QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+
+    if (!MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)) {
+      throw InvalidInput.exception(
+          "finalizeAggregations=false currently not supported for auto-compaction with MSQ engine.");
+    }
 
     for (NonnullPair<Interval, DataSchema> intervalDataSchema : intervalDataSchemas) {
       Query<?> query;
@@ -189,7 +274,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
       if (maxNumTasks < 2) {
         throw InvalidInput.exception(
             "MSQ context maxNumTasks [%,d] cannot be less than 2, "
-            + "since at least 1 controller and 1 worker is necessary",
+            + "since at least 1 controller and 1 worker is necessary.",
             maxNumTasks
         );
       }
@@ -197,8 +282,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
       final int maxNumWorkers = maxNumTasks - 1;
       final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
 
-      boolean isGroupBy = ds.getAggregators().length > 0;
-      if (!isGroupBy) {
+      if (!isGroupBy(ds)) {
         query = buildScanQuery(compactionTask, interval, ds);
       } else {
         query = buildGroupByQuery(compactionTask, interval, ds);
@@ -212,7 +296,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
 
       MSQSpec msqSpec = MSQSpec.builder()
                                .query(query)
-                               .columnMappings(ColumnMappings.identity(getRowSignature(ds)))
+                               .columnMappings(getColumnMappings(ds))
                                .destination(msqDestination)
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
                                .tuningConfig(msqTuningConfig)
@@ -228,7 +312,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
           null,
           null,
           null,
-          null
+          msqControllerTaskContext
       );
 
       // Doing a serde roundtrip for MSQControllerTask as the "injector" field of this class is supposed to be injected
@@ -258,7 +342,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
       int maxRowsInMemory
   )
   {
-    Integer rowsPerSegment = null;
+    Integer rowsPerSegment = PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
     if (compactionTask.getTuningConfig() != null) {
       PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
       if (partitionsSpec instanceof DynamicPartitionsSpec) {
@@ -290,6 +374,12 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
                                             .getSegmentGranularity()
                                         : DEFAULT_SEGMENT_GRANULARITY)
       );
+      if (!isQueryGranularityEmpty(ds)) {
+        context.put(
+            DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY,
+            jsonMapper.writeValueAsString(ds.getGranularitySpec().getQueryGranularity())
+        );
+      }
     }
     catch (JsonProcessingException e) {
       throw DruidException
@@ -301,8 +391,6 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
               + "serializable. Please raise an issue in case you are seeing this message while executing a query."
           );
     }
-    context.put(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS, interval.toString());
-    context.put(Tasks.STORE_COMPACTION_STATE_KEY, true);
     return context;
   }
 
@@ -328,10 +416,6 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
       try {
         if (eachTask.isReady(toolbox.getTaskActionClient())) {
           log.info("Running MSQControllerTask: " + json);
-          // Currently multiple MSQControllerTasks, if created, are started serially in-place, just as multiple
-          // ParallelIndexSupervisorTasks for native compaction. A better strategy may be to trigger them via the
-          // overlord. In that case, the subtask statuses would need to be tracked to determine the final status of the
-          // compaction task.
           final TaskStatus eachResult = eachTask.run(toolbox);
           if (!eachResult.isSuccess()) {
             failCnt++;
