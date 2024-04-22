@@ -214,14 +214,14 @@ public class SqlTestFramework
    */
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
-    private final TempDirProducer temporaryFolder;
+    private final TempDirProducer tempDirProducer;
     private final PlannerComponentSupplier plannerComponentSupplier;
 
     public StandardComponentSupplier(
-        final TempDirProducer temporaryFolder
+        final TempDirProducer tempDirProducer
     )
     {
-      this.temporaryFolder = temporaryFolder;
+      this.tempDirProducer = tempDirProducer;
       this.plannerComponentSupplier = buildPlannerComponentSupplier();
     }
 
@@ -252,7 +252,7 @@ public class SqlTestFramework
 
     protected File newTempFolder(String prefix)
     {
-      return temporaryFolder.getTempDir(prefix);
+      return tempDirProducer.getTempDir(prefix);
     }
 
 
@@ -285,7 +285,7 @@ public class SqlTestFramework
       return TestDataBuilder.createMockWalker(
           injector,
           conglomerate,
-          temporaryFolder.getTempDir("segments"),
+          tempDirProducer.getTempDir("segments"),
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           joinableFactory
       );
