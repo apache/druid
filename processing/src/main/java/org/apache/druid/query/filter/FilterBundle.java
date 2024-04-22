@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * FilterBundle is a container for all the goodies used for producing filtered cursors, a {@link ImmutableBitmap} if
@@ -120,7 +121,9 @@ public class FilterBundle
   public interface IndexBundle
   {
     IndexBundleInfo getIndexInfo();
+
     ImmutableBitmap getBitmap();
+
     ColumnIndexCapabilities getIndexCapabilities();
   }
 
@@ -135,7 +138,9 @@ public class FilterBundle
   public interface MatcherBundle
   {
     MatcherBundleInfo getMatcherInfo();
+
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
+
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset);
   }
 
@@ -205,7 +210,10 @@ public class FilterBundle
     }
 
     @Override
-    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+    public VectorValueMatcher vectorMatcher(
+        VectorColumnSelectorFactory selectorFactory,
+        ReadableVectorOffset baseOffset
+    )
     {
       return vectorMatcherFn.apply(selectorFactory);
     }
@@ -240,6 +248,21 @@ public class FilterBundle
       return matcher;
     }
 
+    /**
+     * Return a multiline description string, suitable for comparisons in tests.
+     */
+    public String describe()
+    {
+      final StringBuilder sb = new StringBuilder();
+      if (index != null) {
+        sb.append(index.describe());
+      }
+      if (matcher != null) {
+        sb.append(matcher.describe());
+      }
+      return sb.toString();
+    }
+
     @Override
     public String toString()
     {
@@ -249,6 +272,8 @@ public class FilterBundle
 
   public static class IndexBundleInfo
   {
+    private static final Pattern PATTERN_LINE_START = Pattern.compile("(?m)^");
+
     private final Supplier<String> filter;
     private final List<IndexBundleInfo> indexes;
     private final int selectionSize;
@@ -292,6 +317,27 @@ public class FilterBundle
       return indexes;
     }
 
+    /**
+     * Return a multiline description string, suitable for comparisons in tests.
+     */
+    public String describe()
+    {
+      final StringBuilder sb = new StringBuilder()
+          .append("index: ")
+          .append(filter.get())
+          .append(" (selectionSize = ")
+          .append(selectionSize)
+          .append(")\n");
+
+      if (indexes != null) {
+        for (final IndexBundleInfo info : indexes) {
+          sb.append(PATTERN_LINE_START.matcher(info.describe()).replaceAll("  "));
+        }
+      }
+
+      return sb.toString();
+    }
+
     @Override
     public String toString()
     {
@@ -306,6 +352,8 @@ public class FilterBundle
 
   public static class MatcherBundleInfo
   {
+    private static final Pattern PATTERN_LINE_START = Pattern.compile("(?m)^");
+
     private final Supplier<String> filter;
     @Nullable
     final List<MatcherBundleInfo> matchers;
@@ -343,6 +391,30 @@ public class FilterBundle
     public List<MatcherBundleInfo> getMatchers()
     {
       return matchers;
+    }
+
+    /**
+     * Return a multiline description string, suitable for comparisons in tests.
+     */
+    public String describe()
+    {
+      final StringBuilder sb = new StringBuilder()
+          .append("matcher: ")
+          .append(filter.get())
+          .append("\n");
+
+      if (partialIndex != null) {
+        sb.append("  with partial ")
+          .append(PATTERN_LINE_START.matcher(partialIndex.describe()).replaceAll("  ").substring(2));
+      }
+
+      if (matchers != null) {
+        for (MatcherBundleInfo info : matchers) {
+          sb.append(PATTERN_LINE_START.matcher(info.describe()).replaceAll("  "));
+        }
+      }
+
+      return sb.toString();
     }
 
     @Override

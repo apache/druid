@@ -76,7 +76,7 @@ public class AndFilter implements BooleanFilter
   public <T> FilterBundle makeFilterBundle(
       ColumnIndexSelector columnIndexSelector,
       BitmapResultFactory<T> bitmapResultFactory,
-      int selectionRowCount,
+      int applyRowCount,
       int totalRowCount,
       boolean includeUnknown
   )
@@ -85,7 +85,7 @@ public class AndFilter implements BooleanFilter
     final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundleInfo> matcherBundleInfos = new ArrayList<>();
 
-    int selectionCount = selectionRowCount;
+    int indexIntersectionSize = totalRowCount;
     ImmutableBitmap index = null;
     ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
     // AND filter can be partitioned into a bundle that has both indexes and value matchers. The filters which support
@@ -101,7 +101,7 @@ public class AndFilter implements BooleanFilter
       final FilterBundle subBundle = subfilter.makeFilterBundle(
           columnIndexSelector,
           bitmapResultFactory,
-          selectionCount,
+          Math.min(applyRowCount, indexIntersectionSize),
           totalRowCount,
           includeUnknown
       );
@@ -120,7 +120,7 @@ public class AndFilter implements BooleanFilter
         } else {
           index = index.intersection(subBundle.getIndex().getBitmap());
         }
-        selectionCount = index.size();
+        indexIntersectionSize = index.size();
       }
       if (subBundle.getMatcherBundle() != null) {
         matcherBundles.add(subBundle.getMatcherBundle());
@@ -140,7 +140,7 @@ public class AndFilter implements BooleanFilter
         indexBundle = new FilterBundle.SimpleIndexBundle(
             new FilterBundle.IndexBundleInfo(
                 () -> "AND",
-                selectionCount,
+                indexIntersectionSize,
                 System.nanoTime() - bitmapConstructionStartNs,
                 indexBundleInfos
             ),
@@ -247,7 +247,7 @@ public class AndFilter implements BooleanFilter
       @Override
       public <T> T computeBitmapResult(
           BitmapResultFactory<T> bitmapResultFactory,
-          int selectionRowCount,
+          int applyRowCount,
           int totalRowCount,
           boolean includeUnknown
       )
@@ -256,7 +256,7 @@ public class AndFilter implements BooleanFilter
         for (final BitmapColumnIndex index : bitmapColumnIndices) {
           final T bitmapResult = index.computeBitmapResult(
               bitmapResultFactory,
-              selectionRowCount,
+              applyRowCount,
               totalRowCount,
               includeUnknown
           );

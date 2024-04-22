@@ -33,6 +33,11 @@ export const EMPTY_ARRAY: any[] = [];
 
 export type NumberLike = number | bigint;
 
+export function isNumberLike(x: unknown): x is NumberLike {
+  const t = typeof x;
+  return t === 'number' || t === 'bigint';
+}
+
 export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }

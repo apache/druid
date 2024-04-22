@@ -43,7 +43,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -60,7 +60,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -77,7 +77,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -103,7 +103,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -129,7 +129,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -156,7 +156,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -173,7 +173,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-            new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, true, null, true, null),
+            new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, true, null, true, null, null, null, null, null),
             new ObjectMapper(),
             client
     );
@@ -192,7 +192,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = mock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, true, null, true, true),
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, true, null, true, true, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -239,7 +239,12 @@ public class StatsDEmitterTest
         true,
         ImmutableList.of("tag1", "value1"),
         true,
-        true
+        true,
+        5100,
+        512,
+        1,
+        1
+
     );
     try (StatsDEmitter emitter = StatsDEmitter.of(config, new ObjectMapper())) {
 

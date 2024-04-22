@@ -1351,6 +1351,73 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testScalarInArrayFilter()
+  {
+    msqIncompatible();
+    testQuery(
+            "SELECT dim2 FROM druid.numfoo WHERE SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd']) LIMIT 5",
+            ImmutableList.of(
+                    newScanQueryBuilder()
+                            .dataSource(CalciteTests.DATASOURCE3)
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .filters(
+                                    new ExpressionDimFilter("scalar_in_array(\"dim2\",array('a','d'))", ExprMacroTable.nil())
+                            )
+                            .columns("dim2")
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .limit(5)
+                            .context(QUERY_CONTEXT_DEFAULT)
+                            .build()
+            ),
+            ImmutableList.of(
+                    new Object[]{"a"},
+                    new Object[]{"a"}
+            )
+    );
+  }
+
+  @Test
+  public void testArrayScalarInFilter_MVD()
+  {
+    msqIncompatible();
+    testBuilder()
+            .sql(
+                    "SELECT dim3, (CASE WHEN scalar_in_array(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
+                            "FROM druid.numfoo"
+            )
+            .expectedQueries(
+                    ImmutableList.of(
+                            newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE3)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .virtualColumns(
+                                            new ExpressionVirtualColumn(
+                                                    "v0",
+                                                    "case_searched(scalar_in_array(\"dim3\",array('a','b','d')),'abd','not abd')",
+                                                    ColumnType.STRING,
+                                                    ExprMacroTable.nil()
+                                            )
+                                    )
+                                    .columns("dim3", "v0")
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .context(QUERY_CONTEXT_DEFAULT)
+                                    .build()
+                    )
+            )
+            .expectedResults(ResultMatchMode.RELAX_NULLS,
+                    ImmutableList.of(
+                            new Object[]{"[\"a\",\"b\"]", "[\"abd\",\"abd\"]"},
+                            new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
+                            new Object[]{"d", "abd"},
+                            new Object[]{"", "not abd"},
+                            new Object[]{null, "not abd"},
+                            new Object[]{null, "not abd"}
+                    )
+            )
+            .run();
+
+  }
 
   @Test
   public void testArraySlice()

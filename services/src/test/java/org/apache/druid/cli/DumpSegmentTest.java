@@ -104,10 +104,12 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryRunner mergeRunner = Mockito.mock(QueryRunner.class);
     Query query = Mockito.mock(Query.class);
     Sequence expected = Sequences.simple(Collections.singletonList(123));
+    Mockito.when(query.withOverriddenContext(ArgumentMatchers.any())).thenReturn(query);
     Mockito.when(injector.getInstance(QueryRunnerFactoryConglomerate.class)).thenReturn(conglomerate);
     Mockito.when(conglomerate.findFactory(ArgumentMatchers.any())).thenReturn(factory);
     Mockito.when(factory.createRunner(ArgumentMatchers.any())).thenReturn(runner);
     Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)))).thenReturn(mergeRunner);
+    Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)), true)).thenReturn(mergeRunner);
     Mockito.when(mergeRunner.run(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(expected);
     Sequence actual = DumpSegment.executeQuery(injector, null, query);
     Assert.assertSame(expected, actual);
