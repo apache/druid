@@ -53,7 +53,6 @@ public class GroupByColumnSelectorStrategyFactory implements ColumnSelectorStrat
       throw DruidException.defensive("Unable to deduce type for the grouping dimension");
     }
     try {
-      // TODO(laksh): Check if the .getNullableStrategy() works, and doesn't throw
       if (!capabilities.toColumnType().getNullableStrategy().groupable()) {
         // InvalidInput because the SQL planner would have already flagged these dimensions, therefore this will only happen
         // if native queries have been submitted.

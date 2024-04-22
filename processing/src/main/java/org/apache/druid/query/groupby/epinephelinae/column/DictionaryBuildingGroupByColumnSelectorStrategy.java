@@ -92,11 +92,8 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
    */
   private static GroupByColumnSelectorStrategy forArrayAndComplexTypes(final ColumnType columnType)
   {
-    final List<Object> dictionary = DictionaryBuildingUtils.createDictionary();
-    final Object2IntMap<Object> reverseDictionary =
-        DictionaryBuildingUtils.createReverseDictionary(columnType.getNullableStrategy());
     return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
-        new UniValueDimensionIdCodec(dictionary, reverseDictionary, columnType.getNullableStrategy()),
+        new UniValueDimensionIdCodec(columnType.getNullableStrategy()),
         columnType,
         columnType.getNullableStrategy(),
         null
@@ -105,10 +102,8 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
 
   private static GroupByColumnSelectorStrategy forStringArrays()
   {
-    final BiMap<String, Integer> elementBiDictionary = HashBiMap.create();
-    final BiMap<ArrayList<Integer>, Integer> arrayBiDictionary = HashBiMap.create();
     return new DictionaryBuildingGroupByColumnSelectorStrategy<>(
-        new StringArrayDimensionIdCodec(elementBiDictionary, arrayBiDictionary),
+        new StringArrayDimensionIdCodec(),
         ColumnType.STRING_ARRAY,
         ColumnType.STRING_ARRAY.getNullableStrategy(),
         null
@@ -140,14 +135,10 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
     @SuppressWarnings("rawtypes")
     private final NullableTypeStrategy nullableTypeStrategy;
 
-    public UniValueDimensionIdCodec(
-        final List<Object> dictionary,
-        final Object2IntMap<Object> reverseDictionary,
-        final NullableTypeStrategy nullableTypeStrategy
-    )
+    public UniValueDimensionIdCodec(final NullableTypeStrategy nullableTypeStrategy)
     {
-      this.dictionary = dictionary;
-      this.reverseDictionary = reverseDictionary;
+      this.dictionary = DictionaryBuildingUtils.createDictionary();
+      this.reverseDictionary = DictionaryBuildingUtils.createReverseDictionary(nullableTypeStrategy);
       this.nullableTypeStrategy = nullableTypeStrategy;
     }
 
@@ -204,23 +195,15 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
    */
   private static class StringArrayDimensionIdCodec implements DimensionIdCodec<Object>
   {
+    // TODO(laksh): Use dictionaryBuilding + reverseBuilding
     // contains string <-> id for each element of the multi value grouping column
     // for eg : [a,b,c] is the col value. dictionaryToInt will contain { a <-> 1, b <-> 2, c <-> 3}
-    private final BiMap<String, Integer> elementBiDictionary;
+    private final BiMap<String, Integer> elementBiDictionary = HashBiMap.create();
 
     // stores each row as an integer array where the int represents the value in dictionaryToInt
     // for eg : [a,b,c] would be converted to [1,2,3] and assigned a integer value 1.
     // [1,2,3] <-> 1
-    private final BiMap<ArrayList<Integer>, Integer> arrayBiDictionary;
-
-    public StringArrayDimensionIdCodec(
-        BiMap<String, Integer> elementBiDictionary,
-        BiMap<ArrayList<Integer>, Integer> arrayBiDictionary
-    )
-    {
-      this.elementBiDictionary = elementBiDictionary;
-      this.arrayBiDictionary = arrayBiDictionary;
-    }
+    private final BiMap<ArrayList<Integer>, Integer> arrayBiDictionary = HashBiMap.create();
 
     @Override
     public MemoryFootprint<Integer> lookupId(Object dimension)
@@ -238,7 +221,9 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
           // We're not using the dictionary and reverseDictionary from DictionaryBuilding, but the BiMap is close enough
           // that we expect this footprint calculation to still be useful.
           estimatedFootprint +=
-              DictionaryBuildingUtils.estimateEntryFootprint(elementCasted == null ? 0 : elementCasted.length() * Character.BYTES);
+              DictionaryBuildingUtils.estimateEntryFootprint(elementCasted == null
+                                                             ? 0
+                                                             : elementCasted.length() * Character.BYTES);
         }
         dictionaryEncodedStringArray.add(elementDictId);
       }

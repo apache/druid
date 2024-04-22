@@ -187,7 +187,6 @@ public class StructuredData implements Comparable<StructuredData>
   }
 
   // hashCode that relies on the object equality. Translates the hashcode to an integer as well
-  // TODO(laksh): better name
   public int equalityHash()
   {
     return Longs.hashCode(hash.getAsLong());

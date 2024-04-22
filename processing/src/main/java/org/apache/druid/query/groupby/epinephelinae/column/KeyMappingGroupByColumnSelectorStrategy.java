@@ -38,8 +38,7 @@ import java.nio.ByteBuffer;
  * a fixed width, and is often backed by a dictionary representing the actual dimension object. It is used for arrays,
  * and complex types.
  * <p>
- * The visibility of the class is limited, and the callers must use one of the two variants of the mapping strategy:
- * 1. TODO(laksh): PrebuiltDictionaryGroupByColumnSelectorStrategy - (not available, because no one is using it)
+ * The visibility of the class is limited, and the callers must use the following variant of the mapping strategy:
  * 2. {@link DictionaryBuildingGroupByColumnSelectorStrategy}
  * <p>
  * {@code null} can be represented by either -1 or the position of null in the dictionary it was stored when it was
@@ -57,7 +56,7 @@ import java.nio.ByteBuffer;
  * It only handles non-primitive types, because numeric primitives are handled by the {@link FixedWidthGroupByColumnSelectorStrategy}
  * and the string primitives are handled by the {@link KeyMappingMultiValueGroupByColumnSelectorStrategy}
  *
- * @param <DimensionType>>     Class of the dimension
+ * @param <DimensionType>   Class of the dimension
  * @see DimensionIdCodec encoding decoding logic for converting value to dictionary
  */
 @NotThreadSafe
