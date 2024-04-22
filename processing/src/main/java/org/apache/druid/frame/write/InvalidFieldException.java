@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class InvalidFieldException extends RuntimeException
 {
@@ -77,6 +78,28 @@ public class InvalidFieldException extends RuntimeException
   public String getErrorMsg()
   {
     return errorMsg;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InvalidFieldException that = (InvalidFieldException) o;
+    return Objects.equals(source, that.source)
+           && Objects.equals(column, that.column)
+           && Objects.equals(rowNumber, that.rowNumber)
+           && Objects.equals(errorMsg, that.errorMsg);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(source, column, rowNumber, errorMsg);
   }
 
   public static Builder builder()
