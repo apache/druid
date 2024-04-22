@@ -75,9 +75,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
   public static class VarianceComponentSupplier extends StandardComponentSupplier
   {
-    public VarianceComponentSupplier(TempDirProducer temporaryFolder)
+    public VarianceComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

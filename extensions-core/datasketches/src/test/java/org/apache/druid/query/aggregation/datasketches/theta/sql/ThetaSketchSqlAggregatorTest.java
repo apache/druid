@@ -93,9 +93,9 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class ThetaSketchComponentSupplier extends StandardComponentSupplier
   {
-    public ThetaSketchComponentSupplier(TempDirProducer temporaryFolder)
+    public ThetaSketchComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

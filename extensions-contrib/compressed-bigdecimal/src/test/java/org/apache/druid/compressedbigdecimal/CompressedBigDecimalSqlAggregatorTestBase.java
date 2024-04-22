@@ -63,9 +63,9 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
 {
   protected static class CompressedBigDecimalComponentSupplier extends StandardComponentSupplier
   {
-    public CompressedBigDecimalComponentSupplier(TempDirProducer temporaryFolder)
+    public CompressedBigDecimalComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     private static final InputRowSchema SCHEMA = new InputRowSchema(

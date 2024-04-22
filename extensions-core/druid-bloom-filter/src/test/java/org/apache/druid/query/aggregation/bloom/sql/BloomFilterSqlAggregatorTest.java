@@ -71,9 +71,9 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class BloomFilterSqlAggComponentSupplier extends StandardComponentSupplier
   {
-    public BloomFilterSqlAggComponentSupplier(TempDirProducer temporaryFolder)
+    public BloomFilterSqlAggComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

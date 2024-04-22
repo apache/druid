@@ -68,9 +68,9 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class QuantileComponentSupplier extends StandardComponentSupplier
   {
-    public QuantileComponentSupplier(TempDirProducer temporaryFolder)
+    public QuantileComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

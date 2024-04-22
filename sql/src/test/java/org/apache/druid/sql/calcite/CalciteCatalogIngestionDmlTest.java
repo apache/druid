@@ -70,9 +70,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   public static class CatalogIngestionDmlComponentSupplier extends IngestionDmlComponentSupplier
   {
-    public CatalogIngestionDmlComponentSupplier(TempDirProducer temporaryFolder)
+    public CatalogIngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     private static final ObjectMapper MAPPER = new DefaultObjectMapper();

@@ -37,9 +37,9 @@ public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
 {
   static class StrictInsertComponentSupplier extends IngestionDmlComponentSupplier
   {
-    public StrictInsertComponentSupplier(TempDirProducer temporaryFolder)
+    public StrictInsertComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

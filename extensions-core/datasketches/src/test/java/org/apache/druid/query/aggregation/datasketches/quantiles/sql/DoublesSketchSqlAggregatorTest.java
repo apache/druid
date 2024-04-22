@@ -78,9 +78,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class DoublesSketchComponentSupplier extends StandardComponentSupplier
   {
-    public DoublesSketchComponentSupplier(TempDirProducer temporaryFolder)
+    public DoublesSketchComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

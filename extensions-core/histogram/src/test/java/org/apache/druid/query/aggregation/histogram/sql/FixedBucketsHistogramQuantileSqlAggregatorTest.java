@@ -69,9 +69,9 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
 {
   protected static class FixedBucketsHistogramComponentSupplier extends StandardComponentSupplier
   {
-    public FixedBucketsHistogramComponentSupplier(TempDirProducer temporaryFolder)
+    public FixedBucketsHistogramComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

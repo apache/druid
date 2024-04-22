@@ -240,9 +240,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class HllSketchComponentSupplier extends StandardComponentSupplier
   {
-    public HllSketchComponentSupplier(TempDirProducer temporaryFolder)
+    public HllSketchComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

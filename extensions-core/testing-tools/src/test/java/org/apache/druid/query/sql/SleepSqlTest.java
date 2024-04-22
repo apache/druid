@@ -41,9 +41,9 @@ public class SleepSqlTest extends BaseCalciteQueryTest
 {
   public static class SleepComponentSupplier extends StandardComponentSupplier
   {
-    public SleepComponentSupplier(TempDirProducer temporaryFolder)
+    public SleepComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

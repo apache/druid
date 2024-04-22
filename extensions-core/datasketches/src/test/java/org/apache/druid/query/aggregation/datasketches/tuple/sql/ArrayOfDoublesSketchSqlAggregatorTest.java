@@ -105,9 +105,9 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class ArrayOfDoublesComponentSupplier extends StandardComponentSupplier
   {
-    public ArrayOfDoublesComponentSupplier(TempDirProducer temporaryFolder)
+    public ArrayOfDoublesComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

@@ -51,9 +51,9 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 
   protected static class CatalogReplaceComponentSupplier extends CatalogIngestionDmlComponentSupplier
   {
-    public CatalogReplaceComponentSupplier(TempDirProducer temporaryFolder)
+    public CatalogReplaceComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

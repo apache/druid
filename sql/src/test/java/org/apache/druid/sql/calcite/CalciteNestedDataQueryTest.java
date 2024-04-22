@@ -181,9 +181,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
   protected static class NestedComponentSupplier extends StandardComponentSupplier
   {
-    public NestedComponentSupplier(TempDirProducer temporaryFolder)
+    public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

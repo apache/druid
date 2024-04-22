@@ -121,9 +121,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
   protected static class ArraysComponentSupplier extends StandardComponentSupplier
   {
-    public ArraysComponentSupplier(TempDirProducer temporaryFolder)
+    public ArraysComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

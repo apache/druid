@@ -343,9 +343,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
-    public MSQBaseComponentSupplier(TempDirProducer temporaryFolder)
+    public MSQBaseComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

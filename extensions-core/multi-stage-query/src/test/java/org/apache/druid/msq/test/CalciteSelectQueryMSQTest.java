@@ -53,9 +53,9 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
   public static class SelectMSQComponentSupplier extends StandardComponentSupplier
   {
-    public SelectMSQComponentSupplier(TempDirProducer temporaryFolder)
+    public SelectMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

@@ -66,9 +66,9 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class TDigestComponentSupplier extends StandardComponentSupplier
   {
-    public TDigestComponentSupplier(TempDirProducer temporaryFolder)
+    public TDigestComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

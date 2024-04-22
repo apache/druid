@@ -53,9 +53,9 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
   public static class BloomDimFilterComponentSupplier extends StandardComponentSupplier
   {
-    public BloomDimFilterComponentSupplier(TempDirProducer temporaryFolder)
+    public BloomDimFilterComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

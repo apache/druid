@@ -82,9 +82,9 @@ public class CatalogQueryTest extends BaseCalciteQueryTest
 
   protected static class CatalogQueryComponentSupplier extends StandardComponentSupplier
   {
-    public CatalogQueryComponentSupplier(TempDirProducer temporaryFolder)
+    public CatalogQueryComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

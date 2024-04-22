@@ -58,9 +58,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
 {
   protected static class ExportComponentSupplier extends IngestionDmlComponentSupplier
   {
-    public ExportComponentSupplier(TempDirProducer temporaryFolder)
+    public ExportComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

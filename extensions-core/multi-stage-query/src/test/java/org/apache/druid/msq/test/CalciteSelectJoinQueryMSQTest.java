@@ -96,17 +96,17 @@ public class CalciteSelectJoinQueryMSQTest
 
   protected static class SortMergeJoinComponentSupplier extends AbstractJoinComponentSupplier
   {
-    public SortMergeJoinComponentSupplier(TempDirProducer temporaryFolder)
+    public SortMergeJoinComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder, JoinAlgorithm.SORT_MERGE);
+      super(tempFolderProducer, JoinAlgorithm.SORT_MERGE);
     }
   }
 
   protected static class BroadcastJoinComponentSupplier extends AbstractJoinComponentSupplier
   {
-    public BroadcastJoinComponentSupplier(TempDirProducer temporaryFolder)
+    public BroadcastJoinComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder, JoinAlgorithm.BROADCAST);
+      super(tempFolderProducer, JoinAlgorithm.BROADCAST);
     }
   }
 
@@ -114,9 +114,9 @@ public class CalciteSelectJoinQueryMSQTest
   {
     private JoinAlgorithm joinAlgorithm;
 
-    public AbstractJoinComponentSupplier(TempDirProducer temporaryFolder, JoinAlgorithm joinAlgorithm)
+    public AbstractJoinComponentSupplier(TempDirProducer tempFolderProducer, JoinAlgorithm joinAlgorithm)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
       this.joinAlgorithm = joinAlgorithm;
     }
 

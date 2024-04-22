@@ -112,9 +112,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 
   static class ScanSignatureComponentSupplier extends StandardComponentSupplier
   {
-    public ScanSignatureComponentSupplier(TempDirProducer temporaryFolder)
+    public ScanSignatureComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

@@ -58,9 +58,9 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 
   public static class UnionQueryMSQComponentSupplier extends StandardComponentSupplier
   {
-    public UnionQueryMSQComponentSupplier(TempDirProducer temporaryFolder)
+    public UnionQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

@@ -43,9 +43,9 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
   public static class ArraysQueryMSQComponentSupplier extends ArraysComponentSupplier
   {
-    public ArraysQueryMSQComponentSupplier(TempDirProducer temporaryFolder)
+    public ArraysQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

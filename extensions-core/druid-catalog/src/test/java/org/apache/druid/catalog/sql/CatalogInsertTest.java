@@ -52,9 +52,9 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
 
   protected static class CatalogInsertComponentSupplier extends CatalogIngestionDmlComponentSupplier
   {
-    public CatalogInsertComponentSupplier(TempDirProducer temporaryFolder)
+    public CatalogInsertComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
