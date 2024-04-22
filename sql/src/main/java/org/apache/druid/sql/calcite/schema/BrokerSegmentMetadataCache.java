@@ -188,7 +188,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    Set<String> refreshedDataSources = refreshByPollingCoordinator(segmentsToRefresh, dataSourcesToRebuild);
+    Set<String> refreshedDataSources = refreshByPollingCoordinator();
 
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> refreshedDataSources.contains(segmentId.getDataSource()));
@@ -228,21 +228,17 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     }
   }
 
-  Set<String> refreshByPollingCoordinator(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+  Set<String> refreshByPollingCoordinator()
   {
-    // query schema for all datasources, which includes,
+    // query schema for all datasources in the inventory,
+    // which includes,
     // datasources explicitly marked for rebuilding
     // datasources for the segments to be refreshed
     // prebuilt datasources
-    final Set<String> dataSourcesToQuery = new HashSet<>(dataSourcesToRebuild);
+    final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
 
-    segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
-
-    dataSourcesToQuery.addAll(tables.keySet());
-
-    synchronized (lock) {
-      dataSourcesToQuery.addAll(dataSourcesNeedingRebuild);
-    }
+    // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
+    dataSourcesToQuery.addAll(segmentMetadataInfo.keySet());
 
     log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
 

@@ -350,12 +350,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     refreshLatch = new CountDownLatch(1);
     serverView.addSegment(newSegment("xyz", 0), ServerType.HISTORICAL);
 
-    schema.markDataSourceAsNeedRebuild("ds1");
-
     refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
 
     // verify that previously refreshed are included in the last coordinator poll
-    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "ds1", "xyz"), argumentCaptor.getValue());
+    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz"), argumentCaptor.getValue());
   }
 
   @Test
