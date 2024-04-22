@@ -24,6 +24,12 @@ import org.apache.druid.java.util.common.FileUtils;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Creates a hierarchy of temp dirs.
+ *
+ * All created directories will be accessible until the shutdown of the current JVM.
+ * Installs only a single shutdown hook.
+ */
 public class TempDirProducer
 {
   private static TempDirProducer INSTANCE = null;
