@@ -62,7 +62,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
+      builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::getTempDir, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
     }
 
 

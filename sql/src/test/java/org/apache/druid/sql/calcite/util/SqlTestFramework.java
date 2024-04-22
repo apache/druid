@@ -68,7 +68,6 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -214,7 +213,7 @@ public class SqlTestFramework
    */
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
-    private final TempDirProducer tempDirProducer;
+    protected final TempDirProducer tempDirProducer;
     private final PlannerComponentSupplier plannerComponentSupplier;
 
     public StandardComponentSupplier(
