@@ -48,6 +48,7 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -593,15 +594,14 @@ public class OrFilter implements BooleanFilter
       boolean descending
   )
   {
-    final IntIterator iter = descending ?
-                             BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
-                             rowBitmap.iterator();
-
-    if (!iter.hasNext()) {
-      return ValueMatchers.allFalse();
-    }
 
     if (descending) {
+
+      final IntIterator iter = BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap);
+
+      if (!iter.hasNext()) {
+        return ValueMatchers.allFalse();
+      }
       return new ValueMatcher()
       {
         int iterOffset = Integer.MAX_VALUE;
@@ -625,6 +625,11 @@ public class OrFilter implements BooleanFilter
         }
       };
     } else {
+      final PeekableIntIterator peekableIterator = rowBitmap.peekableIterator();
+
+      if (!peekableIterator.hasNext()) {
+        return ValueMatchers.allFalse();
+      }
       return new ValueMatcher()
       {
         int iterOffset = -1;
@@ -633,8 +638,9 @@ public class OrFilter implements BooleanFilter
         public boolean matches(boolean includeUnknown)
         {
           int currentOffset = offset.getOffset();
-          while (iterOffset < currentOffset && iter.hasNext()) {
-            iterOffset = iter.next();
+          peekableIterator.advanceIfNeeded(currentOffset);
+          if (peekableIterator.hasNext()) {
+            iterOffset = peekableIterator.peekNext();
           }
 
           return iterOffset == currentOffset;
@@ -644,7 +650,7 @@ public class OrFilter implements BooleanFilter
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("offset", offset);
-          inspector.visit("iter", iter);
+          inspector.visit("peekableIterator", peekableIterator);
         }
       };
     }
@@ -655,8 +661,8 @@ public class OrFilter implements BooleanFilter
       final ImmutableBitmap bitmap
   )
   {
-    final IntIterator bitmapIterator = bitmap.iterator();
-    if (!bitmapIterator.hasNext()) {
+    final PeekableIntIterator peekableIntIterator = bitmap.peekableIterator();
+    if (!peekableIntIterator.hasNext()) {
       return BooleanVectorValueMatcher.of(vectorOffset, ConstantMatcherType.ALL_FALSE);
     }
 
@@ -673,11 +679,12 @@ public class OrFilter implements BooleanFilter
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
             final int rowNum = vectorOffset.getStartOffset() + maskNum;
-            while (iterOffset < rowNum && bitmapIterator.hasNext()) {
-              iterOffset = bitmapIterator.next();
-            }
-            if (iterOffset == rowNum) {
-              selection[numRows++] = maskNum;
+            peekableIntIterator.advanceIfNeeded(rowNum);
+            if (peekableIntIterator.hasNext()) {
+              iterOffset = peekableIntIterator.peekNext();
+              if (iterOffset == rowNum) {
+                selection[numRows++] = maskNum;
+              }
             }
           }
           match.setSelectionSize(numRows);
@@ -688,11 +695,12 @@ public class OrFilter implements BooleanFilter
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
             final int rowNum = currentOffsets[mask.getSelection()[i]];
-            while (iterOffset < rowNum && bitmapIterator.hasNext()) {
-              iterOffset = bitmapIterator.next();
-            }
-            if (iterOffset == rowNum) {
-              selection[numRows++] = maskNum;
+            peekableIntIterator.advanceIfNeeded(rowNum);
+            if (peekableIntIterator.hasNext()) {
+              iterOffset = peekableIntIterator.peekNext();
+              if (iterOffset == rowNum) {
+                selection[numRows++] = maskNum;
+              }
             }
           }
           match.setSelectionSize(numRows);
