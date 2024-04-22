@@ -34,7 +34,7 @@ import java.util.Collections;
 public class RowBasedFrameWriterTest
 {
   @Test
-  public void testWriteToWithException()
+  public void testAddSelectionWithException()
   {
     String colName = "colName";
     String errorMsg = "Frame writer exception";
@@ -67,9 +67,8 @@ public class RowBasedFrameWriterTest
 
     InvalidFieldException actualException = Assert.assertThrows(
         InvalidFieldException.class,
-        rowBasedFrameWriter::writeData
+        rowBasedFrameWriter::addSelection
     );
-
     Assert.assertEquals(expectedException, actualException);
   }
 }

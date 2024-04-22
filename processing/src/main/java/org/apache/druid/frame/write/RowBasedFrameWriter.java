@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
@@ -236,8 +235,7 @@ public class RowBasedFrameWriter implements FrameWriter
     return rowOrderMemory != null;
   }
 
-  @VisibleForTesting
-  boolean writeData()
+  private boolean writeData()
   {
     if (rowMemorySupplier != null) {
       final MemoryRange<Memory> rowMemory = rowMemorySupplier.get();
