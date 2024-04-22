@@ -92,6 +92,7 @@ const supervisorTableColumns: string[] = [
   'Configured tasks',
   'Running tasks',
   'Aggregate lag',
+  'Recent errors',
   'Stats',
   ACTION_COLUMN_LABEL,
 ];
@@ -100,6 +101,10 @@ const ROW_STATS_KEYS: RowStatsKey[] = ['1m', '5m', '15m'];
 
 function getRowStatsKeyTitle(key: RowStatsKey) {
   return `Rate over past ${pluralIfNeeded(parseInt(key, 10), 'minute')}`;
+}
+
+function getRowStatsKeySeconds(key: RowStatsKey): number {
+  return parseInt(key, 10) * 60;
 }
 
 interface SupervisorQuery extends TableState {
@@ -288,7 +293,7 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         if (capabilities.hasOverlordAccess()) {
-          if (visibleColumns.shown('Running tasks') || visibleColumns.shown('Aggregate lag')) {
+          if (visibleColumns.shown('Running tasks', 'Aggregate lag', 'Recent errors')) {
             try {
               for (const supervisor of supervisors) {
                 cancelToken.throwIfRequested();
@@ -674,7 +679,7 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: 'Status',
             id: 'detailed_state',
-            width: 150,
+            width: 130,
             accessor: 'detailed_state',
             Cell: ({ value }) => (
               <TableFilterableCell
@@ -758,7 +763,7 @@ export class SupervisorsView extends React.PureComponent<
           },
           {
             Header: 'Aggregate lag',
-            accessor: 'status.aggregateLag',
+            accessor: 'status.payload.aggregateLag',
             width: 200,
             filterable: false,
             sortable: false,
@@ -800,22 +805,63 @@ export class SupervisorsView extends React.PureComponent<
             Cell: ({ value }) => {
               if (!value) return;
               const c = getTotalSupervisorStats(value, statsKey);
-              const isRate = statsKey !== 'totals';
-              const formatNumber = isRate ? formatRate : formatInteger;
-              const formatData = isRate ? formatByteRate : formatBytes;
-              const bytes = c.processedBytes ? ` (${formatData(c.processedBytes)})` : '';
+              const seconds = getRowStatsKeySeconds(statsKey);
+              const totalLabel = `Total over ${statsKey}: `;
+              const bytes = c.processedBytes ? ` (${formatByteRate(c.processedBytes)})` : '';
               return (
                 <div>
-                  <div>{`Processed: ${formatNumber(c.processed)}${bytes}`}</div>
+                  <div
+                    title={`${totalLabel}${formatInteger(c.processed * seconds)} (${formatBytes(
+                      c.processedBytes * seconds,
+                    )})`}
+                  >{`Processed: ${formatRate(c.processed)}${bytes}`}</div>
                   {Boolean(c.processedWithError) && (
-                    <div>Processed with error: {formatNumber(c.processedWithError)}</div>
+                    <div
+                      className="warning-line"
+                      title={`${totalLabel}${formatInteger(c.processedWithError * seconds)}`}
+                    >
+                      Processed with error: {formatRate(c.processedWithError)}
+                    </div>
                   )}
-                  {Boolean(c.thrownAway) && <div>Thrown away: {formatNumber(c.thrownAway)}</div>}
-                  {Boolean(c.unparseable) && <div>Unparseable: {formatNumber(c.unparseable)}</div>}
+                  {Boolean(c.thrownAway) && (
+                    <div
+                      className="warning-line"
+                      title={`${totalLabel}${formatInteger(c.thrownAway * seconds)}`}
+                    >
+                      Thrown away: {formatRate(c.thrownAway)}
+                    </div>
+                  )}
+                  {Boolean(c.unparseable) && (
+                    <div
+                      className="warning-line"
+                      title={`${totalLabel}${formatInteger(c.unparseable * seconds)}`}
+                    >
+                      Unparseable: {formatRate(c.unparseable)}
+                    </div>
+                  )}
                 </div>
               );
             },
             show: visibleColumns.shown('Stats'),
+          },
+          {
+            Header: 'Recent errors',
+            accessor: 'status.payload.recentErrors',
+            width: 200,
+            filterable: false,
+            sortable: false,
+            show: visibleColumns.shown('Recent errors'),
+            Cell: ({ value, original }) => {
+              return (
+                <TableClickableCell
+                  onClick={() => this.onSupervisorDetail(original)}
+                  hoverIcon={IconNames.SEARCH_TEMPLATE}
+                  title="See errors"
+                >
+                  {pluralIfNeeded(value?.length, 'error')}
+                </TableClickableCell>
+              );
+            },
           },
           {
             Header: ACTION_COLUMN_LABEL,

@@ -201,7 +201,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
   ELSE 'Sub minute'
 END AS "time_span"`,
-      (visibleColumns.shown('Shard type') || visibleColumns.shown('Shard spec')) && `"shard_spec"`,
+      visibleColumns.shown('Shard type', 'Shard spec') && `"shard_spec"`,
       visibleColumns.shown('Partition') && `"partition_num"`,
       visibleColumns.shown('Size') && `"size"`,
       visibleColumns.shown('Num rows') && `"num_rows"`,

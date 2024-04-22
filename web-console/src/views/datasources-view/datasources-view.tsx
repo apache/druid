@@ -338,12 +338,11 @@ export class DatasourcesView extends React.PureComponent<
     const columns = compact(
       [
         visibleColumns.shown('Datasource name') && `datasource`,
-        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) && [
+        visibleColumns.shown('Availability', 'Segment granularity') && [
           `COUNT(*) FILTER (WHERE is_active = 1) AS num_segments`,
           `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND replication_factor = 0) AS num_zero_replica_segments`,
         ],
-        (visibleColumns.shown('Availability') ||
-          visibleColumns.shown('Historical load/drop queues')) && [
+        visibleColumns.shown('Availability', 'Historical load/drop queues') && [
           `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0 AND replication_factor > 0) AS num_segments_to_load`,
           `COUNT(*) FILTER (WHERE is_available = 1 AND is_active = 0) AS num_segments_to_drop`,
         ],
