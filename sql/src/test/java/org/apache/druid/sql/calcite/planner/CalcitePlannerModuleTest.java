@@ -248,7 +248,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     assertBloat(contextWithoutBloat, DEFAULT_BLOAT);
   }
 
-  private void assertBloat(PlannerContext context, int expectedBloat) {
+  private void assertBloat(PlannerContext context, int expectedBloat)
+  {
     Optional<ProjectMergeRule> firstProjectMergeRule = injector.getInstance(CalciteRulesManager.class).baseRuleSet(context).stream()
             .filter(rule -> rule instanceof ProjectMergeRule)
             .map(rule -> (ProjectMergeRule) rule)

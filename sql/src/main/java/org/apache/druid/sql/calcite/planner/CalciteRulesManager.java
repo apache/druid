@@ -83,7 +83,7 @@ public class CalciteRulesManager
   private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
-  public static final String BLOAT_PROPERTY = "sql.planner.bloat";
+  public static final String BLOAT_PROPERTY = "sqlPlannerBloat";
   public static final int DEFAULT_BLOAT = 1000;
 
   /**
@@ -440,11 +440,13 @@ public class CalciteRulesManager
                         .build();
   }
 
-  public List<RelOptRule> configurableRuleSet(PlannerContext plannerContext){
+  public List<RelOptRule> configurableRuleSet(PlannerContext plannerContext)
+  {
     return ImmutableList.of(ProjectMergeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule());
   }
 
-  private int getBloatProperty(PlannerContext plannerContext) {
+  private int getBloatProperty(PlannerContext plannerContext)
+  {
     final Integer bloat = plannerContext.queryContext().getInt(BLOAT_PROPERTY);
     return (bloat != null) ? bloat : DEFAULT_BLOAT;
   }
