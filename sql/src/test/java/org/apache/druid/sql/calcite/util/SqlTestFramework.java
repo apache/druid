@@ -273,7 +273,7 @@ public class SqlTestFramework
       return TestDataBuilder.createMockWalker(
           injector,
           conglomerate,
-          tempDirProducer.getTempDir("segments"),
+          tempDirProducer.newTempFolder("segments"),
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           joinableFactory
       );

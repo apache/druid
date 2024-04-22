@@ -72,13 +72,13 @@ public class TempDirProducer
     return new TempDirProducer(this, prefix);
   }
 
-  public File getTempDir(String prefix)
+  public File newTempFolder(String prefix)
   {
     return FileUtils.createTempDirInLocation(tempDir.toPath(), prefix);
   }
 
-  public File getTempDir()
+  public File newTempFolder()
   {
-    return getTempDir(null);
+    return newTempFolder(null);
   }
 }

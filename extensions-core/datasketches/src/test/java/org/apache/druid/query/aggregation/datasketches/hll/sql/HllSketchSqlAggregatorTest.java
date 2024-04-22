@@ -272,7 +272,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       HllSketchModule.registerSerde();
       final QueryableIndex index = IndexBuilder
           .create()
-          .tmpDir(tempDirProducer.getTempDir())
+          .tmpDir(tempDirProducer.newTempFolder())
           .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
           .schema(
               new IncrementalIndexSchema.Builder()

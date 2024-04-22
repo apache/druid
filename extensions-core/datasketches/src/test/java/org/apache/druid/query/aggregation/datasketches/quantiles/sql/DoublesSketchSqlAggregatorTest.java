@@ -101,7 +101,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
       final QueryableIndex index =
           IndexBuilder.create(CalciteTests.getJsonMapper())
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()

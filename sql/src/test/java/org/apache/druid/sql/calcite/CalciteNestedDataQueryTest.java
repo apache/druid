@@ -204,7 +204,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       NestedDataModule.registerHandlersAndSerde();
       final QueryableIndex index =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -220,7 +220,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
       final QueryableIndex indexMix11 =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -237,7 +237,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
       final QueryableIndex indexMix12 =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -253,7 +253,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
       final QueryableIndex indexMix21 =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -269,7 +269,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
       final QueryableIndex indexMix22 =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -285,7 +285,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
       final QueryableIndex indexArrays =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -304,12 +304,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           )
                       )
                       .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                      .inputTmpDir(tempDirProducer.getTempDir())
+                      .inputTmpDir(tempDirProducer.newTempFolder())
                       .buildMMappedIndex();
 
       final QueryableIndex indexAllTypesAuto =
           IndexBuilder.create()
-                      .tmpDir(tempDirProducer.getTempDir())
+                      .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()
@@ -328,7 +328,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           )
                       )
                       .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                      .inputTmpDir(tempDirProducer.getTempDir())
+                      .inputTmpDir(tempDirProducer.newTempFolder())
                       .buildMMappedIndex();
 
 
