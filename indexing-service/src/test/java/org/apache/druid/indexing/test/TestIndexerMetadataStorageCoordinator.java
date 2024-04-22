@@ -244,11 +244,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+  public List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments
   )
   {
-    return Collections.emptyMap();
+    return Collections.emptyList();
   }
 
   @Override

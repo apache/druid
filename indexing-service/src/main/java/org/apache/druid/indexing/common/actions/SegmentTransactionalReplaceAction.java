@@ -33,12 +33,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -140,7 +137,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     // failure to upgrade pending segments does not affect success of the commit
     if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
       try {
-        registerUpgradedPendingSegmentsOnSupervisor(task, toolbox);
+        registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
       }
       catch (Exception e) {
         log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
@@ -153,7 +150,11 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   /**
    * Registers upgraded pending segments on the active supervisor, if any
    */
-  private void registerUpgradedPendingSegmentsOnSupervisor(Task task, TaskActionToolbox toolbox)
+  private void registerUpgradedPendingSegmentsOnSupervisor(
+      Task task,
+      TaskActionToolbox toolbox,
+      List<PendingSegmentRecord> upgradedPendingSegments
+  )
   {
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
@@ -163,42 +164,10 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return;
     }
 
-    final Set<ReplaceTaskLock> replaceLocksForTask = toolbox
-        .getTaskLockbox()
-        .getAllReplaceLocksForDatasource(task.getDataSource())
-        .stream()
-        .filter(lock -> task.getId().equals(lock.getSupervisorTaskId()))
-        .collect(Collectors.toSet());
-
-
-    Set<PendingSegmentRecord> pendingSegments = new HashSet<>();
-    for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
-      pendingSegments.addAll(
-          toolbox.getIndexerMetadataStorageCoordinator()
-                 .getPendingSegments(task.getDataSource(), replaceLock.getInterval())
-      );
-    }
-    Map<String, SegmentIdWithShardSpec> idToPendingSegment = new HashMap<>();
-    pendingSegments.forEach(pendingSegment -> idToPendingSegment.put(
-        pendingSegment.getId().asSegmentId().toString(),
-        pendingSegment.getId()
-    ));
-    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> segmentToParent = new HashMap<>();
-    pendingSegments.forEach(pendingSegment -> {
-      if (pendingSegment.getUpgradedFromSegmentId() != null
-          && !pendingSegment.getUpgradedFromSegmentId().equals(pendingSegment.getId().asSegmentId().toString())) {
-        segmentToParent.put(
-            pendingSegment.getId(),
-            idToPendingSegment.get(pendingSegment.getUpgradedFromSegmentId())
-        );
-      }
-    });
-
-    segmentToParent.forEach(
-        (newId, oldId) -> supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
+    upgradedPendingSegments.forEach(
+        upgradedPendingSegment -> supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
             activeSupervisorIdWithAppendLock.get(),
-            oldId,
-            newId
+            upgradedPendingSegment
         )
     );
   }

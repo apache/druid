@@ -898,7 +898,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
    */
-  private static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
+  public static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
   {
     if (values == null) {
       return "";

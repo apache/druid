@@ -73,6 +73,7 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
@@ -477,9 +478,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask)
             );
             SegmentPublishResult result = SegmentPublishResult.ok(
-                insertSegments(handle, segmentsToInsert)
+                insertSegments(handle, segmentsToInsert),
+                upgradePendingSegmentsOverlappingWith(segmentsToInsert)
             );
-            upgradePendingSegmentsOverlappingWith(segmentsToInsert);
             return result;
           },
           3,
@@ -678,12 +679,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+  public List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments
   )
   {
     if (replaceSegments.isEmpty()) {
-      return Collections.emptyMap();
+      return Collections.emptyList();
     }
 
     // Any replace interval has exactly one version of segments
@@ -712,16 +713,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * those versions.</li>
    * </ul>
    *
-   * @return Map from original pending segment to the new upgraded ID.
+   * @return Inserted pending segment records
    */
-  private Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(
+  private List<PendingSegmentRecord> upgradePendingSegments(
       Handle handle,
       String datasource,
       Map<Interval, DataSegment> replaceIntervalToMaxId
   ) throws JsonProcessingException
   {
     final List<PendingSegmentRecord> upgradedPendingSegments = new ArrayList<>();
-    final Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> pendingSegmentToNewId = new HashMap<>();
 
     for (Map.Entry<Interval, DataSegment> entry : replaceIntervalToMaxId.entrySet()) {
       final Interval replaceInterval = entry.getKey();
@@ -756,7 +756,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   overlappingPendingSegment.getTaskAllocatorId()
               )
           );
-          pendingSegmentToNewId.put(pendingSegmentId, newId);
         }
       }
     }
@@ -774,7 +773,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         numInsertedPendingSegments, upgradedPendingSegments.size()
     );
 
-    return pendingSegmentToNewId;
+    return upgradedPendingSegments;
   }
 
   private boolean shouldUpgradePendingSegment(
@@ -1263,6 +1262,39 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  private static void bindColumnValuesToQueryWithInCondition(
+      final String columnName,
+      final List<String> values,
+      final Update query
+  )
+  {
+    if (values == null) {
+      return;
+    }
+
+    for (int i = 0; i < values.size(); i++) {
+      query.bind(StringUtils.format("%s%d", columnName, i), values.get(i));
+    }
+  }
+
+  private int deletePendingSegmentsById(Handle handle, String datasource, List<String> pendingSegmentIds)
+  {
+    if (pendingSegmentIds.isEmpty()) {
+      return 0;
+    }
+
+    Update query = handle.createStatement(
+        StringUtils.format(
+            "DELETE FROM %s WHERE dataSource = :dataSource %s",
+            dbTables.getPendingSegmentsTable(),
+            SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", pendingSegmentIds)
+        )
+    ).bind("dataSource", datasource);
+    bindColumnValuesToQueryWithInCondition("id", pendingSegmentIds, query);
+
+    return query.execute();
+  }
+
   private SegmentPublishResult commitAppendSegmentsAndMetadataInTransaction(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
@@ -1324,7 +1356,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               if (metadataUpdateResult.isFailed()) {
                 transactionStatus.setRollbackOnly();
                 metadataNotUpdated.set(true);
-
                 if (metadataUpdateResult.canRetry()) {
                   throw new RetryTransactionException(metadataUpdateResult.getErrorMsg());
                 } else {
@@ -1334,6 +1365,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
 
             insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
+
+            final List<String> appendedSegmentIds
+                = allSegmentsToInsert.stream()
+                                     .map(pendingSegment -> pendingSegment.getId().toString())
+                                     .collect(Collectors.toList());
+            deletePendingSegmentsById(handle, dataSource, appendedSegmentIds);
+
             return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
           },
           3,

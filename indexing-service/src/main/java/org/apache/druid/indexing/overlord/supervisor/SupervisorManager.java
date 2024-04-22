@@ -33,9 +33,9 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
@@ -310,14 +310,14 @@ public class SupervisorManager
    */
   public boolean registerNewVersionOfPendingSegmentOnSupervisor(
       String supervisorId,
-      SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
+      PendingSegmentRecord upgradedPendingSegment
   )
   {
     try {
       Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
-      Preconditions.checkNotNull(basePendingSegment, "rootPendingSegment cannot be null");
-      Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment, "upgraded pending segment cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment.getTaskAllocatorId(), "replica group cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment.getUpgradedFromSegmentId(), "root id cannot be null");
 
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
@@ -326,12 +326,12 @@ public class SupervisorManager
       }
 
       SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
-      seekableStreamSupervisor.registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
+      seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment);
       return true;
     }
     catch (Exception e) {
       log.error(e, "PendingSegmentRecord[%s] mapping update request to version[%s] on Supervisor[%s] failed",
-                basePendingSegment.asSegmentId(), newSegmentVersion.getVersion(), supervisorId);
+                upgradedPendingSegment.getUpgradedFromSegmentId(), upgradedPendingSegment.getId().getVersion(), supervisorId);
     }
     return false;
   }

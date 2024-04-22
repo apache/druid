@@ -78,6 +78,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -1576,17 +1577,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response registerNewVersionOfPendingSegment(
-      PendingSegmentVersions pendingSegmentVersions,
+      PendingSegmentRecord upgradedPendingSegment,
       // this field is only for internal purposes, shouldn't be usually set by users
       @Context final HttpServletRequest req
   )
   {
     authorizationCheck(req, Action.WRITE);
     try {
-      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(
-          pendingSegmentVersions.getBaseSegment(),
-          pendingSegmentVersions.getNewVersion()
-      );
+      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(upgradedPendingSegment);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1599,7 +1597,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       log.error(
           e,
           "Could not register new version[%s] of pending segment[%s]",
-          pendingSegmentVersions.getNewVersion(), pendingSegmentVersions.getBaseSegment()
+          upgradedPendingSegment.getId().getVersion(), upgradedPendingSegment.getUpgradedFromSegmentId()
       );
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
