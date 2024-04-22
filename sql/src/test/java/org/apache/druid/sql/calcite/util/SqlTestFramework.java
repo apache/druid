@@ -189,6 +189,8 @@ public class SqlTestFramework
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
+
+    PlannerComponentSupplier getPlannerComponentSupplier();
   }
 
   public interface PlannerComponentSupplier
@@ -213,6 +215,7 @@ public class SqlTestFramework
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
     private final File temporaryFolder;
+    private PlannerComponentSupplier plannerComponentSupplier = new StandardPlannerComponentSupplier();
 
     public StandardComponentSupplier(
         final File temporaryFolder
@@ -311,6 +314,12 @@ public class SqlTestFramework
     @Override
     public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
     {
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return plannerComponentSupplier;
     }
   }
 
@@ -674,7 +683,25 @@ public class SqlTestFramework
       AuthConfig authConfig
   )
   {
-    return new PlannerFixture(this, componentSupplier, plannerConfig, authConfig);
+    return plannerFixture(plannerConfig, authConfig);
+  }
+
+  /**
+   * Creates an object (a "fixture") to hold the planner factory, view manager
+   * and related items. Most tests need just the statement factory. View-related
+   * tests also use the view manager. The fixture builds the infrastructure
+   * behind the factory by calling methods on the {@link QueryComponentSupplier}
+   * interface. That Calcite tests that interface, so the components can be customized
+   * by overriding methods in a particular tests. As a result, each
+   * planner fixture is specific to one test and one planner config.
+   */
+  public PlannerFixture plannerFixture(
+      PlannerConfig plannerConfig,
+      AuthConfig authConfig
+  )
+  {
+    PlannerComponentSupplier plannerComponentSupplier = componentSupplier.getPlannerComponentSupplier();
+    return new PlannerFixture(this, plannerComponentSupplier, plannerConfig, authConfig);
   }
 
   public void close()
