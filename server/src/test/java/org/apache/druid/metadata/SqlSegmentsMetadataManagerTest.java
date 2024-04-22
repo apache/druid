@@ -149,7 +149,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
         connector
     );
 
-    connector.createSegmentSchemaTable();
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
   }
 

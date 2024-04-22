@@ -1479,7 +1479,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
-    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
 
     Set<DataSegment> segmentsToPersist = new HashSet<>();

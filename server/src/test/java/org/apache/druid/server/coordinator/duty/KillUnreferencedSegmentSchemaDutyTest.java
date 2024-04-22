@@ -85,7 +85,7 @@ public class KillUnreferencedSegmentSchemaDutyTest
     derbyConnector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
-    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
 
     fingerprintGenerator = new FingerprintGenerator(mapper);

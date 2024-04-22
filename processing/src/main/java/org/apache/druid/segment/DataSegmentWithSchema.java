@@ -24,7 +24,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 
 /**
- * Wrapper class for segment and schema.
+ * Immutable wrapper class for segment and schema.
  */
 public class DataSegmentWithSchema
 {

@@ -72,7 +72,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
-    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
     derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();

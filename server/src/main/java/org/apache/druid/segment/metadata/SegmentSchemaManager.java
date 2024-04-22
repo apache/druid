@@ -43,6 +43,7 @@ import org.skife.jdbi.v2.TransactionCallback;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -177,6 +178,9 @@ public class SegmentSchemaManager
       final Map<String, SchemaPayload> fingerprintSchemaPayloadMap
   ) throws JsonProcessingException
   {
+    if (fingerprintSchemaPayloadMap.isEmpty()) {
+      return;
+    }
     // Filter already existing schema
     Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(
         handle,
@@ -206,34 +210,24 @@ public class SegmentSchemaManager
     // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
     if (unusedExistingFingerprints.size() > 0) {
       // make the unused schema as used to prevent deletion
-      String inClause = getInClause(unusedExistingFingerprints.stream());
-
-      handle.createStatement(
-                StringUtils.format(
-                    "UPDATE %s SET used = true, used_status_last_updated = :now"
-                    + " WHERE fingerprint IN (%s)",
-                    dbTables.getSegmentSchemasTable(), inClause
-                )
-            )
-            .bind("now", DateTimes.nowUtc().toString())
-            .execute();
+      markSchemaAsUsed(new ArrayList<>(unusedExistingFingerprints));
     }
 
-    Map<String, SchemaPayload> schemaPayloadToCreate = new HashMap<>();
+    Map<String, SchemaPayload> schemaPayloadToPersist = new HashMap<>();
 
     for (Map.Entry<String, SchemaPayload> entry : fingerprintSchemaPayloadMap.entrySet()) {
       if (!existingFingerprints.contains(entry.getKey())) {
-        schemaPayloadToCreate.put(entry.getKey(), entry.getValue());
+        schemaPayloadToPersist.put(entry.getKey(), entry.getValue());
       }
     }
 
-    if (schemaPayloadToCreate.isEmpty()) {
+    if (schemaPayloadToPersist.isEmpty()) {
       log.info("No schema to persist for dataSource [%s] and version [%s].", dataSource, version);
       return;
     }
 
     final List<List<String>> partitionedFingerprints = Lists.partition(
-        new ArrayList<>(schemaPayloadToCreate.keySet()),
+        new ArrayList<>(schemaPayloadToPersist.keySet()),
         DB_ACTION_PARTITION_SIZE
     );
 
@@ -283,16 +277,16 @@ public class SegmentSchemaManager
   }
 
   /**
-   * Update segment with schemaId and numRows information.
+   * Update segment with schemaFingerprint and numRows information.
    */
   public void updateSegmentWithSchemaInformation(
       final Handle handle,
       final List<SegmentSchemaMetadataPlus> batch
   )
   {
-    log.debug("Updating segment with schema and numRows information: [%s].", batch);
+    log.debug("Updating segment with schemaFingerprint and numRows information: [%s].", batch);
 
-    // update schemaId and numRows in segments table
+    // update schemaFingerprint and numRows in segments table
     String updateSql =
         StringUtils.format(
             "UPDATE %s SET schema_fingerprint = :schema_fingerprint, num_rows = :num_rows WHERE id = :id",
@@ -356,6 +350,10 @@ public class SegmentSchemaManager
       final Set<String> fingerprintsToInsert
   )
   {
+    if (fingerprintsToInsert.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     List<List<String>> partitionedFingerprints = Lists.partition(
         new ArrayList<>(fingerprintsToInsert),
         DB_ACTION_PARTITION_SIZE

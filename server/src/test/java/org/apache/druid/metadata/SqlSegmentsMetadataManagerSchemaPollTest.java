@@ -79,7 +79,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
         connector
     );
 
-    connector.createSegmentSchemaTable();
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
 
     publisher.publishSegment(segment1);

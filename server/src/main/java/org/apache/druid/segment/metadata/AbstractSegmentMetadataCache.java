@@ -906,7 +906,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
             QueryContexts.BROKER_PARALLEL_MERGE_KEY,
             false
         ),
-        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS),
         false,
         null,
         null // we don't care about merging strategy because merge is false

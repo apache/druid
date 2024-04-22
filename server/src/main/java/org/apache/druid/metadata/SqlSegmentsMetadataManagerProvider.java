@@ -65,7 +65,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
           @Override
           public void start()
           {
-            connector.createSegmentSchemaTable();
+            connector.createSegmentSchemasTable();
             connector.createSegmentTable();
             connector.createUpgradeSegmentsTable();
           }

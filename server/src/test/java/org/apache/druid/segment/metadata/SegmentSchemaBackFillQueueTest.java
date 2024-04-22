@@ -59,7 +59,7 @@ public class SegmentSchemaBackFillQueueTest
   public void testPublishSchema() throws InterruptedException
   {
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
-    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
 
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(

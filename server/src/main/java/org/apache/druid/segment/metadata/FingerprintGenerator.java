@@ -55,10 +55,9 @@ public class FingerprintGenerator
   public String generateFingerprint(SchemaPayload schemaPayload, String dataSource, int version)
   {
     try {
-      final Hasher hasher = Hashing.sha256().newHasher()
-                                   .putBytes(objectMapper.writeValueAsBytes(schemaPayload))
-                                   .putByte((byte) 0xff);
+      final Hasher hasher = Hashing.sha256().newHasher();
 
+      hasher.putBytes(objectMapper.writeValueAsBytes(schemaPayload));
       hasher.putBytes(StringUtils.toUtf8(dataSource));
       hasher.putBytes(Ints.toByteArray(version));
       return BaseEncoding.base16().encode(hasher.hash().asBytes());

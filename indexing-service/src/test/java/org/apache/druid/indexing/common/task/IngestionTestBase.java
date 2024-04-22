@@ -140,7 +140,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
-    connector.createSegmentSchemaTable();
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     segmentSchemaManager = new SegmentSchemaManager(

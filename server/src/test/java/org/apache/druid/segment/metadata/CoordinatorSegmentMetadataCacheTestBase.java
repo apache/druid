@@ -91,7 +91,7 @@ public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCach
     druidServers = serverView.getInventory();
 
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
-    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
 
     fingerprintGenerator = new FingerprintGenerator(mapper);

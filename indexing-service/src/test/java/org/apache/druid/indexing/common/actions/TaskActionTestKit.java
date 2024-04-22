@@ -146,7 +146,7 @@ public class TaskActionTestKit extends ExternalResource
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();
-    testDerbyConnector.createSegmentSchemaTable();
+    testDerbyConnector.createSegmentSchemasTable();
     testDerbyConnector.createSegmentTable();
     testDerbyConnector.createRulesTable();
     testDerbyConnector.createConfigTable();

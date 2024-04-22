@@ -561,17 +561,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   /**
    * Adds new columns (used_status_last_updated) to the "segments" table.
-   * Conditionally, add schema_id, segment_stats columns.
+   * Conditionally, add schema_fingerprint, num_rows columns.
    */
   protected void alterSegmentTable()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
 
     Map<String, String> columnNameTypes = new HashMap<>();
-    columnNameTypes.put("used_status_last_updated", "varchar(255)");
+    columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      columnNameTypes.put("schema_fingerprint", "BIGINT");
+      columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
       columnNameTypes.put("num_rows", "BIGINT");
     }
 
@@ -1000,7 +1000,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   @Override
-  public void createSegmentSchemaTable()
+  public void createSegmentSchemasTable()
   {
     if (config.get().isCreateTables() && centralizedDatasourceSchemaConfig.isEnabled()) {
       createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemasTable());

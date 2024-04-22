@@ -33,7 +33,8 @@ import java.util.List;
 public class SQLMetadataConnectorSchemaPersistenceTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
@@ -71,7 +72,7 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     dropSequence.add(tablesConfig.getAuditTable());
     dropSequence.add(tablesConfig.getSupervisorTable());
 
-    connector.createSegmentSchemaTable();
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
     connector.createConfigTable();
     connector.createRulesTable();

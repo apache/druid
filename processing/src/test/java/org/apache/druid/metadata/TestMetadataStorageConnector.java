@@ -97,7 +97,7 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
   }
 
   @Override
-  public void createSegmentSchemaTable()
+  public void createSegmentSchemasTable()
   {
     throw new UnsupportedOperationException();
   }

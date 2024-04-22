@@ -284,7 +284,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
-    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
     derbyConnector.createPendingSegmentsTable();
 

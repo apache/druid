@@ -469,7 +469,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new NamedType(NoopInputFormat.class, "noopInputFormat")
         );
         testDerbyConnector.createTaskTables();
-        testDerbyConnector.createSegmentSchemaTable();
+        testDerbyConnector.createSegmentSchemasTable();
         testDerbyConnector.createSegmentTable();
         taskStorage = new MetadataTaskStorage(
             testDerbyConnector,

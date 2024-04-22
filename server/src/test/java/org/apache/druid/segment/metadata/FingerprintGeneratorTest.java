@@ -51,7 +51,7 @@ public class FingerprintGeneratorTest
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
 
-    String expected = "10494FFFCA7B7428378C2B482E54DD7C87483889F44B1E04584F2D467975EB32";
+    String expected = "FB7E8AD8F2B96E58ACB99F43E380106D134774B1F5C56641268539FBADB897B3";
     Assert.assertEquals(expected, fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0));
   }
 

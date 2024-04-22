@@ -85,7 +85,7 @@ public class SQLMetadataRuleManagerTest
     connector.createRulesTable();
     managerConfig = new MetadataRuleManagerConfig();
     ruleManager = new SQLMetadataRuleManager(mapper, managerConfig, tablesConfig, connector, auditManager);
-    connector.createSegmentSchemaTable();
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
     publisher = new SQLMetadataSegmentPublisher(
         mapper,

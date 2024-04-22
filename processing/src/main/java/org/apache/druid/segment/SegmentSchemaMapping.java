@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Compact representation of segment schema for multiple segments.
+ * Compact representation of segment schema for multiple segments. Note, that this is a mutable class.
  */
 public class SegmentSchemaMapping
 {

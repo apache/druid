@@ -466,14 +466,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         continue;
       }
 
-      log.info("Applying schema update for segmentId [%s] datasource [%s]", segmentId, dataSource);
+      log.debug("Applying schema update for segmentId [%s] datasource [%s]", segmentId, dataSource);
 
       segmentMetadataInfo.compute(
           dataSource,
           (dataSourceKey, segmentsMap) -> {
             if (segmentsMap == null) {
               // Datasource may have been removed or become unavailable while this refresh was ongoing.
-              log.info(
+              log.warn(
                   "No segment map found with datasource [%s], skipping refresh of segment [%s]",
                   dataSourceKey,
                   segmentId

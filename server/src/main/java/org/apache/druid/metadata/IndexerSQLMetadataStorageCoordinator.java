@@ -145,7 +145,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     connector.createDataSourceTable();
     connector.createPendingSegmentsTable();
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      connector.createSegmentSchemaTable();
+      connector.createSegmentSchemasTable();
     }
     connector.createSegmentTable();
     connector.createUpgradeSegmentsTable();
@@ -1883,8 +1883,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     if (segmentSchemaMapping.getSchemaVersion() != CentralizedDatasourceSchemaConfig.SCHEMA_VERSION) {
       log.error(
-          "Schema version [%d] doesn't match the current version [%d], not persisting the schema [%s]. "
-          + "Schema backfill job will populate the schema.",
+          "Schema version [%d] doesn't match the current version [%d]. Not persisting this schema [%s]. "
+          + "Schema for this segment will be poppulated by the schema backfill job in Coordinator.",
           segmentSchemaMapping.getSchemaVersion(),
           CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
           segmentSchemaMapping

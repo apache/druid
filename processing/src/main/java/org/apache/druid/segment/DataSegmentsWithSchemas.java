@@ -25,10 +25,11 @@ import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
- * Encapsulates segments metadata and corresponding schema.
+ * This immutable class encapsulates segments metadata and corresponding schema.
  */
 public class DataSegmentsWithSchemas
 {
@@ -64,5 +65,27 @@ public class DataSegmentsWithSchemas
   public SegmentSchemaMapping getSegmentSchemaMapping()
   {
     return segmentSchemaMapping;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DataSegmentsWithSchemas that = (DataSegmentsWithSchemas) o;
+    return Objects.equals(segments, that.segments) && Objects.equals(
+        segmentSchemaMapping,
+        that.segmentSchemaMapping
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(segments, segmentSchemaMapping);
   }
 }
