@@ -1184,6 +1184,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     ImmutableMap<String, SchemaPayload> schemaMap = schemaMapBuilder.build();
     segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
     segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
+    segmentSchemaCache.setInitialized();
 
     Preconditions.checkNotNull(
         segments,
@@ -1194,7 +1195,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       log.info("No segments found in the database!");
     } else {
       log.info(
-          "Polled and found total %,d segments and [%d] schema in the database in [%,d] ms.",
+          "Polled and found total [%,d] segments and [%,d] schema in the database in [%,d] ms.",
           segments.size(),
           schemaMap.size(),
           stopwatch.millisElapsed()

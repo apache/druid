@@ -149,12 +149,14 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     Assert.assertNull(dataSourcesSnapshot);
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+    Assert.assertFalse(segmentSchemaCache.isInitialized());
 
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     // This call make sure that the first poll is completed
     sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    Assert.assertTrue(segmentSchemaCache.isInitialized());
     Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
 
@@ -234,7 +236,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     sqlSegmentsMetadataManager.poll();
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
-
+    Assert.assertFalse(segmentSchemaCache.isInitialized());
 
     list.clear();
     list.add(
@@ -260,6 +262,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(segmentSchemaCache.isInitialized());
     Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
   }

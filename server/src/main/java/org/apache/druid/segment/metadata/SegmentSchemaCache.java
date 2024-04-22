@@ -108,10 +108,10 @@ public class SegmentSchemaCache
 
   public void setInitialized()
   {
-    log.info("[%s] initializing.", getClass().getSimpleName());
+    log.info("Initializing SegmentSchemaCache.");
     if (initialized.get().getCount() == 1) {
       initialized.get().countDown();
-      log.info("[%s] is initialized.", getClass().getSimpleName());
+      log.info("SegmentSchemaCache is initialized.");
     }
   }
 
@@ -129,6 +129,11 @@ public class SegmentSchemaCache
     finalizedSegmentSchema = ImmutableMap.of();
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
+  }
+
+  public boolean isInitialized()
+  {
+    return initialized.get().getCount() == 0;
   }
 
   /**
