@@ -1452,7 +1452,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
                 new Object[]{"d", "abd"},
                 new Object[]{"", "not abd"},
-                // In the following row, dim3 is an empty list; MSQ currently treats this differently from native.
+                // In the following row, dim3 is an empty list. The Scan query in MSQ reads this with
+                // makeDimensionSelector; the Scan query in native reads this makeColumnValueSelector, and behavior
+                // of those selectors is inconsistent. (The DimensionSelector returns an empty list; the
+                // ColumnValueSelector returns a list containing a single null.)
                 new Object[]{
                     null,
                     queryFramework().engine().name().equals("msq-task")
