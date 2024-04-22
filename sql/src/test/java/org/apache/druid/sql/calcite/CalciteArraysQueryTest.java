@@ -1422,6 +1422,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayScalarInFilter_MVD()
   {
+    // In the fifth row, dim3 is an empty list. The Scan query in MSQ reads this with makeDimensionSelector, whereas
+    // the Scan query in native reads this makeColumnValueSelector. Behavior of those selectors is inconsistent.
+    // The DimensionSelector returns an empty list; the ColumnValueSelector returns a list containing a single null.
+    final String expectedValueForEmptyMvd =
+        queryFramework().engine().name().equals("msq-task")
+        ? NullHandling.nullToEmptyIfNeeded(null)
+        : "not abd";
+
     testBuilder()
         .sql(
             "SELECT dim3, (CASE WHEN scalar_in_array(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
@@ -1452,16 +1460,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
                 new Object[]{"d", "abd"},
                 new Object[]{"", "not abd"},
-                // In the following row, dim3 is an empty list. The Scan query in MSQ reads this with
-                // makeDimensionSelector; the Scan query in native reads this makeColumnValueSelector, and behavior
-                // of those selectors is inconsistent. (The DimensionSelector returns an empty list; the
-                // ColumnValueSelector returns a list containing a single null.)
-                new Object[]{
-                    null,
-                    queryFramework().engine().name().equals("msq-task")
-                    ? NullHandling.nullToEmptyIfNeeded(null)
-                    : "not abd"
-                },
+                new Object[]{null, expectedValueForEmptyMvd},
                 new Object[]{null, "not abd"}
             )
         )
