@@ -91,7 +91,8 @@ public class GoogleTaskLogsTest extends EasyMockSupport
       storage.insert(
           EasyMock.eq(BUCKET),
           EasyMock.eq(PREFIX + "/" + TASKID),
-          EasyMock.anyObject(InputStreamContent.class)
+          EasyMock.anyObject(InputStreamContent.class),
+          EasyMock.eq(GoogleTaskLogs.UPLOAD_BUFFER_SIZE)
       );
       EasyMock.expectLastCall();
 
@@ -120,7 +121,8 @@ public class GoogleTaskLogsTest extends EasyMockSupport
       storage.insert(
           EasyMock.eq(BUCKET),
           EasyMock.eq(PREFIX + "/" + TASKID),
-          EasyMock.anyObject(InputStreamContent.class)
+          EasyMock.anyObject(InputStreamContent.class),
+          EasyMock.eq(GoogleTaskLogs.UPLOAD_BUFFER_SIZE)
       );
       EasyMock.expectLastCall();
 

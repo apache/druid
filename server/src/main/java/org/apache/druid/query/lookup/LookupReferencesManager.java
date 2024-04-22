@@ -394,7 +394,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     if (lookupConfig.getEnableLookupSyncOnStartup()) {
       lookupBeanList = getLookupListFromCoordinator(lookupListeningAnnouncerConfig.getLookupTier());
       if (lookupBeanList == null) {
-        LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
+        LOG.info("Could not fetch lookups from the coordinator. Loading saved snapshot instead");
         lookupBeanList = getLookupListFromSnapshot();
       }
     } else {

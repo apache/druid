@@ -22,14 +22,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Optionality;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -54,8 +47,6 @@ import java.util.stream.Collectors;
 
 public class BitwiseSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction XOR_FUNCTION = new BitwiseXorSqlAggFunction();
-
   public enum Op
   {
     AND {
@@ -88,8 +79,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
       @Override
       SqlAggFunction getCalciteFunction()
       {
-        // newer versions of calcite have this built-in so someday we can drop this...
-        return XOR_FUNCTION;
+        return SqlStdOperatorTable.BIT_XOR;
       }
 
       @Override
@@ -174,24 +164,5 @@ public class BitwiseSqlAggregator implements SqlAggregator
             )
         )
     );
-  }
-
-  private static class BitwiseXorSqlAggFunction extends SqlAggFunction
-  {
-    BitwiseXorSqlAggFunction()
-    {
-      super(
-          "BIT_XOR",
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.BIGINT),
-          InferTypes.ANY_NULLABLE,
-          OperandTypes.EXACT_NUMERIC,
-          SqlFunctionCategory.NUMERIC,
-          false,
-          false,
-          Optionality.IGNORED
-      );
-    }
   }
 }

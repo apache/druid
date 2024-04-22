@@ -294,7 +294,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final Duration DEFAULT_COORDINATOR_PERIOD = Period.parse("PT60s").toStandardDuration();
     private static final Duration DEFAULT_COORDINATOR_INDEXING_PERIOD = Period.parse("PT1800s").toStandardDuration();
     private static final Duration DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD = Period.parse("PT1H").toStandardDuration();
-    private static final Duration DEFAULT_COORDINATOR_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
     private static final Duration DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
     private static final Duration DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD = Period.parse("P30D").toStandardDuration();
     private static final boolean DEFAULT_COORDINATOR_KILL_IGNORE_DURATION_TO_RETAIN = false;
@@ -497,7 +496,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           coordinatorIndexingPeriod == null ? DEFAULT_COORDINATOR_INDEXING_PERIOD : coordinatorIndexingPeriod,
           metadataStoreManagementPeriod == null ? DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD : metadataStoreManagementPeriod,
           loadTimeoutDelay == null ? DEFAULT_LOAD_TIMEOUT_DELAY : loadTimeoutDelay,
-          coordinatorKillPeriod == null ? DEFAULT_COORDINATOR_KILL_PERIOD : coordinatorKillPeriod,
+          coordinatorKillPeriod == null ? (coordinatorIndexingPeriod == null ? DEFAULT_COORDINATOR_INDEXING_PERIOD : coordinatorIndexingPeriod)
+                                        : coordinatorKillPeriod,
           coordinatorKillDurationToRetain == null ? DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAIN
                                                   : coordinatorKillDurationToRetain,
           coordinatorSupervisorKillPeriod == null ? DEFAULT_COORDINATOR_SUPERVISOR_KILL_PERIOD : coordinatorSupervisorKillPeriod,

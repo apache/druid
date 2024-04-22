@@ -378,7 +378,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource` on the Peon |1|
+| `service/heartbeat` | Metric indicating the service is up. This metric is emitted only when `ServiceStatusMonitor` is enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource`, `tags` on the Peon |1|
 
 ### Historical
 
@@ -399,19 +399,19 @@ For more information, see [Enabling Metrics](../configuration/index.md#enabling-
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`jvm/pool/committed`|Committed pool|`poolKind`, `poolName`|Close to max pool|
-|`jvm/pool/init`|Initial pool|`poolKind`, `poolName`|Varies|
-|`jvm/pool/max`|Max pool|`poolKind`, `poolName`|Varies|
-|`jvm/pool/used`|Pool used|`poolKind`, `poolName`|< max pool|
-|`jvm/bufferpool/count`|Bufferpool count|`bufferpoolName`|Varies|
-|`jvm/bufferpool/used`|Bufferpool used|`bufferpoolName`|Close to capacity|
-|`jvm/bufferpool/capacity`|Bufferpool capacity|`bufferpoolName`|Varies|
-|`jvm/mem/init`|Initial memory|`memKind`|Varies|
-|`jvm/mem/max`|Max memory|`memKind`|Varies|
-|`jvm/mem/used`|Used memory|`memKind`|< max memory|
-|`jvm/mem/committed`|Committed memory|`memKind`|Close to max memory|
-|`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young)|Varies|
-|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
+|`jvm/pool/committed`|Committed pool|`poolKind`, `poolName`, `jvmVersion`|Close to max pool|
+|`jvm/pool/init`|Initial pool|`poolKind`, `poolName`, `jvmVersion`|Varies|
+|`jvm/pool/max`|Max pool|`poolKind`, `poolName`, `jvmVersion`|Varies|
+|`jvm/pool/used`|Pool used|`poolKind`, `poolName`, `jvmVersion`|< max pool|
+|`jvm/bufferpool/count`|Bufferpool count|`bufferpoolName`, `jvmVersion`|Varies|
+|`jvm/bufferpool/used`|Bufferpool used|`bufferpoolName`, `jvmVersion`|Close to capacity|
+|`jvm/bufferpool/capacity`|Bufferpool capacity|`bufferpoolName`, `jvmVersion`|Varies|
+|`jvm/mem/init`|Initial memory|`memKind`, `jvmVersion`|Varies|
+|`jvm/mem/max`|Max memory|`memKind`, `jvmVersion`|Varies|
+|`jvm/mem/used`|Used memory|`memKind`, `jvmVersion`|< max memory|
+|`jvm/mem/committed`|Committed memory|`memKind`, `jvmVersion`|Close to max memory|
+|`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young), `jvmVersion`|Varies|
+|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`, `jvmVersion`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
 
 ### ZooKeeper
 

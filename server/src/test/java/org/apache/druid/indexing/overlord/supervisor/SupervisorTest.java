@@ -17,30 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.indexing.overlord.supervisor;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+public class SupervisorTest
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
-
-  @Override
-  public StorageConnector get()
+  @Test
+  public void testAutoScalerLagComputation()
   {
-    return STORAGE_CONNECTOR;
-  }
+    Supervisor supervisor = Mockito.spy(Supervisor.class);
 
-  @Override
-  public String getResourceType()
-  {
-    return "testExport";
-  }
+    Mockito.when(supervisor.computeLagStats()).thenReturn(new LagStats(1, 2, 3));
+    Assert.assertEquals(2, supervisor.computeLagForAutoScaler());
 
-  @Override
-  public String getBasePath()
-  {
-    return "testExport";
+    Mockito.when(supervisor.computeLagStats()).thenReturn(null);
+    Assert.assertEquals(0, supervisor.computeLagForAutoScaler());
   }
 }
