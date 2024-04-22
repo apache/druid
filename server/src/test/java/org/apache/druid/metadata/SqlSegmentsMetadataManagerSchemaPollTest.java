@@ -234,9 +234,9 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     sqlSegmentsMetadataManager.start();
     sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(segmentSchemaCache.isInitialized());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
-    Assert.assertFalse(segmentSchemaCache.isInitialized());
 
     list.clear();
     list.add(
