@@ -78,7 +78,6 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -122,7 +121,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
   protected static class ArraysComponentSupplier extends StandardComponentSupplier
   {
-    public ArraysComponentSupplier(File temporaryFolder)
+    public ArraysComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

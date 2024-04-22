@@ -244,7 +244,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   protected static class DrillComponentSupplier extends StandardComponentSupplier
   {
-    public DrillComponentSupplier(File temporaryFolder)
+    public DrillComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

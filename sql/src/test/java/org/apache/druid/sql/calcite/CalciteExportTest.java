@@ -50,7 +50,6 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,7 +58,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
 {
   protected static class ExportComponentSupplier extends IngestionDmlComponentSupplier
   {
-    public ExportComponentSupplier(File temporaryFolder)
+    public ExportComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

@@ -31,12 +31,11 @@ import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogReplaceTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.extension.RegisterExtension;
-
-import java.io.File;
 
 import static org.junit.Assert.fail;
 
@@ -52,7 +51,7 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 
   protected static class CatalogReplaceComponentSupplier extends CatalogIngestionDmlComponentSupplier
   {
-    public CatalogReplaceComponentSupplier(File temporaryFolder)
+    public CatalogReplaceComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

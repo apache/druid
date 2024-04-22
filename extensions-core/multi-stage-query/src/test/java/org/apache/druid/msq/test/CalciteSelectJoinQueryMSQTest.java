@@ -31,6 +31,7 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -38,8 +39,6 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-
-import java.io.File;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
@@ -97,7 +96,7 @@ public class CalciteSelectJoinQueryMSQTest
 
   protected static class SortMergeJoinComponentSupplier extends AbstractJoinComponentSupplier
   {
-    public SortMergeJoinComponentSupplier(File temporaryFolder)
+    public SortMergeJoinComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder, JoinAlgorithm.SORT_MERGE);
     }
@@ -105,7 +104,7 @@ public class CalciteSelectJoinQueryMSQTest
 
   protected static class BroadcastJoinComponentSupplier extends AbstractJoinComponentSupplier
   {
-    public BroadcastJoinComponentSupplier(File temporaryFolder)
+    public BroadcastJoinComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder, JoinAlgorithm.BROADCAST);
     }
@@ -115,7 +114,7 @@ public class CalciteSelectJoinQueryMSQTest
   {
     private JoinAlgorithm joinAlgorithm;
 
-    public AbstractJoinComponentSupplier(File temporaryFolder, JoinAlgorithm joinAlgorithm)
+    public AbstractJoinComponentSupplier(TempDirProducer temporaryFolder, JoinAlgorithm joinAlgorithm)
     {
       super(temporaryFolder);
       this.joinAlgorithm = joinAlgorithm;

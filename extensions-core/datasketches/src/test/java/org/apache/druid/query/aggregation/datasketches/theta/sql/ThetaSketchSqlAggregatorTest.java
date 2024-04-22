@@ -62,6 +62,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -75,7 +76,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -93,7 +93,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class ThetaSketchComponentSupplier extends StandardComponentSupplier
   {
-    public ThetaSketchComponentSupplier(File temporaryFolder)
+    public ThetaSketchComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

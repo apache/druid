@@ -160,6 +160,7 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -342,7 +343,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
-    public MSQBaseComponentSupplier(File temporaryFolder)
+    public MSQBaseComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

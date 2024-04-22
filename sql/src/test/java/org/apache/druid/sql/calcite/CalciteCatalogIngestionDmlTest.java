@@ -53,8 +53,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-
 @SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
@@ -72,7 +70,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   public static class CatalogIngestionDmlComponentSupplier extends IngestionDmlComponentSupplier
   {
-    public CatalogIngestionDmlComponentSupplier(File temporaryFolder)
+    public CatalogIngestionDmlComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

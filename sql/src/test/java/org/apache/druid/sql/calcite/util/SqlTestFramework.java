@@ -34,7 +34,6 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -51,6 +50,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -214,11 +214,11 @@ public class SqlTestFramework
    */
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
-    private final File temporaryFolder;
+    private final TempDirProducer temporaryFolder;
     private final PlannerComponentSupplier plannerComponentSupplier;
 
     public StandardComponentSupplier(
-        final File temporaryFolder
+        final TempDirProducer temporaryFolder
     )
     {
       this.temporaryFolder = temporaryFolder;
@@ -245,15 +245,14 @@ public class SqlTestFramework
     {
     }
 
-
-    public File newTempFolder()
+    protected File newTempFolder()
     {
       return newTempFolder(null);
     }
 
-    public File newTempFolder(String prefix)
+    protected File newTempFolder(String prefix)
     {
-      return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), prefix);
+      return temporaryFolder.getTempDir(prefix);
     }
 
 
@@ -286,7 +285,7 @@ public class SqlTestFramework
       return TestDataBuilder.createMockWalker(
           injector,
           conglomerate,
-          temporaryFolder,
+          temporaryFolder.getTempDir("segments"),
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           joinableFactory
       );

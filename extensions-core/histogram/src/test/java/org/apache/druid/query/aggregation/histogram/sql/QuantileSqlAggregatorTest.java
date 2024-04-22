@@ -51,6 +51,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -60,7 +61,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.List;
 
 @SqlTestFramework.SqlTestFrameWorkModule(QuantileComponentSupplier.class)
@@ -68,7 +68,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class QuantileComponentSupplier extends StandardComponentSupplier
   {
-    public QuantileComponentSupplier(File temporaryFolder)
+    public QuantileComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }

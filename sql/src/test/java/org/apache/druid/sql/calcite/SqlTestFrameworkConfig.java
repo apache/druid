@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
@@ -30,8 +29,6 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.io.File;
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -68,7 +65,7 @@ public @interface SqlTestFrameworkConfig
   {
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
     private SqlTestFrameworkConfig config;
-    private Function<File, QueryComponentSupplier> testHostSupplier;
+    private Function<TempDirProducer, QueryComponentSupplier> testHostSupplier;
     private Method method;
 
     @Override
@@ -76,7 +73,7 @@ public @interface SqlTestFrameworkConfig
     {
       Class<?> testClass = context.getTestClass().get();
       SqlTestFramework.SqlTestFrameWorkModule moduleAnnotation = getModuleAnnotationFor(testClass);
-      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(File.class);
+      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(TempDirProducer.class);
       testHostSupplier = f -> {
         try {
           return constructor.newInstance(f);
@@ -154,26 +151,12 @@ public @interface SqlTestFrameworkConfig
 
     ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
     {
-      return new ConfigurationInstance(config, testHostSupplier.apply(createTempFolder("druid-test")));
+      return new ConfigurationInstance(config, testHostSupplier.apply(getTempDirProducer("druid-test")));
     }
 
-    protected File createTempFolder(String prefix)
+    private TempDirProducer getTempDirProducer(String prefix)
     {
-      File tempDir = FileUtils.createTempDir(prefix);
-      Runtime.getRuntime().addShutdownHook(new Thread()
-      {
-        @Override
-        public void run()
-        {
-          try {
-            FileUtils.deleteDirectory(tempDir);
-          }
-          catch (IOException ex) {
-            ex.printStackTrace();
-          }
-        }
-      });
-      return tempDir;
+      return TempDirProducer.instance().getProducer(prefix);
     }
   }
 

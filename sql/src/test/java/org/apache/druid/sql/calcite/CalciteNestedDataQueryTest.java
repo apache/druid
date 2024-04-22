@@ -80,7 +80,6 @@ import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -182,7 +181,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
   protected static class NestedComponentSupplier extends StandardComponentSupplier
   {
-    public NestedComponentSupplier(File temporaryFolder)
+    public NestedComponentSupplier(TempDirProducer temporaryFolder)
     {
       super(temporaryFolder);
     }
