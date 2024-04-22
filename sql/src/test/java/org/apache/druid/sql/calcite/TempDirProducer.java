@@ -76,4 +76,9 @@ public class TempDirProducer
   {
     return FileUtils.createTempDirInLocation(tempDir.toPath(), prefix);
   }
+
+  public File getTempDir()
+  {
+    return getTempDir(null);
+  }
 }

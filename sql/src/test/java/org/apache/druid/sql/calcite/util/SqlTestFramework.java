@@ -247,7 +247,7 @@ public class SqlTestFramework
 
     protected File newTempFolder()
     {
-      return newTempFolder(null);
+      return tempDirProducer.getTempDir();
     }
 
     protected File newTempFolder(String prefix)
