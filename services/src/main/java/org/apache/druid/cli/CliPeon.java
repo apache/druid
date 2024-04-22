@@ -217,7 +217,7 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
-
+            ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 

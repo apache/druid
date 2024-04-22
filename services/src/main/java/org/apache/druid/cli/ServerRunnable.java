@@ -205,7 +205,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
-  protected void validateCentralizedDatasourceSchemaConfig(Properties properties)
+  protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
   {
     if (isSegmentMetadataCacheEnabled(properties)) {
       String serverViewType = properties.getProperty(ServerViewModule.SERVERVIEW_TYPE_PROPERTY);
@@ -227,7 +227,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
-  protected boolean isSegmentMetadataCacheEnabled(Properties properties)
+  protected static boolean isSegmentMetadataCacheEnabled(Properties properties)
   {
     return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }
