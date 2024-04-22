@@ -245,17 +245,6 @@ public class SqlTestFramework
     {
     }
 
-    protected File newTempFolder()
-    {
-      return tempDirProducer.getTempDir();
-    }
-
-    protected File newTempFolder(String prefix)
-    {
-      return tempDirProducer.getTempDir(prefix);
-    }
-
-
     @Override
     public QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,

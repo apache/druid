@@ -89,7 +89,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
       final QueryableIndex index =
           IndexBuilder.create(CalciteTests.getJsonMapper())
-                      .tmpDir(newTempFolder())
+                      .tmpDir(tempDirProducer.getTempDir())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           new IncrementalIndexSchema.Builder()

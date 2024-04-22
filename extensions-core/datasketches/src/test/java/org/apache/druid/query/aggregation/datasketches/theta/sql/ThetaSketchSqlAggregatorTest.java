@@ -127,7 +127,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
       SketchModule.registerSerde();
 
       final QueryableIndex index = IndexBuilder.create()
-                                               .tmpDir(newTempFolder())
+                                               .tmpDir(tempDirProducer.getTempDir())
                                                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                                .schema(
                                                    new IncrementalIndexSchema.Builder()

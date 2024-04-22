@@ -91,7 +91,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
       ApproximateHistogramDruidModule.registerSerde();
 
       final QueryableIndex index = IndexBuilder.create(CalciteTests.getJsonMapper())
-                                               .tmpDir(newTempFolder())
+                                               .tmpDir(tempDirProducer.getTempDir())
                                                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                                .schema(
                                                    new IncrementalIndexSchema.Builder()
