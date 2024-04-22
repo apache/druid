@@ -721,32 +721,33 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<ResultRow> queryRunnerForSegments = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            (queryPlus, responseContext) -> Sequences
-                .simple(
-                    ImmutableList.of(
-                        Sequences.map(
-                            segment1Runner
-                                .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
-                            toolChest.makePreComputeManipulatorFn(
-                                (GroupByQuery) queryPlus.getQuery(),
-                                MetricManipulatorFns.deserializing()
-                            )
-                        ),
-                        Sequences.map(
-                            segment2Runner
-                                 .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
-                            toolChest.makePreComputeManipulatorFn(
-                                (GroupByQuery) queryPlus.getQuery(),
-                                MetricManipulatorFns.deserializing()
-                            )
+    QueryRunner<ResultRow> baseRunner = toolChest.mergeResults(
+        (queryPlus, responseContext) -> Sequences
+            .simple(
+                ImmutableList.of(
+                    Sequences.map(
+                        segment1Runner
+                            .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
+                        toolChest.makePreComputeManipulatorFn(
+                            (GroupByQuery) queryPlus.getQuery(),
+                            MetricManipulatorFns.deserializing()
+                        )
+                    ),
+                    Sequences.map(
+                        segment2Runner
+                            .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
+                        toolChest.makePreComputeManipulatorFn(
+                            (GroupByQuery) queryPlus.getQuery(),
+                            MetricManipulatorFns.deserializing()
                         )
                     )
                 )
-                .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering()),
-            true
-        ),
+            )
+            .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering()),
+        true
+    );
+    QueryRunner<ResultRow> queryRunnerForSegments = new FinalizeResultsQueryRunner<>(
+        baseRunner,
         (QueryToolChest) toolChest
     );
     GroupingEngine groupingEngine = ((GroupByQueryRunnerFactory) groupByFactory).getGroupingEngine();
