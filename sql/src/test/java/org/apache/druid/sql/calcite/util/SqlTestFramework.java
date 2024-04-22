@@ -215,13 +215,24 @@ public class SqlTestFramework
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
     private final File temporaryFolder;
-    private PlannerComponentSupplier plannerComponentSupplier = new StandardPlannerComponentSupplier();
+    private final PlannerComponentSupplier plannerComponentSupplier;
 
     public StandardComponentSupplier(
         final File temporaryFolder
     )
     {
       this.temporaryFolder = temporaryFolder;
+      this.plannerComponentSupplier = buildPlannerComponentSupplier();
+    }
+
+    /**
+     * Build the {@link PlannerComponentSupplier}.
+     *
+     * Implementations may override how this is being built.
+     */
+    protected PlannerComponentSupplier buildPlannerComponentSupplier()
+    {
+      return new StandardPlannerComponentSupplier();
     }
 
     @Override
