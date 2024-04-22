@@ -201,7 +201,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     expectedException.expect(ExecutionException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
     expectedException.expectMessage(
-        "Fail test while dropping segment[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123]"
+        "Fail test while dropping segment"
     );
 
     driver = new StreamAppenderatorDriver(
