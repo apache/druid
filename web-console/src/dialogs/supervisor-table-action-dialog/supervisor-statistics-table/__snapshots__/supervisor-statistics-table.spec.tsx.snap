@@ -656,7 +656,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           {
             "Cell": [Function],
             "Header": "1m",
-            "accessor": [Function],
+            "accessor": "summary.movingAverages.buildSegments.1m",
             "className": "padded",
             "id": "1m",
             "width": 200,
@@ -664,7 +664,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           {
             "Cell": [Function],
             "Header": "5m",
-            "accessor": [Function],
+            "accessor": "summary.movingAverages.buildSegments.5m",
             "className": "padded",
             "id": "5m",
             "width": 200,
@@ -672,7 +672,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           {
             "Cell": [Function],
             "Header": "15m",
-            "accessor": [Function],
+            "accessor": "summary.movingAverages.buildSegments.15m",
             "className": "padded",
             "id": "15m",
             "width": 200,
@@ -687,18 +687,21 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
                 "buildSegments": {
                   "15m": {
                     "processed": 5.544749689510444,
+                    "processedBytes": 20,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
                   "1m": {
                     "processed": 4.593670088770785,
+                    "processedBytes": 30,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
                   "5m": {
                     "processed": 3.5455993615040584,
+                    "processedBytes": 10,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
@@ -708,6 +711,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
               "totals": {
                 "buildSegments": {
                   "processed": 7516,
+                  "processedBytes": 60,
                   "processedWithError": 0,
                   "thrownAway": 0,
                   "unparseable": 0,

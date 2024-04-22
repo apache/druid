@@ -25,6 +25,7 @@ import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
+import type { TableColumnSelectorColumn } from '../../components';
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
@@ -84,16 +85,16 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './supervisors-view.scss';
 
-const supervisorTableColumns: string[] = [
+const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Supervisor ID',
   'Type',
   'Topic/Stream',
   'Status',
   'Configured tasks',
-  'Running tasks',
-  'Aggregate lag',
-  'Recent errors',
-  'Stats',
+  { text: 'Running tasks', label: 'status API' },
+  { text: 'Aggregate lag', label: 'status API' },
+  { text: 'Recent errors', label: 'status API' },
+  { text: 'Stats', label: 'stats API' },
   ACTION_COLUMN_LABEL,
 ];
 
@@ -797,7 +798,7 @@ export class SupervisorsView extends React.PureComponent<
               </Popover2>,
             ),
             id: 'stats',
-            width: 220,
+            width: 300,
             filterable: false,
             sortable: false,
             className: 'padded',
@@ -847,7 +848,7 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: 'Recent errors',
             accessor: 'status.payload.recentErrors',
-            width: 200,
+            width: 150,
             filterable: false,
             sortable: false,
             show: visibleColumns.shown('Recent errors'),
@@ -1031,7 +1032,7 @@ export class SupervisorsView extends React.PureComponent<
           />
           {this.renderBulkSupervisorActions()}
           <TableColumnSelector
-            columns={supervisorTableColumns}
+            columns={SUPERVISOR_TABLE_COLUMNS}
             onChange={column =>
               this.setState(prevState => ({
                 visibleColumns: prevState.visibleColumns.toggle(column),
