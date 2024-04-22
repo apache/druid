@@ -78,7 +78,6 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -1034,7 +1033,9 @@ public class StreamAppenderator implements Appenderator
 
     log.debug("Shutting down immediately...");
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      unannounceAllVersionsOfSegment(entry.getValue().getSegment());
+      synchronized (entry.getValue()) {
+        unannounceAllVersionsOfSegment(entry.getValue().getSegment());
+      }
     }
     try {
       shutdownExecutors();
@@ -1069,14 +1070,9 @@ public class StreamAppenderator implements Appenderator
    */
   private void unannounceAllVersionsOfSegment(DataSegment baseSegment)
   {
-    unannounceSegment(baseSegment);
-
     final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
-    final Set<SegmentIdWithShardSpec> upgradedVersionsOfSegment = baseSegmentToUpgradedVersions.get(baseId);
-
-    if (CollectionUtils.isNullOrEmpty(upgradedVersionsOfSegment)) {
-      return;
-    }
+    final List<SegmentIdWithShardSpec> upgradedVersionsOfSegment
+        = ImmutableList.copyOf(baseSegmentToUpgradedVersions.get(baseId));
 
     for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
       final DataSegment newSegment = new DataSegment(
@@ -1106,6 +1102,9 @@ public class StreamAppenderator implements Appenderator
     }
     SegmentIdWithShardSpec id = SegmentIdWithShardSpec.fromDataSegment(segment);
     SegmentIdWithShardSpec baseId = upgradedVersionToBaseSegment.remove(id);
+    if (baseId == null) {
+      return;
+    }
     baseSegmentToUpgradedVersions.get(baseId).remove(id);
     if (baseSegmentToUpgradedVersions.get(baseId).isEmpty()) {
       baseSegmentToUpgradedVersions.remove(baseId);
@@ -1398,9 +1397,10 @@ public class StreamAppenderator implements Appenderator
       final boolean removeOnDiskData
   )
   {
-    final SegmentIdWithShardSpec baseIdentifier = upgradedVersionToBaseSegment.get(identifier);
+    final SegmentIdWithShardSpec baseIdentifier = upgradedVersionToBaseSegment.getOrDefault(identifier, identifier);
     synchronized (sink) {
-      if (baseSegmentToUpgradedVersions.get(baseIdentifier).size() > 1) {
+      if (baseSegmentToUpgradedVersions.containsKey(baseIdentifier)
+          && baseSegmentToUpgradedVersions.get(baseIdentifier).size() > 1) {
         unannounceSegment(getUpgradedSegment(sink.getSegment(), identifier));
         return Futures.immediateFuture(null);
       }
@@ -1462,8 +1462,10 @@ public class StreamAppenderator implements Appenderator
             }
 
             // Unannounce the segment.
-            final DataSegment segment = getUpgradedSegment(sink.getSegment(), identifier);
-            unannounceSegment(segment);
+            synchronized (sink) {
+              final DataSegment segment = getUpgradedSegment(sink.getSegment(), identifier);
+              unannounceSegment(segment);
+            }
 
             Runnable removeRunnable = () -> {
               droppingSinks.remove(baseIdentifier);

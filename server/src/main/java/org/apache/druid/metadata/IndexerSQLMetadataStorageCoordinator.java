@@ -1056,8 +1056,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     // always insert empty previous sequence id
-    insertPendingSegmentIntoMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1,
-                                      taskAllocatorId
+    insertPendingSegmentIntoMetastore(
+        handle,
+        newIdentifier,
+        dataSource,
+        interval,
+        "",
+        sequenceName,
+        sequenceNamePrevIdSha1,
+        taskAllocatorId
     );
 
     log.info(
@@ -2584,7 +2591,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int deletePendingSegmentsForTaskGroup(final String pendingSegmentsGroup)
+  public int deletePendingSegmentsForTaskAllocatorId(final String pendingSegmentsGroup)
   {
     return connector.getDBI().inTransaction(
         (handle, status) -> handle

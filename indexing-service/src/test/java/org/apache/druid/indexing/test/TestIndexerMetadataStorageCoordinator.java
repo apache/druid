@@ -289,7 +289,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public int deletePendingSegmentsForTaskGroup(final String taskGroup)
+  public int deletePendingSegmentsForTaskAllocatorId(final String taskGroup)
   {
     throw new UnsupportedOperationException();
   }
