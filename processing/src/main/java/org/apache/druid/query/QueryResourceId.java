@@ -114,8 +114,6 @@ public class QueryResourceId
   @Override
   public String toString()
   {
-    return "QueryResourceId{" +
-           "queryResourceId='" + queryResourceId + '\'' +
-           '}';
+    return queryResourceId;
   }
 }
