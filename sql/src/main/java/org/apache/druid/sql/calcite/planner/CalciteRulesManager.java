@@ -83,10 +83,8 @@ public class CalciteRulesManager
   private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
-  private static final String BLOAT_PROPERTY = "druid.sql.planner.bloat";
-  private static final int BLOAT = Integer.parseInt(
-      System.getProperty(BLOAT_PROPERTY, "1000")
-  );
+  public static final String BLOAT_PROPERTY = "sql.planner.bloat";
+  public static final int DEFAULT_BLOAT = 1000;
 
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#BASE_RULES}, minus:
@@ -100,16 +98,14 @@ public class CalciteRulesManager
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
    * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
    * this rule could create a lot of non-useful plans.
-   *
-   * {@link CoreRules#PROJECT_MERGE} includes configurable bloat parameter, as a workaround for Calcite exception
+   * 5) {@link CoreRules#PROJECT_MERGE} added later with bloat parameter configured from query context as a workaround for Calcite exception
    * (there are not enough rules to produce a node with desired properties) thrown while running complex sql-queries with
-   * big amount of subqueries. `druid.sql.planner.bloat` should be set in broker's `jvm.config` file.
+   * big amount of subqueries.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           CoreRules.AGGREGATE_STAR_TABLE,
           CoreRules.AGGREGATE_PROJECT_STAR_TABLE,
-          ProjectMergeRule.Config.DEFAULT.withBloat(BLOAT).toRule(),
           CoreRules.FILTER_SCAN,
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
@@ -444,6 +440,15 @@ public class CalciteRulesManager
                         .build();
   }
 
+  public List<RelOptRule> configurableRuleSet(PlannerContext plannerContext){
+    return ImmutableList.of(ProjectMergeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule());
+  }
+
+  private int getBloatProperty(PlannerContext plannerContext) {
+    final Integer bloat = plannerContext.queryContext().getInt(BLOAT_PROPERTY);
+    return (bloat != null) ? bloat : DEFAULT_BLOAT;
+  }
+
   public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
   {
     final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
@@ -453,6 +458,7 @@ public class CalciteRulesManager
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
+    rules.addAll(configurableRuleSet(plannerContext));
 
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       rules.addAll(FANCY_JOIN_RULES);
