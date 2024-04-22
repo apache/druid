@@ -960,13 +960,19 @@ public class TaskLockbox
             }
 
             final int priority = lockFilter.getPriority();
-            final boolean ignoreAppendLocks =
-                Boolean.TRUE.equals(lockFilter.getContext().getOrDefault(
-                    Tasks.USE_CONCURRENT_LOCKS,
-                    Tasks.DEFAULT_USE_CONCURRENT_LOCKS))
-                || TaskLockType.REPLACE.name().equals(lockFilter.getContext().getOrDefault(
+            final boolean isReplaceLock = TaskLockType.REPLACE.name().equals(
+                lockFilter.getContext().getOrDefault(
                     Tasks.TASK_LOCK_TYPE,
-                    Tasks.DEFAULT_TASK_LOCK_TYPE));
+                    Tasks.DEFAULT_TASK_LOCK_TYPE
+                )
+            );
+            final boolean isUsingConcurrentLocks = Boolean.TRUE.equals(
+                lockFilter.getContext().getOrDefault(
+                    Tasks.USE_CONCURRENT_LOCKS,
+                    Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+                )
+            );
+            final boolean ignoreAppendLocks = isUsingConcurrentLocks || isReplaceLock;
 
             running.get(datasource).forEach(
                 (startTime, startTimeLocks) -> startTimeLocks.forEach(
