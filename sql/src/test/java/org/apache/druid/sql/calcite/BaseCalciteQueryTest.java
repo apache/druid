@@ -1644,4 +1644,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
     return file;
   }
+
+  @Override
+  public void close() throws IOException
+  {
+  }
 }
