@@ -67,6 +67,7 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -126,7 +127,7 @@ public class SqlTestFramework
    * exist in {@code BaseCalciteQueryTest}. Any changes here will impact that
    * base class, and possibly many test cases that extend that class.
    */
-  public interface QueryComponentSupplier
+  public interface QueryComponentSupplier extends Closeable
   {
     /**
      * Gather properties to be used within tests. Particularly useful when choosing
@@ -283,6 +284,11 @@ public class SqlTestFramework
 
     @Override
     public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+    }
+
+    @Override
+    public void close()
     {
     }
   }
@@ -655,6 +661,7 @@ public class SqlTestFramework
   {
     try {
       resourceCloser.close();
+      componentSupplier.close();
     }
     catch (IOException e) {
       throw new RE(e);
