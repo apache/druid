@@ -101,7 +101,7 @@ public class DruidAvaticaTestDriver implements Driver
   public static final String URI_PREFIX = "druidtest://";
   public static final String DEFAULT_URI = URI_PREFIX + "/";
 
-  private static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
+  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
 
   public DruidAvaticaTestDriver()
   {
