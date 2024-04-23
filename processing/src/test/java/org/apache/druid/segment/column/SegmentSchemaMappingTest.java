@@ -40,6 +40,8 @@ public class SegmentSchemaMappingTest
     NullHandling.initializeForTests();
   }
 
+  private ObjectMapper mapper = TestHelper.makeJsonMapper();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -57,7 +59,6 @@ public class SegmentSchemaMappingTest
         1
     );
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     byte[] bytes = mapper.writeValueAsBytes(segmentSchemaMapping);
     SegmentSchemaMapping deserialized = mapper.readValue(bytes, SegmentSchemaMapping.class);
 
@@ -72,5 +73,38 @@ public class SegmentSchemaMappingTest
     copy2.addSchema(segmentId, schemaPayloadPlus, "fp1");
 
     Assert.assertEquals(segmentSchemaMapping, copy2);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    RowSignature rowSignature = RowSignature.builder().add("c", ColumnType.FLOAT).build();
+
+    SegmentId segmentId = SegmentId.dummy("ds1");
+
+    StringLastAggregatorFactory factory = new StringLastAggregatorFactory("billy", "nilly", null, 20);
+    SchemaPayload payload = new SchemaPayload(rowSignature, Collections.singletonMap("twosum", factory));
+
+    SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(
+        Collections.singletonMap(segmentId.toString(), new SegmentMetadata(20L, "fp1")),
+        Collections.singletonMap("fp1", payload),
+        1
+    );
+
+    SegmentSchemaMapping segmentSchemaMappingWithDifferentVersion = new SegmentSchemaMapping(
+        Collections.singletonMap(segmentId.toString(), new SegmentMetadata(20L, "fp1")),
+        Collections.singletonMap("fp1", payload),
+        0
+    );
+
+    Assert.assertNotEquals(segmentSchemaMapping, segmentSchemaMappingWithDifferentVersion);
+
+    SegmentSchemaMapping segmentSchemaMappingWithDifferentPayload = new SegmentSchemaMapping(
+        Collections.emptyMap(),
+        Collections.emptyMap(),
+        0
+    );
+
+    Assert.assertNotEquals(segmentSchemaMapping, segmentSchemaMappingWithDifferentPayload);
   }
 }

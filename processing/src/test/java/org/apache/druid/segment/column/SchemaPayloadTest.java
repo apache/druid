@@ -37,6 +37,8 @@ public class SchemaPayloadTest
     NullHandling.initializeForTests();
   }
 
+  private ObjectMapper mapper = TestHelper.makeJsonMapper();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -52,7 +54,6 @@ public class SchemaPayloadTest
 
     Assert.assertEquals(payload, payloadCopy);
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     byte[] bytes = mapper.writeValueAsBytes(payload);
     SchemaPayload deserialized = mapper.readValue(bytes, SchemaPayload.class);
 

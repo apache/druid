@@ -38,6 +38,8 @@ public class SchemaPayloadPlusTest
     NullHandling.initializeForTests();
   }
 
+  private ObjectMapper mapper = TestHelper.makeJsonMapper();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -48,7 +50,6 @@ public class SchemaPayloadPlusTest
 
     SchemaPayloadPlus metadata = new SchemaPayloadPlus(payload, 20L);
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     byte[] bytes = mapper.writeValueAsBytes(metadata);
     SchemaPayloadPlus deserialized = mapper.readValue(bytes, SchemaPayloadPlus.class);
 
