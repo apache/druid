@@ -243,13 +243,11 @@ public class Windowing
       // We know windowProject is a mapping due to the isMapping() check in DruidRules.
       // check anyway as defensive programming.
       Preconditions.checkArgument(partialQuery.getWindowProject().isMapping());
-      int maxFieldCount = 1 + partialQuery.getWindowProject()
-                                          .getProjects()
-                                          .stream()
-                                          .map(node -> ((RexInputRef) node).getIndex())
-                                          .reduce(0, Integer::max);
       final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
-          Project.getPartialMapping(maxFieldCount, partialQuery.getWindowProject().getProjects()),
+          Project.getPartialMapping(
+              partialQuery.getWindowProject().getInput().getRowType().getFieldCount(),
+              partialQuery.getWindowProject().getProjects()
+          ),
           "mapping for windowProject[%s]",
           partialQuery.getWindowProject()
       );
