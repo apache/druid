@@ -30,6 +30,10 @@ import java.util.Objects;
  * Group of stages that must be launched as a unit. Within each group, stages communicate with each other using
  * {@link OutputChannelMode#MEMORY} channels. The final stage in a group writes its own output using
  * {@link #lastStageOutputChannelMode()}.
+ *
+ * Stages in a group have linear (non-branching) data flow: the first stage is an input to the second stage, the second
+ * stage is an input to the third stage, and so on. This is done to simplify the logic. In the future, it is possible
+ * that stage groups may contain branching data flow.
  */
 public class StageGroup
 {
@@ -44,6 +48,9 @@ public class StageGroup
 
   /**
    * List of stage IDs in this group.
+   *
+   * The first stage is an input to the second stage, the second stage is an input to the third stage, and so on.
+   * See class-level javadocs for more details.
    */
   public List<StageId> stageIds()
   {

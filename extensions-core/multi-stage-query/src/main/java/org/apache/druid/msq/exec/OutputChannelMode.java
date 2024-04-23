@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.kernel.controller.ControllerUtils;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelUtils;
 
 /**
  * Mode for stage output channels. Provided to workers in {@link WorkOrder#getOutputChannelMode()}.
@@ -33,7 +33,7 @@ public enum OutputChannelMode
 {
   /**
    * In-memory output channels. Stage shuffle data does not hit disk. This mode requires a consumer stage to run
-   * at the same time as its corresponding producer stage. See {@link ControllerUtils#computeStageGroups} for the
+   * at the same time as its corresponding producer stage. See {@link ControllerQueryKernelUtils#computeStageGroups} for the
    * logic that determines when we can use in-memory channels.
    */
   MEMORY("memory"),

@@ -160,14 +160,14 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     Assert.assertEquals(
         ImmutableList.of(
-            ControllerUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
-            ControllerUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
-            ControllerUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 2, 4),
-            ControllerUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 3),
-            ControllerUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 5),
-            ControllerUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 6)
+            ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
+            ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
+            ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 2, 4),
+            ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 3),
+            ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 5),
+            ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 6)
         ),
-        ControllerUtils.computeStageGroups(queryDef, controllerQueryKernelTester.getConfig())
+        ControllerQueryKernelUtils.computeStageGroups(queryDef, controllerQueryKernelTester.getConfig())
     );
 
     Set<Integer> newStageNumbers;

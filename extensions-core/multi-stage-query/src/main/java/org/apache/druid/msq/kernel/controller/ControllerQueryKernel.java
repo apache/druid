@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -88,12 +89,12 @@ public class ControllerQueryKernel
   private final Map<StageId, ControllerStageTracker> stageTrackers = new HashMap<>();
 
   /**
-   * Stage ID -> stages that flow *into* that stage. Computed by {@link ControllerUtils#computeStageInflowMap}.
+   * Stage ID -> stages that flow *into* that stage. Computed by {@link ControllerQueryKernelUtils#computeStageInflowMap}.
    */
   private final ImmutableMap<StageId, Set<StageId>> inflowMap;
 
   /**
-   * Stage ID -> stages that *depend on* that stage. Computed by {@link ControllerUtils#computeStageOutflowMap}.
+   * Stage ID -> stages that *depend on* that stage. Computed by {@link ControllerQueryKernelUtils#computeStageOutflowMap}.
    */
   private final ImmutableMap<StageId, Set<StageId>> outflowMap;
 
@@ -102,14 +103,14 @@ public class ControllerQueryKernel
    * corresponding to the stageId. After initializing, if the value of the entry becomes an empty set, it is removed
    * from the map, and the removed entry is added to {@link #stageGroupQueue}.
    */
-  private final Map<StageId, Set<StageId>> pendingInflowMap;
+  private final Map<StageId, SortedSet<StageId>> pendingInflowMap;
 
   /**
    * Maintains a running count of (stageId -> outflow stages pending on its results). After initializing, if
    * the value of the entry becomes an empty set, it is removed from the map and the removed entry is added to
    * {@link #effectivelyFinishedStages}.
    */
-  private final Map<StageId, Set<StageId>> pendingOutflowMap;
+  private final Map<StageId, SortedSet<StageId>> pendingOutflowMap;
 
   /**
    * Stage groups, in the order that we will run them. Each group is a set of stages that internally uses
@@ -157,14 +158,14 @@ public class ControllerQueryKernel
   {
     this.queryDef = queryDef;
     this.config = config;
-    this.inflowMap = ImmutableMap.copyOf(ControllerUtils.computeStageInflowMap(queryDef));
-    this.outflowMap = ImmutableMap.copyOf(ControllerUtils.computeStageOutflowMap(queryDef));
+    this.inflowMap = ImmutableMap.copyOf(ControllerQueryKernelUtils.computeStageInflowMap(queryDef));
+    this.outflowMap = ImmutableMap.copyOf(ControllerQueryKernelUtils.computeStageOutflowMap(queryDef));
 
     // pendingInflowMap and pendingOutflowMap are wholly separate from inflowMap, so we can edit the Sets.
-    this.pendingInflowMap = ControllerUtils.computeStageInflowMap(queryDef);
-    this.pendingOutflowMap = ControllerUtils.computeStageOutflowMap(queryDef);
+    this.pendingInflowMap = ControllerQueryKernelUtils.computeStageInflowMap(queryDef);
+    this.pendingOutflowMap = ControllerQueryKernelUtils.computeStageOutflowMap(queryDef);
 
-    this.stageGroupQueue = new ArrayDeque<>(ControllerUtils.computeStageGroups(queryDef, config));
+    this.stageGroupQueue = new ArrayDeque<>(ControllerQueryKernelUtils.computeStageGroups(queryDef, config));
     initializeReadyToRunStages();
   }
 
@@ -395,10 +396,11 @@ public class ControllerQueryKernel
   private void initializeReadyToRunStages()
   {
     final List<StageId> readyStages = new ArrayList<>();
-    final Iterator<Map.Entry<StageId, Set<StageId>>> pendingInflowIterator = pendingInflowMap.entrySet().iterator();
+    final Iterator<Map.Entry<StageId, SortedSet<StageId>>> pendingInflowIterator =
+        pendingInflowMap.entrySet().iterator();
 
     while (pendingInflowIterator.hasNext()) {
-      final Map.Entry<StageId, Set<StageId>> stageToInflowStages = pendingInflowIterator.next();
+      final Map.Entry<StageId, SortedSet<StageId>> stageToInflowStages = pendingInflowIterator.next();
       if (stageToInflowStages.getValue().isEmpty()) {
         readyStages.add(stageToInflowStages.getKey());
         pendingInflowIterator.remove();

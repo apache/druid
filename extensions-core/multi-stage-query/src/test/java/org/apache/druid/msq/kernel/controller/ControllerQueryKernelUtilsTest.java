@@ -32,7 +32,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-public class ControllerUtilsTest
+public class ControllerQueryKernelUtilsTest
 {
   @Test
   public void test_computeStageGroups_multiPronged()
@@ -49,7 +49,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 5),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 6)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -76,7 +76,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 3, 5),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 6)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -102,7 +102,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -128,7 +128,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -154,7 +154,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -181,7 +181,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -208,7 +208,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -235,7 +235,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -261,7 +261,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0, 1),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 2, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -288,7 +288,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -314,7 +314,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -340,7 +340,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -366,7 +366,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -393,7 +393,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -419,7 +419,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 2, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
@@ -445,7 +445,7 @@ public class ControllerUtilsTest
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0, 2),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 3)
         ),
-        ControllerUtils.computeStageGroups(
+        ControllerQueryKernelUtils.computeStageGroups(
             queryDef,
             ControllerQueryKernelConfig
                 .builder()
