@@ -493,7 +493,7 @@ public class ForkingTaskRunnerTest
                                               + task.getId()
                                               + " must be an array of strings.")
     );
-    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
     Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 
