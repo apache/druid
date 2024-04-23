@@ -263,9 +263,7 @@ public class RealtimeIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-        }
+        lock.assertNotRevoked(segment.getInterval());
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -292,9 +290,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-          }
+          lock.assertNotRevoked(segment.getInterval());
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -346,9 +342,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               interval
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-          }
+          lock.assertNotRevoked(interval);
           return lock.getVersion();
         }
         catch (IOException e) {

@@ -88,9 +88,7 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
     if (lock == null) {
       return false;
     }
-    if (lock.isRevoked()) {
-      throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-    }
+    lock.assertNotRevoked(interval);
     return true;
   }
 

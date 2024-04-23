@@ -37,7 +37,7 @@ import java.util.Objects;
  */
 public class TaskStatus
 {
-  public static final int MAX_ERROR_MSG_LENGTH = 100;
+  public static final int MAX_ERROR_MSG_LENGTH = 2048;
 
   public static TaskStatus running(String taskId)
   {

@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.LockAcquisitionFailedException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -351,7 +352,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 
     if (lockResult.isRevoked()) {
       // We had acquired a lock but it was preempted by other locks
-      throw new ISE("The lock for interval[%s] is preempted and no longer valid", tryInterval);
+      throw new LockAcquisitionFailedException(tryInterval);
     }
 
     if (lockResult.isOk()) {

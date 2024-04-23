@@ -232,9 +232,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
         if (taskLock == null) {
           return false;
-        } else if (taskLock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked", interval));
         }
+        taskLock.assertNotRevoked(interval);
       }
     }
 

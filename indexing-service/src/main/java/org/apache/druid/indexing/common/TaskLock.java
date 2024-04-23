@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import org.apache.druid.indexing.overlord.LockRequest;
+import org.apache.druid.java.util.common.LockAcquisitionFailedException;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -62,4 +63,17 @@ public interface TaskLock
   boolean isRevoked();
 
   boolean conflict(LockRequest request);
+
+  /**
+   * Checks if the lock is revoked and throws a {@link LockAcquisitionFailedException} if so.
+   *
+   * @param interval The time interval for which the lock is acquired.
+   * @throws LockAcquisitionFailedException if the lock is revoked.
+   */
+  default void assertNotRevoked(Interval interval)
+  {
+    if (isRevoked()) {
+      throw new LockAcquisitionFailedException(interval);
+    }
+  }
 }

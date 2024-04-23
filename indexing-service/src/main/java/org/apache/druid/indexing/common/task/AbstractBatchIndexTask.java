@@ -482,9 +482,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
-      if (lock.isRevoked()) {
-        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
-      }
+      lock.assertNotRevoked(cur);
       locksAcquired++;
       intervalToLockVersion.put(cur, lock.getVersion());
     }
@@ -825,9 +823,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             interval
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
+        lock.assertNotRevoked(interval);
         version = lock.getVersion();
       } else {
         version = existingLockVersion;
