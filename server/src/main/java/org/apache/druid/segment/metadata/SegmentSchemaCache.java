@@ -295,9 +295,9 @@ public class SegmentSchemaCache
   /**
    * Remove schema for realtime segment.
    */
-  public boolean realtimeSegmentRemoved(SegmentId segmentId)
+  public void realtimeSegmentRemoved(SegmentId segmentId)
   {
-    return realtimeSegmentSchemaMap.remove(segmentId) != null;
+    realtimeSegmentSchemaMap.remove(segmentId);
   }
 
   public void emitStats()
