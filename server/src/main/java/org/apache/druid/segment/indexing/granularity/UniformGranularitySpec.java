@@ -49,7 +49,8 @@ public class UniformGranularitySpec extends BaseGranularitySpec
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
     if (Granularity.IS_FINER_THAN.compare(this.segmentGranularity, this.queryGranularity) < 0) {
       throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .withErrorCode("invalidInput")
                           .build(
                               "SegmentGranularity[%s] must not be finer than QueryGranularity[%s].",
                               this.segmentGranularity,

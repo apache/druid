@@ -209,7 +209,7 @@ public class GranularityPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularities.DAY,
-                Granularities.ALL,
+                Granularities.DAY,
                 ImmutableList.of(Intervals.of("2015-01-01T11Z/2015-01-02T05Z"))
             ),
             null,

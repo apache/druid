@@ -25,12 +25,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -359,14 +363,50 @@ public class UniformGranularityTest
     Assert.assertEquals(3600 * 24 * 365 * 10 + 3 * 24 * 3600, count);
   }
 
-  @Test(expected = DruidException.class)
-  public void testCheckGranularityValidity()
+
+  @Test
+  public void testSegmentGranularityEqualToQueryGranularity()
   {
-    new UniformGranularitySpec(
-        Granularities.SECOND,
-        Granularities.MINUTE,
-        Collections.singletonList(
-            Intervals.of("2012-01-01T00Z/P10Y")
+    final Granularity secondGranularity = Granularities.SECOND;
+    final Granularity secondDurationGranularity = new DurationGranularity(1000, 0);
+    try {
+      new UniformGranularitySpec(
+          secondGranularity,
+          secondGranularity,
+          Collections.emptyList()
+      );
+      new UniformGranularitySpec(
+          secondGranularity,
+          secondDurationGranularity,
+          Collections.emptyList()
+      );
+    }
+    catch (DruidException e) {
+      Assert.fail();
+    }
+  }
+
+  @Test
+  public void testSegmentGranularityFinerThanQueryGranularity()
+  {
+    final Granularity segmentGranularity = Granularities.SECOND;
+    final Granularity queryGranularity = Granularities.MINUTE;
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () ->
+            new UniformGranularitySpec(
+                segmentGranularity,
+                queryGranularity,
+                Collections.singletonList(
+                    Intervals.of("2012-01-01T00Z/P10Y")
+                )
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            StringUtils.format(
+                "SegmentGranularity[%s] must not be finer than QueryGranularity[%s].",
+                segmentGranularity,
+                queryGranularity
+            )
         )
     );
   }
