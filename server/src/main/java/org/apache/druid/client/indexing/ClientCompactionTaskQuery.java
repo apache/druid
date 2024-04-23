@@ -61,7 +61,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("engine") DataSourceCompactionConfig.Engine engine
-      )
+  )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;

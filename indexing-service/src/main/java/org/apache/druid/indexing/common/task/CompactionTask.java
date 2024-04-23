@@ -44,6 +44,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
@@ -484,9 +485,16 @@ public class CompactionTask extends AbstractBatchIndexTask
     );
 
     if (engine == Engine.MSQ) {
-        registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
-        return toolbox.getCompactionToMSQ()
-                      .createAndRunMSQTasks(this, toolbox, intervalDataSchemas);
+      if (toolbox.getCompactionToMSQ() == null) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.NOT_FOUND)
+                            .build(
+                                "Extension[druid-multi-stage-query] required for running compaction on MSQ "
+                                + "not found on the Indexer");
+      }
+      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
+      return toolbox.getCompactionToMSQ()
+                    .createAndRunMSQTasks(this, toolbox, intervalDataSchemas);
     } else {
       final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSpecs(
           intervalDataSchemas,
@@ -510,8 +518,9 @@ public class CompactionTask extends AbstractBatchIndexTask
           .collect(Collectors.toList());
 
       if (subtasks.isEmpty()) {
-        String msg = StringUtils.format("Can't find segments from inputSpec[%s], nothing to do.",
-                                        ioConfig.getInputSpec()
+        String msg = StringUtils.format(
+            "Can't find segments from inputSpec[%s], nothing to do.",
+            ioConfig.getInputSpec()
         );
         log.warn(msg);
         return TaskStatus.failure(getId(), msg);
@@ -527,47 +536,50 @@ public class CompactionTask extends AbstractBatchIndexTask
     final int totalNumSpecs = tasks.size();
     log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
-      int failCnt = 0;
-      final TaskReport.ReportMap completionReports = new TaskReport.ReportMap();
-      for (int i = 0; i < tasks.size(); i++) {
-        ParallelIndexSupervisorTask eachSpec = tasks.get(i);
-        final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
-        if (!currentSubTaskHolder.setTask(eachSpec)) {
-          String errMsg = "Task was asked to stop. Finish as failed.";
-          log.info(errMsg);
-          return TaskStatus.failure(getId(), errMsg);
-        }
-        try {
-          if (eachSpec.isReady(toolbox.getTaskActionClient())) {
-            log.info("Running indexSpec: " + json);
-            final TaskStatus eachResult = eachSpec.run(toolbox);
-            if (!eachResult.isSuccess()) {
-              failCnt++;
-              log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
-            }
-
-            String reportKeySuffix = "_" + i;
-            Optional.ofNullable(eachSpec.getCompletionReports())
-                    .ifPresent(reports -> completionReports.putAll(
-                        CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)));
-          } else {
+    int failCnt = 0;
+    final TaskReport.ReportMap completionReports = new TaskReport.ReportMap();
+    for (int i = 0; i < tasks.size(); i++) {
+      ParallelIndexSupervisorTask eachSpec = tasks.get(i);
+      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
+      if (!currentSubTaskHolder.setTask(eachSpec)) {
+        String errMsg = "Task was asked to stop. Finish as failed.";
+        log.info(errMsg);
+        return TaskStatus.failure(getId(), errMsg);
+      }
+      try {
+        if (eachSpec.isReady(toolbox.getTaskActionClient())) {
+          log.info("Running indexSpec: " + json);
+          final TaskStatus eachResult = eachSpec.run(toolbox);
+          if (!eachResult.isSuccess()) {
             failCnt++;
-            log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
+            log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
           }
-        }
-        catch (Exception e) {
+
+          String reportKeySuffix = "_" + i;
+          Optional.ofNullable(eachSpec.getCompletionReports())
+                  .ifPresent(reports -> completionReports.putAll(
+                      CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)));
+        } else {
           failCnt++;
-          log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+          log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
         }
       }
+      catch (Exception e) {
+        failCnt++;
+        log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+      }
+    }
 
-      String msg = StringUtils.format("Ran [%d] specs, [%d] succeeded, [%d] failed",
-                                      totalNumSpecs, totalNumSpecs - failCnt, failCnt
-      );
+    String msg = StringUtils.format(
+        "Ran [%d] specs, [%d] succeeded, [%d] failed",
+        totalNumSpecs,
+        totalNumSpecs - failCnt,
+        failCnt
+    );
 
-      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
-      log.info(msg);
-      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId(), msg);
+    toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    log.info(msg);
+    return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId(), msg);
   }
 
   @VisibleForTesting

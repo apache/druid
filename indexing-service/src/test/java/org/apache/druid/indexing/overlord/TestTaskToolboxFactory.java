@@ -400,7 +400,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
       return this;
     }
 
-    public Builder setCompactionToMSQ(CompactionToMSQTask compactionToMSQTask){
+    public Builder setCompactionToMSQ(CompactionToMSQTask compactionToMSQTask)
+    {
       this.compactionToMSQTask = compactionToMSQTask;
       return this;
     }

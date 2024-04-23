@@ -30,9 +30,9 @@ import java.util.List;
 
 public interface CompactionToMSQTask
 {
-    TaskStatus createAndRunMSQTasks(
-        CompactionTask compactionTask,
-        TaskToolbox taskToolbox,
-        List<NonnullPair<Interval, DataSchema>> dataSchemas
-    ) throws JsonProcessingException;
+  TaskStatus createAndRunMSQTasks(
+      CompactionTask compactionTask,
+      TaskToolbox taskToolbox,
+      List<NonnullPair<Interval, DataSchema>> dataSchemas
+  ) throws JsonProcessingException;
 }

@@ -870,7 +870,8 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder compactionToMSQ(final CompactionToMSQTask compactionToMSQTask){
+    public Builder compactionToMSQ(final CompactionToMSQTask compactionToMSQTask)
+    {
       this.compactionToMSQTask = compactionToMSQTask;
       return this;
     }

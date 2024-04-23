@@ -86,7 +86,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
   final OverlordClient overlordClient;
   final ObjectMapper jsonMapper;
 
-  private static final String TIME_VIRTUAL_COLUMN = "v0";
+  private static final String TIME_VIRTUAL_COLUMN = "vTime";
   private static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
   @Inject
@@ -130,17 +130,17 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
                                .tuningConfig(buildMSQTuningConfig(compactionTask, compactionTaskContext))
                                .build();
 
-      Map<String, Object> MSQControllerTaskContext = createMSQTaskContext(compactionTask, ds);
+      Map<String, Object> msqControllerTaskContext = createMSQTaskContext(compactionTask, ds);
 
       MSQControllerTask controllerTask = new MSQControllerTask(
           compactionTask.getId(),
-          msqSpec.withOverriddenContext(MSQControllerTaskContext),
+          msqSpec.withOverriddenContext(msqControllerTaskContext),
           null,
-          MSQControllerTaskContext,
+          msqControllerTaskContext,
           null,
           null,
           null,
-          MSQControllerTaskContext
+          msqControllerTaskContext
       );
 
       // Doing a serde roundtrip for MSQControllerTask as the "injector" field of this class is supposed to be injected
@@ -281,11 +281,6 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
     return new ColumnMappings(columnMappings);
   }
 
-  private static MultipleIntervalSegmentSpec createMultipleIntervalSpec(Interval interval)
-  {
-    return new MultipleIntervalSegmentSpec(Collections.singletonList(interval));
-  }
-
   private static List<OrderByColumnSpec> getOrderBySpec(PartitionsSpec partitionSpec)
   {
     if (partitionSpec.getType() == SecondaryPartitionType.RANGE) {
@@ -303,7 +298,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
     return new Druids.ScanQueryBuilder().dataSource(dataSchema.getDataSource())
                                         .columns(rowSignature.getColumnNames())
                                         .columnTypes(rowSignature.getColumnTypes())
-                                        .intervals(createMultipleIntervalSpec(interval))
+                                        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
                                         .legacy(false)
                                         .filters(dataSchema.getTransformSpec().getFilter())
                                         .context(compactionTask.getContext())
@@ -341,9 +336,7 @@ public class CompactionToMSQTaskImpl implements CompactionToMSQTask
     return virtualColumns;
   }
 
-  private static Query<?> buildGroupByQuery(
-      CompactionTask compactionTask, Interval interval, DataSchema dataSchema
-  )
+  private static Query<?> buildGroupByQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema)
   {
     DimFilter dimFilter = dataSchema.getTransformSpec().getFilter();
 
