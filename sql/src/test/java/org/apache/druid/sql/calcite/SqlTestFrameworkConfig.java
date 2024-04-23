@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -103,7 +104,7 @@ public @interface SqlTestFrameworkConfig
     }
   }
 
-  class SqlTestFrameworkConfigStore
+  class SqlTestFrameworkConfigStore implements Closeable
   {
     Map<SqlTestFrameworkConfigInstance, ConfigurationInstance> configMap = new HashMap<>();
 
