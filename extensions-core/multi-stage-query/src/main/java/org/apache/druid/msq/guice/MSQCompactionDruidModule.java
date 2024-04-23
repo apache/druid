@@ -19,41 +19,20 @@
 
 package org.apache.druid.msq.guice;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
-import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.compaction.CompactionToMSQTaskImpl;
-import org.apache.druid.rpc.indexing.OverlordClient;
 
-import java.util.Collections;
-import java.util.List;
-
+/**
+ * Module for running compaction on MSQ
+ */
 public class MSQCompactionDruidModule implements DruidModule
 {
-
   @Override
   public void configure(Binder binder)
   {
     binder.bind(CompactionToMSQTask.class).to(CompactionToMSQTaskImpl.class).in(LazySingleton.class);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
-
-  @Provides
-  @LazySingleton
-  CompactionToMSQTaskImpl getCompactionToMSQImpl(
-      final OverlordClient overlordClient,
-      final ObjectMapper jsonMapper
-  )
-  {
-    return new CompactionToMSQTaskImpl(overlordClient, jsonMapper);
   }
 }

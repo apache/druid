@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -33,6 +34,5 @@ public interface CompactionToMSQTask
         CompactionTask compactionTask,
         TaskToolbox taskToolbox,
         List<NonnullPair<Interval, DataSchema>> dataSchemas
-    ) throws Exception;
-
+    ) throws JsonProcessingException;
 }
