@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * In-memory cache of segment schema.
  * <p>
  * Internally, mapping of segmentId to segment level information like schemaId & numRows is maintained.
- * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentMetadata}.
+ * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentSchemaInfo}.
  * Segment schema created since last DB poll is also fetched and updated in the cache {@code finalizedSegmentSchema}.
  * <p>
  * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchema}. This mapping
@@ -69,15 +69,10 @@ public class SegmentSchemaCache
   private final AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
 
   /**
-   * Mapping from segmentId to segment level information which includes numRows and schemaId.
-   * This mapping is updated on each database poll.
+   * Finalized segment schema information.
    */
-  private volatile ImmutableMap<SegmentId, SegmentMetadata> finalizedSegmentMetadata = ImmutableMap.of();
-
-  /**
-   * Mapping from schemaId to payload. Gets updated after DB poll.
-   */
-  private volatile ImmutableMap<String, SchemaPayload> finalizedSegmentSchema = ImmutableMap.of();
+  private volatile FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo =
+      new FinalizedSegmentSchemaInfo(ImmutableMap.of(), ImmutableMap.of());
 
   /**
    * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
@@ -110,7 +105,7 @@ public class SegmentSchemaCache
 
   public void setInitialized()
   {
-    if (initialized.get().getCount() == 1) {
+    if (!isInitialized()) {
       initialized.get().countDown();
       log.info("SegmentSchemaCache is initialized.");
     }
@@ -125,8 +120,7 @@ public class SegmentSchemaCache
   {
     initialized.set(new CountDownLatch(1));
 
-    finalizedSegmentMetadata = ImmutableMap.of();
-    finalizedSegmentSchema = ImmutableMap.of();
+    finalizedSegmentSchemaInfo = new FinalizedSegmentSchemaInfo(ImmutableMap.of(), ImmutableMap.of());
     inTransitSMQResults.clear();
     inTransitSMQPublishedResults.clear();
   }
@@ -146,19 +140,12 @@ public class SegmentSchemaCache
   }
 
   /**
-   * This method is called after each DB poll.
+   * This method is called after each DB Poll. It updates reference for segment metadata and schema maps.
    */
-  public void updateFinalizedSegmentMetadataReference(ImmutableMap<SegmentId, SegmentMetadata> segmentStatsMap)
+  public void updateFinalizedSegmentSchema(FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo)
   {
-    this.finalizedSegmentMetadata = segmentStatsMap;
-  }
-
-  /**
-   * This method is called on full schema refresh from the DB.
-   */
-  public void updateFinalizedSegmentSchemaReference(ImmutableMap<String, SchemaPayload> schemaPayloadMap)
-  {
-    finalizedSegmentSchema = schemaPayloadMap;
+    this.finalizedSegmentSchemaInfo = finalizedSegmentSchemaInfo;
+    setInitialized();
   }
 
   /**
@@ -238,9 +225,9 @@ public class SegmentSchemaCache
     }
 
     // segment schema has been polled from the DB
-    SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
+    SegmentMetadata segmentMetadata = getSegmentMetadataMap().get(segmentId);
     if (segmentMetadata != null) {
-      SchemaPayload schemaPayload = finalizedSegmentSchema.get(segmentMetadata.getSchemaFingerprint());
+      SchemaPayload schemaPayload = getSchemaPayloadMap().get(segmentMetadata.getSchemaFingerprint());
       if (schemaPayload != null) {
         return Optional.of(
             new SchemaPayloadPlus(
@@ -267,11 +254,21 @@ public class SegmentSchemaCache
 
   private boolean isFinalizedSegmentSchemaCached(SegmentId segmentId)
   {
-    SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
+    SegmentMetadata segmentMetadata = getSegmentMetadataMap().get(segmentId);
     if (segmentMetadata != null) {
-      return finalizedSegmentSchema.containsKey(segmentMetadata.getSchemaFingerprint());
+      return getSchemaPayloadMap().containsKey(segmentMetadata.getSchemaFingerprint());
     }
     return false;
+  }
+
+  private ImmutableMap<SegmentId, SegmentMetadata> getSegmentMetadataMap()
+  {
+    return finalizedSegmentSchemaInfo.getFinalizedSegmentMetadata();
+  }
+
+  private ImmutableMap<String, SchemaPayload> getSchemaPayloadMap()
+  {
+    return finalizedSegmentSchemaInfo.getFinalizedSegmentSchema();
   }
 
   /**
@@ -285,7 +282,7 @@ public class SegmentSchemaCache
     inTransitSMQPublishedResults.remove(segmentId);
 
     // Since finalizedSegmentMetadata & finalizedSegmentSchema is updated on each DB poll,
-    // it is fine to not remove the segment from them.
+    // there is no need to remove segment from them.
     return true;
   }
 
@@ -299,10 +296,46 @@ public class SegmentSchemaCache
 
   public void emitStats()
   {
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchema.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSegmentMetadata/size", finalizedSegmentMetadata.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", finalizedSegmentSchema.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", inTransitSMQResults.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/size", inTransitSMQPublishedResults.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/count", realtimeSegmentSchema.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSegmentMetadata/count", getSegmentMetadataMap().size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/count", getSchemaPayloadMap().size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/count", inTransitSMQResults.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/count", inTransitSMQPublishedResults.size()));
+  }
+
+  /**
+   * This class encapsulates schema information for segments polled from the DB.
+   */
+  public static class FinalizedSegmentSchemaInfo
+  {
+    /**
+     * Mapping from segmentId to segment level information which includes numRows and schemaFingerprint.
+     * This mapping is updated on each database poll.
+     */
+    private final ImmutableMap<SegmentId, SegmentMetadata> finalizedSegmentMetadata;
+
+    /**
+     * Mapping from schemaFingerprint to payload.
+     */
+    private final ImmutableMap<String, SchemaPayload> finalizedSegmentSchema;
+
+    public FinalizedSegmentSchemaInfo(
+        final ImmutableMap<SegmentId, SegmentMetadata> finalizedSegmentMetadata,
+        final ImmutableMap<String, SchemaPayload> finalizedSegmentSchema
+    )
+    {
+      this.finalizedSegmentMetadata = finalizedSegmentMetadata;
+      this.finalizedSegmentSchema = finalizedSegmentSchema;
+    }
+
+    public ImmutableMap<SegmentId, SegmentMetadata> getFinalizedSegmentMetadata()
+    {
+      return finalizedSegmentMetadata;
+    }
+
+    public ImmutableMap<String, SchemaPayload> getFinalizedSegmentSchema()
+    {
+      return finalizedSegmentSchema;
+    }
   }
 }

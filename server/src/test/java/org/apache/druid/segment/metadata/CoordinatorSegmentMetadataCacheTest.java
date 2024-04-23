@@ -1548,8 +1548,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       return null;
     });
 
-    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap.build());
-    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataMap.build());
+    segmentSchemaCache.updateFinalizedSegmentSchema(
+        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentMetadataMap.build(), schemaPayloadMap.build()));
     segmentSchemaCache.setInitialized();
 
     serverView = new TestCoordinatorServerView(Collections.emptyList(), Collections.emptyList());
@@ -1648,8 +1648,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentStatsMap.put(segment3.getId(), new SegmentMetadata((long) adapter.getNumRows(), "fp"));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put("fp", new SchemaPayload(adapter.getRowSignature()));
-    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaPayloadMap.build());
-    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentStatsMap.build());
+    segmentSchemaCache.updateFinalizedSegmentSchema(
+        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
+    );
 
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     List<DataSegment> segments = segmentsMetadata.values()
@@ -1671,7 +1672,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         existingSegment.getId(),
         new SegmentMetadata(5L, "fp")
     );
-    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentStatsMap.build());
+    segmentSchemaCache.updateFinalizedSegmentSchema(
+        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
+    );
 
     // find a druidServer holding existingSegment
     final Pair<DruidServer, DataSegment> pair = druidServers

@@ -88,18 +88,21 @@ public class SegmentSchemaCacheTest
   {
     SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
+    Assert.assertFalse(cache.isInitialized());
+
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
     SegmentId id = SegmentId.dummy("ds");
 
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadBuilder = new ImmutableMap.Builder<>();
     schemaPayloadBuilder.put("fp1", new SchemaPayload(rowSignature));
-    cache.updateFinalizedSegmentSchemaReference(schemaPayloadBuilder.build());
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
     segmentMetadataBuilder.put(id, new SegmentMetadata(20L, "fp1"));
-    cache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
 
+    cache.updateFinalizedSegmentSchema(new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentMetadataBuilder.build(), schemaPayloadBuilder.build()));
+
+    Assert.assertTrue(cache.isInitialized());
     Assert.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());

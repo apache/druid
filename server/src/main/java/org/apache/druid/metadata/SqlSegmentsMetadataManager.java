@@ -1182,9 +1182,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         });
 
     ImmutableMap<String, SchemaPayload> schemaMap = schemaMapBuilder.build();
-    segmentSchemaCache.updateFinalizedSegmentSchemaReference(schemaMap);
-    segmentSchemaCache.updateFinalizedSegmentMetadataReference(segmentMetadataBuilder.build());
-    segmentSchemaCache.setInitialized();
+    segmentSchemaCache.updateFinalizedSegmentSchema(
+        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentMetadataBuilder.build(), schemaMap)
+    );
 
     Preconditions.checkNotNull(
         segments,
