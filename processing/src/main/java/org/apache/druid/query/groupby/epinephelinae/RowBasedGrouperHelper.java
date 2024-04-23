@@ -739,7 +739,6 @@ public class RowBasedGrouperHelper
     }
   }
 
-  // TODO(laksh): Figure out why this isn't getting triggered
   private static class InputRawSupplierColumnSelectorStrategyFactory
       implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
@@ -763,24 +762,10 @@ public class RowBasedGrouperHelper
           return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> () -> columnSelector.isNull() ? null : columnSelector.getDouble();
         case ARRAY:
-          switch (capabilities.getElementType().getType()) {
-            case STRING:
-              return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
-                  columnSelector ->
-                      () -> DimensionHandlerUtils.coerceToStringArray(columnSelector.getObject());
-            case FLOAT:
-            case LONG:
-            case DOUBLE:
-              return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
-                  columnSelector ->
-                      () -> DimensionHandlerUtils.convertToArray(columnSelector.getObject(),
-                                                                 capabilities.getElementType());
-            default:
-              throw new IAE(
-                  "Cannot create query type helper from invalid type [%s]",
-                  capabilities.asTypeString()
-              );
-          }
+        case COMPLEX:
+          return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
+              columnSelector ->
+                  () -> DimensionHandlerUtils.convertObjectToType(columnSelector.getObject(), capabilities.toColumnType());
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }

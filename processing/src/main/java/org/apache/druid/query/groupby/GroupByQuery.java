@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -597,11 +598,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         needsReverseList.add(false);
         final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
-        if (type.isNumeric()) {
-          comparators.add(StringComparators.NUMERIC);
-        } else {
-          comparators.add(StringComparators.LEXICOGRAPHIC);
-        }
+        comparators.add(StringComparators.NATURAL);
       }
     }
 
@@ -780,23 +777,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final Object lhsObj = lhs.get(fieldNumber);
       final Object rhsObj = rhs.get(fieldNumber);
 
-      if (dimensionType.isNumeric()) {
-        if (comparator.equals(StringComparators.NUMERIC)) {
-          dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
-        } else {
-          dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
-        }
-      } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
-        final Object[] lhsArr = DimensionHandlerUtils.coerceToStringArray(lhsObj);
-        final Object[] rhsArr = DimensionHandlerUtils.coerceToStringArray(rhsObj);
-        dimCompare = ColumnType.STRING_ARRAY.getNullableStrategy().compare(lhsArr, rhsArr);
-      } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
-                 || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
-        final Object[] lhsArr = DimensionHandlerUtils.convertToArray(lhsObj, dimensionType.getElementType());
-        final Object[] rhsArr = DimensionHandlerUtils.convertToArray(rhsObj, dimensionType.getElementType());
-        dimCompare = dimensionType.getNullableStrategy().compare(lhsArr, rhsArr);
+      if (DimensionComparisonUtils.isNaturalComparator(dimensionType.getType(), comparator)) {
+        dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
       } else {
-        dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
+        dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
       }
 
       if (dimCompare != 0) {

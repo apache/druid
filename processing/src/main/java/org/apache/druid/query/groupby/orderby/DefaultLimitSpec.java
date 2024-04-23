@@ -478,6 +478,15 @@ public class DefaultLimitSpec implements LimitSpec
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
       }
     }
+    final Comparator comparatorToUse;
+    if (arrayComparator != null) {
+      comparatorToUse = arrayComparator;
+    } else {
+      comparatorToUse = DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)
+                        ? columnType.getNullableStrategy()
+                        : stringComparator;
+    }
+
     return Ordering.from(
         Comparator.comparing(
             (ResultRow row) -> {
@@ -487,7 +496,7 @@ public class DefaultLimitSpec implements LimitSpec
                 return getDimensionValue(row, column);
               }
             },
-            Comparator.nullsFirst(arrayComparator == null ? stringComparator : arrayComparator)
+            Comparator.nullsFirst(comparatorToUse)
         )
     );
   }
