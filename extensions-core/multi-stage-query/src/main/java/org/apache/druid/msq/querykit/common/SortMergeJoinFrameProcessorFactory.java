@@ -37,6 +37,7 @@ import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -61,6 +62,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Factory for {@link SortMergeJoinFrameProcessor}, which does a sort-merge join of two inputs.
@@ -143,7 +145,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     }
 
     // Compute key columns.
-    final List<List<KeyColumn>> keyColumns = toKeyColumns(condition);
+    final List<List<KeyColumn>> keyColumnsWithoutColumnTypes = toKeyColumns(condition);
     final int[] requiredNonNullKeyParts = toRequiredNonNullKeyParts(condition);
 
     // Stitch up the inputs and validate each input channel signature.
@@ -155,7 +157,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
             counters,
             warningPublisher
         ),
-        keyColumns
+        keyColumnsWithoutColumnTypes
     );
 
     if (inputsByPartition.isEmpty()) {
@@ -175,14 +177,20 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
           final int partitionNumber = entry.getIntKey();
           final List<ReadableInput> readableInputs = entry.getValue();
           final OutputChannel outputChannel = outputChannels.get(partitionNumber);
+          final FrameWriterFactory frameWriterFactory = stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator());
+          final RowSignature rowSignature = frameWriterFactory.signature();
+          final KeyColumn keyColumnWithTypes = keyColumnsWithoutColumnTypes.stream()
+              .map(key -> KeyColumn.populateKeyColumnSignature(key, rowSignature))
+              .collect(Collectors.toList());
+
 
           return new SortMergeJoinFrameProcessor(
               readableInputs.get(LEFT),
               readableInputs.get(RIGHT),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
+              frameWriterFactory,
               rightPrefix,
-              keyColumns,
+              keyColumnsWithoutColumnTypes,
               requiredNonNullKeyParts,
               joinType,
               frameContext.memoryParameters().getSortMergeJoinMemory()
@@ -200,6 +208,8 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
    * Extracts key columns from a {@link JoinConditionAnalysis}. The returned list has two elements: 0 is the
    * left-hand side, 1 is the right-hand side. Each sub-list has one element for each equi-condition.
    *
+   * This doesn't populate the column type for the keyColumn. Add it using {@link KeyColumn#populateKeyColumnSignature(KeyColumn, RowSignature)}
+   *
    * The condition must have been validated by {@link #validateCondition(JoinConditionAnalysis)}.
    */
   public static List<List<KeyColumn>> toKeyColumns(final JoinConditionAnalysis condition)
@@ -214,7 +224,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
           "leftExpr#getBindingIfIdentifier"
       );
 
-      retVal.get(0).add(new KeyColumn(leftColumn, KeyOrder.ASCENDING));
+      retVal.get(0).add(new KeyColumn(leftColumn,  KeyOrder.ASCENDING));
       retVal.get(1).add(new KeyColumn(equiCondition.getRightColumn(), KeyOrder.ASCENDING));
     }
 

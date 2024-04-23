@@ -19,11 +19,16 @@
 
 package org.apache.druid.frame.key;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -38,23 +43,25 @@ import java.util.Objects;
  */
 public class ByteRowKeyComparator implements Comparator<byte[]>
 {
+  private final List<KeyColumn> keyColumns;
   private final int firstFieldPosition;
-  private final int[] ascDescRunLengths;
+  private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
 
   private ByteRowKeyComparator(
-      final int firstFieldPosition,
-      final int[] ascDescRunLengths
+      final List<KeyColumn> keyColumns,
+      final RowKeyComparisonRunLengths rowKeyComparisonRunLengths
   )
   {
-    this.firstFieldPosition = firstFieldPosition;
-    this.ascDescRunLengths = ascDescRunLengths;
+    this.keyColumns = keyColumns;
+    this.firstFieldPosition = computeFirstFieldPosition(keyColumns.size());
+    this.rowKeyComparisonRunLengths = rowKeyComparisonRunLengths;
   }
 
   public static ByteRowKeyComparator create(final List<KeyColumn> keyColumns)
   {
     return new ByteRowKeyComparator(
-        computeFirstFieldPosition(keyColumns.size()),
-        computeAscDescRunLengths(keyColumns)
+        keyColumns,
+        RowKeyComparisonRunLengths.create(keyColumns)
     );
   }
 
@@ -68,83 +75,86 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
     return Ints.checkedCast((long) fieldCount * Integer.BYTES);
   }
 
-  /**
-   * Given a list of sort columns, compute an array of the number of ascending fields in a run, followed by number of
-   * descending fields in a run, followed by ascending, etc. For example: ASC, ASC, DESC, ASC would return [2, 1, 1]
-   * and DESC, DESC, ASC would return [0, 2, 1].
-   *
-   * Public so {@link FrameComparisonWidgetImpl} can use it.
-   */
-  public static int[] computeAscDescRunLengths(final List<KeyColumn> keyColumns)
-  {
-    final IntList ascDescRunLengths = new IntArrayList(4);
-
-    KeyOrder order = KeyOrder.ASCENDING;
-    int runLength = 0;
-
-    for (final KeyColumn column : keyColumns) {
-      if (column.order() == KeyOrder.NONE) {
-        throw new IAE("Key must be sortable");
-      }
-
-      if (column.order() != order) {
-        ascDescRunLengths.add(runLength);
-        runLength = 0;
-
-        // Invert "order".
-        order = order == KeyOrder.ASCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING;
-      }
-
-      runLength++;
-    }
-
-    if (runLength > 0) {
-      ascDescRunLengths.add(runLength);
-    }
-
-    return ascDescRunLengths.toIntArray();
-  }
-
   @Override
   @SuppressWarnings("SubtractionInCompareTo")
   public int compare(final byte[] keyArray1, final byte[] keyArray2)
   {
-    // Similar logic to FrameComparaisonWidgetImpl, but implementation is different enough that we need our own.
+    // Similar logic to FrameComparisonWidgetImpl, but implementation is different enough that we need our own.
     // Major difference is Frame v. Frame instead of byte[] v. byte[].
 
-    int comparableBytesStartPosition1 = firstFieldPosition;
-    int comparableBytesStartPosition2 = firstFieldPosition;
+    int currentRunStartPosition1 = firstFieldPosition;
+    int currentRunStartPosition2 = firstFieldPosition;
 
-    boolean ascending = true;
-    int field = 0;
+    // Number of fields compared till now, which is equivalent to the index of the field to compare next
+    int fieldsComparedTillNow = 0;
 
-    for (int numFields : ascDescRunLengths) {
-      if (numFields > 0) {
-        final int nextField = field + numFields;
-        final int comparableBytesEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
-        final int comparableBytesEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
+    for (RowKeyComparisonRunLengths.RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
 
-        int cmp = FrameReaderUtils.compareByteArraysUnsigned(
-            keyArray1,
-            comparableBytesStartPosition1,
-            comparableBytesEndPosition1 - comparableBytesStartPosition1,
-            keyArray2,
-            comparableBytesStartPosition2,
-            comparableBytesEndPosition2 - comparableBytesStartPosition2
-        );
-
-        if (cmp != 0) {
-          return ascending ? cmp : -cmp;
-        }
-
-        field = nextField;
-        comparableBytesStartPosition1 = comparableBytesEndPosition1;
-        comparableBytesStartPosition2 = comparableBytesEndPosition2;
+      if (runLengthEntry.getRunLength() <= 0) {
+        // Defensive check
+        continue;
       }
 
-      ascending = !ascending;
-    }
+      if (!runLengthEntry.isByteComparable()) {
+        // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
+        assert runLengthEntry.getRunLength() == 1;
+        // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
+        // a known complex type
+        String complexTypeName = Preconditions.checkNotNull(
+            keyColumns.get(fieldsComparedTillNow).columnType().getComplexTypeName(),
+            "complexType must be present for comparison"
+        );
 
+        ComplexMetricSerde serde = Preconditions.checkNotNull(
+            ComplexMetrics.getSerdeForType(complexTypeName),
+            "serde for type [%s] not present",
+            complexTypeName
+        );
+
+        // Index of the next field that will get considered. Excludes the current field that we are comparing right now
+        final int nextField = fieldsComparedTillNow + 1;
+        final int currentRunEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
+        final int currentRunEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
+
+        int cmp = FrameReaderUtils.compareComplexTypes(
+            keyArray1,
+            currentRunStartPosition1,
+            currentRunEndPosition1 - currentRunStartPosition1,
+            keyArray2,
+            currentRunStartPosition2,
+            currentRunEndPosition2 - currentRunStartPosition2,
+            keyColumns.get(fieldsComparedTillNow).columnType(),
+            serde
+        );
+        if (cmp != 0) {
+          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+        }
+        // We have only compared a single field here
+        fieldsComparedTillNow = nextField;
+        currentRunStartPosition1 = currentRunEndPosition1;
+        currentRunStartPosition2 = currentRunEndPosition2;
+      } else {
+        // The keys are byte comparable
+        int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
+        final int currentRunEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
+        final int currentRunEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
+        int cmp = FrameReaderUtils.compareByteArraysUnsigned(
+            keyArray1,
+            currentRunStartPosition1,
+            currentRunEndPosition1 - currentRunStartPosition1,
+            keyArray2,
+            currentRunStartPosition2,
+            currentRunEndPosition2 - currentRunStartPosition2
+        );
+        if (cmp != 0) {
+          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+        }
+
+        fieldsComparedTillNow = nextField;
+        currentRunStartPosition1 = currentRunEndPosition1;
+        currentRunStartPosition2 = currentRunEndPosition2;
+      }
+    }
     return 0;
   }
 
@@ -159,23 +169,23 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
     }
     ByteRowKeyComparator that = (ByteRowKeyComparator) o;
     return firstFieldPosition == that.firstFieldPosition
-           && Arrays.equals(ascDescRunLengths, that.ascDescRunLengths);
+           && Objects.equals(keyColumns, that.keyColumns)
+           && Objects.equals(rowKeyComparisonRunLengths, that.rowKeyComparisonRunLengths);
   }
 
   @Override
   public int hashCode()
   {
-    int result = Objects.hash(firstFieldPosition);
-    result = 31 * result + Arrays.hashCode(ascDescRunLengths);
-    return result;
+    return Objects.hash(keyColumns, firstFieldPosition, rowKeyComparisonRunLengths);
   }
 
   @Override
   public String toString()
   {
     return "ByteRowKeyComparator{" +
-           "firstFieldPosition=" + firstFieldPosition +
-           ", ascDescRunLengths=" + Arrays.toString(ascDescRunLengths) +
+           "keyColumns=" + keyColumns +
+           ", firstFieldPosition=" + firstFieldPosition +
+           ", rowKeyComparisonRunLengths=" + rowKeyComparisonRunLengths +
            '}';
   }
 }

@@ -133,6 +133,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         clusterByColumns.add(
             new KeyColumn(
                 orderBy.getColumnName(),
+                scanSignature.getColumnType(orderBy.getColumnName()).orElse(null),
                 orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
             )
         );
@@ -155,7 +156,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         }
       } else {
         // Add partition boosting column.
-        clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+        clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG, KeyOrder.ASCENDING));
         signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
       }
 

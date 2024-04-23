@@ -111,7 +111,7 @@ public class QueryKitUtils
       return clusterBy;
     } else {
       final List<KeyColumn> newColumns = new ArrayList<>(clusterBy.getColumns().size() + 1);
-      newColumns.add(new KeyColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
+      newColumns.add(new KeyColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, ColumnType.LONG, KeyOrder.ASCENDING));
       newColumns.addAll(clusterBy.getColumns());
       return new ClusterBy(newColumns, 1);
     }

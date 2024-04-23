@@ -719,8 +719,12 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
-    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), maxWorkerCount));
-    leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
+    final RowSignature leftSignature = QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey);
+    final List<KeyColumn> leftPartitionKeyWithColumnTypes = leftPartitionKey.stream()
+                        .map(key -> KeyColumn.populateKeyColumnSignature(key, leftSignature))
+                        .collect(Collectors.toList());
+    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKeyWithColumnTypes, 0), maxWorkerCount));
+    leftBuilder.signature(leftSignature);
 
     // Build up the right stage.
     final StageDefinitionBuilder rightBuilder = subQueryDefBuilder.getStageBuilder(
@@ -728,8 +732,14 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> rightPartitionKey = partitionKeys.get(1);
-    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), maxWorkerCount));
-    rightBuilder.signature(QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey));
+    final RowSignature rightSignature = QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey);
+    final List<KeyColumn> rightPartitionKeyWithColumnTypes =
+        rightPartitionKey.stream()
+                         .map(key -> KeyColumn.populateKeyColumnSignature(key, rightSignature))
+                         .collect(Collectors.toList());
+
+    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKeyWithColumnTypes, 0), maxWorkerCount));
+    rightBuilder.signature(rightSignature);
 
     // Compute join signature.
     final RowSignature.Builder joinSignatureBuilder = RowSignature.builder();

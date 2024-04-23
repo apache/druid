@@ -275,7 +275,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   public void test_complex()
   {
     // Complex types can't be sorted, so skip the sortedness tests.
-    Assume.assumeThat(sortedness, CoreMatchers.is(KeyOrder.NONE));
+    // Assume.assumeThat(sortedness, CoreMatchers.is(KeyOrder.NONE));
     testWithDataset(FrameWriterTestData.TEST_COMPLEX);
   }
 
@@ -466,7 +466,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       final List<String> sortColumnNames
   )
   {
-    final List<KeyColumn> keyColumns = computeSortColumns(sortColumnNames);
+    final List<KeyColumn> keyColumns = computeSortColumns(sortColumnNames, signature);
 
     if (keyColumns.isEmpty()) {
       return rows;
@@ -500,7 +500,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         capabilitiesAdjustFn,
         rows,
         signature,
-        computeSortColumns(sortColumns)
+        computeSortColumns(sortColumns, signature)
     );
   }
 
@@ -508,7 +508,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
    * Converts the provided column names into {@link KeyColumn} according to the current {@link #sortedness}
    * parameter.
    */
-  private List<KeyColumn> computeSortColumns(final List<String> sortColumnNames)
+  private List<KeyColumn> computeSortColumns(final List<String> sortColumnNames, final RowSignature rowSignature)
   {
     if (sortedness == KeyOrder.NONE) {
       return Collections.emptyList();
@@ -516,7 +516,11 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       return sortColumnNames.stream()
                             .map(
                                 columnName ->
-                                    new KeyColumn(columnName, sortedness)
+                                    new KeyColumn(
+                                        columnName,
+                                        rowSignature.getColumnType(columnName).orElse(null),
+                                        sortedness
+                                    )
                             )
                             .collect(Collectors.toList());
     }

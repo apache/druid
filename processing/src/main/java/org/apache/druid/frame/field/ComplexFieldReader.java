@@ -92,7 +92,7 @@ public class ComplexFieldReader implements FieldReader
   @Override
   public boolean isComparable()
   {
-    return false;
+    return true;
   }
 
   /**

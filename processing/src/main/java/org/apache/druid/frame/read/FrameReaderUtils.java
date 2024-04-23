@@ -26,8 +26,10 @@ import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -215,6 +217,74 @@ public class FrameReaderUtils
 
     return Integer.compare(length1, length2);
   }
+
+  // TODO(laksh): There's an implicit contract that if a field isn't comparable by bytes, then it must be serded using
+  //  the CopmlexMetricSerde.toBytes()
+  public static int compareComplexTypes(
+      final byte[] array1,
+      final int position1,
+      final int length1,
+      final byte[] array2,
+      final int position2,
+      final int length2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        complexMetricSerde.fromBytes(array1, position1, length1),
+        complexMetricSerde.fromBytes(array2, position2, length2)
+    );
+  }
+
+  public static int compareComplexTypes(
+      final Memory memory,
+      final long position1,
+      final long length1,
+      final byte[] array,
+      final int position2,
+      final int length2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    int memoryLengthCasted = Ints.checkedCast(length1);
+    byte[] bytes = new byte[memoryLengthCasted];
+    memory.getByteArray(position1, bytes, 0, memoryLengthCasted);
+    return compareComplexTypes(bytes, 0, memoryLengthCasted, array, position2, length2, columnType, complexMetricSerde);
+  }
+
+  public static int compareComplexTypes(
+      final Memory memory1,
+      final long position1,
+      final long length1,
+      final Memory memory2,
+      final long position2,
+      final long length2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    int memoryLengthCasted1 = Ints.checkedCast(length1);
+    byte[] bytes1 = new byte[memoryLengthCasted1];
+    memory1.getByteArray(position1, bytes1, 0, memoryLengthCasted1);
+
+    int memoryLengthCasted2 = Ints.checkedCast(length2);
+    byte[] bytes2 = new byte[memoryLengthCasted2];
+    memory2.getByteArray(position2, bytes2, 0, memoryLengthCasted2);
+
+    return compareComplexTypes(
+        bytes1,
+        0,
+        memoryLengthCasted1,
+        bytes2,
+        0,
+        memoryLengthCasted2,
+        columnType,
+        complexMetricSerde
+    );
+  }
+
 
   /**
    * Returns whether a {@link ColumnSelectorFactory} may be able to provide a {@link MemoryRange}. This enables

@@ -21,9 +21,13 @@ package org.apache.druid.frame.key;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -32,11 +36,14 @@ import java.util.Objects;
 public class KeyColumn
 {
   private final String columnName;
+  @Nullable
+  private final ColumnType columnType;
   private final KeyOrder order;
 
   @JsonCreator
   public KeyColumn(
       @JsonProperty("columnName") String columnName,
+      @Nullable @JsonProperty("columnType") ColumnType columnType,
       @JsonProperty("order") KeyOrder order
   )
   {
@@ -45,7 +52,13 @@ public class KeyColumn
     }
 
     this.columnName = columnName;
+    this.columnType = columnType;
     this.order = order;
+  }
+
+  public KeyColumn(String columnName, KeyOrder order)
+  {
+    this(columnName, null, order);
   }
 
   @JsonProperty
@@ -55,9 +68,35 @@ public class KeyColumn
   }
 
   @JsonProperty
+  public ColumnType columnType()
+  {
+    return columnType;
+  }
+
+  @JsonProperty
   public KeyOrder order()
   {
     return order;
+  }
+
+  public static KeyColumn populateKeyColumnSignature(KeyColumn keyColumn, RowSignature rowSignature)
+  {
+    ColumnType columnTypeFromRowSignature = rowSignature.getColumnType(keyColumn.columnName()).orElse(null);
+    if (columnTypeFromRowSignature == null) {
+      return keyColumn;
+    }
+    if (keyColumn.columnType != null) {
+      if (!columnTypeFromRowSignature.equals(keyColumn.columnType)) {
+        throw DruidException.defensive(
+            "Column type mismatch between [%s] and [%s]",
+            keyColumn.columnType,
+            columnTypeFromRowSignature
+        );
+      }
+      return keyColumn;
+    }
+
+    return new KeyColumn(keyColumn.columnName(), columnTypeFromRowSignature, keyColumn.order);
   }
 
   @Override
@@ -69,14 +108,16 @@ public class KeyColumn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    KeyColumn that = (KeyColumn) o;
-    return order == that.order && Objects.equals(columnName, that.columnName);
+    KeyColumn keyColumn = (KeyColumn) o;
+    return Objects.equals(columnName, keyColumn.columnName)
+           && Objects.equals( columnType, keyColumn.columnType )
+           && order == keyColumn.order;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columnName, order);
+    return Objects.hash(columnName, columnType, order);
   }
 
   @Override

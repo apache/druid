@@ -271,7 +271,12 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
             order = KeyOrder.ASCENDING;
           }
 
-          sortColumns.add(new KeyColumn(columnWithDirection.getColumn(), order));
+          // TODO(laksh): Vet
+          sortColumns.add(new KeyColumn(
+              columnWithDirection.getColumn(),
+              signature.getColumnType(columnWithDirection.getColumn()).orElse(null),
+              order
+          ));
         }
       }
 
