@@ -129,8 +129,10 @@ public class DruidAvaticaTestDriver implements Driver
     }
   }
 
-  static class AvaticaBasedConnectionModule implements DruidModule
+  static class AvaticaBasedConnectionModule implements DruidModule, Closeable
   {
+    Closer closer = Closer.create();
+
     @Provides
     @LazySingleton
     public DruidSchemaCatalog getLookupNodeService(QueryRunnerFactoryConglomerate conglomerate,
@@ -153,7 +155,7 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, Closer closer, DruidConnectionExtras druidConnectionExtras) throws Exception
+    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
     {
       AvaticaJettyServer avaticaJettyServer = new AvaticaJettyServer(druidMeta, druidConnectionExtras);
       closer.register(avaticaJettyServer);
@@ -163,6 +165,12 @@ public class DruidAvaticaTestDriver implements Driver
     @Override
     public void configure(Binder binder)
     {
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      closer.close();
     }
 
   }
@@ -223,12 +231,13 @@ public class DruidAvaticaTestDriver implements Driver
 
   static class AvaticaBasedTestConnectionSupplier implements QueryComponentSupplier
   {
-
     private QueryComponentSupplier delegate;
+    private AvaticaBasedConnectionModule connectionModule;
 
     public AvaticaBasedTestConnectionSupplier(QueryComponentSupplier delegate)
     {
       this.delegate = delegate;
+      this.connectionModule = new AvaticaBasedConnectionModule();
     }
 
     @Override
@@ -242,7 +251,7 @@ public class DruidAvaticaTestDriver implements Driver
     {
       delegate.configureGuice(builder);
       TestRequestLogger testRequestLogger = new TestRequestLogger();
-      builder.addModule(new AvaticaBasedConnectionModule());
+      builder.addModule(connectionModule);
       builder.addModule(
           binder -> {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
@@ -306,6 +315,13 @@ public class DruidAvaticaTestDriver implements Driver
     public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
     {
       delegate.finalizeTestFramework(sqlTestFramework);
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      connectionModule.close();
+      delegate.close();
     }
   }
 
