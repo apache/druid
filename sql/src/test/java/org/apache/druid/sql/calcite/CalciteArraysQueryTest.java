@@ -1427,7 +1427,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // The DimensionSelector returns an empty list; the ColumnValueSelector returns a list containing a single null.
     final String expectedValueForEmptyMvd =
         queryFramework().engine().name().equals("msq-task")
-        ? NullHandling.nullToEmptyIfNeeded(null)
+        ? NullHandling.defaultStringValue()
         : "not abd";
 
     testBuilder()
@@ -1454,14 +1454,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             )
         )
         .expectedResults(
-            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
                 new Object[]{"[\"a\",\"b\"]", "[\"abd\",\"abd\"]"},
                 new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
                 new Object[]{"d", "abd"},
                 new Object[]{"", "not abd"},
-                new Object[]{null, expectedValueForEmptyMvd},
-                new Object[]{null, "not abd"}
+                new Object[]{NullHandling.defaultStringValue(), expectedValueForEmptyMvd},
+                new Object[]{NullHandling.defaultStringValue(), "not abd"}
             )
         )
         .run();
