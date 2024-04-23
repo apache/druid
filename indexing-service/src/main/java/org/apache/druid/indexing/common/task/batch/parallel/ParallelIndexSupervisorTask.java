@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -131,7 +132,8 @@ import java.util.stream.Collectors;
  *
  * @see ParallelIndexTaskRunner
  */
-public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implements ChatHandler
+public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
+    implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final String TYPE = "index_parallel";
 
@@ -474,6 +476,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getIngestionMode(),
         getIngestionSchema().getTuningConfig()
     );
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Nullable

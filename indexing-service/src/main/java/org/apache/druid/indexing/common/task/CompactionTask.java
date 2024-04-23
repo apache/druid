@@ -127,7 +127,7 @@ import java.util.stream.IntStream;
  * serialization fields of this class must correspond to those of {@link
  * ClientCompactionTaskQuery}.
  */
-public class CompactionTask extends AbstractBatchIndexTask
+public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
   private static final Clock UTC_CLOCK = Clock.systemUTC();
@@ -398,6 +398,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Nonnull

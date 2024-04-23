@@ -40,6 +40,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -72,7 +73,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @JsonTypeName(MSQControllerTask.TYPE)
-public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
+public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";
@@ -156,6 +157,12 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   {
     // the input sources are properly computed in the SQL / calcite layer, but not in the native MSQ task here.
     return ImmutableSet.of();
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getId();
   }
 
   @JsonProperty("spec")
