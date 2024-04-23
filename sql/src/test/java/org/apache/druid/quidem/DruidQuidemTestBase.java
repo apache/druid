@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -204,4 +205,10 @@ public abstract class DruidQuidemTestBase
   }
 
   protected abstract File getTestRoot();
+
+  @AfterAll
+  public static void afterAll()
+  {
+    DruidAvaticaTestDriver.CONFIG_STORE.close();
+  }
 }
