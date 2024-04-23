@@ -1090,6 +1090,12 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>net.hydromatic</groupId>
+                <artifactId>quidem</artifactId>
+                <version>0.11</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-bom</artifactId>
                 <version>${mockito.version}</version>
