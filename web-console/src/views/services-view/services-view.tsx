@@ -71,7 +71,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Usage',
     'Start time',
     'Detail',
-    ACTION_COLUMN_LABEL,
   ],
   'no-sql': [
     'Service',
@@ -83,7 +82,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Max size',
     'Usage',
     'Detail',
-    ACTION_COLUMN_LABEL,
   ],
   'no-proxy': [
     'Service',
@@ -646,7 +644,7 @@ ORDER BY
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasOverlordAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
+            show: capabilities.hasOverlordAccess(),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.workerInfo,

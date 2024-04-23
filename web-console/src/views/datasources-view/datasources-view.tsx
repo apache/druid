@@ -102,7 +102,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     '% Compacted',
     'Left to be compacted',
     'Retention',
-    ACTION_COLUMN_LABEL,
   ],
   'no-sql': [
     'Datasource name',
@@ -114,7 +113,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     '% Compacted',
     'Left to be compacted',
     'Retention',
-    ACTION_COLUMN_LABEL,
   ],
   'no-proxy': [
     'Datasource name',
@@ -128,7 +126,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Total rows',
     'Avg. row size',
     'Replicated size',
-    ACTION_COLUMN_LABEL,
   ],
 };
 
@@ -1576,7 +1573,6 @@ GROUP BY 1, 2`;
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
             accessor: 'datasource',
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,

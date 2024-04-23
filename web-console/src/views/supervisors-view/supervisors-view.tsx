@@ -95,7 +95,6 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   { text: 'Aggregate lag', label: 'status API' },
   { text: 'Recent errors', label: 'status API' },
   { text: 'Stats', label: 'stats API' },
-  ACTION_COLUMN_LABEL,
 ];
 
 const ROW_STATS_KEYS: RowStatsKey[] = ['1m', '5m', '15m'];
@@ -883,7 +882,6 @@ export class SupervisorsView extends React.PureComponent<
                 />
               );
             },
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
           },
         ]}
       />

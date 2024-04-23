@@ -65,7 +65,6 @@ const taskTableColumns: string[] = [
   'Created time',
   'Duration',
   'Location',
-  ACTION_COLUMN_LABEL,
 ];
 
 interface TaskQueryResultRow {
@@ -509,7 +508,6 @@ ORDER BY
               );
             },
             Aggregated: () => '',
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
           },
         ]}
       />

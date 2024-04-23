@@ -95,7 +95,6 @@ exports[`SupervisorsView matches snapshot 1`] = `
             "label": "stats API",
             "text": "Stats",
           },
-          "Actions",
         ]
       }
       onChange={[Function]}
@@ -323,7 +322,6 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "accessor": "supervisor_id",
           "filterable": false,
           "id": "actions",
-          "show": true,
           "sortable": false,
           "width": 70,
         },

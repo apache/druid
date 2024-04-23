@@ -60,7 +60,6 @@ exports[`ServicesView renders data 1`] = `
           "Usage",
           "Start time",
           "Detail",
-          "Actions",
         ]
       }
       onChange={[Function]}
