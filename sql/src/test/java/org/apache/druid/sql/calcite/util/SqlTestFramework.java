@@ -176,6 +176,7 @@ public class SqlTestFramework
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
 
+    @Override
     default void close() throws IOException
     {
     }
