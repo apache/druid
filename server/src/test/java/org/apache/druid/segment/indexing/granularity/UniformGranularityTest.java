@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -287,8 +288,8 @@ public class UniformGranularityTest
     notEqualsCheck(
         spec,
         new UniformGranularitySpec(
-            Granularities.DAY,
             Granularities.ALL,
+            Granularities.DAY,
             Lists.newArrayList(
                 Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
                 Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
@@ -356,6 +357,18 @@ public class UniformGranularityTest
     int count = Iterators.size(spec.sortedBucketIntervals().iterator());
     // account for three leap years...
     Assert.assertEquals(3600 * 24 * 365 * 10 + 3 * 24 * 3600, count);
+  }
+
+  @Test(expected = DruidException.class)
+  public void testCheckGranularityValidity()
+  {
+    new UniformGranularitySpec(
+        Granularities.SECOND,
+        Granularities.MINUTE,
+        Collections.singletonList(
+            Intervals.of("2012-01-01T00Z/P10Y")
+        )
+    );
   }
 
   private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2)
