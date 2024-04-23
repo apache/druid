@@ -695,6 +695,7 @@ public class SqlTestFramework
   {
     try {
       resourceCloser.close();
+      componentSupplier.close();
     }
     catch (IOException e) {
       throw new RE(e);
