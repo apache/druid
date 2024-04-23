@@ -120,7 +120,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   {
     super.tearDown();
     if (runningSchema != null) {
-      runningSchema.leaderStop();
+      runningSchema.onLeaderStop();
     }
   }
 
@@ -159,7 +159,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
-    runningSchema.leaderStart();
+    runningSchema.onLeaderStart();
     runningSchema.awaitInitialization();
     return runningSchema;
   }
@@ -345,7 +345,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
-    schema.leaderStart();
+    schema.onLeaderStart();
     schema.awaitInitialization();
 
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
@@ -1316,7 +1316,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
-    schema.leaderStart();
+    schema.onLeaderStart();
     schema.awaitInitialization();
 
     AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
@@ -1400,7 +1400,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
-    schema.leaderStart();
+    schema.onLeaderStart();
     schema.awaitInitialization();
     Assert.assertTrue(refresh1Latch.await(10, TimeUnit.SECONDS));
 
@@ -1587,7 +1587,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     serverView.addSegment(segment1, ServerType.HISTORICAL);
     serverView.addSegment(segment2, ServerType.HISTORICAL);
 
-    schema.leaderStart();
+    schema.onLeaderStart();
     schema.awaitInitialization();
 
     // verify SMQ is not executed, since the schema is already cached

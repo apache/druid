@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentMetadata}.
  * Segment schema created since last DB poll is also fetched and updated in the cache {@code finalizedSegmentSchema}.
  * <p>
- * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchemaMap}. This mapping
+ * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchema}. This mapping
  * is cleared either when the segment is removed or marked as finalized.
  * <p>
  * Finalized segments which do not have their schema information present in the DB, fetch their schema via SMQ.
@@ -63,7 +63,9 @@ public class SegmentSchemaCache
 {
   private static final Logger log = new Logger(SegmentSchemaCache.class);
 
-  // Cache is marked initialized after first DB poll.
+  /**
+   * Cache is marked initialized after first DB poll.
+   */
   private final AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
 
   /**
@@ -81,21 +83,13 @@ public class SegmentSchemaCache
    * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
    * The mapping is removed when the segment is either removed or marked as finalized.
    */
-  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> realtimeSegmentSchema = new ConcurrentHashMap<>();
 
   /**
    * If the segment schema is fetched via SMQ, subsequently it is added here.
    * The mapping is removed when the schema information is backfilled in the DB.
    */
   private final ConcurrentMap<SegmentId, SchemaPayloadPlus> inTransitSMQResults = new ConcurrentHashMap<>();
-
-  private final ServiceEmitter emitter;
-
-  @Inject
-  public SegmentSchemaCache(ServiceEmitter emitter)
-  {
-    this.emitter = emitter;
-  }
 
   /**
    * Once the schema information is backfilled in the DB, it is added here.
@@ -106,9 +100,16 @@ public class SegmentSchemaCache
    */
   private final ConcurrentMap<SegmentId, SchemaPayloadPlus> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
+  private final ServiceEmitter emitter;
+
+  @Inject
+  public SegmentSchemaCache(ServiceEmitter emitter)
+  {
+    this.emitter = emitter;
+  }
+
   public void setInitialized()
   {
-    log.info("Initializing SegmentSchemaCache.");
     if (initialized.get().getCount() == 1) {
       initialized.get().countDown();
       log.info("SegmentSchemaCache is initialized.");
@@ -116,13 +117,12 @@ public class SegmentSchemaCache
   }
 
   /**
-   * Uninitialize is called when the current node is no longer the leader.
+   * This method is called when the current node is no longer the leader.
    * The schema is cleared except for {@code realtimeSegmentSchemaMap}.
-   * Schema map continues to be updated on both the leader and follower nodes.
+   * Realtime schema continues to be updated on both the leader and follower nodes.
    */
-  public void uninitialize()
+  public void onLeaderStop()
   {
-    log.info("[%s] is uninitializing.", getClass().getSimpleName());
     initialized.set(new CountDownLatch(1));
 
     finalizedSegmentMetadata = ImmutableMap.of();
@@ -166,7 +166,7 @@ public class SegmentSchemaCache
    */
   public void addRealtimeSegmentSchema(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
-    realtimeSegmentSchemaMap.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
+    realtimeSegmentSchema.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
   }
 
   /**
@@ -211,13 +211,14 @@ public class SegmentSchemaCache
    */
   public Optional<SchemaPayloadPlus> getSchemaForSegment(SegmentId segmentId)
   {
-    // We first look up the schema in the realtime map. This ensures that during handoff
+    // First look up the schema in the realtime map. This ensures that during handoff
     // there is no window where segment schema is missing from the cache.
     // If were to look up the finalized segment map first, during handoff it is possible
     // that segment schema isn't polled yet and thus missing from the map and by the time
     // we look up the schema in the realtime map, it has been removed.
-    if (realtimeSegmentSchemaMap.containsKey(segmentId)) {
-      return Optional.of(realtimeSegmentSchemaMap.get(segmentId));
+    SchemaPayloadPlus payloadPlus = realtimeSegmentSchema.get(segmentId);
+    if (payloadPlus != null) {
+      return Optional.of(payloadPlus);
     }
 
     // it is important to lookup {@code inTransitSMQResults} before {@code inTransitSMQPublishedResults}
@@ -225,17 +226,19 @@ public class SegmentSchemaCache
     // in {@code inTransitSMQPublishedResults} and by the time we check {@code inTransitSMQResults} it is removed.
 
     // segment schema has been fetched via SMQ
-    if (inTransitSMQResults.containsKey(segmentId)) {
-      return Optional.of(inTransitSMQResults.get(segmentId));
+    payloadPlus = inTransitSMQResults.get(segmentId);
+    if (payloadPlus != null) {
+      return Optional.of(payloadPlus);
     }
 
     // segment schema has been fetched via SMQ and the schema has been published to the DB
-    if (inTransitSMQPublishedResults.containsKey(segmentId)) {
-      return Optional.of(inTransitSMQPublishedResults.get(segmentId));
+    payloadPlus = inTransitSMQPublishedResults.get(segmentId);
+    if (payloadPlus != null) {
+      return Optional.of(payloadPlus);
     }
 
-    SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
     // segment schema has been polled from the DB
+    SegmentMetadata segmentMetadata = finalizedSegmentMetadata.get(segmentId);
     if (segmentMetadata != null) {
       SchemaPayload schemaPayload = finalizedSegmentSchema.get(segmentMetadata.getSchemaFingerprint());
       if (schemaPayload != null) {
@@ -256,7 +259,7 @@ public class SegmentSchemaCache
    */
   public boolean isSchemaCached(SegmentId segmentId)
   {
-    return realtimeSegmentSchemaMap.containsKey(segmentId) ||
+    return realtimeSegmentSchema.containsKey(segmentId) ||
            inTransitSMQResults.containsKey(segmentId) ||
            inTransitSMQPublishedResults.containsKey(segmentId) ||
            isFinalizedSegmentSchemaCached(segmentId);
@@ -276,19 +279,13 @@ public class SegmentSchemaCache
    */
   public boolean segmentRemoved(SegmentId segmentId)
   {
-    if (!isSchemaCached(segmentId)) {
-      return false;
-    }
     // remove the segment from all the maps
-    realtimeSegmentSchemaMap.remove(segmentId);
+    realtimeSegmentSchema.remove(segmentId);
     inTransitSMQResults.remove(segmentId);
     inTransitSMQPublishedResults.remove(segmentId);
 
-    // Stale schema payload from finalizedSegmentSchema is not removed
-    // as it could be referenced by other segments.
-    // Stale schema from the cache would get cleared on full schema refresh from the DB,
-    // which would be triggered after any stale schema is deleted from the DB.
-    // Also, segment is not cleared from finalizedSegmentStats since it updated on each DB poll.
+    // Since finalizedSegmentMetadata & finalizedSegmentSchema is updated on each DB poll,
+    // it is fine to not remove the segment from them.
     return true;
   }
 
@@ -297,12 +294,12 @@ public class SegmentSchemaCache
    */
   public void realtimeSegmentRemoved(SegmentId segmentId)
   {
-    realtimeSegmentSchemaMap.remove(segmentId);
+    realtimeSegmentSchema.remove(segmentId);
   }
 
   public void emitStats()
   {
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchemaMap.size()));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/size", realtimeSegmentSchema.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSegmentMetadata/size", finalizedSegmentMetadata.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/size", finalizedSegmentSchema.size()));
     emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/size", inTransitSMQResults.size()));

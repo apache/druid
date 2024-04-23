@@ -168,16 +168,18 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     callbackExec.shutdownNow();
     cacheExec.shutdownNow();
-    segmentSchemaCache.uninitialize();
-    segmentSchemaBackfillQueue.leaderStop();
-    cacheExecFuture = null;
+    segmentSchemaCache.onLeaderStop();
+    segmentSchemaBackfillQueue.onLeaderStop();
+    if (cacheExecFuture != null) {
+      cacheExecFuture.cancel(true);
+    }
   }
 
-  public void leaderStart()
+  public void onLeaderStart()
   {
-    log.info("Initializing cache.");
+    log.info("Initializing cache on leader node.");
     try {
-      segmentSchemaBackfillQueue.leaderStart();
+      segmentSchemaBackfillQueue.onLeaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
       if (config.isAwaitInitializationOnStart()) {
         awaitInitialization();
@@ -188,12 +190,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
   }
 
-  public void leaderStop()
+  public void onLeaderStop()
   {
-    log.info("Stopping cache.");
-    cacheExecFuture.cancel(true);
-    segmentSchemaCache.uninitialize();
-    segmentSchemaBackfillQueue.leaderStop();
+    log.info("No longer leader, stopping cache.");
+    if (cacheExecFuture != null) {
+      cacheExecFuture.cancel(true);
+    }
+    segmentSchemaCache.onLeaderStop();
+    segmentSchemaBackfillQueue.onLeaderStop();
   }
 
   /**
@@ -401,16 +405,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private Set<SegmentId> filterSegmentWithCachedSchema(Set<SegmentId> segmentIds)
   {
     Set<SegmentId> cachedSegments = new HashSet<>();
-    synchronized (lock) {
-      for (SegmentId id : segmentIds) {
-        if (segmentSchemaCache.isSchemaCached(id)) {
-          cachedSegments.add(id);
-        }
+    for (SegmentId id : segmentIds) {
+      if (segmentSchemaCache.isSchemaCached(id)) {
+        cachedSegments.add(id);
       }
     }
 
     segmentIds.removeAll(cachedSegments);
-
     return cachedSegments;
   }
 

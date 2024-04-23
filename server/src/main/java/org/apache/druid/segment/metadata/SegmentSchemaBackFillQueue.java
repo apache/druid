@@ -94,20 +94,24 @@ public class SegmentSchemaBackFillQueue
   public void stop()
   {
     this.executor.shutdownNow();
-    scheduledFuture = null;
+    if (scheduledFuture != null) {
+      scheduledFuture.cancel(true);
+    }
   }
 
-  public void leaderStart()
+  public void onLeaderStart()
   {
     if (isEnabled()) {
       scheduledFuture = executor.scheduleAtFixedRate(this::processBatchesDueSafely, executionPeriod, executionPeriod, TimeUnit.MILLISECONDS);
     }
   }
 
-  public void leaderStop()
+  public void onLeaderStop()
   {
     if (isEnabled()) {
-      scheduledFuture.cancel(true);
+      if (scheduledFuture != null) {
+        scheduledFuture.cancel(true);
+      }
     }
   }
 

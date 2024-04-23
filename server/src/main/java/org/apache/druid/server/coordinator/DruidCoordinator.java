@@ -431,7 +431,7 @@ public class DruidCoordinator
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
       if (coordinatorSegmentMetadataCache != null) {
-        coordinatorSegmentMetadataCache.leaderStart();
+        coordinatorSegmentMetadataCache.onLeaderStart();
       }
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
@@ -513,7 +513,7 @@ public class DruidCoordinator
       log.info("I am no longer the leader...");
 
       if (coordinatorSegmentMetadataCache != null) {
-        coordinatorSegmentMetadataCache.leaderStop();
+        coordinatorSegmentMetadataCache.onLeaderStop();
       }
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
