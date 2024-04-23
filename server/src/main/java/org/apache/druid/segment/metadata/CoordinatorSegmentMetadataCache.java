@@ -224,6 +224,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
+  protected boolean fetchAggregatorsInSegmentMetadataQuery()
+  {
+    return true;
+  }
+
+  @Override
   protected boolean segmentMetadataQueryResultHandler(
       String dataSource,
       SegmentId segmentId,

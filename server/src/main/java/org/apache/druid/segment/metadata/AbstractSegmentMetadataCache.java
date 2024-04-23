@@ -873,6 +873,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+  protected boolean fetchAggregatorsInSegmentMetadataQuery()
+  {
+    return false;
+  }
+
   /**
    * Execute a SegmentMetadata query and return a {@link Sequence} of {@link SegmentAnalysis}.
    *
@@ -906,7 +911,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
             QueryContexts.BROKER_PARALLEL_MERGE_KEY,
             false
         ),
-        EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS),
+        fetchAggregatorsInSegmentMetadataQuery()
+        ? EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
+        : EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
         null // we don't care about merging strategy because merge is false

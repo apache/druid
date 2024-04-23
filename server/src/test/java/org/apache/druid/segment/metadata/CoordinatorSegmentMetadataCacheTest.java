@@ -992,7 +992,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new AllColumnIncluderator(),
         false,
         queryContext,
-        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS),
         false,
         null,
         null

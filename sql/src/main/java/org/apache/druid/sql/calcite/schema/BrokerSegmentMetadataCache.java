@@ -188,10 +188,26 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    Set<String> refreshedDataSources = refreshByPollingCoordinator();
+    // query schema for all datasources in the inventory,
+    // which includes,
+    // datasources explicitly marked for rebuilding
+    // datasources for the segments to be refreshed
+    // prebuilt datasources
+    // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
+    final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
+
+    log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
+
+    // Fetch datasource information from the Coordinator
+    Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = queryDataSourceInformation(dataSourcesToQuery);
+
+    log.debug("Fetched schema for [%s] datasources from Coordinator.", polledDataSourceMetadata.keySet());
+
+    // update datasource metadata in the cache
+    polledDataSourceMetadata.forEach(this::updateDSMetadata);
 
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
-    segmentsToRefresh.removeIf(segmentId -> refreshedDataSources.contains(segmentId.getDataSource()));
+    segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
     Set<SegmentId> refreshed = new HashSet<>();
 
@@ -209,8 +225,15 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
 
       // Remove those datasource for which we received schema from the Coordinator.
-      dataSourcesToRebuild.removeAll(refreshedDataSources);
+      dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
 
+      if (centralizedDatasourceSchemaConfig.isEnabled()) {
+        // this is a hacky way to ensure refresh is executed even if there are no new segments to refresh
+        // once, CentralizedDatasourceSchema feature is GA, brokers should simply poll schema for all datasources
+        dataSourcesNeedingRebuild.addAll(segmentMetadataInfo.keySet());
+      } else {
+        dataSourcesNeedingRebuild.clear();
+      }
       log.debug("DatasourcesNeedingRebuild are [%s]", dataSourcesNeedingRebuild);
     }
 
@@ -226,31 +249,6 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
-  }
-
-  Set<String> refreshByPollingCoordinator()
-  {
-    // query schema for all datasources in the inventory,
-    // which includes,
-    // datasources explicitly marked for rebuilding
-    // datasources for the segments to be refreshed
-    // prebuilt datasources
-    final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
-
-    // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
-    dataSourcesToQuery.addAll(segmentMetadataInfo.keySet());
-
-    log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
-
-    // Fetch datasource information from the Coordinator
-    Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = queryDataSourceInformation(dataSourcesToQuery);
-
-    log.debug("Fetched schema for [%s] datasources from Coordinator.", polledDataSourceMetadata.keySet());
-
-    // update datasource metadata in the cache
-    polledDataSourceMetadata.forEach(this::updateDSMetadata);
-
-    return polledDataSourceMetadata.keySet();
   }
 
   @Override

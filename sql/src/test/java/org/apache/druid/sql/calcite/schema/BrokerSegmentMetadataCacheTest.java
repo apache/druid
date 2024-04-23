@@ -103,7 +103,9 @@ import java.util.stream.Collectors;
 
 public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTestBase
 {
-  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
+  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT =
+      BrokerSegmentMetadataCacheConfig.create("PT1S");
+
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final int WAIT_TIMEOUT_SECS = 6;
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
