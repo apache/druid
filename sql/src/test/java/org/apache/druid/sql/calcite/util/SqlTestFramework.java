@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -140,7 +141,7 @@ public class SqlTestFramework
    * exist in {@code BaseCalciteQueryTest}. Any changes here will impact that
    * base class, and possibly many test cases that extend that class.
    */
-  public interface QueryComponentSupplier
+  public interface QueryComponentSupplier extends Closeable
   {
     /**
      * Gather properties to be used within tests. Particularly useful when choosing
@@ -318,6 +319,12 @@ public class SqlTestFramework
     public PlannerComponentSupplier getPlannerComponentSupplier()
     {
       return plannerComponentSupplier;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      tempDirProducer.close();
     }
   }
 

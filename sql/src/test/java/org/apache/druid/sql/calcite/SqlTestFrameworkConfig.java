@@ -151,12 +151,7 @@ public @interface SqlTestFrameworkConfig
 
     ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
     {
-      return new ConfigurationInstance(config, testHostSupplier.apply(getTempDirProducer("druid-test")));
-    }
-
-    private TempDirProducer getTempDirProducer(String prefix)
-    {
-      return TempDirProducer.instance().getProducer(prefix);
+      return new ConfigurationInstance(config, testHostSupplier.apply(new TempDirProducer("druid-test")));
     }
   }
 

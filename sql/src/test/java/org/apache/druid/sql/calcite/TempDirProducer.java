@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.druid.java.util.common.FileUtils;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
@@ -30,36 +31,13 @@ import java.io.IOException;
  * All created directories will be accessible until the shutdown of the current JVM.
  * Installs only a single shutdown hook.
  */
-public class TempDirProducer
+public class TempDirProducer implements Closeable
 {
-  private static TempDirProducer INSTANCE = null;
-
-  public static TempDirProducer instance()
-  {
-    if (INSTANCE == null) {
-      INSTANCE = new TempDirProducer();
-    }
-    return INSTANCE;
-  }
-
   private final File tempDir;
 
-  private TempDirProducer()
+  public TempDirProducer(String prefix)
   {
-    tempDir = FileUtils.createTempDir("druid-tempdir");
-    Runtime.getRuntime().addShutdownHook(new Thread()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          FileUtils.deleteDirectory(tempDir);
-        }
-        catch (IOException ex) {
-          ex.printStackTrace();
-        }
-      }
-    });
+    tempDir = FileUtils.createTempDir(prefix);
   }
 
   public TempDirProducer(TempDirProducer tempDirProducer, String prefix)
@@ -80,5 +58,11 @@ public class TempDirProducer
   public File newTempFolder()
   {
     return newTempFolder(null);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    FileUtils.deleteDirectory(tempDir);
   }
 }
