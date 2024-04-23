@@ -206,7 +206,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
    * Currently, there are 2 threads that can access these variables.
    *
-   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
+   * - {@link #callbackExec} executes the timeline callbacks whenever ServerView changes.
    * - {@code cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
    *   based on the information collected via timeline callbacks.
    */

@@ -1884,7 +1884,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (segmentSchemaMapping.getSchemaVersion() != CentralizedDatasourceSchemaConfig.SCHEMA_VERSION) {
       log.error(
           "Schema version [%d] doesn't match the current version [%d]. Not persisting this schema [%s]. "
-          + "Schema for this segment will be poppulated by the schema backfill job in Coordinator.",
+          + "Schema for this segment will be populated by the schema backfill job in Coordinator.",
           segmentSchemaMapping.getSchemaVersion(),
           CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
           segmentSchemaMapping
