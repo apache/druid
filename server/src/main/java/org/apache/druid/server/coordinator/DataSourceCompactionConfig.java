@@ -268,6 +268,9 @@ public class DataSourceCompactionConfig
         throw InvalidInput.exception("rollup in granularitySpec must be set to True if metricsSpec is specifed.");
       }
     }
+    if (newEngine == newConfig.getEngine()) {
+      return newConfig;
+    }
     return new DataSourceCompactionConfig(
         newConfig.getDataSource(),
         newConfig.getTaskPriority(),

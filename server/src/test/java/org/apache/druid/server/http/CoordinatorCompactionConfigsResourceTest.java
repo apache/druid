@@ -191,7 +191,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        null,
+        DataSourceCompactionConfig.Engine.NATIVE,
         ImmutableMap.of("key", "val")
     );
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
@@ -392,7 +392,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        null,
+        DataSourceCompactionConfig.Engine.MSQ,
         ImmutableMap.of("key", "val")
     );
     String author = "maytas";
