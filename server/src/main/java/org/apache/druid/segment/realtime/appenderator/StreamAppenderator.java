@@ -163,10 +163,13 @@ public class StreamAppenderator implements Appenderator
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  private final ConcurrentHashMap<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> baseSegmentToUpgradedVersions
+  private final ConcurrentMap<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> baseSegmentToUpgradedVersions
       = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedVersionToBaseSegment
+  private final ConcurrentMap<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedVersionToBaseSegment
       = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap.KeySetView<SegmentIdWithShardSpec, Boolean> abandonedSegments
+      = ConcurrentHashMap.newKeySet();
+
 
   private final SinkSchemaAnnouncer sinkSchemaAnnouncer;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
@@ -1071,6 +1074,10 @@ public class StreamAppenderator implements Appenderator
   private void unannounceAllVersionsOfSegment(DataSegment baseSegment)
   {
     final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
+    if (!baseSegmentToUpgradedVersions.containsKey(baseId)) {
+      return;
+    }
+
     final List<SegmentIdWithShardSpec> upgradedVersionsOfSegment
         = ImmutableList.copyOf(baseSegmentToUpgradedVersions.get(baseId));
 
@@ -1397,12 +1404,15 @@ public class StreamAppenderator implements Appenderator
       final boolean removeOnDiskData
   )
   {
+    abandonedSegments.add(identifier);
     final SegmentIdWithShardSpec baseIdentifier = upgradedVersionToBaseSegment.getOrDefault(identifier, identifier);
     synchronized (sink) {
-      if (baseSegmentToUpgradedVersions.containsKey(baseIdentifier)
-          && baseSegmentToUpgradedVersions.get(baseIdentifier).size() > 1) {
-        unannounceSegment(getUpgradedSegment(sink.getSegment(), identifier));
-        return Futures.immediateFuture(null);
+      if (baseSegmentToUpgradedVersions.containsKey(baseIdentifier)) {
+        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedVersions.get(baseIdentifier));
+        relevantSegments.removeAll(abandonedSegments);
+        if (!relevantSegments.isEmpty()) {
+          return Futures.immediateFuture(null);
+        }
       }
     }
     // Ensure no future writes will be made to this sink.
@@ -1463,8 +1473,7 @@ public class StreamAppenderator implements Appenderator
 
             // Unannounce the segment.
             synchronized (sink) {
-              final DataSegment segment = getUpgradedSegment(sink.getSegment(), identifier);
-              unannounceSegment(segment);
+              unannounceAllVersionsOfSegment(sink.getSegment());
             }
 
             Runnable removeRunnable = () -> {
