@@ -231,7 +231,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
-  private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
+  public Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
   {
     final Object[] resultArray = getNullAggregations(query.getAggregatorSpecs());
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();

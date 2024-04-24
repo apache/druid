@@ -45,6 +45,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,9 +53,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class TimeseriesQueryQueryToolChestTest
+public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
   private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
@@ -453,6 +456,29 @@ public class TimeseriesQueryQueryToolChestTest
                 )
             )
         )
+    );
+  }
+
+  @Test
+  public void testGetNullTimeseriesResultValue()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .intervals("2000/P1D")
+              .dataSource("foo")
+              .aggregators(new CountAggregatorFactory("a0"), new LongSumAggregatorFactory("a1", "nofield"))
+              .build();
+
+    final Map<String, Object> resultMap = new HashMap<>();
+    resultMap.put("a0", 0L);
+    resultMap.put("a1", null);
+
+    Assert.assertEquals(
+        new Result<>(
+            DateTimes.of("2000"),
+            new TimeseriesResultValue(resultMap)
+        ),
+        TOOL_CHEST.getNullTimeseriesResultValue(query)
     );
   }
 }
