@@ -4698,7 +4698,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NPE)
   @DrillTest("first_val/firstValFn_5")
   @Test
   public void test_first_val_firstValFn_5()
@@ -4922,7 +4921,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NPE)
   @DrillTest("lag_func/lag_Fn_82")
   @Test
   public void test_lag_func_lag_Fn_82()
@@ -4930,7 +4928,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NPE)
   @DrillTest("last_val/lastValFn_5")
   @Test
   public void test_last_val_lastValFn_5()

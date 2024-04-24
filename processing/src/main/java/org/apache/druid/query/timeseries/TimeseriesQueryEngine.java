@@ -164,9 +164,9 @@ public class TimeseriesQueryEngine
       }
 
       final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-      final AggregatorAdapters aggregators = closer.register(
-          AggregatorAdapters.factorizeVector(columnSelectorFactory, query.getAggregatorSpecs())
-      );
+      final AggregatorAdapters aggregators =
+          AggregatorAdapters.factorizeVector(columnSelectorFactory, query.getAggregatorSpecs());
+      closer.register(aggregators::reset);
 
       final ResourceHolder<ByteBuffer> bufferHolder = closer.register(bufferPool.take());
 
