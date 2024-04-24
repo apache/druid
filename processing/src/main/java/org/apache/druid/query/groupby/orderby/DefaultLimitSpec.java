@@ -27,9 +27,11 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -50,6 +52,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -486,10 +489,31 @@ public class DefaultLimitSpec implements LimitSpec
 
     return Ordering.from(
         Comparator.comparing(
-            (ResultRow row) -> row.get(column),
+            (ResultRow row) -> {
+              if (columnType.isArray()) {
+                // Arrays have a specialized comparator, that applies the ordering per element. That will handle the casting
+                // and the comparison
+                return row.get(column);
+              } else if (DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)) {
+                // If the natural comparator is used, we can directly extract the dimension value, and the type strategy's comparison
+                // function will handle it, without casting
+                return row.get(column);
+              } else {
+                // If the comparator is not natural, we will be using the string comparator, and we need to cast the dimension to string
+                // before comparison
+                return getDimensionValue(row, column);
+              }
+            },
             Comparator.nullsFirst(comparatorToUse)
         )
     );
+  }
+
+  @Nullable
+  private static String getDimensionValue(ResultRow row, int column)
+  {
+    final List<String> values = Rows.objectToStrings(row.get(column));
+    return values.isEmpty() ? null : Iterables.getOnlyElement(values);
   }
 
   @Override
