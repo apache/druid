@@ -70,7 +70,7 @@ public abstract class SingleChannelFrameProcessor<T> implements FrameProcessor<T
   }
 
   @Override
-  public ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
+  public ReturnOrAwait<T> runIncrementally(IntSet readableInputs) throws IOException
   {
     return ReturnOrAwait.returnObject(doSimpleWork());
   }
