@@ -1433,7 +1433,13 @@ public class DruidQuery
         }
       }
     }
-    if (queryGranularity == null) {
+
+    if (grouping.getDimensions().isEmpty() && grouping.hasGroupingDimensionsDropped()) {
+      // GROUP BY ().
+      theContext.put(GroupByQuery.CTX_HAS_DROPPED_DIMENSIONS, grouping.hasGroupingDimensionsDropped());
+    }
+
+    if (theContext.isEmpty()) {
       return query;
     }
     return query.withOverriddenContext(theContext);

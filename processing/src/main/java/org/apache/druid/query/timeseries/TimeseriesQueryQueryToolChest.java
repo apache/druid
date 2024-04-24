@@ -233,30 +233,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
   private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
   {
-    List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-    Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
-    String[] aggregatorNames = new String[aggregatorSpecs.size()];
-    RowSignature aggregatorsSignature =
-        RowSignature.builder().addAggregators(aggregatorSpecs, RowSignature.Finalization.UNKNOWN).build();
-    for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      aggregators[i] =
-          aggregatorSpecs.get(i)
-                         .factorize(
-                             RowBasedColumnSelectorFactory.create(
-                                 RowAdapters.standardRow(),
-                                 () -> new MapBasedRow(null, null),
-                                 aggregatorsSignature,
-                                 false,
-                                 false
-                             )
-                         );
-      aggregatorNames[i] = aggregatorSpecs.get(i).getName();
-    }
+    final Object[] resultArray = getNullAggregations(query.getAggregatorSpecs());
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
     TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
-    for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      bob.addMetric(aggregatorNames[i], aggregators[i].get());
-      aggregators[i].close();
+    for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
+      bob.addMetric(query.getAggregatorSpecs().get(i).getName(), resultArray[i]);
     }
     return bob.build();
   }
@@ -536,5 +517,32 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           new TimeseriesResultValue(values)
       );
     };
+  }
+
+  public static Object[] getNullAggregations(List<AggregatorFactory> aggregatorSpecs)
+  {
+    final Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
+    final RowSignature aggregatorsSignature =
+        RowSignature.builder().addAggregators(aggregatorSpecs, RowSignature.Finalization.UNKNOWN).build();
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      aggregators[i] =
+          aggregatorSpecs.get(i)
+                         .factorize(
+                             RowBasedColumnSelectorFactory.create(
+                                 RowAdapters.standardRow(),
+                                 () -> new MapBasedRow(null, null),
+                                 aggregatorsSignature,
+                                 false,
+                                 false
+                             )
+                         );
+    }
+
+    final Object[] retVal = new Object[aggregatorSpecs.size()];
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      retVal[i] = aggregators[i].get();
+      aggregators[i].close();
+    }
+    return retVal;
   }
 }
