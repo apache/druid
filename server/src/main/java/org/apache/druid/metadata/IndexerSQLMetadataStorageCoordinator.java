@@ -1373,12 +1373,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
             insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
 
-            // Delete the pending segments committed in this transaction
-            final List<String> appendedSegmentIds
-                = allSegmentsToInsert.stream()
-                                     .map(pendingSegment -> pendingSegment.getId().toString())
-                                     .collect(Collectors.toList());
-            deletePendingSegmentsById(handle, dataSource, appendedSegmentIds);
+            // Delete the pending segments to be committed in this transaction in batches of at most 100
+            final List<List<String>> pendingSegmentIdBatches = Lists.partition(
+                allSegmentsToInsert.stream()
+                                   .map(pendingSegment -> pendingSegment.getId().toString())
+                                   .collect(Collectors.toList()),
+                100
+            );
+            for (List<String> pendingSegmentIdBatch : pendingSegmentIdBatches) {
+              deletePendingSegmentsById(handle, dataSource, pendingSegmentIdBatch);
+            }
 
             return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
           },
