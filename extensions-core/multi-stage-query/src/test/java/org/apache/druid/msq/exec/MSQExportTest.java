@@ -62,7 +62,7 @@ public class MSQExportTest extends MSQTestBase
                      .verifyResults();
 
     Assert.assertEquals(
-        1,
+         2, // result file and manifest file
         Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
     );
 
@@ -93,9 +93,10 @@ public class MSQExportTest extends MSQTestBase
                      .verifyResults();
 
     Assert.assertEquals(
-        1,
+        2,
         Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
     );
+
 
     File resultFile = new File(exportDir, "query-test-query-worker0-partition0.csv");
     List<String> results = readResultsFromFile(resultFile);
@@ -103,6 +104,8 @@ public class MSQExportTest extends MSQTestBase
         expectedFoo2FileContents(true),
         results
     );
+
+    verifyManifestFile(exportDir, ImmutableList.of(resultFile));
   }
 
   @Test
@@ -129,7 +132,7 @@ public class MSQExportTest extends MSQTestBase
                      .verifyResults();
 
     Assert.assertEquals(
-        expectedFooFileContents(false).size(),
+        expectedFooFileContents(false).size() + 1, // + 1 for the manifest file
         Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
     );
   }
@@ -141,14 +144,13 @@ public class MSQExportTest extends MSQTestBase
       expectedResults.add("cnt,dim");
     }
     expectedResults.addAll(ImmutableList.of(
-                               "1,",
-                               "1,10.1",
-                               "1,2",
-                               "1,1",
-                               "1,def",
-                               "1,abc"
-                           )
-    );
+        "1,",
+        "1,10.1",
+        "1,2",
+        "1,1",
+        "1,def",
+        "1,abc"
+    ));
     return expectedResults;
   }
 
@@ -171,6 +173,37 @@ public class MSQExportTest extends MSQTestBase
         results.add(line);
       }
       return results;
+    }
+  }
+
+  private void verifyManifestFile(File exportDir, List<File> resultFiles) throws IOException
+  {
+    final File manifestFile = new File(exportDir, ExportMetadataManager.MANIFEST_FILE);
+    try (
+        BufferedReader bufferedReader = new BufferedReader(
+            new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StringUtils.UTF8_STRING)
+        )
+    ) {
+      for (File file : resultFiles) {
+        Assert.assertEquals(
+            StringUtils.format("file:%s", file.getAbsolutePath()),
+            bufferedReader.readLine()
+        );
+      }
+      Assert.assertNull(bufferedReader.readLine());
+    }
+
+    final File metaFile = new File(exportDir, ExportMetadataManager.META_FILE);
+    try (
+        BufferedReader bufferedReader = new BufferedReader(
+            new InputStreamReader(Files.newInputStream(metaFile.toPath()), StringUtils.UTF8_STRING)
+        )
+    ) {
+      Assert.assertEquals(
+          StringUtils.format("version: %s", ExportMetadataManager.MANIFEST_FILE_VERSION),
+          bufferedReader.readLine()
+      );
+      Assert.assertNull(bufferedReader.readLine());
     }
   }
 }

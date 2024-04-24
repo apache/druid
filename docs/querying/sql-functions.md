@@ -206,6 +206,14 @@ Returns the 1-based index of the first occurrence of `expr` in the array. If no 
 
 Returns 1 if `arr1` and `arr2` have any elements in common, else 0.|
 
+## SCALAR_IN_ARRAY
+
+`SCALAR_IN_ARRAY(expr, arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns 1 if the scalar `expr` is present in `arr`, else 0.|
+
 ## ARRAY_PREPEND
 
 `ARRAY_PREPEND(expr, arr)`

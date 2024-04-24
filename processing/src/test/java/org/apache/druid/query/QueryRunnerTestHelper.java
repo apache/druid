@@ -455,7 +455,7 @@ public class QueryRunnerTestHelper
       retVal.add(
           FluentQueryRunner.create(baseRunner, toolchest)
                            .applyPreMergeDecoration()
-                           .mergeResults()
+                           .mergeResults(true)
                            .applyPostMergeDecoration()
                            .setToString(baseRunner.toString())
       );
@@ -568,7 +568,7 @@ public class QueryRunnerTestHelper
             toolChest
         )
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration();
   }
 

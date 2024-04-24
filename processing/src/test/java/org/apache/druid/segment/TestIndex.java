@@ -24,6 +24,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -68,6 +70,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
  */
 public class TestIndex
 {
@@ -222,6 +225,9 @@ public class TestIndex
                    .build()
       )
   );
+  private static Supplier<QueryableIndex> wikipediaMMappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(makeWikipediaIncrementalIndex())
+  );
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -241,6 +247,11 @@ public class TestIndex
   public static QueryableIndex getMMappedTestIndex()
   {
     return mmappedIndex.get();
+  }
+
+  public static QueryableIndex getMMappedWikipediaIndex()
+  {
+    return wikipediaMMappedIndex.get();
   }
 
   public static QueryableIndex getNoRollupMMappedTestIndex()
@@ -318,6 +329,62 @@ public class TestIndex
       } else {
         noRollupRealtimeIndex = null;
       }
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static IncrementalIndex makeWikipediaIncrementalIndex()
+  {
+    final List<DimensionSchema> dimensions = Arrays.asList(
+        new StringDimensionSchema("channel"),
+        new StringDimensionSchema("cityName"),
+        new StringDimensionSchema("comment"),
+        new StringDimensionSchema("countryIsoCode"),
+        new StringDimensionSchema("countryName"),
+        new StringDimensionSchema("isAnonymous"),
+        new StringDimensionSchema("isMinor"),
+        new StringDimensionSchema("isNew"),
+        new StringDimensionSchema("isRobot"),
+        new StringDimensionSchema("isUnpatrolled"),
+        new StringDimensionSchema("metroCode"),
+        new StringDimensionSchema("namespace"),
+        new StringDimensionSchema("page"),
+        new StringDimensionSchema("regionIsoCode"),
+        new StringDimensionSchema("regionName"),
+        new StringDimensionSchema("user"),
+        new LongDimensionSchema("delta"),
+        new LongDimensionSchema("added"),
+        new LongDimensionSchema("deleted")
+    );
+
+    final File tmpDir;
+    try {
+      tmpDir = FileUtils.createTempDir("test-index-input-source");
+      try {
+        return IndexBuilder
+            .create()
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(new IncrementalIndexSchema.Builder()
+                        .withRollup(false)
+                        .withTimestampSpec(new TimestampSpec("time", null, null))
+                        .withDimensionsSpec(new DimensionsSpec(dimensions))
+                        .build()
+            )
+            .inputSource(
+                ResourceInputSource.of(
+                    TestIndex.class.getClassLoader(),
+                    "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
+                )
+            )
+            .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+            .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
+            .buildIncrementalIndex();
+      }
+      finally {
+        FileUtils.deleteDirectory(tmpDir);
+      }
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

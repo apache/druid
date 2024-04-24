@@ -3606,7 +3606,7 @@ public interface Function extends NamedFunction
       final Object[] array = arrayExpr.asArray();
       final int position = scalarExpr.asInt();
 
-      if (array.length > position) {
+      if (array.length > position && position >= 0) {
         return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
@@ -3634,7 +3634,7 @@ public interface Function extends NamedFunction
       final Object[] array = arrayExpr.asArray();
       final int position = scalarExpr.asInt() - 1;
 
-      if (array.length > position) {
+      if (array.length > position && position >= 0) {
         return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
@@ -3721,6 +3721,44 @@ public interface Function extends NamedFunction
               scalarExpr.type()
           );
       }
+    }
+  }
+
+  class ArrayScalarInFunction extends ArrayScalarFunction
+  {
+    @Override
+    public String name()
+    {
+      return "scalar_in_array";
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    Expr getScalarArgument(List<Expr> args)
+    {
+      return args.get(0);
+    }
+
+    @Override
+    Expr getArrayArgument(List<Expr> args)
+    {
+      return args.get(1);
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final Object[] array = arrayExpr.castTo(scalarExpr.asArrayType()).asArray();
+      if (array == null) {
+        return ExprEval.ofLong(null);
+      }
+      return ExprEval.ofLongBoolean(Arrays.asList(array).contains(scalarExpr.value()));
     }
   }
 
