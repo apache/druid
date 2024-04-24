@@ -759,6 +759,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     }
   }
 
+  /**
+   * Compares the dimensions for limit pushdown.
+   *
+   * Due to legacy reason, the provided StringComparator for the arrays isn't applied and must be changed once we
+   * get rid of the StringComparators for array types
+   */
   private static int compareDimsForLimitPushDown(
       final IntList fields,
       final List<Boolean> needsReverseList,
@@ -777,10 +783,25 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final Object lhsObj = lhs.get(fieldNumber);
       final Object rhsObj = rhs.get(fieldNumber);
 
-      if (DimensionComparisonUtils.isNaturalComparator(dimensionType.getType(), comparator)) {
+      if (dimensionType.isNumeric()) {
+        if (DimensionComparisonUtils.isNaturalComparator(dimensionType.getType(), comparator)) {
+          dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
+        } else {
+          dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
+        }
+      } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
+        final Object[] lhsArr = DimensionHandlerUtils.coerceToStringArray(lhsObj);
+        final Object[] rhsArr = DimensionHandlerUtils.coerceToStringArray(rhsObj);
+        dimCompare = ColumnType.STRING_ARRAY.getNullableStrategy().compare(lhsArr, rhsArr);
+      } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
+                 || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
+        final Object[] lhsArr = DimensionHandlerUtils.convertToArray(lhsObj, dimensionType.getElementType());
+        final Object[] rhsArr = DimensionHandlerUtils.convertToArray(rhsObj, dimensionType.getElementType());
+        dimCompare = dimensionType.getNullableStrategy().compare(lhsArr, rhsArr);
+      } else if (DimensionComparisonUtils.isNaturalComparator(dimensionType.getType(), comparator)) {
         dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
       } else {
-        dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
+        dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }
 
       if (dimCompare != 0) {

@@ -195,7 +195,6 @@ public class DictionaryBuildingGroupByColumnSelectorStrategy<DimensionType>
    */
   private static class StringArrayDimensionIdCodec implements DimensionIdCodec<Object>
   {
-    // TODO(laksh): Use dictionaryBuilding + reverseBuilding
     // contains string <-> id for each element of the multi value grouping column
     // for eg : [a,b,c] is the col value. dictionaryToInt will contain { a <-> 1, b <-> 2, c <-> 3}
     private final BiMap<String, Integer> elementBiDictionary = HashBiMap.create();
