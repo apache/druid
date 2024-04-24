@@ -68,12 +68,14 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.eclipse.jetty.server.Server;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -117,7 +119,6 @@ public class DruidAvaticaTestDriver implements Driver
 
       ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
           config,
-          () -> createTempFolder(getClass().getSimpleName()),
           x -> new AvaticaBasedTestConnectionSupplier(x)
       );
 
@@ -321,6 +322,12 @@ public class DruidAvaticaTestDriver implements Driver
     {
       connectionModule.close();
       delegate.close();
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return delegate.getPlannerComponentSupplier();
     }
   }
 

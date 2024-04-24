@@ -40,7 +40,6 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 /**
@@ -107,13 +106,12 @@ public @interface SqlTestFrameworkConfig
 
     public ConfigurationInstance getConfigurationInstance(
         SqlTestFrameworkConfigInstance config,
-        Callable<File> tempDirProducer,
         Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
     ) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
-        ret = new ConfigurationInstance(config, tempDirProducer, queryComponentSupplierWrapper);
+        ret = new ConfigurationInstance(config, new TempDirProducer("druid-test"), queryComponentSupplierWrapper);
         configMap.put(config, ret);
       }
       return ret;
@@ -141,8 +139,7 @@ public @interface SqlTestFrameworkConfig
 
     private void setComponentSupplier(Class<? extends QueryComponentSupplier> value) throws NoSuchMethodException
     {
-      Constructor<? extends QueryComponentSupplier> constructor = value.getConstructor(File.class);
-      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(TempDirProducer.class);
+      Constructor<? extends QueryComponentSupplier> constructor = value.getConstructor(TempDirProducer.class);
       testHostSupplier = f -> {
         try {
           return constructor.newInstance(f);
@@ -211,7 +208,7 @@ public @interface SqlTestFrameworkConfig
 
     public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, () -> createTempFolder("druid-test"), x -> x).framework;
+      return configStore.getConfigurationInstance(config, x -> x).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -223,10 +220,9 @@ public @interface SqlTestFrameworkConfig
     {
       return method.getName();
     }
-    }
   }
 
-  class ConfigurationInstance
+  public class ConfigurationInstance
   {
     public SqlTestFramework framework;
 
@@ -243,7 +239,7 @@ public @interface SqlTestFrameworkConfig
 
     public ConfigurationInstance(
         SqlTestFrameworkConfigInstance config,
-        Callable<File> tempDirProducer,
+        TempDirProducer tempDirProducer,
         Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
     ) throws Exception
     {
@@ -252,10 +248,10 @@ public @interface SqlTestFrameworkConfig
 
     private static QueryComponentSupplier makeQueryComponentSupplier(
         Class<? extends QueryComponentSupplier> supplierClazz,
-        Callable<File> tempDirProducer) throws Exception
+        TempDirProducer tempDirProducer) throws Exception
     {
-      Constructor<? extends QueryComponentSupplier> constructor = supplierClazz.getConstructor(File.class);
-      return constructor.newInstance(tempDirProducer.call());
+      Constructor<? extends QueryComponentSupplier> constructor = supplierClazz.getConstructor(TempDirProducer.class);
+      return constructor.newInstance(tempDirProducer);
     }
 
     public void close()
