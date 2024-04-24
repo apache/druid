@@ -36,6 +36,8 @@ public class SegmentsAndCommitMetadata
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
+
+  // This set corresponds to the set of extra segments committed due to a concurrent replace.
   private final ImmutableSet<DataSegment> upgradedSegments;
 
   public SegmentsAndCommitMetadata(

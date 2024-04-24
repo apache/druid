@@ -1576,7 +1576,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/pendingSegmentVersion")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response registerNewVersionOfPendingSegment(
+  public Response registerUpgradedPendingSegment(
       PendingSegmentRecord upgradedPendingSegment,
       // this field is only for internal purposes, shouldn't be usually set by users
       @Context final HttpServletRequest req
@@ -1596,8 +1596,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(
           e,
-          "Could not register new version[%s] of pending segment[%s]",
-          upgradedPendingSegment.getId().getVersion(), upgradedPendingSegment.getUpgradedFromSegmentId()
+          "Could not register pending segment[%s] upgraded from[%s]",
+          upgradedPendingSegment.getId().asSegmentId(), upgradedPendingSegment.getUpgradedFromSegmentId()
       );
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }

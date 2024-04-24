@@ -308,7 +308,7 @@ public class SupervisorManager
    * allows the supervisor to include the pending segment in queries fired against
    * that segment version.
    */
-  public boolean registerNewVersionOfPendingSegmentOnSupervisor(
+  public boolean registerUpgradedPendingSegmentOnSupervisor(
       String supervisorId,
       PendingSegmentRecord upgradedPendingSegment
   )
@@ -316,8 +316,11 @@ public class SupervisorManager
     try {
       Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
       Preconditions.checkNotNull(upgradedPendingSegment, "upgraded pending segment cannot be null");
-      Preconditions.checkNotNull(upgradedPendingSegment.getTaskAllocatorId(), "replica group cannot be null");
-      Preconditions.checkNotNull(upgradedPendingSegment.getUpgradedFromSegmentId(), "root id cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment.getTaskAllocatorId(), "taskAllocatorId cannot be null");
+      Preconditions.checkNotNull(
+          upgradedPendingSegment.getUpgradedFromSegmentId(),
+          "upgradedFromSegmentId cannot be null"
+      );
 
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
@@ -330,7 +333,7 @@ public class SupervisorManager
       return true;
     }
     catch (Exception e) {
-      log.error(e, "PendingSegment[%s] mapping update request to version[%s] on Supervisor[%s] failed",
+      log.error(e, "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
                 upgradedPendingSegment.getUpgradedFromSegmentId(), upgradedPendingSegment.getId().getVersion(), supervisorId);
     }
     return false;

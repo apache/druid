@@ -168,7 +168,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     appendTask = createAndStartTask();
     supervisorId = Capture.newInstance(CaptureType.ALL);
     pendingSegment = Capture.newInstance(CaptureType.ALL);
-    EasyMock.expect(supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
+    EasyMock.expect(supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
         EasyMock.capture(supervisorId),
         EasyMock.capture(pendingSegment)
     )).andReturn(true).anyTimes();

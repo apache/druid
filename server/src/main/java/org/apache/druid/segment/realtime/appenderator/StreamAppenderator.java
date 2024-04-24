@@ -163,9 +163,9 @@ public class StreamAppenderator implements Appenderator
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  private final ConcurrentMap<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> baseSegmentToUpgradedVersions
+  private final ConcurrentMap<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> baseSegmentToUpgradedSegments
       = new ConcurrentHashMap<>();
-  private final ConcurrentMap<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedVersionToBaseSegment
+  private final ConcurrentMap<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedSegmentToBaseSegment
       = new ConcurrentHashMap<>();
   private final ConcurrentHashMap.KeySetView<SegmentIdWithShardSpec, Boolean> abandonedSegments
       = ConcurrentHashMap.newKeySet();
@@ -529,9 +529,9 @@ public class StreamAppenderator implements Appenderator
 
       sinks.put(identifier, retVal);
       idToPendingSegment.put(identifier.asSegmentId().toString(), identifier);
-      baseSegmentToUpgradedVersions.put(identifier, new HashSet<>());
-      baseSegmentToUpgradedVersions.get(identifier).add(identifier);
-      upgradedVersionToBaseSegment.put(identifier, identifier);
+      baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
+      baseSegmentToUpgradedSegments.get(identifier).add(identifier);
+      upgradedSegmentToBaseSegment.put(identifier, identifier);
       metrics.setSinkCount(sinks.size());
       sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
@@ -1074,12 +1074,12 @@ public class StreamAppenderator implements Appenderator
   private void unannounceAllVersionsOfSegment(DataSegment baseSegment)
   {
     final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
-    if (!baseSegmentToUpgradedVersions.containsKey(baseId)) {
+    if (!baseSegmentToUpgradedSegments.containsKey(baseId)) {
       return;
     }
 
     final List<SegmentIdWithShardSpec> upgradedVersionsOfSegment
-        = ImmutableList.copyOf(baseSegmentToUpgradedVersions.get(baseId));
+        = ImmutableList.copyOf(baseSegmentToUpgradedSegments.get(baseId));
 
     for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
       final DataSegment newSegment = new DataSegment(
@@ -1108,13 +1108,13 @@ public class StreamAppenderator implements Appenderator
          .emit();
     }
     SegmentIdWithShardSpec id = SegmentIdWithShardSpec.fromDataSegment(segment);
-    SegmentIdWithShardSpec baseId = upgradedVersionToBaseSegment.remove(id);
+    SegmentIdWithShardSpec baseId = upgradedSegmentToBaseSegment.remove(id);
     if (baseId == null) {
       return;
     }
-    baseSegmentToUpgradedVersions.get(baseId).remove(id);
-    if (baseSegmentToUpgradedVersions.get(baseId).isEmpty()) {
-      baseSegmentToUpgradedVersions.remove(baseId);
+    baseSegmentToUpgradedSegments.get(baseId).remove(id);
+    if (baseSegmentToUpgradedSegments.get(baseId).isEmpty()) {
+      baseSegmentToUpgradedSegments.remove(baseId);
     }
   }
 
@@ -1134,8 +1134,8 @@ public class StreamAppenderator implements Appenderator
     final DataSegment newSegment = getUpgradedSegment(baseSegment, newSegmentVersion);
 
     segmentAnnouncer.announceSegment(newSegment);
-    baseSegmentToUpgradedVersions.get(basePendingSegment).add(newSegmentVersion);
-    upgradedVersionToBaseSegment.put(newSegmentVersion, basePendingSegment);
+    baseSegmentToUpgradedSegments.get(basePendingSegment).add(newSegmentVersion);
+    upgradedSegmentToBaseSegment.put(newSegmentVersion, basePendingSegment);
   }
 
   private DataSegment getUpgradedSegment(DataSegment baseSegment, SegmentIdWithShardSpec upgradedVersion)
@@ -1367,9 +1367,9 @@ public class StreamAppenderator implements Appenderator
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);
         idToPendingSegment.put(identifier.asSegmentId().toString(), identifier);
-        baseSegmentToUpgradedVersions.put(identifier, new HashSet<>());
-        baseSegmentToUpgradedVersions.get(identifier).add(identifier);
-        upgradedVersionToBaseSegment.put(identifier, identifier);
+        baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
+        baseSegmentToUpgradedSegments.get(identifier).add(identifier);
+        upgradedSegmentToBaseSegment.put(identifier, identifier);
         sinkTimeline.add(
             currSink.getInterval(),
             currSink.getVersion(),
@@ -1405,10 +1405,10 @@ public class StreamAppenderator implements Appenderator
   )
   {
     abandonedSegments.add(identifier);
-    final SegmentIdWithShardSpec baseIdentifier = upgradedVersionToBaseSegment.getOrDefault(identifier, identifier);
+    final SegmentIdWithShardSpec baseIdentifier = upgradedSegmentToBaseSegment.getOrDefault(identifier, identifier);
     synchronized (sink) {
-      if (baseSegmentToUpgradedVersions.containsKey(baseIdentifier)) {
-        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedVersions.get(baseIdentifier));
+      if (baseSegmentToUpgradedSegments.containsKey(baseIdentifier)) {
+        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedSegments.get(baseIdentifier));
         relevantSegments.removeAll(abandonedSegments);
         if (!relevantSegments.isEmpty()) {
           return Futures.immediateFuture(null);

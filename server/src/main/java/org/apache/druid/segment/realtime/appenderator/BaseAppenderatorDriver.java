@@ -635,6 +635,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                       callerMetadata
                   );
                   log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
+                  // This set must contain only those segments that were upgraded as a result of a concurrent replace.
                   upgradedSegments.addAll(publishResult.getSegments());
                   segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {

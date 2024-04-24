@@ -165,7 +165,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     }
 
     upgradedPendingSegments.forEach(
-        upgradedPendingSegment -> supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
+        upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
             activeSupervisorIdWithAppendLock.get(),
             upgradedPendingSegment
         )
