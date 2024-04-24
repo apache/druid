@@ -293,9 +293,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
       for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
         Optional<SchemaPayloadPlus> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
-        AvailableSegmentMetadata copied = entry.getValue();
+        AvailableSegmentMetadata availableSegmentMetadata = entry.getValue();
         if (metadata.isPresent()) {
-          copied = AvailableSegmentMetadata.from(entry.getValue())
+          availableSegmentMetadata = AvailableSegmentMetadata.from(entry.getValue())
                                            .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
                                            .withNumRows(metadata.get().getNumRows())
                                            .build();
@@ -304,7 +304,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           markSegmentAsNeedRefresh(entry.getKey());
           log.debug("SchemaMetadata for segmentId [%s] is absent.", entry.getKey());
         }
-        segmentMetadata.put(entry.getKey(), copied);
+        segmentMetadata.put(entry.getKey(), availableSegmentMetadata);
       }
     }
     return segmentMetadata;
@@ -314,10 +314,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
-    if (!segmentMetadataInfo.containsKey(datasource)) {
+    ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentMap = segmentMetadataInfo.get(datasource);
+    AvailableSegmentMetadata availableSegmentMetadata = null;
+    if (segmentMap != null) {
+      availableSegmentMetadata = segmentMap.get(segmentId);
+    }
+    if (availableSegmentMetadata == null) {
       return null;
     }
-    AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataInfo.get(datasource).get(segmentId);
     Optional<SchemaPayloadPlus> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
     if (metadata.isPresent()) {
       availableSegmentMetadata = AvailableSegmentMetadata.from(availableSegmentMetadata)
