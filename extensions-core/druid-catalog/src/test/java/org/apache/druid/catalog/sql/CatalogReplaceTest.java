@@ -31,20 +31,18 @@ import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogReplaceTest;
-import org.apache.druid.sql.calcite.CatalogIngestionDmlComponentSupplier;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.extension.RegisterExtension;
-
-import java.io.File;
 
 import static org.junit.Assert.fail;
 
 /**
  * Test the use of catalog specs to drive MSQ ingestion.
  */
-@SqlTestFramework.SqlTestFrameWorkModule(CatalogReplaceComponentSupplier.class)
+@SqlTestFrameWorkModule(CatalogReplaceComponentSupplier.class)
 public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 {
   @RegisterExtension
@@ -53,9 +51,9 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 
   protected static class CatalogReplaceComponentSupplier extends CatalogIngestionDmlComponentSupplier
   {
-    public CatalogReplaceComponentSupplier(File temporaryFolder)
+    public CatalogReplaceComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
@@ -80,8 +78,8 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 
     public void buildDatasources()
     {
-      resolvedTables.forEach((datasourceName, datasourceTable) -> {
-        DatasourceFacade catalogMetadata = ((DatasourceTable) datasourceTable).effectiveMetadata().catalogMetadata();
+      RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
+        DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
         TableBuilder tableBuilder = TableBuilder.datasource(datasourceName, catalogMetadata.segmentGranularityString());
         catalogMetadata.columnFacades().forEach(
             columnFacade -> {
@@ -104,7 +102,7 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
         createTableMetadata(tableBuilder.build());
       });
       DatasourceFacade catalogMetadata =
-          ((DatasourceTable) resolvedTables.get("foo")).effectiveMetadata().catalogMetadata();
+          RESOLVED_TABLES.get("foo").effectiveMetadata().catalogMetadata();
       TableBuilder tableBuilder = TableBuilder.datasource("foo", catalogMetadata.segmentGranularityString());
       catalogMetadata.columnFacades().forEach(
           columnFacade -> {

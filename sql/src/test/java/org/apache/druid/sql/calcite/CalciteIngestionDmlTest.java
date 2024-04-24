@@ -130,9 +130,9 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   static class IngestionDmlComponentSupplier extends StandardComponentSupplier
   {
-    public IngestionDmlComponentSupplier(File temporaryFolder)
+    public IngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

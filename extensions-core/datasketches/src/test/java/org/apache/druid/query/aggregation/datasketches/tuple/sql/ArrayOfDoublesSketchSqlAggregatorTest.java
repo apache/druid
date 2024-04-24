@@ -48,6 +48,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -57,7 +58,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -105,9 +105,9 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class ArrayOfDoublesComponentSupplier extends StandardComponentSupplier
   {
-    public ArrayOfDoublesComponentSupplier(File temporaryFolder)
+    public ArrayOfDoublesComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
@@ -127,7 +127,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
       ArrayOfDoublesSketchModule.registerSerde();
 
       final QueryableIndex index = IndexBuilder.create()
-                                               .tmpDir(newTempFolder())
+                                               .tmpDir(tempDirProducer.newTempFolder())
                                                .segmentWriteOutMediumFactory(
                                                    OffHeapMemorySegmentWriteOutMediumFactory.instance()
                                                )

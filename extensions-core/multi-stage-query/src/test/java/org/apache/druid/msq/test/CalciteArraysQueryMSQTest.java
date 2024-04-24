@@ -31,9 +31,9 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import java.io.File;
 
 /**
  * Runs {@link CalciteArraysQueryTest} but with MSQ engine
@@ -43,9 +43,9 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
   public static class ArraysQueryMSQComponentSupplier extends ArraysComponentSupplier
   {
-    public ArraysQueryMSQComponentSupplier(File temporaryFolder)
+    public ArraysQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
     {
       super.configureGuice(builder);
       builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
       );
     }
 

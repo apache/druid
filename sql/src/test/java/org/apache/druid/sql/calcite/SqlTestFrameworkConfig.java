@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
@@ -31,8 +30,6 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -139,12 +136,13 @@ public @interface SqlTestFrameworkConfig
   {
     SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
     private SqlTestFrameworkConfigInstance config;
-    private Function<File, QueryComponentSupplier> testHostSupplier;
+    private Function<TempDirProducer, QueryComponentSupplier> testHostSupplier;
     private Method method;
 
     private void setComponentSupplier(Class<? extends QueryComponentSupplier> value) throws NoSuchMethodException
     {
       Constructor<? extends QueryComponentSupplier> constructor = value.getConstructor(File.class);
+      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(TempDirProducer.class);
       testHostSupplier = f -> {
         try {
           return constructor.newInstance(f);
@@ -225,24 +223,6 @@ public @interface SqlTestFrameworkConfig
     {
       return method.getName();
     }
-
-    protected File createTempFolder(String prefix)
-    {
-      File tempDir = FileUtils.createTempDir(prefix);
-      Runtime.getRuntime().addShutdownHook(new Thread()
-      {
-        @Override
-        public void run()
-        {
-          try {
-            FileUtils.deleteDirectory(tempDir);
-          }
-          catch (IOException ex) {
-            ex.printStackTrace();
-          }
-        }
-      });
-      return tempDir;
     }
   }
 

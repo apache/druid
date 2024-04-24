@@ -40,6 +40,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteUnionQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -47,8 +48,6 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import java.io.File;
 
 /**
  * Runs {@link CalciteUnionQueryTest} but with MSQ engine
@@ -59,9 +58,9 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 
   public static class UnionQueryMSQComponentSupplier extends StandardComponentSupplier
   {
-    public UnionQueryMSQComponentSupplier(File temporaryFolder)
+    public UnionQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
@@ -69,7 +68,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
     {
       super.configureGuice(builder);
       builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
       );
     }
 

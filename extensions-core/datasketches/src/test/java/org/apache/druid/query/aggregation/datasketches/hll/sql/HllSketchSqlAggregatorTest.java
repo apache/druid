@@ -76,6 +76,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
@@ -91,7 +92,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -240,9 +240,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   public static class HllSketchComponentSupplier extends StandardComponentSupplier
   {
-    public HllSketchComponentSupplier(File temporaryFolder)
+    public HllSketchComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
@@ -272,7 +272,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       HllSketchModule.registerSerde();
       final QueryableIndex index = IndexBuilder
           .create()
-          .tmpDir(newTempFolder())
+          .tmpDir(tempDirProducer.newTempFolder())
           .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
           .schema(
               new IncrementalIndexSchema.Builder()
@@ -1100,7 +1100,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "SELECT"
@@ -1200,7 +1199,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testResultCacheWithWindowing()
   {
     cannotVectorize();
-    skipVectorize();
     for (int i = 0; i < 2; i++) {
       testBuilder()
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))

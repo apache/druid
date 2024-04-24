@@ -27,8 +27,6 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver.NullCatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-
 /**
  * Test for the "strict" feature of the catalog which can restrict INSERT statements
  * to only work with existing datasources. The strict option is a config option which
@@ -39,9 +37,9 @@ public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
 {
   static class StrictInsertComponentSupplier extends IngestionDmlComponentSupplier
   {
-    public StrictInsertComponentSupplier(File temporaryFolder)
+    public StrictInsertComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

@@ -30,21 +30,20 @@ import org.apache.druid.query.sql.SleepSqlTest.SleepComponentSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Test;
-
-import java.io.File;
 
 @SqlTestFrameWorkModule(SleepComponentSupplier.class)
 public class SleepSqlTest extends BaseCalciteQueryTest
 {
   public static class SleepComponentSupplier extends StandardComponentSupplier
   {
-    public SleepComponentSupplier(File temporaryFolder)
+    public SleepComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override

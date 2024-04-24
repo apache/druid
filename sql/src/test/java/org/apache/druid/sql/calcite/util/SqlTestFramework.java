@@ -34,7 +34,6 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -51,6 +50,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -69,7 +69,6 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -105,7 +104,7 @@ import java.util.Set;
  * <p>
  * The framework should be built once per test class (not once per test method.)
  * Then, for each planner setup, call
- * {@link #plannerFixture(PlannerComponentSupplier, PlannerConfig, AuthConfig)}
+ * {@link #plannerFixture(PlannerConfig, AuthConfig)}
  * to get a {@link PlannerFixture} with a view manager and planner factory. Call
  * {@link PlannerFixture#statementFactory()} to
  * obtain a the test-specific planner and wrapper classes for that test. After
@@ -191,6 +190,7 @@ public class SqlTestFramework
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
 
+    PlannerComponentSupplier getPlannerComponentSupplier();
     @Override
     default void close() throws IOException
     {
@@ -218,13 +218,25 @@ public class SqlTestFramework
    */
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
-    private final File temporaryFolder;
+    protected final TempDirProducer tempDirProducer;
+    private final PlannerComponentSupplier plannerComponentSupplier;
 
     public StandardComponentSupplier(
-        final File temporaryFolder
+        final TempDirProducer tempDirProducer
     )
     {
-      this.temporaryFolder = temporaryFolder;
+      this.tempDirProducer = tempDirProducer;
+      this.plannerComponentSupplier = buildPlannerComponentSupplier();
+    }
+
+    /**
+     * Build the {@link PlannerComponentSupplier}.
+     *
+     * Implementations may override how this is being built.
+     */
+    protected PlannerComponentSupplier buildPlannerComponentSupplier()
+    {
+      return new StandardPlannerComponentSupplier();
     }
 
     @Override
@@ -236,18 +248,6 @@ public class SqlTestFramework
     public void configureGuice(DruidInjectorBuilder builder)
     {
     }
-
-
-    public File newTempFolder()
-    {
-      return newTempFolder(null);
-    }
-
-    public File newTempFolder(String prefix)
-    {
-      return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), prefix);
-    }
-
 
     @Override
     public QueryRunnerFactoryConglomerate createCongolmerate(
@@ -278,7 +278,7 @@ public class SqlTestFramework
       return TestDataBuilder.createMockWalker(
           injector,
           conglomerate,
-          temporaryFolder,
+          tempDirProducer.newTempFolder("segments"),
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           joinableFactory
       );
@@ -320,8 +320,15 @@ public class SqlTestFramework
     }
 
     @Override
-    public void close()
+    public PlannerComponentSupplier getPlannerComponentSupplier()
     {
+      return plannerComponentSupplier;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      tempDirProducer.close();
     }
   }
 
@@ -681,12 +688,12 @@ public class SqlTestFramework
    * planner fixture is specific to one test and one planner config.
    */
   public PlannerFixture plannerFixture(
-      PlannerComponentSupplier componentSupplier,
       PlannerConfig plannerConfig,
       AuthConfig authConfig
   )
   {
-    return new PlannerFixture(this, componentSupplier, plannerConfig, authConfig);
+    PlannerComponentSupplier plannerComponentSupplier = componentSupplier.getPlannerComponentSupplier();
+    return new PlannerFixture(this, plannerComponentSupplier, plannerConfig, authConfig);
   }
 
   public void close()

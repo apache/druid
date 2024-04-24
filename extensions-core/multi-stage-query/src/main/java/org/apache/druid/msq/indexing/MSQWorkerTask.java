@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
@@ -45,7 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 
 @JsonTypeName(MSQWorkerTask.TYPE)
-public class MSQWorkerTask extends AbstractTask
+public class MSQWorkerTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   public static final String TYPE = "query_worker";
 
@@ -123,6 +124,12 @@ public class MSQWorkerTask extends AbstractTask
   {
     // the input sources are properly computed in the SQL / calcite layer, but not in the native MSQ task here.
     return ImmutableSet.of();
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getControllerTaskId();
   }
 
 

@@ -42,7 +42,6 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.destination.IngestDestination;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -113,9 +112,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 
   static class ScanSignatureComponentSupplier extends StandardComponentSupplier
   {
-    public ScanSignatureComponentSupplier(File temporaryFolder)
+    public ScanSignatureComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(temporaryFolder);
+      super(tempFolderProducer);
     }
 
     @Override
