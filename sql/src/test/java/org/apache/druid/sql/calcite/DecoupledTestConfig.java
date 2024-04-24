@@ -44,12 +44,6 @@ public @interface DecoupledTestConfig
    */
   NativeQueryIgnore nativeQueryIgnore() default NativeQueryIgnore.NONE;
 
-  /**
-   * Use alternate quidem test for testcase
-   */
-  boolean quidem() default false;
-
-
   enum NativeQueryIgnore
   {
     NONE,

@@ -122,6 +122,7 @@ public @interface SqlTestFrameworkConfig
       return ret;
     }
 
+    @Override
     public void close()
     {
       for (ConfigurationInstance f : configMap.values()) {

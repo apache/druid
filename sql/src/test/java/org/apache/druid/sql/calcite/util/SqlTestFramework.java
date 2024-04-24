@@ -190,6 +190,11 @@ public class SqlTestFramework
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
+
+    @Override
+    default void close() throws IOException
+    {
+    }
   }
 
   public interface PlannerComponentSupplier

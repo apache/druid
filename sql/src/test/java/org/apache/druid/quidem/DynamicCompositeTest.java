@@ -42,7 +42,6 @@ public class DynamicCompositeTest
 
     assertInstanceOf(Function.class, composite);
     Function<Integer, Integer> sq2 = (Function<Integer, Integer>) composite;
-    assertEquals(9, sq.apply(3));
-
+    assertEquals(9, sq2.apply(3));
   }
 }
