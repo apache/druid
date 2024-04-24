@@ -1492,7 +1492,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
+        new ClientCompactionTaskGranularitySpec(null, Granularities.HOUR, null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         METRIC_BUILDER
@@ -1512,7 +1512,7 @@ public class CompactionTaskTest
         AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
-        new PeriodGranularity(Period.months(3), null, null),
+        Granularities.HOUR,
         BatchIOConfig.DEFAULT_DROP_EXISTING
     );
   }

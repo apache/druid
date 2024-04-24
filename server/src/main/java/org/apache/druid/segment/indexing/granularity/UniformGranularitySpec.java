@@ -21,7 +21,7 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
@@ -48,14 +48,11 @@ public class UniformGranularitySpec extends BaseGranularitySpec
     this.queryGranularity = queryGranularity == null ? DEFAULT_QUERY_GRANULARITY : queryGranularity;
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
     if (Granularity.IS_FINER_THAN.compare(this.segmentGranularity, this.queryGranularity) < 0) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .withErrorCode("invalidInput")
-                          .build(
-                              "SegmentGranularity[%s] must not be finer than QueryGranularity[%s].",
-                              this.segmentGranularity,
-                              this.queryGranularity
-                          );
+      throw InvalidInput.exception(
+          "segmentGranularity[%s] must not be finer than queryGranularity[%s].",
+          this.segmentGranularity,
+          this.queryGranularity
+      );
     }
     intervalsByGranularity = new IntervalsByGranularity(this.inputIntervals, segmentGranularity);
     lookupTableBucketByDateTime = new LookupIntervalBuckets(sortedBucketIntervals());

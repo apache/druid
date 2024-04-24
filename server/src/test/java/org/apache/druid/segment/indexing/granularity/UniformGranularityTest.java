@@ -369,21 +369,25 @@ public class UniformGranularityTest
   {
     final Granularity secondGranularity = Granularities.SECOND;
     final Granularity secondDurationGranularity = new DurationGranularity(1000, 0);
-    try {
-      new UniformGranularitySpec(
-          secondGranularity,
-          secondGranularity,
-          Collections.emptyList()
-      );
-      new UniformGranularitySpec(
-          secondGranularity,
-          secondDurationGranularity,
-          Collections.emptyList()
-      );
-    }
-    catch (DruidException e) {
-      Assert.fail();
-    }
+    final GranularitySpec granularitySpec0 = new UniformGranularitySpec(
+        secondGranularity,
+        secondGranularity,
+        Collections.emptyList()
+    );
+    Assert.assertEquals(granularitySpec0.getSegmentGranularity(), granularitySpec0.getQueryGranularity());
+
+    final GranularitySpec granularitySpec1 = new UniformGranularitySpec(
+        secondGranularity,
+        secondDurationGranularity,
+        Collections.emptyList()
+    );
+    Assert.assertEquals(
+        0,
+        Granularity.IS_FINER_THAN.compare(
+            granularitySpec1.getQueryGranularity(),
+            granularitySpec1.getSegmentGranularity()
+        )
+    );
   }
 
   @Test
@@ -403,7 +407,7 @@ public class UniformGranularityTest
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             StringUtils.format(
-                "SegmentGranularity[%s] must not be finer than QueryGranularity[%s].",
+                "segmentGranularity[%s] must not be finer than queryGranularity[%s].",
                 segmentGranularity,
                 queryGranularity
             )
