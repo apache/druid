@@ -32,11 +32,15 @@ import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.util.Objects;
+
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.spy;
 
 public class BytesFullResponseHolderTest
 {
-  ObjectMapper objectMapper = new DefaultObjectMapper();
+  ObjectMapper objectMapper = spy(new DefaultObjectMapper());
 
   @Test
   public void testDeserialize() throws Exception
@@ -45,13 +49,25 @@ public class BytesFullResponseHolderTest
 
     final DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 
-    final BytesFullResponseHolder target = Mockito.spy(new BytesFullResponseHolder(response));
+    final BytesFullResponseHolder target = spy(new BytesFullResponseHolder(response));
     target.addChunk(objectMapper.writeValueAsBytes(payload));
 
     final ResponseObject deserialize = target.deserialize(objectMapper, new TypeReference<ResponseObject>() {
     });
 
     Assert.assertEquals(payload, deserialize);
+    Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());
+  }
+
+  @Test
+  public void testDeserializeException() throws IOException
+  {
+    final DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+
+    final BytesFullResponseHolder target = spy(new BytesFullResponseHolder(response));
+    Mockito.doThrow(IOException.class).when(objectMapper).readValue(isA(byte[].class), isA(TypeReference.class));
+
+    Assert.assertThrows(RuntimeException.class, () -> target.deserialize(objectMapper, new TypeReference<ResponseObject>() {}));
     Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 
