@@ -471,7 +471,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
 
     final Map<String, Object> resultMap = new HashMap<>();
     resultMap.put("a0", 0L);
-    resultMap.put("a1", null);
+    resultMap.put("a1", NullHandling.defaultLongValue());
 
     Assert.assertEquals(
         new Result<>(
