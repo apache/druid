@@ -68,6 +68,7 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.function.Function;
 
@@ -162,7 +163,7 @@ public class TaskToolboxFactory
       TaskLogPusher taskLogPusher,
       @AttemptId String attemptId,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionToMSQTask compactionToMSQTask
+      @Nullable CompactionToMSQTask compactionToMSQTask
   )
   {
     this.segmentLoaderConfig = segmentLoadConfig;
