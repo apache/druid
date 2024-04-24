@@ -52,7 +52,6 @@ import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.LockAcquisitionFailedException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -426,12 +425,12 @@ public class TaskQueue
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
             final String errorMessage;
-            if (e instanceof MaxAllowedLocksExceededException || e instanceof LockAcquisitionFailedException) {
+            if (e instanceof MaxAllowedLocksExceededException || e instanceof DruidException) {
               errorMessage = e.getMessage();
             } else {
               errorMessage = StringUtils.format(
-                  "Encountered error while waiting for task to be ready. See Overlord logs for more details. Error: %s",
-                  Throwables.getStackTraceAsString(e)
+                  "Encountered error [%s] while waiting for task to be ready. See Overlord logs for more details.",
+                  e.getMessage()
               );
             }
             TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
