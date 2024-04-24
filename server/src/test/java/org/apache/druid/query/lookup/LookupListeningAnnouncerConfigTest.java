@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -36,6 +37,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public class LookupListeningAnnouncerConfigTest
@@ -57,6 +60,13 @@ public class LookupListeningAnnouncerConfigTest
               binder
                   .bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
                   .toInstance("some_datasource");
+
+              ArrayList<String> lookupsToLoad = new ArrayList<>();
+              lookupsToLoad.add("lookupName1");
+              lookupsToLoad.add("lookupName2");
+              binder.bind(new TypeLiteral<List<String>>() {})
+                    .annotatedWith(Names.named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK))
+                    .toInstance(lookupsToLoad);
             }
           },
           new LookupModule()
@@ -125,6 +135,18 @@ public class LookupListeningAnnouncerConfigTest
     configProvider.inject(properties, configurator);
     final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals("some_datasource", config.getLookupTier());
+  }
+
+  @Test
+  public void testLookupsToLoadInjection()
+  {
+    ArrayList<String> lookupsToLoad = new ArrayList<>();
+    lookupsToLoad.add("lookupName1");
+    lookupsToLoad.add("lookupName2");
+
+    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    injector.injectMembers(dimensionIdHolder);
+    Assert.assertEquals(lookupsToLoad, dimensionIdHolder.getLookupsToLoad());
   }
 
   @Test(expected = IllegalArgumentException.class)

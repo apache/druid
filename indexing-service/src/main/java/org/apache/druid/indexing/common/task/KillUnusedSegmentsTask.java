@@ -339,4 +339,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     );
     return taskLockMap;
   }
+
+  @Override
+  public List<String> getLookupsToLoad()
+  {
+    return new ArrayList<>();
+  }
 }

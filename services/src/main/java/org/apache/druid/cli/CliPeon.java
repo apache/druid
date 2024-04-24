@@ -356,6 +356,14 @@ public class CliPeon extends GuiceRunnable
           {
             return task.getId();
           }
+
+          @Provides
+          @LazySingleton
+          @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
+          public List<String> getLookupsToLoad(final Task task)
+          {
+            return task.getLookupsToLoad();
+          }
         },
         new QueryablePeonModule(),
         new IndexingServiceFirehoseModule(),

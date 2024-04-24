@@ -22,16 +22,25 @@ package org.apache.druid.server.metrics;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+import javax.annotation.Nullable;
+import java.util.List;
+
 public class DataSourceTaskIdHolder
 {
   public static final String DATA_SOURCE_BINDING = "druidDataSource";
   public static final String TASK_ID_BINDING = "druidTaskId";
+  public static final String LOOKUPS_TO_LOAD_FOR_TASK = "lookupsToLoadForTask";
   @Named(DATA_SOURCE_BINDING)
   @Inject(optional = true)
   String dataSource = null;
   @Named(TASK_ID_BINDING)
   @Inject(optional = true)
   String taskId = null;
+
+  @Nullable
+  @Named(LOOKUPS_TO_LOAD_FOR_TASK)
+  @Inject(optional = true)
+  List<String> lookupsToLoad = null;
 
   public String getDataSource()
   {
@@ -41,5 +50,10 @@ public class DataSourceTaskIdHolder
   public String getTaskId()
   {
     return taskId;
+  }
+
+  public List<String> getLookupsToLoad()
+  {
+    return lookupsToLoad;
   }
 }

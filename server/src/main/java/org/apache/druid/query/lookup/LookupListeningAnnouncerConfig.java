@@ -26,6 +26,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
+import java.util.List;
+
 class LookupListeningAnnouncerConfig
 {
   public static final String DEFAULT_TIER = "__default";
@@ -56,5 +58,10 @@ class LookupListeningAnnouncerConfig
         "Cannot have empty lookup tier from %s",
         lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
     );
+  }
+
+  public List<String> getLookupsToLoad()
+  {
+    return dataSourceTaskIdHolder.getLookupsToLoad();
   }
 }

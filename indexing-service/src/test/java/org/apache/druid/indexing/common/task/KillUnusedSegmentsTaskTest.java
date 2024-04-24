@@ -424,6 +424,17 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   }
 
   @Test
+  public void testGetLookupsToLoad()
+  {
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2019-03-01/2019-04-01"))
+        .markAsUnused(true)
+        .build();
+    Assert.assertTrue(task.getLookupsToLoad().isEmpty());
+  }
+
+  @Test
   public void testKillBatchSizeOneAndLimit4() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);

@@ -46,6 +46,8 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -330,5 +332,11 @@ public interface Task
         taskInfo.getDataSource(),
         taskInfo.getTask().getMetadata()
     );
+  }
+
+  @Nullable
+  default List<String> getLookupsToLoad()
+  {
+    return null;
   }
 }

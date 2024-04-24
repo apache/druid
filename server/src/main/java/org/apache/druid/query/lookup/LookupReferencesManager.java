@@ -70,6 +70,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager. It allows basic operations fetching,
@@ -167,7 +168,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
         FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
       }
-      loadAllLookupsAndInitStateRef();
+      loadLookupsAndInitStateRef(lookupListeningAnnouncerConfig.getLookupsToLoad());
       if (!testMode) {
         mainThread = Execs.makeThread(
             "LookupExtractorFactoryContainerProvider-MainThread",
@@ -373,11 +374,29 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
   }
 
-  private void loadAllLookupsAndInitStateRef()
+  /**
+   * Load a set of lookups.
+   * @param lookupsToLoad List of lookup names to load. Pass null to load all lookups.
+   */
+  private void loadLookupsAndInitStateRef(List<String> lookupsToLoad)
   {
     List<LookupBean> lookupBeanList = getLookupsList();
-    if (lookupBeanList != null) {
-      startLookups(lookupBeanList);
+
+    List<LookupBean> lookupBeansToLoad;
+    if (lookupsToLoad != null) {
+      lookupBeansToLoad = new ArrayList<>();
+      if (lookupBeanList != null) {
+        lookupBeansToLoad = lookupBeanList.stream()
+                                          .filter(lookupBean -> lookupsToLoad.contains(lookupBean.getName()))
+                                          .collect(Collectors.toList());
+      }
+    }
+    else {
+      lookupBeansToLoad = lookupBeanList;
+    }
+
+    if (lookupBeansToLoad != null) {
+      startLookups(lookupBeansToLoad);
     } else {
       LOG.debug("No lookups to be loaded at this point.");
       stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
