@@ -51,6 +51,8 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -138,6 +140,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -1476,6 +1479,41 @@ public class CompactionTaskTest
         new PeriodGranularity(Period.months(3), null, null),
         Granularities.NONE,
         BatchIOConfig.DEFAULT_DROP_EXISTING
+    );
+  }
+
+  @Test
+  public void testCoarserQueryGranularityAndNullSegmentGranularityThrowsException()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () ->
+            CompactionTask.createIngestionSchema(
+                clock,
+                toolbox,
+                LockGranularity.TIME_CHUNK,
+                new CompactionIOConfig(null, false, null),
+                new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+                new PartitionConfigurationManager(TUNING_CONFIG),
+                null,
+                null,
+                null,
+                new ClientCompactionTaskGranularitySpec(
+                    null,
+                    new PeriodGranularity(Period.months(3), null, null),
+                    null
+                ),
+                COORDINATOR_CLIENT,
+                segmentCacheManagerFactory,
+                METRIC_BUILDER
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            StringUtils.format(
+                "segmentGranularity[%s] must not be finer than queryGranularity[%s].",
+                Granularities.MONTH,
+                Granularities.QUARTER
+            )
+        )
     );
   }
 
