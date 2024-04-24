@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -37,6 +38,8 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -155,6 +158,29 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
         }
       }
     };
+  }
+
+  @Override
+  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(
+        getObjectStrategy(),
+        ColumnType.ofComplex(TYPE_NAME),
+        new Hash.Strategy<Object>()
+        {
+          @Override
+          public int hashCode(Object o)
+          {
+            return StructuredData.wrap(o).equalityHash();
+          }
+
+          @Override
+          public boolean equals(Object a, Object b)
+          {
+            return StructuredData.wrap(a).compareTo(StructuredData.wrap(b)) == 0;
+          }
+        }
+    );
   }
 
   public static class NestedColumnFormatV4 implements ColumnFormat

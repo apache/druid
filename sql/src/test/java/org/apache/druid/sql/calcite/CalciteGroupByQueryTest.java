@@ -17,18 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.query.dimension;
+package org.apache.druid.sql.calcite;
 
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
-
-public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
+public class CalciteGroupByQueryTest
 {
-  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector, String dimension);
-
-  /**
-   * Whether the strategy supports complex types. If a strategy doesn't support the complex types, they can either throw an
-   * unsupported exception or treat them like strings.
-   */
-  boolean supportsComplexTypes();
 }

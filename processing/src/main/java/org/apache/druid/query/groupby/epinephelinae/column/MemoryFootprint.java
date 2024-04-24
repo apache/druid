@@ -17,18 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.query.dimension;
+package org.apache.druid.query.groupby.epinephelinae.column;
 
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
-
-public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
+/**
+ * Holder for a value and the memory increase in the internal dictionary associated with the increase
+ */
+public class MemoryFootprint<T>
 {
-  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector, String dimension);
+  private final T value;
+  private final int footprintIncrease;
 
-  /**
-   * Whether the strategy supports complex types. If a strategy doesn't support the complex types, they can either throw an
-   * unsupported exception or treat them like strings.
-   */
-  boolean supportsComplexTypes();
+  // Reduced visibility
+  MemoryFootprint(T value, int footprintIncrease)
+  {
+    this.value = value;
+    this.footprintIncrease = footprintIncrease;
+  }
+
+  public T value()
+  {
+    return value;
+  }
+
+  public int memoryIncrease()
+  {
+    return footprintIncrease;
+  }
 }
