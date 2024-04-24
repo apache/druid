@@ -27,11 +27,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -52,7 +50,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -489,23 +486,10 @@ public class DefaultLimitSpec implements LimitSpec
 
     return Ordering.from(
         Comparator.comparing(
-            (ResultRow row) -> {
-              if (columnType.isArray()) {
-                return row.get(column);
-              } else {
-                return getDimensionValue(row, column);
-              }
-            },
+            (ResultRow row) -> row.get(column),
             Comparator.nullsFirst(comparatorToUse)
         )
     );
-  }
-
-  @Nullable
-  private static String getDimensionValue(ResultRow row, int column)
-  {
-    final List<String> values = Rows.objectToStrings(row.get(column));
-    return values.isEmpty() ? null : Iterables.getOnlyElement(values);
   }
 
   @Override
