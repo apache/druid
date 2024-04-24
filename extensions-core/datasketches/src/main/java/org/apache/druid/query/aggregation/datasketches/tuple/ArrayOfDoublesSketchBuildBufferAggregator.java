@@ -73,8 +73,6 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
     this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[0]);
     this.nominalEntries = nominalEntries;
     this.maxIntermediateSize = maxIntermediateSize;
-    values = new double[valueSelectors.size()];
-
     this.canCacheById = this.keySelector.nameLookupPossibleInAdvance();
     this.canLookupUtf8 = this.keySelector.supportsLookupNameUtf8();
   }
@@ -92,6 +90,10 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
+    if (values == null) {
+      values = new double[valueSelectors.length];
+    }
+
     for (int i = 0; i < valueSelectors.length; i++) {
       if (valueSelectors[i].isNull()) {
         return;
