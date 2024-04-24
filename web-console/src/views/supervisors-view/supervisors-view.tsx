@@ -699,7 +699,7 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: 'Configured tasks',
             id: 'configured_tasks',
-            width: 150,
+            width: 130,
             accessor: 'spec',
             filterable: false,
             sortable: false,

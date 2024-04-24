@@ -649,6 +649,7 @@ ORDER BY
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.workerInfo,
             filterable: false,
+            sortable: false,
             Cell: ({ value, aggregated }) => {
               if (aggregated) return '';
               if (!value) return null;

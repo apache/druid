@@ -444,6 +444,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             accessor: 'id',
             Cell: ({ original }) => {
               const lookupId = original.id;

@@ -495,6 +495,7 @@ ORDER BY
             accessor: 'task_id',
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;

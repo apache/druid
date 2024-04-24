@@ -1577,6 +1577,7 @@ GROUP BY 1, 2`;
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: ({ value: datasource, original }) => {
               const { unused, rules, compaction } = original as Datasource;
               const datasourceActions = this.getDatasourceActions(
