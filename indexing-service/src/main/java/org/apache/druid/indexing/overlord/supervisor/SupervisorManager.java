@@ -39,7 +39,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,15 +123,6 @@ public class SupervisorManager
     }
 
     return Optional.absent();
-  }
-
-  public Set<String> getActiveRealtimeSequencePrefixes(String activeSupervisorId)
-  {
-    if (supervisors.containsKey(activeSupervisorId)) {
-      return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
-    } else {
-      return Collections.emptySet();
-    }
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -340,7 +330,7 @@ public class SupervisorManager
       return true;
     }
     catch (Exception e) {
-      log.error(e, "PendingSegment[%s] mapping update request to version[%s] on Supervisor[%s] failed",
+      log.error(e, "PendingSegmentRecord[%s] mapping update request to version[%s] on Supervisor[%s] failed",
                 basePendingSegment.asSegmentId(), newSegmentVersion.getVersion(), supervisorId);
     }
     return false;

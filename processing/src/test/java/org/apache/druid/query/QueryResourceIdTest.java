@@ -17,30 +17,39 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.query;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+import java.util.HashMap;
+import java.util.Map;
+
+public class QueryResourceIdTest
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
 
-  @Override
-  public StorageConnector get()
+  @Test
+  public void testConstructorWithNullString()
   {
-    return STORAGE_CONNECTOR;
+    Assert.assertThrows(NullPointerException.class, () -> new QueryResourceId(null));
   }
 
-  @Override
-  public String getResourceType()
+  @Test
+  public void testEqualsAndHashCode()
   {
-    return "testExport";
+    EqualsVerifier.forClass(QueryResourceId.class)
+                  .withNonnullFields("queryResourceId")
+                  .usingGetClass()
+                  .verify();
   }
 
-  @Override
-  public String getBasePath()
+  @Test
+  public void testAddressableOnAssociativeMap()
   {
-    return "testExport";
+    Map<QueryResourceId, Integer> map = new HashMap<>();
+    map.put(new QueryResourceId("abc"), 1);
+    Assert.assertEquals(1, (int) map.get(new QueryResourceId("abc")));
+
   }
 }

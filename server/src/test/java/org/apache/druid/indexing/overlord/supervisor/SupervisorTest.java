@@ -17,13 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.indexing.overlord.supervisor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
-public interface TaskReportFileWriter
+public class SupervisorTest
 {
-  void write(String taskId, TaskReport.ReportMap reports);
+  @Test
+  public void testAutoScalerLagComputation()
+  {
+    Supervisor supervisor = Mockito.spy(Supervisor.class);
 
-  void setObjectMapper(ObjectMapper objectMapper);
+    Mockito.when(supervisor.computeLagStats()).thenReturn(new LagStats(1, 2, 3));
+    Assert.assertEquals(2, supervisor.computeLagForAutoScaler());
+
+    Mockito.when(supervisor.computeLagStats()).thenReturn(null);
+    Assert.assertEquals(0, supervisor.computeLagForAutoScaler());
+  }
 }

@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -69,6 +70,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
@@ -84,7 +86,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
-public class GroupByMultiSegmentTest
+public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
 {
   public static final ObjectMapper JSON_MAPPER;
 
@@ -239,11 +241,12 @@ public class GroupByMultiSegmentTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -251,7 +254,7 @@ public class GroupByMultiSegmentTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
     );
   }
 
@@ -279,7 +282,8 @@ public class GroupByMultiSegmentTest
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, makeGroupByMultiRunners())
+            groupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, makeGroupByMultiRunners()),
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -305,7 +309,10 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = theRunner.run(
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(

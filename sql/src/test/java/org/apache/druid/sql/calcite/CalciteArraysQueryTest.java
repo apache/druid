@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
@@ -934,6 +936,40 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayOverlapFilterWithDynamicParameter()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE3)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .filters(expressionFilter("array_overlap(array(1.0,1.7,null),array(\"d1\"))"))
+            .columns("dim3")
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .limit(5)
+            .context(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+            PLANNER_CONFIG_DEFAULT,
+            QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(
+                    new SqlParameter(SqlType.ARRAY, Arrays.asList(1.0, 1.7, null))
+            ),
+            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, ARRAY[d1]) LIMIT 5",
+            CalciteTests.REGULAR_USER_AUTH_RESULT,
+            ImmutableList.of(builder.build()),
+            NullHandling.sqlCompatible() ? ImmutableList.of(
+                    new Object[]{"[\"a\",\"b\"]"},
+                    new Object[]{"[\"b\",\"c\"]"},
+                    new Object[]{""},
+                    new Object[]{null},
+                    new Object[]{null}
+            ) : ImmutableList.of(
+                    new Object[]{"[\"a\",\"b\"]"},
+                    new Object[]{"[\"b\",\"c\"]"}
+            )
+    );
+  }
+
+  @Test
   public void testArrayContainsFilter()
   {
     testQuery(
@@ -1268,6 +1304,106 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{NullHandling.sqlCompatible() ? null : false}
         )
     );
+  }
+
+  @Test
+  public void testArrayContainsFilterWithDynamicParameter()
+  {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE3)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .filters(expressionFilter("array_contains(array(1,null),array((\"d1\" > 1)))"))
+            .columns("dim3")
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .limit(5)
+            .context(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+            PLANNER_CONFIG_DEFAULT,
+            QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(
+                    new SqlParameter(SqlType.ARRAY, Arrays.asList(true, null))
+            ),
+            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(?, ARRAY[d1>1]) LIMIT 5",
+            CalciteTests.REGULAR_USER_AUTH_RESULT,
+            ImmutableList.of(builder.build()),
+            NullHandling.sqlCompatible() ? ImmutableList.of(
+                    new Object[]{"[\"b\",\"c\"]"},
+                    new Object[]{""},
+                    new Object[]{null},
+                    new Object[]{null}
+            ) : ImmutableList.of(
+                    new Object[]{"[\"b\",\"c\"]"}
+            )
+    );
+  }
+
+  @Test
+  public void testScalarInArrayFilter()
+  {
+    msqIncompatible();
+    testQuery(
+            "SELECT dim2 FROM druid.numfoo WHERE SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd']) LIMIT 5",
+            ImmutableList.of(
+                    newScanQueryBuilder()
+                            .dataSource(CalciteTests.DATASOURCE3)
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .filters(
+                                    new ExpressionDimFilter("scalar_in_array(\"dim2\",array('a','d'))", ExprMacroTable.nil())
+                            )
+                            .columns("dim2")
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .limit(5)
+                            .context(QUERY_CONTEXT_DEFAULT)
+                            .build()
+            ),
+            ImmutableList.of(
+                    new Object[]{"a"},
+                    new Object[]{"a"}
+            )
+    );
+  }
+
+  @Test
+  public void testArrayScalarInFilter_MVD()
+  {
+    msqIncompatible();
+    testBuilder()
+            .sql(
+                    "SELECT dim3, (CASE WHEN scalar_in_array(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
+                            "FROM druid.numfoo"
+            )
+            .expectedQueries(
+                    ImmutableList.of(
+                            newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE3)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .virtualColumns(
+                                            new ExpressionVirtualColumn(
+                                                    "v0",
+                                                    "case_searched(scalar_in_array(\"dim3\",array('a','b','d')),'abd','not abd')",
+                                                    ColumnType.STRING,
+                                                    ExprMacroTable.nil()
+                                            )
+                                    )
+                                    .columns("dim3", "v0")
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .context(QUERY_CONTEXT_DEFAULT)
+                                    .build()
+                    )
+            )
+            .expectedResults(ResultMatchMode.RELAX_NULLS,
+                    ImmutableList.of(
+                            new Object[]{"[\"a\",\"b\"]", "[\"abd\",\"abd\"]"},
+                            new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
+                            new Object[]{"d", "abd"},
+                            new Object[]{"", "not abd"},
+                            new Object[]{null, "not abd"},
+                            new Object[]{null, "not abd"}
+                    )
+            )
+            .run();
+
   }
 
   @Test

@@ -32,8 +32,8 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -105,7 +106,7 @@ import java.util.stream.Collectors;
  * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexTaskRunner} instead of
  * publishing on its own.
  */
-public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHandler
+public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final String TYPE = "single_phase_sub_task";
   public static final String OLD_TYPE_NAME = "index_sub";
@@ -234,6 +235,12 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public String getSubtaskSpecId()
   {
     return subtaskSpecId;
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Override
@@ -542,7 +549,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
-  private TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
+  TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     return buildLiveIngestionStatsReport(
         ingestionState,

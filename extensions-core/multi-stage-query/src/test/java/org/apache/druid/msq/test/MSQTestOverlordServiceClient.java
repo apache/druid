@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -31,7 +30,7 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -42,7 +41,6 @@ import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,22 +119,9 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
   {
-    SettableFuture<Map<String, Object>> future = SettableFuture.create();
-    try {
-      future.set(
-          objectMapper.readValue(
-              objectMapper.writeValueAsBytes(getReportForTask(taskId)),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
-          ));
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return future;
+    return Futures.immediateFuture(getReportForTask(taskId));
   }
 
   @Override

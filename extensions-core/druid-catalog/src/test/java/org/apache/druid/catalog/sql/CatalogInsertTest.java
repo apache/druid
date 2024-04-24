@@ -31,7 +31,6 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogInsertTest;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -69,8 +68,8 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
 
   public void buildDatasources()
   {
-    resolvedTables.forEach((datasourceName, datasourceTable) -> {
-      DatasourceFacade catalogMetadata = ((DatasourceTable) datasourceTable).effectiveMetadata().catalogMetadata();
+    RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
+      DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
       TableBuilder tableBuilder = TableBuilder.datasource(datasourceName, catalogMetadata.segmentGranularityString());
       catalogMetadata.columnFacades().forEach(
           columnFacade -> {
@@ -92,14 +91,6 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
 
       createTableMetadata(tableBuilder.build());
     });
-    DatasourceFacade catalogMetadata =
-        ((DatasourceTable) resolvedTables.get("foo")).effectiveMetadata().catalogMetadata();
-    TableBuilder tableBuilder = TableBuilder.datasource("foo", catalogMetadata.segmentGranularityString());
-    catalogMetadata.columnFacades().forEach(
-        columnFacade -> {
-          tableBuilder.column(columnFacade.spec().name(), columnFacade.spec().dataType());
-        }
-    );
   }
 
   private void createTableMetadata(TableMetadata table)
