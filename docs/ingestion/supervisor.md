@@ -311,7 +311,7 @@ The following table lists `detailedState` values and their corresponding `state`
 
 On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
 
-1. Fetch the list of partitions and determine the starting offset for each partition. Druid determines the offset based on the last processed offset if continuing, or it starts from the beginning or end of the stream if it's a new stream.
+1. Retrieve the list of partitions and determine the starting offset for each partition. If continuing, Druid uses the last processed offset. For new streams, Druid starts from either the beginning or end of the stream, depending on the `useEarliestOffset` property.
 2. Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match the supervisor's configuration, else signal them to stop.
 3. Send a status request to each supervised task to update the view of the state of the tasks under supervision.
 4. Handle tasks that have exceeded `taskDuration` and should transition from reading to publishing.
@@ -384,7 +384,7 @@ For information on how to reset a supervisor by API, see [Supervisors: Reset a s
 
 ### Terminate
 
-**Terminate** stops a supervisor and its indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, a tombstone marker is placed in the database to prevent reloading on restart.
+**Terminate** stops a supervisor and its indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, Druid places a tombstone marker in the metadata store to prevent reloading on restart.
 The terminated supervisor still exists in the metadata store and its history can be retrieved.
 
 For information on how to terminate a supervisor by API, see [Supervisors: Terminate a supervisor](../api-reference/supervisor-api.md#terminate-a-supervisor).

@@ -3246,7 +3246,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 The supervisor must be running for this endpoint to be available.
 
-Resets the specified supervisor. This endpoint clears supervisor metadata, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the `useEarliestOffset` setting.
+Resets the specified supervisor. This endpoint clears supervisor metadata, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the value of the `useEarliestOffset` property.
 After clearing all stored offsets, the supervisor kills and recreates active tasks,
 so that tasks begin reading from valid positions.
 
@@ -3428,7 +3428,7 @@ when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 1
 
 ### Terminate a supervisor
 
-Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart.
+Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, Druid places a tombstone marker in the metadata store to prevent reloading on restart.
 
 The terminated supervisor still exists in the metadata store and its history can be retrieved.
 
