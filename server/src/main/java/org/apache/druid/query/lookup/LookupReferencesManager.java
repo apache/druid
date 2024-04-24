@@ -390,8 +390,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
                                           .filter(lookupBean -> lookupsToLoad.contains(lookupBean.getName()))
                                           .collect(Collectors.toList());
       }
-    }
-    else {
+    } else {
       lookupBeansToLoad = lookupBeanList;
     }
 
