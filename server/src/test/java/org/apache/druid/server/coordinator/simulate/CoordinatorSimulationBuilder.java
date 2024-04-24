@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -208,7 +209,9 @@ public class CoordinatorSimulationBuilder
         createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        COMPACTION_SEGMENT_SEARCH_POLICY
+        COMPACTION_SEGMENT_SEARCH_POLICY,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     return new SimulationImpl(coordinator, env);
@@ -502,6 +505,7 @@ public class CoordinatorSimulationBuilder
           segmentManager,
           null,
           ruleManager,
+          null,
           null
       );
     }

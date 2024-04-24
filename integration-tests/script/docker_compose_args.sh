@@ -75,6 +75,14 @@ getComposeArgs()
       then
         # cluster with overriden properties for broker and coordinator
         echo "-f ${DOCKERDIR}/docker-compose.centralized-datasource-schema.yml"
+  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-task-schema-publish-disabled" ]
+      then
+        # cluster with overriden properties for broker and coordinator
+        echo "-f ${DOCKERDIR}/docker-compose.cds-task-schema-publish-disabled.yml"
+  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-coordinator-smq-disabled" ]
+      then
+        # cluster with overriden properties for broker and coordinator
+        echo "-f ${DOCKERDIR}/docker-compose.cds-coordinator-smq-disabled.yml"
   else
     # default
     echo "-f ${DOCKERDIR}/docker-compose.yml"

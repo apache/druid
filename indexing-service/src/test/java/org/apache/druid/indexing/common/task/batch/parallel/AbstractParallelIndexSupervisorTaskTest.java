@@ -83,6 +83,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -93,6 +94,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -120,7 +122,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -533,13 +534,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public Set<DataSegment> getPublishedSegments(String taskId)
+    public DataSegmentsWithSchemas getPublishedSegments(String taskId)
     {
       final TaskContainer taskContainer = tasks.get(taskId);
       if (taskContainer == null || taskContainer.actionClient == null) {
-        return Collections.emptySet();
+        return new DataSegmentsWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
       } else {
-        return taskContainer.actionClient.getPublishedSegments();
+        return new DataSegmentsWithSchemas(taskContainer.actionClient.getPublishedSegments(), taskContainer.actionClient.getSegmentSchemas());
       }
     }
   }
@@ -664,7 +665,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public Set<DataSegment> getPublishedSegments(Task task)
+    public DataSegmentsWithSchemas getSegmentAndSchemas(Task task)
     {
       return taskRunner.getPublishedSegments(task.getId());
     }
@@ -711,6 +712,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     TaskConfig config = new TaskConfigBuilder()
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -747,6 +749,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .taskLogPusher(null)
         .attemptId("1")
         .emitter(new StubServiceEmitter())
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 

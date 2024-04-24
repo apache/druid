@@ -51,6 +51,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -594,6 +595,7 @@ public class BatchAppenderatorsTest
           .appenderatorsManager(new TestAppenderatorsManager())
           .taskLogPusher(null)
           .attemptId("1")
+          .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
           .build();
 
     }

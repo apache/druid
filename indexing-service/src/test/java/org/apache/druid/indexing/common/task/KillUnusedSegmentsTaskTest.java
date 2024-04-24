@@ -75,7 +75,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKill() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
     Assert.assertEquals(segments, announced);
 
     Assert.assertTrue(
@@ -124,7 +124,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKillWithMarkUnused() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
     Assert.assertEquals(segments, announced);
 
     Assert.assertTrue(
@@ -181,7 +181,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V1, segment3V1, segment4V2, segment5V3);
 
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -229,7 +229,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V1, segment3V1, segment4V2, segment5V3);
 
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -277,7 +277,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V1, segment3V1, segment4V2, segment5V3);
 
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -326,7 +326,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V1, segment3V1, segment4V2, segment5V3);
 
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -380,7 +380,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final Set<DataSegment> segments = ImmutableSet.of(segment1V1, segment2V2, segment3V3);
     final Set<DataSegment> unusedSegments = ImmutableSet.of(segment1V1, segment2V2);
 
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         unusedSegments.size(),
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -427,7 +427,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKillBatchSizeOneAndLimit4() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
 
     Assert.assertEquals(segments, announced);
     Assert.assertEquals(
@@ -474,7 +474,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKillMultipleUnusedSegmentsWithNullMaxUsedStatusLastUpdatedTime() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
 
     Assert.assertEquals(segments, announced);
 
@@ -551,7 +551,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedStatusLastUpdatedTime() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
 
     Assert.assertEquals(segments, announced);
 
@@ -662,7 +662,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedStatusLastUpdatedTime2() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
 
     Assert.assertEquals(segments, announced);
 
@@ -760,7 +760,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final DataSegment segment5 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version.minusHours(3).toString());
 
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4, segment5);
-    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments));
+    Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
 
     Assert.assertEquals(
         3,
@@ -845,7 +845,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void testKillBatchSizeThree() throws Exception
   {
     final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments, null);
+
     Assert.assertEquals(segments, announced);
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
