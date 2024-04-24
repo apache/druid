@@ -19,8 +19,14 @@
 
 package org.apache.druid.emitter.prometheus;
 
-import io.prometheus.client.Histogram;
+import io.prometheus.client.CollectorRegistry;
+import org.apache.druid.emitter.prometheus.metrics.Counter;
+import org.apache.druid.emitter.prometheus.metrics.Gauge;
+import org.apache.druid.emitter.prometheus.metrics.Histogram;
+import org.apache.druid.emitter.prometheus.metrics.Timer;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -28,67 +34,104 @@ import java.util.Map;
 
 public class MetricsTest
 {
-  @Test
-  public void testMetricsConfiguration()
-  {
-    Metrics metrics = new Metrics("test", null, true, true, null);
-    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    Assert.assertNotNull(dimensionsAndCollector);
-    String[] dimensions = dimensionsAndCollector.getDimensions();
-    Assert.assertEquals("dataSource", dimensions[0]);
-    Assert.assertEquals("druid_service", dimensions[1]);
-    Assert.assertEquals("host_name", dimensions[2]);
-    Assert.assertEquals("type", dimensions[3]);
-    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
-    Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+  private Metrics metrics;
 
-    DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
-    Assert.assertNotNull(d);
-    String[] dims = d.getDimensions();
-    Assert.assertEquals("druid_service", dims[0]);
-    Assert.assertEquals("host_name", dims[1]);
-    Assert.assertEquals("server", dims[2]);
-  }
-
-  @Test
-  public void testMetricsConfigurationWithExtraLabels()
+  @Before
+  public void setUp()
   {
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("extra_label", "value");
 
-    Metrics metrics = new Metrics("test_2", null, true, true, extraLabels);
-    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    Assert.assertNotNull(dimensionsAndCollector);
-    String[] dimensions = dimensionsAndCollector.getDimensions();
-    Assert.assertEquals("dataSource", dimensions[0]);
-    Assert.assertEquals("druid_service", dimensions[1]);
-    Assert.assertEquals("extra_label", dimensions[2]);
-    Assert.assertEquals("host_name", dimensions[3]);
-    Assert.assertEquals("type", dimensions[4]);
-    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
-    Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
-
-    DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
-    Assert.assertNotNull(d);
-    String[] dims = d.getDimensions();
-    Assert.assertEquals("druid_service", dims[0]);
-    Assert.assertEquals("extra_label", dims[1]);
-    Assert.assertEquals("host_name", dims[2]);
-    Assert.assertEquals("server", dims[3]);
+    CollectorRegistry.defaultRegistry.clear();
+    PrometheusEmitterConfig prometheusEmitterConfig = new PrometheusEmitterConfig(
+        null,
+        "test",
+        null,
+        null,
+        null,
+        true,
+        true,
+        null,
+        extraLabels,
+        null,
+        null
+    );
+    metrics = new Metrics(prometheusEmitterConfig);
   }
-  
+
+  @Test
+  public void testTimerMetricInitialization()
+  {
+    Timer timer = (Timer) metrics.getByName("query/time", "historical");
+
+    Assert.assertNotNull(timer);
+    Assert.assertEquals("dataSource", timer.getDimensions()[0]);
+    Assert.assertEquals("druid_service", timer.getDimensions()[1]);
+    Assert.assertEquals("extra_label", timer.getDimensions()[2]);
+    Assert.assertEquals("host_name", timer.getDimensions()[3]);
+    Assert.assertEquals("type", timer.getDimensions()[4]);
+    Assert.assertEquals(1000, timer.getConversionFactor(), 0.0);
+  }
+
+  @Test
+  public void testGaugeMetricInitialization()
+  {
+    Gauge gauge = (Gauge) metrics.getByName("segment/loadQueue/count", "historical");
+
+    Assert.assertNotNull(gauge);
+    Assert.assertEquals("druid_service", gauge.getDimensions()[0]);
+    Assert.assertEquals("extra_label", gauge.getDimensions()[1]);
+    Assert.assertEquals("host_name", gauge.getDimensions()[2]);
+    Assert.assertEquals("server", gauge.getDimensions()[3]);
+  }
+
+  @Test
+  public void testHistogramMetricInitialization()
+  {
+    Histogram histogram = (Histogram) metrics.getByName("sqlQuery/time", null);
+
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals("dataSource", histogram.getDimensions()[0]);
+    Assert.assertEquals("druid_service", histogram.getDimensions()[1]);
+    Assert.assertEquals("extra_label", histogram.getDimensions()[2]);
+    Assert.assertEquals("host_name", histogram.getDimensions()[3]);
+  }
+
+  @Test
+  public void testCounterMetricInitialization()
+  {
+    Counter counter = (Counter) metrics.getByName("query/count", null);
+
+    Assert.assertNotNull(counter);
+    Assert.assertEquals("druid_service", counter.getDimensions()[0]);
+    Assert.assertEquals("extra_label", counter.getDimensions()[1]);
+    Assert.assertEquals("host_name", counter.getDimensions()[2]);
+  }
+
   @Test
   public void testMetricsConfigurationWithBadExtraLabels()
   {
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("extra label", "value");
 
-    // Expect an exception thrown by Prometheus code due to invalid metric label
-    Exception exception = Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new Metrics("test_3", null, true, true, extraLabels);
+    CollectorRegistry.defaultRegistry.clear();
+    Exception exception = Assert.assertThrows(DruidException.class, () -> {
+      new PrometheusEmitterConfig(
+          null,
+          "test",
+          null,
+          null,
+          null,
+          true,
+          true,
+          null,
+          extraLabels,
+          null,
+          null
+      );
     });
 
-    String expectedMessage = "Invalid metric label name: extra label";
+    String expectedMessage = "Invalid metric label name [extra label]";
     String actualMessage = exception.getMessage();
 
     Assert.assertTrue(actualMessage.contains(expectedMessage));

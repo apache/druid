@@ -7,7 +7,9 @@
   "query/node/backpressure": { "dimensions" : ["server"], "type" : "timer", "help": "Seconds that the channel to this process has spent suspended due to backpressure."},
   "query/intervalChunk/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk. This metric is deprecated and will be removed in the future because interval chunking is deprecated."},
 
-  "query/segment/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to query individual segment. Includes time to page in the segment from disk."},
+  "query/segment/time" : { "dimensions" : [], "type" : "timer", "conversionFactor":  1000.0, "help": "Seconds taken to query individual segment. Includes time to page in the segment from disk."},
+  "sqlQuery/time": {"dimensions":  ["dataSource"], "type":  "histogram", "buckets":  [100, 250, 500, 1000, 5000], "help": "Milliseconds taken to complete SQL query"},
+  "sqlQuery/planningTimeMs": {"dimensions":  ["dataSource"], "type": "summary", "quantiles":  [0.5, 0.95, 0.99], "errors":  [0.01, 0.001, 0.0001], "ageSeconds": 100, "ageBuckets": 5, "help": "Milliseconds to plan a SQL query to native query."},
   "query/wait/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds spent waiting for a segment to be scanned."},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge", "help": "Number of segments in queue waiting to be scanned."},
   "segment/scan/active" : { "dimensions" : [], "type" : "gauge", "help": "Number of segments currently scanned."},
