@@ -75,10 +75,10 @@ public abstract class SingleChannelFrameProcessor<T> implements FrameProcessor<T
     return ReturnOrAwait.returnObject(doSimpleWork());
   }
 
-  public abstract T doSimpleWork() throws InterruptedException, IOException;
+  public abstract T doSimpleWork() throws IOException;
 
   @Override
-  public void cleanup() throws IOException
+  public void cleanup()
   {
   }
 }
