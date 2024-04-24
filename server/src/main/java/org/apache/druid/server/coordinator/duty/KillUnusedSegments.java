@@ -82,7 +82,7 @@ public class KillUnusedSegments implements CoordinatorDuty
    */
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
   private DateTime lastKillTime;
-  private final long bufferPeriod;
+  private final Duration bufferPeriod;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
@@ -105,7 +105,7 @@ public class KillUnusedSegments implements CoordinatorDuty
           durationToRetain
       );
     }
-    this.bufferPeriod = killConfig.getBufferPeriod().getMillis();
+    this.bufferPeriod = killConfig.getBufferPeriod();
 
     datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
 

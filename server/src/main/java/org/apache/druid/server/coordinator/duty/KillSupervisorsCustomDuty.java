@@ -35,7 +35,7 @@ import org.joda.time.Duration;
  * as {@link KillSupervisors} but uses a different configuration style as
  * detailed in {@link CoordinatorCustomDuty}.
  * <p>
- * This duty is only an example to demostrate the usage of coordinator custom
+ * This duty is only an example to demonstrate the usage of coordinator custom
  * duties. All production clusters should continue using {@link KillSupervisors}.
  */
 @UnstableApi

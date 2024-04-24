@@ -84,12 +84,12 @@ public class CoordinatorKillConfigs
       @JsonProperty("maxSegments") Integer killUnusedMaxSegments
   )
   {
-    this.pendingSegments = Configs.valueOrDefault(pendingSegments, MetadataCleanupConfig.STANDARD);
-    this.supervisors = Configs.valueOrDefault(supervisors, MetadataCleanupConfig.STANDARD);
-    this.audit = Configs.valueOrDefault(audit, MetadataCleanupConfig.STANDARD);
-    this.datasource = Configs.valueOrDefault(datasource, MetadataCleanupConfig.STANDARD);
-    this.rules = Configs.valueOrDefault(rules, MetadataCleanupConfig.STANDARD);
-    this.compaction = Configs.valueOrDefault(compaction, MetadataCleanupConfig.STANDARD);
+    this.pendingSegments = Configs.valueOrDefault(pendingSegments, MetadataCleanupConfig.DEFAULT);
+    this.supervisors = Configs.valueOrDefault(supervisors, MetadataCleanupConfig.DEFAULT);
+    this.audit = Configs.valueOrDefault(audit, MetadataCleanupConfig.DEFAULT);
+    this.datasource = Configs.valueOrDefault(datasource, MetadataCleanupConfig.DEFAULT);
+    this.rules = Configs.valueOrDefault(rules, MetadataCleanupConfig.DEFAULT);
+    this.compaction = Configs.valueOrDefault(compaction, MetadataCleanupConfig.DEFAULT);
 
     this.killUnusedEnabled = killUnusedEnabled;
     this.killUnusedPeriod = killUnusedPeriod;

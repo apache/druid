@@ -24,7 +24,7 @@ import org.joda.time.Duration;
 
 public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
 {
-  public static KillUnusedSegmentsConfig STANDARD
+  public static KillUnusedSegmentsConfig DEFAULT
       = new KillUnusedSegmentsConfig(null, null, null, null, null, null);
 
   private final int maxSegments;

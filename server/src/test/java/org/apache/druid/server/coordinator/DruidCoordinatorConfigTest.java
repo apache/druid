@@ -216,12 +216,12 @@ public class DruidCoordinatorConfigTest
     final CoordinatorKillConfigs killConfigs
         = deserializeFrom(new Properties(), "druid.coordinator.kill", CoordinatorKillConfigs.class);
 
-    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.audit());
-    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.supervisors());
-    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.compaction());
-    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.datasource());
-    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.rules());
-    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.pendingSegments());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.audit());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.supervisors());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.compaction());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.datasource());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.rules());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.pendingSegments());
   }
 
   @Test
