@@ -337,7 +337,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
                 if (lock == null) {
                   return false;
                 }
-                lock.assertNotRevoked(segmentId.getInterval());
+                lock.assertNotRevoked();
                 return true;
               }
             }

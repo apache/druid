@@ -88,7 +88,7 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
     if (lock == null) {
       return false;
     }
-    lock.assertNotRevoked(interval);
+    lock.assertNotRevoked();
     return true;
   }
 

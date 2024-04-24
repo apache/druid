@@ -463,7 +463,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 if (lock == null) {
                   return false;
                 }
-                lock.assertNotRevoked(segmentId.getInterval());
+                lock.assertNotRevoked();
                 return true;
               }
             }

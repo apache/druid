@@ -27,7 +27,7 @@ import java.io.IOException;
 
 public class TaskStatusTest
 {
-  final static String stackTrace =
+  static final String STACK_TRACE =
       "org.apache.druid.java.util.common.ISE: Lock for interval [2024-04-23T00:00:00.000Z/2024-04-24T00:00:00.000Z] was revoked.\n"
       + "\tat org.apache.druid.indexing.common.task.AbstractBatchIndexTask.tryTimeChunkLock(AbstractBatchIndexTask.java:465) ~[druid-indexing-service-2024.03.0-iap.jar:2024.03.0-iap]\n"
       + "\tat org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask.isReady(PartialHashSegmentGenerateTask.java:152) ~[druid-indexing-service-2024.03.0-iap.jar:2024.03.0-iap]\n"
@@ -42,7 +42,7 @@ public class TaskStatusTest
       + "\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628) [?:?]\n"
       + "\tat java.base/java.lang.Thread.run(Thread.java:829) [?:?]\n";
 
-  final static String expectedErrorMessage =
+  static final String EXPECTED_ERROR_MESSAGE =
       "org.apache.druid.java.util.common.ISE: Lock for interval [2024-04-23T00:00:00.000Z/2024-04-24T00:00:00.000Z] was revoked.\n"
       + "\tat org.apache.druid.indexing.common.task.AbstractBatchIndexTask.tryTimeChunkLock(AbstractBatchIndexTask.java:465) ~[druid-indexing-service-2024.03.0-iap.jar:2024.03.0-iap]\n"
       + "\tat org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask.isReady(PartialHashSegmentGenerateTask.java:152) ~[druid-indexing-service-2024.03.0-iap.jar:2024.03.0-iap]\n"
@@ -94,7 +94,7 @@ public class TaskStatusTest
   @Test
   public void testTruncation()
   {
-    final TaskStatus status = TaskStatus.failure("testId", stackTrace);
-    Assert.assertEquals(status.getErrorMsg(), expectedErrorMessage);
+    final TaskStatus status = TaskStatus.failure("testId", STACK_TRACE);
+    Assert.assertEquals(status.getErrorMsg(), EXPECTED_ERROR_MESSAGE);
   }
 }

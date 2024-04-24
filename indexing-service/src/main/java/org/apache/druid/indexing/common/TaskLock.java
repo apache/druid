@@ -67,13 +67,12 @@ public interface TaskLock
   /**
    * Checks if the lock is revoked and throws a {@link LockAcquisitionFailedException} if so.
    *
-   * @param interval The time interval for which the lock is acquired.
    * @throws LockAcquisitionFailedException if the lock is revoked.
    */
-  default void assertNotRevoked(Interval interval)
+  default void assertNotRevoked()
   {
     if (isRevoked()) {
-      throw new LockAcquisitionFailedException(interval);
+      throw new LockAcquisitionFailedException(getInterval());
     }
   }
 }
