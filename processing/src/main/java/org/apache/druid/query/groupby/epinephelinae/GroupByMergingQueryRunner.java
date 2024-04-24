@@ -30,9 +30,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,6 +49,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryWatcher;
@@ -55,12 +57,15 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryResources;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -73,8 +78,9 @@ import java.util.concurrent.TimeoutException;
  * using a buffer provided by {@code mergeBufferPool} and a parallel executor provided by {@code exec}. Outputs a
  * fully aggregated stream of {@link ResultRow} objects. Does not apply post-aggregators.
  *
- * The input {@code queryables} are expected to come from a {@link GroupByQueryEngine}. This code runs on data
- * servers, like Historicals.
+ * The input {@code queryables} are expected to come from a {@link GroupByQueryEngine}. This code primarily runs on data
+ * servers like Historicals and Realtime Tasks. This can also run on Brokers, if the query is operating on local
+ * data sources, like inlined data, where the broker itself acts like a data server
  *
  * This class has some resemblance to {@link GroupByRowProcessor}. See the javadoc of that class for a discussion of
  * similarities and differences.
@@ -90,10 +96,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final GroupByQueryConfig config;
   private final DruidProcessingConfig processingConfig;
   private final Iterable<QueryRunner<ResultRow>> queryables;
+  private final GroupByResourcesReservationPool groupByResourcesReservationPool;
   private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
-  private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
@@ -104,8 +110,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
+      GroupByResourcesReservationPool groupByResourcesReservationPool,
       int concurrencyHint,
-      BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
       String processingTmpDir
@@ -116,8 +122,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
+    this.groupByResourcesReservationPool = groupByResourcesReservationPool;
     this.concurrencyHint = concurrencyHint;
-    this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
@@ -185,11 +191,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
 
-              final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = getMergeBuffersHolder(
-                  numMergeBuffers,
-                  hasTimeout,
-                  timeoutAt
-              );
+              final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders =
+                  getMergeBuffersHolder(query, numMergeBuffers);
               resources.registerAll(mergeBufferHolders);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
@@ -309,41 +312,32 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     );
   }
 
-  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(
-      int numBuffers,
-      boolean hasTimeout,
-      long timeoutAt
-  )
+  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(GroupByQuery query, int numBuffers)
   {
-    try {
-      if (numBuffers > mergeBufferPool.maxSize()) {
-        throw new ResourceLimitExceededException(
-            "Query needs " + numBuffers + " merge buffers, but only "
-            + mergeBufferPool.maxSize() + " merge buffers were configured. "
-            + "Try raising druid.processing.numMergeBuffers."
-        );
-      }
-      final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolder;
-      // This will potentially block if there are no merge buffers left in the pool.
-      if (hasTimeout) {
-        final long timeout = timeoutAt - System.currentTimeMillis();
-        if (timeout <= 0) {
-          throw new QueryTimeoutException();
-        }
-        if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
-          throw new QueryTimeoutException("Cannot acquire enough merge buffers");
-        }
-      } else {
-        mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);
-      }
-      return mergeBufferHolder;
+    QueryResourceId queryResourceId = query.context().getQueryResourceId();
+    GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
+    if (resource == null) {
+      throw DruidException.defensive(
+          "Expected merge buffers to be reserved in the reservation pool for the query id [%s] however while executing "
+          + "the GroupByMergingQueryRunner, however none were provided.",
+          queryResourceId
+      );
     }
-    catch (QueryTimeoutException | ResourceLimitExceededException e) {
-      throw e;
+    if (numBuffers > resource.getNumMergingQueryRunnerMergeBuffers()) {
+      // Defensive exception, because we should have acquired the correct number of merge buffers beforehand, or
+      // thrown an RLE in the caller of the runner
+      throw DruidException.defensive(
+          "Query needs [%d] merge buffers for GroupByMergingQueryRunner, however only [%d] were provided.",
+          numBuffers,
+          resource.getNumMergingQueryRunnerMergeBuffers()
+      );
     }
-    catch (Exception e) {
-      throw new QueryInterruptedException(e);
+    final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = new ArrayList<>();
+    for (int i = 0; i < numBuffers; ++i) {
+      ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergingQueryRunnerMergeBuffer();
+      mergeBufferHolders.add(new ReferenceCountingResourceHolder<>(mergeBufferHolder.get(), mergeBufferHolder));
     }
+    return mergeBufferHolders;
   }
 
   private void waitForFutureCompletion(

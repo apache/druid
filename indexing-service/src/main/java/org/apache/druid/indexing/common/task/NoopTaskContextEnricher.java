@@ -17,13 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-public interface TaskReportFileWriter
+public class NoopTaskContextEnricher implements TaskContextEnricher
 {
-  void write(String taskId, TaskReport.ReportMap reports);
+  public static final String TYPE = "noop";
 
-  void setObjectMapper(ObjectMapper objectMapper);
+  @Override
+  public void enrichContext(Task task)
+  {
+  }
 }
