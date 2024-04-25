@@ -428,7 +428,7 @@ public class TaskQueue
               errorMessage = e.getMessage();
             } else {
               errorMessage = StringUtils.format(
-                  "Encountered error [%s] while waiting for task to be ready. See Overlord logs for more details.",
+                  "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
                   e.getMessage()
               );
             }

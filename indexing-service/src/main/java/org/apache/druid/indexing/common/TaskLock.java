@@ -74,7 +74,7 @@ public interface TaskLock
     if (isRevoked()) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-          .build("Lock for interval [%s] was revoked", getInterval());
+          .build("Lock of type[%s] for interval[%s] was revoked", getType(), getInterval());
     }
   }
 }
