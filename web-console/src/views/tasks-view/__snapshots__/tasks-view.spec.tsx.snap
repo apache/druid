@@ -216,6 +216,7 @@ exports[`TasksView matches snapshot 1`] = `
           "accessor": "task_id",
           "filterable": false,
           "id": "actions",
+          "sortable": false,
           "width": 70,
         },
       ]

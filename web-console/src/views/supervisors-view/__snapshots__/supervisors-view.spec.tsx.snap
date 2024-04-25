@@ -203,7 +203,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "id": "configured_tasks",
           "show": true,
           "sortable": false,
-          "width": 150,
+          "width": 130,
         },
         {
           "Cell": [Function],

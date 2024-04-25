@@ -147,6 +147,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "accessor": "id",
           "filterable": false,
           "id": "actions",
+          "sortable": false,
           "width": 70,
         },
       ]

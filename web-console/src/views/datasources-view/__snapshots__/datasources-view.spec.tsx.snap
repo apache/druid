@@ -337,6 +337,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "accessor": "datasource",
           "filterable": false,
           "id": "actions",
+          "sortable": false,
           "width": 70,
         },
       ]
