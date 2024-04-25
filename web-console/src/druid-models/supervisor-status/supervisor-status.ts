@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sum } from 'd3-array';
+import { max, sum } from 'd3-array';
 
 import type { NumberLike } from '../../utils';
 import { compact, deepGet } from '../../utils';
@@ -88,13 +88,23 @@ export interface RowStatsCounter {
   unparseable: number;
 }
 
-function aggregateRowStatsCounter(rowStats: RowStatsCounter[]): RowStatsCounter {
+function sumRowStatsCounter(rowStats: RowStatsCounter[]): RowStatsCounter {
   return {
     processed: sum(rowStats, d => d.processed),
     processedBytes: sum(rowStats, d => d.processedBytes),
     processedWithError: sum(rowStats, d => d.processedWithError),
     thrownAway: sum(rowStats, d => d.thrownAway),
     unparseable: sum(rowStats, d => d.unparseable),
+  };
+}
+
+function maxRowStatsCounter(rowStats: RowStatsCounter[]): RowStatsCounter {
+  return {
+    processed: max(rowStats, d => d.processed) ?? 0,
+    processedBytes: max(rowStats, d => d.processedBytes) ?? 0,
+    processedWithError: max(rowStats, d => d.processedWithError) ?? 0,
+    thrownAway: max(rowStats, d => d.thrownAway) ?? 0,
+    unparseable: max(rowStats, d => d.unparseable) ?? 0,
   };
 }
 
@@ -107,9 +117,9 @@ function getRowStatsCounter(rowStats: RowStats, key: RowStatsKey): RowStatsCount
 }
 
 export function getTotalSupervisorStats(stats: SupervisorStats, key: RowStatsKey): RowStatsCounter {
-  return aggregateRowStatsCounter(
-    compact(
-      Object.values(stats).flatMap(s => Object.values(s).map(rs => getRowStatsCounter(rs, key))),
+  return sumRowStatsCounter(
+    Object.values(stats).map(s =>
+      maxRowStatsCounter(compact(Object.values(s).map(rs => getRowStatsCounter(rs, key)))),
     ),
   );
 }

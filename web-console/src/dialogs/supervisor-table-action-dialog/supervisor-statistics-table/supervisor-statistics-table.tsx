@@ -31,14 +31,17 @@ import { deepGet, formatByteRate, formatBytes, formatInteger, formatRate } from 
 import './supervisor-statistics-table.scss';
 
 export interface SupervisorStatisticsTableRow {
+  groupId: string;
   taskId: string;
-  summary: RowStats;
+  rowStats: RowStats;
 }
 
 export function normalizeSupervisorStatisticsResults(
   data: SupervisorStats,
 ): SupervisorStatisticsTableRow[] {
-  return Object.values(data).flatMap(v => Object.keys(v).map(k => ({ taskId: k, summary: v[k] })));
+  return Object.entries(data).flatMap(([groupId, v]) =>
+    Object.entries(v).map(([taskId, rowStats]) => ({ groupId, taskId, rowStats })),
+  );
 }
 
 export interface SupervisorStatisticsTableProps {
@@ -82,10 +85,15 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
   function renderTable() {
     let columns: Column<SupervisorStatisticsTableRow>[] = [
       {
-        Header: 'Task ID',
-        id: 'task_id',
+        Header: 'Group ID',
+        accessor: 'groupId',
         className: 'padded',
-        accessor: d => d.taskId,
+        width: 100,
+      },
+      {
+        Header: 'Task ID',
+        accessor: 'taskId',
+        className: 'padded',
         width: 400,
       },
       {
@@ -93,16 +101,14 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
         id: 'total',
         className: 'padded',
         width: 200,
-        accessor: d => {
-          return deepGet(d, 'summary.totals.buildSegments') as RowStatsCounter;
-        },
+        accessor: 'rowStats.totals.buildSegments',
         Cell: c => renderCounters(c, false),
       },
     ];
 
     const movingAveragesBuildSegments = deepGet(
       supervisorStatisticsState.data as any,
-      '0.summary.movingAverages.buildSegments',
+      '0.rowStats.movingAverages.buildSegments',
     );
     if (movingAveragesBuildSegments) {
       columns = columns.concat(
@@ -114,7 +120,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
               id: interval,
               className: 'padded',
               width: 200,
-              accessor: `summary.movingAverages.buildSegments.${interval}`,
+              accessor: `rowStats.movingAverages.buildSegments.${interval}`,
               Cell: c => renderCounters(c, true),
             };
           }),
