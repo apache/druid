@@ -1467,6 +1467,8 @@ public class StreamAppenderator implements Appenderator
       if (baseSegmentToUpgradedSegments.containsKey(baseIdentifier)) {
         Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedSegments.get(baseIdentifier));
         relevantSegments.removeAll(abandonedSegments);
+        // If there are unabandoned segments associated with the sink, return early
+        // This may be the case if segments have been upgraded as the result of a concurrent replace
         if (!relevantSegments.isEmpty()) {
           return Futures.immediateFuture(null);
         }
