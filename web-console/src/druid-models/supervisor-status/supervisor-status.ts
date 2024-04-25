@@ -19,7 +19,7 @@
 import { max, sum } from 'd3-array';
 
 import type { NumberLike } from '../../utils';
-import { compact, deepGet } from '../../utils';
+import { deepGet, filterMap } from '../../utils';
 
 export type SupervisorOffsetMap = Record<string, NumberLike>;
 
@@ -116,10 +116,20 @@ function getRowStatsCounter(rowStats: RowStats, key: RowStatsKey): RowStatsCount
   }
 }
 
-export function getTotalSupervisorStats(stats: SupervisorStats, key: RowStatsKey): RowStatsCounter {
+export function getTotalSupervisorStats(
+  stats: SupervisorStats,
+  key: RowStatsKey,
+  activeTaskIds: string[] | undefined,
+): RowStatsCounter {
   return sumRowStatsCounter(
     Object.values(stats).map(s =>
-      maxRowStatsCounter(compact(Object.values(s).map(rs => getRowStatsCounter(rs, key)))),
+      maxRowStatsCounter(
+        filterMap(Object.entries(s), ([taskId, rs]) =>
+          !activeTaskIds || activeTaskIds.includes(taskId)
+            ? getRowStatsCounter(rs, key)
+            : undefined,
+        ),
+      ),
     ),
   );
 }

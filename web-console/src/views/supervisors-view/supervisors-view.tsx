@@ -50,6 +50,7 @@ import type {
   QueryWithContext,
   RowStatsKey,
   SupervisorStatus,
+  SupervisorStatusTask,
 } from '../../druid-models';
 import { getTotalSupervisorStats } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
@@ -806,9 +807,13 @@ export class SupervisorsView extends React.PureComponent<
             sortable: false,
             className: 'padded',
             accessor: 'stats',
-            Cell: ({ value }) => {
+            Cell: ({ value, original }) => {
               if (!value) return;
-              const c = getTotalSupervisorStats(value, statsKey);
+              const activeTaskIds: string[] | undefined = deepGet(
+                original,
+                'status.payload.activeTasks',
+              )?.map((t: SupervisorStatusTask) => t.id);
+              const c = getTotalSupervisorStats(value, statsKey, activeTaskIds);
               const seconds = getRowStatsKeySeconds(statsKey);
               const totalLabel = `Total over ${statsKey}: `;
               const bytes = c.processedBytes ? ` (${formatByteRate(c.processedBytes)})` : '';
