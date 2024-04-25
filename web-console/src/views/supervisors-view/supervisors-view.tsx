@@ -98,6 +98,8 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
 ];
 
 const ROW_STATS_KEYS: RowStatsKey[] = ['1m', '5m', '15m'];
+const STATUS_API_TIMEOUT = 5000;
+const STATS_API_TIMEOUT = 5000;
 
 function getRowStatsKeyTitle(key: RowStatsKey) {
   return `Rate over past ${pluralIfNeeded(parseInt(key, 10), 'minute')}`;
@@ -302,7 +304,7 @@ export class SupervisorsView extends React.PureComponent<
                     `/druid/indexer/v1/supervisor/${Api.encodePath(
                       supervisor.supervisor_id,
                     )}/status`,
-                    { cancelToken },
+                    { cancelToken, timeout: STATUS_API_TIMEOUT },
                   )
                 ).data;
               }
@@ -324,7 +326,7 @@ export class SupervisorsView extends React.PureComponent<
                     `/druid/indexer/v1/supervisor/${Api.encodePath(
                       supervisor.supervisor_id,
                     )}/stats`,
-                    { cancelToken },
+                    { cancelToken, timeout: STATS_API_TIMEOUT },
                   )
                 ).data;
               }
@@ -358,7 +360,7 @@ export class SupervisorsView extends React.PureComponent<
     const { capabilities } = this.props;
     const { visibleColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
-    const { page, pageSize, filtered, sorted } = this.lastTableState!;
+    const { page, pageSize, filtered, sorted } = this.lastTableState;
     this.supervisorQueryManager.runQuery({
       page,
       pageSize,
