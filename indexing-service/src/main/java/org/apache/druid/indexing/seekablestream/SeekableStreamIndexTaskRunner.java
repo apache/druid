@@ -1584,7 +1584,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     try {
-      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(upgradedPendingSegment);
+      ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
       return Response.ok().build();
     }
     catch (DruidException e) {

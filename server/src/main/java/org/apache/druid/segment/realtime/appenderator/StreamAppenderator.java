@@ -177,7 +177,6 @@ public class StreamAppenderator implements Appenderator
       = new ConcurrentHashMap<>();
   /**
    * Map from the id of an upgraded pending segment to the segment corresponding to its upgradedFromSegmentId.
-   * The set contains the base segment itself and its upgraded versions announced as a result of a concurrent replace.
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedSegmentToBaseSegment
       = new ConcurrentHashMap<>();
@@ -1117,9 +1116,7 @@ public class StreamAppenderator implements Appenderator
         return;
       }
 
-      final List<SegmentIdWithShardSpec> upgradedVersionsOfSegment
-          = ImmutableList.copyOf(baseSegmentToUpgradedSegments.get(baseId));
-
+      final Set<SegmentIdWithShardSpec> upgradedVersionsOfSegment = baseSegmentToUpgradedSegments.remove(baseId);
       for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
         final DataSegment newSegment = new DataSegment(
             newId.getDataSource(),
@@ -1133,6 +1130,7 @@ public class StreamAppenderator implements Appenderator
             baseSegment.getSize()
         );
         unannounceSegment(newSegment);
+        upgradedSegmentToBaseSegment.remove(newId);
       }
     }
   }
@@ -1147,35 +1145,26 @@ public class StreamAppenderator implements Appenderator
          .addData("identifier", segment.getId().toString())
          .emit();
     }
-    SegmentIdWithShardSpec id = SegmentIdWithShardSpec.fromDataSegment(segment);
-    SegmentIdWithShardSpec baseId = upgradedSegmentToBaseSegment.remove(id);
-    if (baseId == null) {
-      return;
-    }
-    baseSegmentToUpgradedSegments.get(baseId).remove(id);
-    if (baseSegmentToUpgradedSegments.get(baseId).isEmpty()) {
-      baseSegmentToUpgradedSegments.remove(baseId);
-    }
   }
 
-  public void registerNewVersionOfPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
+  public void registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
   {
     SegmentIdWithShardSpec basePendingSegment = idToPendingSegment.get(pendingSegmentRecord.getUpgradedFromSegmentId());
-    SegmentIdWithShardSpec newSegmentVersion = pendingSegmentRecord.getId();
+    SegmentIdWithShardSpec upgradedPendingSegment = pendingSegmentRecord.getId();
     if (!sinks.containsKey(basePendingSegment) || droppingSinks.contains(basePendingSegment)) {
       return;
     }
 
     // Update query mapping with SinkQuerySegmentWalker
-    ((SinkQuerySegmentWalker) texasRanger).registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
+    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(basePendingSegment, upgradedPendingSegment);
 
     // Announce segments
     final DataSegment baseSegment = sinks.get(basePendingSegment).getSegment();
-    final DataSegment newSegment = getUpgradedSegment(baseSegment, newSegmentVersion);
+    final DataSegment newSegment = getUpgradedSegment(baseSegment, upgradedPendingSegment);
 
     segmentAnnouncer.announceSegment(newSegment);
-    baseSegmentToUpgradedSegments.get(basePendingSegment).add(newSegmentVersion);
-    upgradedSegmentToBaseSegment.put(newSegmentVersion, basePendingSegment);
+    baseSegmentToUpgradedSegments.get(basePendingSegment).add(upgradedPendingSegment);
+    upgradedSegmentToBaseSegment.put(upgradedPendingSegment, basePendingSegment);
   }
 
   private DataSegment getUpgradedSegment(DataSegment baseSegment, SegmentIdWithShardSpec upgradedVersion)
@@ -1445,7 +1434,6 @@ public class StreamAppenderator implements Appenderator
     // The base segment is associated with itself in the maps to maintain all the upgraded ids of a sink.
     baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
     baseSegmentToUpgradedSegments.get(identifier).add(identifier);
-    upgradedSegmentToBaseSegment.put(identifier, identifier);
 
     sinkTimeline.add(
         sink.getInterval(),
