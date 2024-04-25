@@ -557,7 +557,15 @@ public class SqlBenchmark
           schemaInfo,
           DimensionsSpec.builder().setDimensions(columnSchemas).build(),
           TransformSpec.NONE,
-          IndexSpec.DEFAULT,
+          new IndexSpec(
+              null,
+              null,
+              getStringEncodingStrategy(),
+              null,
+              null,
+              null,
+              null
+          ),
           Granularities.NONE,
           rowsPerSegment
       );
