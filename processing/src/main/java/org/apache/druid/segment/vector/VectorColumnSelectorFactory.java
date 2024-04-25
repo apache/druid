@@ -20,7 +20,11 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -110,4 +114,22 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
   @Override
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
+
+  /**
+   * Returns a group-by selector. Allows columns to control their own grouping behavior.
+   *
+   * @param column                    column name
+   * @param deferExpressionDimensions active value of {@link org.apache.druid.query.groupby.GroupByQueryConfig#CTX_KEY_DEFER_EXPRESSION_DIMENSIONS}
+   */
+  default GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String column,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    return ColumnProcessors.makeVectorProcessor(
+        column,
+        GroupByVectorColumnProcessorFactory.instance(),
+        this
+    );
+  }
 }
