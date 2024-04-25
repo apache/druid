@@ -445,7 +445,8 @@ END AS "time_span"`,
     const { capabilities } = this.props;
     const { visibleColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
-    const { page, pageSize, filtered, sorted } = this.lastTableState!;
+    if (!this.lastTableState) return;
+    const { page, pageSize, filtered, sorted } = this.lastTableState;
     this.segmentsQueryManager.runQuery({
       page,
       pageSize,

@@ -295,6 +295,15 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         if (capabilities.hasOverlordAccess()) {
+          let showIssue = (message: string) => {
+            showIssue = () => {}; // Only show once
+            AppToaster.show({
+              icon: IconNames.ERROR,
+              intent: Intent.DANGER,
+              message,
+            });
+          };
+
           if (visibleColumns.shown('Running tasks', 'Aggregate lag', 'Recent errors')) {
             try {
               for (const supervisor of supervisors) {
@@ -309,11 +318,7 @@ export class SupervisorsView extends React.PureComponent<
                 ).data;
               }
             } catch (e) {
-              AppToaster.show({
-                icon: IconNames.ERROR,
-                intent: Intent.DANGER,
-                message: 'Could not get status',
-              });
+              showIssue('Could not get status');
             }
           }
 
@@ -331,11 +336,7 @@ export class SupervisorsView extends React.PureComponent<
                 ).data;
               }
             } catch (e) {
-              AppToaster.show({
-                icon: IconNames.ERROR,
-                intent: Intent.DANGER,
-                message: 'Could not get stats',
-              });
+              showIssue('Could not get stats');
             }
           }
         }
@@ -360,6 +361,7 @@ export class SupervisorsView extends React.PureComponent<
     const { capabilities } = this.props;
     const { visibleColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
+    if (!this.lastTableState) return;
     const { page, pageSize, filtered, sorted } = this.lastTableState;
     this.supervisorQueryManager.runQuery({
       page,
