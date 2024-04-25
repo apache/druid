@@ -616,13 +616,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
     final Object callerMetadata = metadata == null
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
-    final Set<DataSegment> upgradedSegments = new HashSet<>();
     return executor.submit(
       () -> {
         try {
-          RetryUtils.retry(
+          return RetryUtils.retry(
               () -> {
               try {
+                final Set<DataSegment> upgradedSegments = new HashSet<>();
                 final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
                 final SegmentPublishResult publishResult = publisher.publishSegments(
                     segmentsToBeOverwritten,
@@ -699,6 +699,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     throw new ISE("Failed to publish segments");
                   }
                 }
+                return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
               }
               catch (Exception e) {
                 // Must not remove segments here, we aren't sure if our transaction succeeded or not.
@@ -711,9 +712,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 Throwables.propagateIfPossible(e);
                 throw new RuntimeException(e);
               }
-              return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
             },
-              e -> (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")),
+              e -> (e != null && e.getMessage() != null
+                    && e.getMessage().contains("Failed to update the metadata Store."
+                                               + " The new start metadata is ahead of last commited end state.")),
               RetryUtils.DEFAULT_MAX_TRIES
           );
         }
@@ -725,7 +727,6 @@ public abstract class BaseAppenderatorDriver implements Closeable
           Throwables.propagateIfPossible(e);
           throw new RuntimeException(e);
         }
-        return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
       }
     );
   }
