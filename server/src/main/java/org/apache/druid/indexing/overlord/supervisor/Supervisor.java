@@ -95,7 +95,7 @@ public interface Supervisor
   /**
    * Used by AutoScaler to make scaling decisions.
    */
-  default long computeLagForAutoScaler()
+  default long computeLagForAutoScaler(boolean useDefaultImplementation)
   {
     LagStats lagStats = computeLagStats();
     return lagStats == null ? 0L : lagStats.getTotalLag();

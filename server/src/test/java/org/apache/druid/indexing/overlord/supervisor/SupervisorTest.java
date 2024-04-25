@@ -32,9 +32,11 @@ public class SupervisorTest
     Supervisor supervisor = Mockito.spy(Supervisor.class);
 
     Mockito.when(supervisor.computeLagStats()).thenReturn(new LagStats(1, 2, 3));
-    Assert.assertEquals(2, supervisor.computeLagForAutoScaler());
+    Assert.assertEquals(2, supervisor.computeLagForAutoScaler(false));
+    Assert.assertEquals(2, supervisor.computeLagForAutoScaler(true));
 
     Mockito.when(supervisor.computeLagStats()).thenReturn(null);
-    Assert.assertEquals(0, supervisor.computeLagForAutoScaler());
+    Assert.assertEquals(0, supervisor.computeLagForAutoScaler(false));
+    Assert.assertEquals(0, supervisor.computeLagForAutoScaler(true));
   }
 }

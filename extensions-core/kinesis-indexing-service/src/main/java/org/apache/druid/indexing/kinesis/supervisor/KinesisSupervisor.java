@@ -428,8 +428,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  public long computeLagForAutoScaler()
+  public long computeLagForAutoScaler(boolean useDefault)
   {
+    if (useDefault) {
+      return super.computeLagForAutoScaler(true);
+    }
+
     LagStats lagStats = computeLagStats();
     return lagStats == null ? 0L : lagStats.getMaxLag();
   }

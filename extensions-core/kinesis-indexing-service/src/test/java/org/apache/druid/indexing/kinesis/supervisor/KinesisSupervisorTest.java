@@ -57,6 +57,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
@@ -4206,6 +4207,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
             )),
         supervisorSpec.getInputSourceResources()
     );
+  }
+
+  @Test
+  public void testComputeLagForAutoscaler()
+  {
+    KinesisSupervisor kinesisSupervisor = EasyMock.partialMockBuilder(KinesisSupervisor.class)
+                                                  .addMockedMethod("computeLagStats").createMock();
+    EasyMock.expect(kinesisSupervisor.computeLagStats())
+            .andReturn(new LagStats(1, 2, 3)).anyTimes();
+    EasyMock.replay(kinesisSupervisor);
+
+    Assert.assertEquals(kinesisSupervisor.computeLagForAutoScaler(true), 1);
+    Assert.assertEquals(kinesisSupervisor.computeLagForAutoScaler(false), 2);
   }
 
   private List<Task> testShardSplitPhaseOne() throws Exception

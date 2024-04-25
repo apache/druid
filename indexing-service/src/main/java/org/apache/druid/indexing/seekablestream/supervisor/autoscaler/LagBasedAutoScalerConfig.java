@@ -45,6 +45,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
+  private final boolean useDefaultTotalLag;
 
   @JsonCreator
   public LagBasedAutoScalerConfig(
@@ -61,7 +62,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleInStep") Integer scaleInStep,
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
-          @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis
+          @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
+          @Nullable @JsonProperty("useDefaultTotalLag") Boolean useDefaultTotalLag
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -73,6 +75,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleInThreshold = scaleInThreshold != null ? scaleInThreshold : 1000000;
     this.triggerScaleOutFractionThreshold = triggerScaleOutFractionThreshold != null ? triggerScaleOutFractionThreshold : 0.3;
     this.triggerScaleInFractionThreshold = triggerScaleInFractionThreshold != null ? triggerScaleInFractionThreshold : 0.9;
+    this.useDefaultTotalLag = useDefaultTotalLag != null ? useDefaultTotalLag : true;
 
     // Only do taskCountMax and taskCountMin check when autoscaler is enabled. So that users left autoConfig empty{} will not throw any exception and autoscaler is disabled.
     // If autoscaler is disabled, no matter what configs are set, they are not used.
@@ -186,6 +189,12 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     return minTriggerScaleActionFrequencyMillis;
   }
 
+  @JsonProperty
+  public boolean isUseDefaultTotalLag()
+  {
+    return useDefaultTotalLag;
+  }
+
   @Override
   public String toString()
   {
@@ -204,6 +213,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
             ", scaleInStep=" + scaleInStep +
             ", scaleOutStep=" + scaleOutStep +
+           ", useDefaultTotalLag=" + useDefaultTotalLag +
             '}';
   }
 }
