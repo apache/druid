@@ -40,7 +40,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
-@Test(groups = {TestNGGroup.APPEND_INGESTION})
+@Test(groups = {TestNGGroup.APPEND_INGESTION, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_SMQ_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
 {

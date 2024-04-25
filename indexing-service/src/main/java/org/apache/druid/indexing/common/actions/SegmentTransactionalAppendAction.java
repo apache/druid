@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
@@ -65,26 +66,30 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
+  @Nullable
+  private final SegmentSchemaMapping segmentSchemaMapping;
 
-  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments)
+  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)
   {
-    return new SegmentTransactionalAppendAction(segments, null, null);
+    return new SegmentTransactionalAppendAction(segments, null, null, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
       Set<DataSegment> segments,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata);
+    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = segments;
@@ -95,6 +100,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         || (startMetadata != null && endMetadata == null)) {
       throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
     }
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
@@ -115,6 +121,13 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public DataSourceMetadata getEndMetadata()
   {
     return endMetadata;
+  }
+
+  @JsonProperty
+  @Nullable
+  public SegmentSchemaMapping getSegmentSchemaMapping()
+  {
+    return segmentSchemaMapping;
   }
 
   @Override
@@ -158,7 +171,8 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
           segmentToReplaceLock,
-          taskAllocatorId
+          taskAllocatorId,
+          segmentSchemaMapping
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
@@ -166,7 +180,8 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           segmentToReplaceLock,
           startMetadata,
           endMetadata,
-          taskAllocatorId
+          taskAllocatorId,
+          segmentSchemaMapping
       );
     }
 

@@ -66,6 +66,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -73,6 +74,7 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -208,7 +210,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   private Long segmentsRead;
   private Long segmentsPublished;
   private final boolean isCompactionTask;
-
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -358,7 +359,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         getGroupId(),
         baseSubtaskSpecName,
         ingestionSchema,
-        getContext()
+        getContext(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -439,7 +441,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         ingestionSchema.getDataSchema(),
         ioConfigs,
         ingestionSchema.getTuningConfig(),
-        getContext()
+        getContext(),
+        toolbox.getJsonMapper(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -1147,11 +1151,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
+          if (report.getSegmentSchemaMapping() != null) {
+            segmentSchemaMapping.merge(report.getSegmentSchemaMapping());
+          }
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,
@@ -1162,7 +1171,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         toolbox,
         ingestionSchema
     );
-
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
@@ -1189,16 +1197,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping).isSuccess();
 
     if (published) {
-      LOG.info("Published [%d] segments", newSegments.size());
+      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), segmentSchemaMapping.getSchemaCount());
 
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());

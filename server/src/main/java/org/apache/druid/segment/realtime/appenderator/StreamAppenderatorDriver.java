@@ -338,7 +338,9 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         return Futures.immediateFuture(
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                segmentsAndCommitMetadata.getUpgradedSegments()
             )
         );
       }
@@ -382,14 +384,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                           log.warn("Slow segment handoff! Time taken for [%d] segments is %d ms",
                                    segments.size(), handoffTotalTime);
                         }
-                        SegmentsAndCommitMetadata retVal = new SegmentsAndCommitMetadata(
-                            segments,
-                            ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                        resultFuture.set(
+                            new SegmentsAndCommitMetadata(
+                                segments,
+                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                                upgradedSegments
+                            )
                         );
-                        if (upgradedSegments != null) {
-                          retVal = retVal.withUpgradedSegments(upgradedSegments);
-                        }
-                        resultFuture.set(retVal);
                       }
                     }
 

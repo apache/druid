@@ -562,7 +562,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
           final Object metadata = segmentsAndCommitMetadata.getCommitMetadata();
           return new SegmentsAndCommitMetadata(
               segmentsAndCommitMetadata.getSegments(),
-              metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+              metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+              segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+              segmentsAndCommitMetadata.getUpgradedSegments()
           );
         },
         MoreExecutors.directExecutor()
@@ -626,7 +628,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsToBeOverwritten,
                     ourSegments,
                     outputSegmentsAnnotateFunction,
-                    callerMetadata
+                    callerMetadata,
+                    segmentsAndCommitMetadata.getSegmentSchemaMapping()
                 );
                 if (publishResult.isSuccess()) {
                   log.info(
@@ -642,6 +645,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     log.info("Published [%d] upgraded segments.", upgradedSegments.size());
                     log.infoSegments(upgradedSegments, "Upgraded segments");
                   }
+                  log.info("Published segment schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
                 } else {
                   // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
                   // now after all, for two possible reasons:
@@ -669,6 +673,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                         segmentsAndCommitMetadata.getSegments(),
                         "Could not publish segments"
                     );
+                    log.info("Could not publish segment and schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
 
                     // Clean up pushed segments if they are physically disjoint from the published ones (this means
                     // they were probably pushed by a replica, and with the unique paths option).
@@ -682,6 +687,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     }
                   } else {
                     log.errorSegments(ourSegments, "Failed to publish segments");
+                    log.error("Failed to publish segments and corresponding schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
                     if (publishResult.getErrorMsg() != null && publishResult.getErrorMsg().contains(("Failed to update the metadata Store. The new start metadata is ahead of last commited end state."))) {
                       throw new ISE(publishResult.getErrorMsg());
                     }
@@ -701,6 +707,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsAndCommitMetadata.getSegments(),
                     "Failed publish, not removing segments"
                 );
+                log.warn("Failed to publish segments and corresponding schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
                 Throwables.propagateIfPossible(e);
                 throw new RuntimeException(e);
               }

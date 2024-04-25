@@ -35,6 +35,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -55,7 +58,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SqlSegmentsMetadataManagerTest
+public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTestBase
 {
   private static class DS
   {
@@ -117,14 +120,26 @@ public class SqlSegmentsMetadataManagerTest
   @Before
   public void setUp()
   {
-    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.millis(1));
+    config.setPollDuration(Period.seconds(3));
+
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        jsonMapper,
+        connector
+    );
+
+    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
+
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         JSON_MAPPER,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        connector
+        connector,
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     sqlSegmentsMetadataManager.start();
 
@@ -134,6 +149,7 @@ public class SqlSegmentsMetadataManagerTest
         connector
     );
 
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
   }
 
@@ -1301,7 +1317,9 @@ public class SqlSegmentsMetadataManagerTest
         JSON_MAPPER,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     sqlSegmentsMetadataManager.start();
 

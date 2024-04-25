@@ -38,6 +38,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -53,6 +56,8 @@ public class TaskActionTestKit extends ExternalResource
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskActionToolbox taskActionToolbox;
+  private SegmentSchemaManager segmentSchemaManager;
+  private SegmentSchemaCache segmentSchemaCache;
 
   public TaskLockbox getTaskLockbox()
   {
@@ -83,10 +88,13 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(metadataStorageTablesConfig)
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
+    segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         metadataStorageTablesConfig,
-        testDerbyConnector
+        testDerbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -96,11 +104,14 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig),
-        testDerbyConnector
+        testDerbyConnector,
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     final ServiceEmitter noopEmitter = new NoopServiceEmitter();
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
@@ -135,6 +146,7 @@ public class TaskActionTestKit extends ExternalResource
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();
+    testDerbyConnector.createSegmentSchemasTable();
     testDerbyConnector.createSegmentTable();
     testDerbyConnector.createRulesTable();
     testDerbyConnector.createConfigTable();

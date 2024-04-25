@@ -416,13 +416,13 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) ->
         SegmentPublishResult.ok(Collections.emptySet());
   }
 
   private TransactionalSegmentPublisher makeUpgradingPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) -> {
       Set<DataSegment> allSegments = new HashSet<>(segmentsToPublish);
       int id = 0;
       for (DataSegment segment : segmentsToPublish) {
@@ -445,7 +445,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) -> {
       final RuntimeException exception = new RuntimeException("test");
       if (failWithException) {
         throw exception;

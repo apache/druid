@@ -32,9 +32,11 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -66,25 +68,38 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
    */
   private final Set<DataSegment> segments;
 
+  @Nullable
+  private final SegmentSchemaMapping segmentSchemaMapping;
+
   public static SegmentTransactionalReplaceAction create(
-      Set<DataSegment> segmentsToPublish
+      Set<DataSegment> segmentsToPublish,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToPublish);
+    return new SegmentTransactionalReplaceAction(segmentsToPublish, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  @Nullable
+  public SegmentSchemaMapping getSegmentSchemaMapping()
+  {
+    return segmentSchemaMapping;
   }
 
   @Override
@@ -115,7 +130,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask)
+                               .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(
