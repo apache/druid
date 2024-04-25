@@ -1523,4 +1523,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
     }
   }
+
+  @Override
+  public List<String> getLookupsToLoad()
+  {
+    return Collections.emptyList();
+  }
 }

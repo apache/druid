@@ -1737,6 +1737,20 @@ public class CompactionTaskTest
     Assert.assertNull(chooseFinestGranularityHelper(input));
   }
 
+  @Test
+  public void testGetLookupsToLoad()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask task = builder
+        .interval(Intervals.of("2000-01-01/2000-01-02"))
+        .build();
+    Assert.assertTrue(task.getLookupsToLoad().isEmpty());
+  }
+
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
   {
     SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
