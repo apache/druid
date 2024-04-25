@@ -74,11 +74,13 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -86,6 +88,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.hamcrest.MatcherAssert;
@@ -1548,9 +1554,18 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetActiveRealtimeSequencePrefixes()
+  public void testRegisterNewVersionOfPendingSegment()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+
+    Capture<PendingSegmentRecord> captured0 = Capture.newInstance(CaptureType.FIRST);
+    Capture<PendingSegmentRecord> captured1 = Capture.newInstance(CaptureType.FIRST);
+    EasyMock.expect(
+        indexTaskClient.registerNewVersionOfPendingSegmentAsync(EasyMock.eq("task0"), EasyMock.capture(captured0))
+    ).andReturn(Futures.immediateFuture(true));
+    EasyMock.expect(
+        indexTaskClient.registerNewVersionOfPendingSegmentAsync(EasyMock.eq("task2"), EasyMock.capture(captured1))
+    ).andReturn(Futures.immediateFuture(true));
 
     replayAll();
 
@@ -1559,34 +1574,63 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // Spin off two active tasks with each task serving one partition.
     supervisor.getIoConfig().setTaskCount(3);
     supervisor.start();
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+
+    final SeekableStreamSupervisor.TaskGroup taskGroup0 = supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition("0"),
         ImmutableMap.of("0", "5"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task0"),
+        ImmutableSet.of()
+    );
+    final SeekableStreamSupervisor.TaskGroup taskGroup1 = supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "6"),
         Optional.absent(),
         Optional.absent(),
         ImmutableSet.of("task1"),
         ImmutableSet.of()
     );
-
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition("1"),
-        ImmutableMap.of("1", "6"),
+    final SeekableStreamSupervisor.TaskGroup taskGroup2 = supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition("2"),
+        ImmutableMap.of("2", "100"),
         Optional.absent(),
         Optional.absent(),
         ImmutableSet.of("task2"),
         ImmutableSet.of()
     );
 
-    supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition("2"),
-        ImmutableMap.of("2", "100"),
-        Optional.absent(),
-        Optional.absent(),
-        ImmutableSet.of("task3"),
-        ImmutableSet.of()
+    final PendingSegmentRecord pendingSegmentRecord0 = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "DS",
+            Intervals.of("2024/2025"),
+            "2024",
+            new NumberedShardSpec(1, 0)
+        ),
+        taskGroup0.getBaseSequenceName(),
+        "prevId0",
+        "someAppendedSegment0",
+        taskGroup0.getBaseSequenceName()
+    );
+    final PendingSegmentRecord pendingSegmentRecord1 = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "DS",
+            Intervals.of("2024/2025"),
+            "2024",
+            new NumberedShardSpec(2, 0)
+        ),
+        taskGroup2.getBaseSequenceName(),
+        "prevId1",
+        "someAppendedSegment1",
+        taskGroup2.getBaseSequenceName()
     );
 
-    Assert.assertEquals(3, supervisor.getActiveRealtimeSequencePrefixes().size());
+    supervisor.registerNewVersionOfPendingSegment(pendingSegmentRecord0);
+    supervisor.registerNewVersionOfPendingSegment(pendingSegmentRecord1);
+
+    Assert.assertEquals(pendingSegmentRecord0, captured0.getValue());
+    Assert.assertEquals(pendingSegmentRecord1, captured1.getValue());
+    verifyAll();
   }
 
   @Test

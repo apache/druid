@@ -1242,7 +1242,7 @@ public class TaskLockbox
               idsInSameGroup.remove(task.getId());
               if (idsInSameGroup.isEmpty()) {
                 final int pendingSegmentsDeleted
-                    = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(taskAllocatorId);
+                    = metadataStorageCoordinator.deletePendingSegmentsForTaskAllocatorId(taskAllocatorId);
                 log.info(
                     "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
                     pendingSegmentsDeleted, taskAllocatorId
