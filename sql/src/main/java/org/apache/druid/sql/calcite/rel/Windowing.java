@@ -240,11 +240,16 @@ public class Windowing
 
     // Apply windowProject, if present.
     if (partialQuery.getWindowProject() != null) {
-      // We know windowProject is a mapping due to the isMapping() check in DruidRules. Check for null anyway,
-      // as defensive programming.
+      // We know windowProject is a mapping due to the isMapping() check in DruidRules.
+      // check anyway as defensive programming.
+      Preconditions.checkArgument(partialQuery.getWindowProject().isMapping());
       final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
-          partialQuery.getWindowProject().getMapping(),
-          "mapping for windowProject[%s]", partialQuery.getWindowProject()
+          Project.getPartialMapping(
+              partialQuery.getWindowProject().getInput().getRowType().getFieldCount(),
+              partialQuery.getWindowProject().getProjects()
+          ),
+          "mapping for windowProject[%s]",
+          partialQuery.getWindowProject()
       );
 
       final List<String> windowProjectOutputColumns = new ArrayList<>();

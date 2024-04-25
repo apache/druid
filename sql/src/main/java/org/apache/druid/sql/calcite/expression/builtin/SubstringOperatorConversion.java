@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.segment.column.RowSignature;
@@ -45,7 +46,7 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("SUBSTRING")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeInference(ReturnTypes.ARG0)
+      .returnTypeInference(ReturnTypes.ARG0.andThen(SqlTypeTransforms.FORCE_NULLABLE))
       .requiredOperandCount(2)
       .build();
 

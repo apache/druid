@@ -124,6 +124,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.InvalidFieldFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -1583,9 +1584,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.APPEND)) {
-      return SegmentTransactionalAppendAction.forSegments(segments);
+      return SegmentTransactionalAppendAction.forSegments(segments, null);
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
-      return SegmentTransactionalInsertAction.appendAction(segments, null, null);
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }
@@ -1597,9 +1598,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.REPLACE)) {
-      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones);
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, null);
     } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
-      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones);
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
     }
@@ -3159,17 +3160,17 @@ public class ControllerImpl implements Controller
                                   .build(),
           task.getQuerySpec().getColumnMappings()
       );
-    } else if (workerErrorReport.getFault() instanceof InvalidFieldException) {
-      InvalidFieldException ife = (InvalidFieldException) workerErrorReport.getFault();
+    } else if (workerErrorReport.getFault() instanceof InvalidFieldFault) {
+      InvalidFieldFault iff = (InvalidFieldFault) workerErrorReport.getFault();
       return MSQErrorReport.fromException(
           workerErrorReport.getTaskId(),
           workerErrorReport.getHost(),
           workerErrorReport.getStageNumber(),
           InvalidFieldException.builder()
-                               .source(ife.getSource())
-                               .rowNumber(ife.getRowNumber())
-                               .column(ife.getColumn())
-                               .errorMsg(ife.getErrorMsg())
+                               .source(iff.getSource())
+                               .rowNumber(iff.getRowNumber())
+                               .column(iff.getColumn())
+                               .errorMsg(iff.getErrorMsg())
                                .build(),
           task.getQuerySpec().getColumnMappings()
       );

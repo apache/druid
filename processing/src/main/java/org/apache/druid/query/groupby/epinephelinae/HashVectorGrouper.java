@@ -205,6 +205,7 @@ public class HashVectorGrouper implements VectorGrouper
     }
 
     this.hashTable = createTable(buffer, tableStart, numBuckets);
+    this.aggregators.reset();
   }
 
   @Override
@@ -256,7 +257,7 @@ public class HashVectorGrouper implements VectorGrouper
   @Override
   public void close()
   {
-    aggregators.close();
+    aggregators.reset();
   }
 
   @VisibleForTesting
