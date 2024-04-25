@@ -105,7 +105,8 @@ public class RealtimeishTask extends AbstractTask
                        .version(lock1.getVersion())
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
     toolbox.getTaskActionClient().submit(firstSegmentInsertAction);
 
@@ -125,7 +126,8 @@ public class RealtimeishTask extends AbstractTask
                        .version(lock2.getVersion())
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
     toolbox.getTaskActionClient().submit(secondSegmentInsertAction);
 

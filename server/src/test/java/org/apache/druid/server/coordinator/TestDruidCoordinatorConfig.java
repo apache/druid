@@ -48,6 +48,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration httpLoadQueuePeonHostTimeout;
   private final int httpLoadQueuePeonBatchSize;
   private final Duration coordinatorKillBufferPeriod;
+  private final Duration segmentSchemaKillPeriod;
+  private final Duration segmentSchemaKillDurationToRetain;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -73,7 +75,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration httpLoadQueuePeonHostTimeout,
       int httpLoadQueuePeonBatchSize,
       int curatorLoadQueuePeonNumCallbackThreads,
-      Duration coordinatorKillBufferPeriod
+      Duration coordinatorKillBufferPeriod,
+      Duration segmentSchemaKillPeriod,
+      Duration segmentSchemaKillDurationToRetain
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -100,6 +104,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.httpLoadQueuePeonBatchSize = httpLoadQueuePeonBatchSize;
     this.curatorLoadQueuePeonNumCallbackThreads = curatorLoadQueuePeonNumCallbackThreads;
     this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
+    this.segmentSchemaKillPeriod = segmentSchemaKillPeriod;
+    this.segmentSchemaKillDurationToRetain = segmentSchemaKillDurationToRetain;
   }
 
   @Override
@@ -283,6 +289,24 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isSegmentSchemaKillEnabled()
+  {
+    return true;
+  }
+
+  @Override
+  public Duration getSegmentSchemaKillPeriod()
+  {
+    return segmentSchemaKillPeriod;
+  }
+
+  @Override
+  public Duration getSegmentSchemaKillDurationToRetain()
+  {
+    return segmentSchemaKillDurationToRetain;
+  }
+
+  @Override
   public Duration getCoordinatorKillBufferPeriod()
   {
     return coordinatorKillBufferPeriod;
@@ -313,7 +337,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final int DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE = 1;
     private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
     private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
-
+    private static final Duration DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_PERIOD = Period.parse("PT1H").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_DURATION_TO_RETAIN = Period.parse("PT6H").toStandardDuration();
 
     private Duration coordinatorStartDelay;
     private Duration coordinatorPeriod;
@@ -339,6 +364,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
     private Duration coordinatorKillBufferPeriod;
+    private Duration segmentSchemaKillPeriod;
+    private Duration segmentSchemaKillDurationToRetain;
 
     public Builder()
     {
@@ -488,6 +515,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
+    public Builder withSegmentSchemaKillPeriod(Duration segmentSchemaKillPeriod)
+    {
+      this.segmentSchemaKillPeriod = segmentSchemaKillPeriod;
+      return this;
+    }
+
+    public Builder withSegmentSchemaKillDurationToRetain(Duration segmentSchemaKillDurationToRetain)
+    {
+      this.segmentSchemaKillDurationToRetain = segmentSchemaKillDurationToRetain;
+      return this;
+    }
+
     public TestDruidCoordinatorConfig build()
     {
       return new TestDruidCoordinatorConfig(
@@ -517,9 +556,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           httpLoadQueuePeonBatchSize == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE : httpLoadQueuePeonBatchSize,
           curatorLoadQueuePeonNumCallbackThreads == null ? DEFAULT_CURATOR_LOAD_QUEUE_PEON_NUM_CALLBACK_THREADS
                                                          : curatorLoadQueuePeonNumCallbackThreads,
-          coordinatorKillBufferPeriod == null ? DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD : coordinatorKillBufferPeriod
+          coordinatorKillBufferPeriod == null ? DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD : coordinatorKillBufferPeriod,
+          segmentSchemaKillPeriod == null ? DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_PERIOD : segmentSchemaKillPeriod,
+          segmentSchemaKillDurationToRetain == null ? DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_DURATION_TO_RETAIN : segmentSchemaKillDurationToRetain
       );
     }
-
   }
 }
