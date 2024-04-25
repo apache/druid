@@ -104,12 +104,11 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
-    MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+    final MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration()
     );
-
     KillUnreferencedSegmentSchemaDuty duty =
         new TestKillUnreferencedSegmentSchemasDuty(cleanupConfig, segmentSchemaManager, dateTimes);
 

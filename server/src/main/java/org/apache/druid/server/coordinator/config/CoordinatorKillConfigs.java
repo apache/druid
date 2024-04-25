@@ -48,7 +48,7 @@ public class CoordinatorKillConfigs
   private final MetadataCleanupConfig pendingSegments;
 
   @JsonProperty("segmentSchema")
-  private final KillUnusedSchemasConfig segmentSchema;
+  private final MetadataCleanupConfig segmentSchema;
 
   // Raw configs for killing unused segments
   // These have been added as fields because KillUnusedSegmentsConfig is initialized lazily
@@ -78,7 +78,7 @@ public class CoordinatorKillConfigs
       @JsonProperty("datasource") MetadataCleanupConfig datasource,
       @JsonProperty("rule") MetadataCleanupConfig rules,
       @JsonProperty("compaction") MetadataCleanupConfig compaction,
-      @JsonProperty("segmentSchema") KillUnusedSchemasConfig segmentSchema,
+      @JsonProperty("segmentSchema") MetadataCleanupConfig segmentSchema,
       // Configs for cleanup of unused segments
       @JsonProperty("on") Boolean killUnusedEnabled,
       @JsonProperty("period") Duration killUnusedPeriod,
@@ -94,7 +94,7 @@ public class CoordinatorKillConfigs
     this.datasource = Configs.valueOrDefault(datasource, MetadataCleanupConfig.DEFAULT);
     this.rules = Configs.valueOrDefault(rules, MetadataCleanupConfig.DEFAULT);
     this.compaction = Configs.valueOrDefault(compaction, MetadataCleanupConfig.DEFAULT);
-    this.segmentSchema = Configs.valueOrDefault(segmentSchema, KillUnusedSchemasConfig.DEFAULT);
+    this.segmentSchema = Configs.valueOrDefault(segmentSchema, MetadataCleanupConfig.DEFAULT);
 
     this.killUnusedEnabled = killUnusedEnabled;
     this.killUnusedPeriod = killUnusedPeriod;
