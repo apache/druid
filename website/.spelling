@@ -53,6 +53,7 @@ CORS
 CNF
 CPUs
 CSVs
+CentralizedDatasourceSchema
 Ceph
 CloudWatch
 ColumnDescriptor
@@ -1508,6 +1509,7 @@ array_overlap
 array_prepend
 array_slice
 array_to_string
+scalar_in_array
 asin
 atan
 atan2

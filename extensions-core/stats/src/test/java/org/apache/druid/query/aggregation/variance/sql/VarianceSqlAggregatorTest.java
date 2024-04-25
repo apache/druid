@@ -41,6 +41,7 @@ import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregat
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorCollector;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.VarianceSerde;
+import org.apache.druid.query.aggregation.variance.sql.VarianceSqlAggregatorTest.VarianceComponentSupplier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -57,8 +58,11 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -66,61 +70,70 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+@SqlTestFramework.SqlTestFrameWorkModule(VarianceComponentSupplier.class)
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  public static class VarianceComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new DruidStatsModule());
-  }
+    public VarianceComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    ComplexMetrics.registerSerde(VarianceSerde.TYPE_NAME, new VarianceSerde());
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new DruidStatsModule());
+    }
 
-    final QueryableIndex index =
-        IndexBuilder.create(CalciteTests.getJsonMapper().registerModules(new DruidStatsModule().getJacksonModules()))
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withDimensionsSpec(
-                                new DimensionsSpec(
-                                    ImmutableList.<DimensionSchema>builder()
-                                                 .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                                                 .add(new DoubleDimensionSchema("d1"))
-                                                 .add(new FloatDimensionSchema("f1"))
-                                                 .add(new LongDimensionSchema("l1"))
-                                                 .build()
-                                )
-                            )
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt"),
-                                new DoubleSumAggregatorFactory("m1", "m1"),
-                                new VarianceAggregatorFactory("var1", "m1", null, null)
-                            )
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
-                    .buildMMappedIndex();
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      ComplexMetrics.registerSerde(VarianceSerde.TYPE_NAME, new VarianceSerde());
 
-    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE3)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
+      final QueryableIndex index =
+          IndexBuilder.create(CalciteTests.getJsonMapper().registerModules(new DruidStatsModule().getJacksonModules()))
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withDimensionsSpec(
+                                  new DimensionsSpec(
+                                      ImmutableList.<DimensionSchema>builder()
+                                                   .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                                                   .add(new DoubleDimensionSchema("d1"))
+                                                   .add(new FloatDimensionSchema("f1"))
+                                                   .add(new LongDimensionSchema("l1"))
+                                                   .build()
+                                  )
+                              )
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt"),
+                                  new DoubleSumAggregatorFactory("m1", "m1"),
+                                  new VarianceAggregatorFactory("var1", "m1", null, null)
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
+                      .buildMMappedIndex();
+
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(CalciteTests.DATASOURCE3)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   public void addToHolder(VarianceAggregatorCollector holder, Object raw)

@@ -135,7 +135,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
   }
 
   @Override
-  protected void closeAggregators(Map<Object, Aggregator[]> stringMap)
+  protected void resetAggregators(Map<Object, Aggregator[]> stringMap)
   {
     for (Aggregator[] aggregators : stringMap.values()) {
       for (Aggregator agg : aggregators) {

@@ -960,8 +960,19 @@ public class TaskLockbox
             }
 
             final int priority = lockFilter.getPriority();
-            final boolean ignoreAppendLocks =
-                TaskLockType.REPLACE.name().equals(lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE));
+            final boolean isReplaceLock = TaskLockType.REPLACE.name().equals(
+                lockFilter.getContext().getOrDefault(
+                    Tasks.TASK_LOCK_TYPE,
+                    Tasks.DEFAULT_TASK_LOCK_TYPE
+                )
+            );
+            final boolean isUsingConcurrentLocks = Boolean.TRUE.equals(
+                lockFilter.getContext().getOrDefault(
+                    Tasks.USE_CONCURRENT_LOCKS,
+                    Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+                )
+            );
+            final boolean ignoreAppendLocks = isUsingConcurrentLocks || isReplaceLock;
 
             running.get(datasource).forEach(
                 (startTime, startTimeLocks) -> startTimeLocks.forEach(
@@ -1231,7 +1242,7 @@ public class TaskLockbox
               idsInSameGroup.remove(task.getId());
               if (idsInSameGroup.isEmpty()) {
                 final int pendingSegmentsDeleted
-                    = metadataStorageCoordinator.deletePendingSegmentsForTaskGroup(taskAllocatorId);
+                    = metadataStorageCoordinator.deletePendingSegmentsForTaskAllocatorId(taskAllocatorId);
                 log.info(
                     "Deleted [%d] entries from pendingSegments table for pending segments group [%s] with APPEND locks.",
                     pendingSegmentsDeleted, taskAllocatorId
