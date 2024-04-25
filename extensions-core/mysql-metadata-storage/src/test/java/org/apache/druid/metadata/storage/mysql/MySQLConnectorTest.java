@@ -61,7 +61,6 @@ public class MySQLConnectorTest
     Assert.assertFalse(
         connector.connectorIsTransientException(new SQLException("totally realistic test data", "s0", 1337))
     );
-    // this method does not specially handle normal transient exceptions either, since it is not vendor specific
     Assert.assertTrue(
         connector.connectorIsTransientException(new SQLTransientConnectionException("transient"))
     );
