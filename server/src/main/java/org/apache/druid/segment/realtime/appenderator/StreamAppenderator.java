@@ -548,7 +548,6 @@ public class StreamAppenderator implements Appenderator
       }
 
       addSink(identifier, retVal);
-      sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
 
     return retVal;
@@ -1077,9 +1076,7 @@ public class StreamAppenderator implements Appenderator
 
     log.debug("Shutting down immediately...");
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-      synchronized (entry.getValue()) {
-        unannounceAllVersionsOfSegment(entry.getValue().getSegment());
-      }
+      unannounceAllVersionsOfSegment(entry.getValue().getSegment(), entry.getValue());
     }
     try {
       shutdownExecutors();
@@ -1112,29 +1109,31 @@ public class StreamAppenderator implements Appenderator
   /**
    * Unannounces the given base segment and all its upgraded versions.
    */
-  private void unannounceAllVersionsOfSegment(DataSegment baseSegment)
+  private void unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
   {
-    final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
-    if (!baseSegmentToUpgradedSegments.containsKey(baseId)) {
-      return;
-    }
+    synchronized (sink) {
+      final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
+      if (!baseSegmentToUpgradedSegments.containsKey(baseId)) {
+        return;
+      }
 
-    final List<SegmentIdWithShardSpec> upgradedVersionsOfSegment
-        = ImmutableList.copyOf(baseSegmentToUpgradedSegments.get(baseId));
+      final List<SegmentIdWithShardSpec> upgradedVersionsOfSegment
+          = ImmutableList.copyOf(baseSegmentToUpgradedSegments.get(baseId));
 
-    for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
-      final DataSegment newSegment = new DataSegment(
-          newId.getDataSource(),
-          newId.getInterval(),
-          newId.getVersion(),
-          baseSegment.getLoadSpec(),
-          baseSegment.getDimensions(),
-          baseSegment.getMetrics(),
-          newId.getShardSpec(),
-          baseSegment.getBinaryVersion(),
-          baseSegment.getSize()
-      );
-      unannounceSegment(newSegment);
+      for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
+        final DataSegment newSegment = new DataSegment(
+            newId.getDataSource(),
+            newId.getInterval(),
+            newId.getVersion(),
+            baseSegment.getLoadSpec(),
+            baseSegment.getDimensions(),
+            baseSegment.getMetrics(),
+            newId.getShardSpec(),
+            baseSegment.getBinaryVersion(),
+            baseSegment.getSize()
+        );
+        unannounceSegment(newSegment);
+      }
     }
   }
 
@@ -1530,10 +1529,7 @@ public class StreamAppenderator implements Appenderator
               }
             }
 
-            // Unannounce the segment.
-            synchronized (sink) {
-              unannounceAllVersionsOfSegment(sink.getSegment());
-            }
+            unannounceAllVersionsOfSegment(sink.getSegment(), sink);
 
             Runnable removeRunnable = () -> {
               droppingSinks.remove(baseIdentifier);
