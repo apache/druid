@@ -31,25 +31,4 @@ public class SqlTestFrameworkConfigTest
         .usingGetClass()
         .verify();
   }
-
-
-  @SqlTestFrameworkConfig(minTopNThreshold = 111)
-  static class C {
-  }
-  @SqlTestFrameworkConfig(numMergeBuffers =  222)
-  static class D {
-  }
-
-  @Test
-  public void testA()
-  {
-
-    SqlTestFrameworkConfig[] ann=new SqlTestFrameworkConfig[] {
-        C.class.getAnnotation(SqlTestFrameworkConfig.class),
-        D.class.getAnnotation(SqlTestFrameworkConfig.class)
-    }
-    ;
-    new SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance(ann);
-  }
-
 }

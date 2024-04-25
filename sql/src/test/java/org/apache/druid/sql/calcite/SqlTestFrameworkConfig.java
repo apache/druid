@@ -29,8 +29,6 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import javax.ws.rs.DefaultValue;
-
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -38,11 +36,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -57,12 +52,11 @@ import java.util.function.Function;
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface SqlTestFrameworkConfig
 {
-  @DefaultValue("sdf")
   int numMergeBuffers() default 0;
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
-  ResultCacheMode resultCache() default null;
+  ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
 
   Class<? extends QueryComponentSupplier> supplier() default StandardComponentSupplier.class;
 
@@ -78,30 +72,12 @@ public @interface SqlTestFrameworkConfig
     public final ResultCacheMode resultCache;
     public final Class<? extends QueryComponentSupplier> supplier;
 
-    public SqlTestFrameworkConfigInstance(SqlTestFrameworkConfig ...annotations)
+    public SqlTestFrameworkConfigInstance(SqlTestFrameworkConfig annotation)
     {
-      try {
-        numMergeBuffers = getValue(annotations, SqlTestFrameworkConfig.class.getMethod("numMergeBuffers"));
-        minTopNThreshold = getValue(annotations, SqlTestFrameworkConfig.class.getMethod("minTopNThreshold"));
-        resultCache = getValue(annotations, SqlTestFrameworkConfig.class.getMethod("resultCache"));
-        supplier = getValue(annotations, SqlTestFrameworkConfig.class.getMethod("supplier"));
-      }
-      catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    private <T> T getValue(SqlTestFrameworkConfig[] annotations, Method method) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException
-    {
-      T  value = (T) method.getDefaultValue();
-      Class<? extends Annotation> at = annotations[0].annotationType();
-      Class<? extends Annotation> at2 = annotations[0].getClass();
-        Class<SqlTestFrameworkConfig> ct = SqlTestFrameworkConfig.class;
-      for (SqlTestFrameworkConfig annotation : annotations) {
-        value = (T) method.invoke(annotation);
-      }
-      return value;
-
+      numMergeBuffers = annotation.numMergeBuffers();
+      minTopNThreshold = annotation.minTopNThreshold();
+      resultCache = annotation.resultCache();
+      supplier = annotation.supplier();
     }
 
     @Override
@@ -201,18 +177,11 @@ public @interface SqlTestFrameworkConfig
     private void setConfig(ExtensionContext context) throws NoSuchMethodException
     {
       method = context.getTestMethod().get();
-      List<SqlTestFrameworkConfig> annotations = new ArrayList<>();
-      annotations.add(method.getAnnotation(SqlTestFrameworkConfig.class));
-
-      Class<?> clz = method.getDeclaringClass();
-      while (clz != null) {
-        annotations.add(clz.getAnnotation(SqlTestFrameworkConfig.class));
-        clz = clz.getSuperclass();
+      SqlTestFrameworkConfig annotation = method.getAnnotation(SqlTestFrameworkConfig.class);
+      if (annotation == null) {
+        annotation = defaultConfig();
       }
-      annotations.removeIf(v -> v == null);
-
-      SqlTestFrameworkConfig[] array = annotations.toArray(new SqlTestFrameworkConfig[] {});
-      config = new SqlTestFrameworkConfigInstance(array);
+      config = new SqlTestFrameworkConfigInstance(annotation);
       setComponentSupplier(config.supplier);
 
 
