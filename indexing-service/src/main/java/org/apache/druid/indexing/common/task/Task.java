@@ -334,6 +334,11 @@ public interface Task
     );
   }
 
+  /**
+   * Returns the list of lookup names to be loaded for the given task.
+   *
+   * @return null if all lookups need to be loaded, list of lookup names otherwise.
+   */
   @Nullable
   default List<String> getLookupsToLoad()
   {

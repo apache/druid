@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -168,7 +169,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
         FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
       }
-      loadLookupsAndInitStateRef(lookupListeningAnnouncerConfig.getLookupsToLoad());
+      loadLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(
             "LookupExtractorFactoryContainerProvider-MainThread",
@@ -375,27 +376,18 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   /**
-   * Load a set of lookups.
-   * @param lookupsToLoad List of lookup names to load. Pass null to load all lookups.
+   * Load a set of lookups based on the injected value in {@link DataSourceTaskIdHolder#getLookupsToLoad()}.
    */
-  private void loadLookupsAndInitStateRef(List<String> lookupsToLoad)
+  private void loadLookupsAndInitStateRef()
   {
     List<LookupBean> lookupBeanList = getLookupsList();
-
-    List<LookupBean> lookupBeansToLoad;
-    if (lookupsToLoad != null) {
-      lookupBeansToLoad = new ArrayList<>();
-      if (lookupBeanList != null) {
-        lookupBeansToLoad = lookupBeanList.stream()
-                                          .filter(lookupBean -> lookupsToLoad.contains(lookupBean.getName()))
-                                          .collect(Collectors.toList());
-      }
-    } else {
-      lookupBeansToLoad = lookupBeanList;
-    }
-
-    if (lookupBeansToLoad != null) {
-      startLookups(lookupBeansToLoad);
+    if (lookupBeanList != null) {
+      final List<String> lookupsToLoad = lookupListeningAnnouncerConfig.getLookupsToLoad();
+      final boolean loadAllLookups = lookupsToLoad == null;
+      lookupBeanList = lookupBeanList.stream()
+                                     .filter(lookupBean -> loadAllLookups || lookupsToLoad.contains(lookupBean.getName()))
+                                     .collect(Collectors.toList());
+      startLookups(lookupBeanList);
     } else {
       LOG.debug("No lookups to be loaded at this point.");
       stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));

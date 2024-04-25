@@ -781,17 +781,11 @@ public class LookupReferencesManagerTest
   {
     return new Object[] {
         // load all lookups
-        new Object[]{
-            null
-        },
+        new Object[]{null},
         // don't load any lookups
-        new Object[]{
-            Collections.emptyList()
-        },
+        new Object[]{Collections.emptyList()},
         // only load these lookups
-        new Object[]{
-            Arrays.asList("testLookup1", "testLookup2")
-        },
+        new Object[]{Arrays.asList("testLookup1", "testLookup2")},
     };
   }
 
@@ -801,31 +795,18 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactoryContainer container1 = new LookupExtractorFactoryContainer(
         "0",
-        new MapLookupExtractorFactory(
-            ImmutableMap.of(
-                "key1",
-                "value1"
-            ), true
-        )
+        new MapLookupExtractorFactory(ImmutableMap.of("key1", "value1"), true)
     );
 
     LookupExtractorFactoryContainer container2 = new LookupExtractorFactoryContainer(
         "0",
-        new MapLookupExtractorFactory(
-            ImmutableMap.of(
-                "key2",
-                "value2"
-            ), true
+        new MapLookupExtractorFactory(ImmutableMap.of("key2", "value2"), true
         )
     );
 
     LookupExtractorFactoryContainer container3 = new LookupExtractorFactoryContainer(
         "0",
-        new MapLookupExtractorFactory(
-            ImmutableMap.of(
-                "key3",
-                "value3"
-            ), true
+        new MapLookupExtractorFactory(ImmutableMap.of("key3", "value3"), true
         )
     );
     EasyMock.reset(config);

@@ -38,6 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -61,9 +62,7 @@ public class LookupListeningAnnouncerConfigTest
                   .bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
                   .toInstance("some_datasource");
 
-              ArrayList<String> lookupsToLoad = new ArrayList<>();
-              lookupsToLoad.add("lookupName1");
-              lookupsToLoad.add("lookupName2");
+              final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
               binder.bind(new TypeLiteral<List<String>>() {})
                     .annotatedWith(Names.named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK))
                     .toInstance(lookupsToLoad);
@@ -140,10 +139,7 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    ArrayList<String> lookupsToLoad = new ArrayList<>();
-    lookupsToLoad.add("lookupName1");
-    lookupsToLoad.add("lookupName2");
-
+    final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
     final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
     injector.injectMembers(dimensionIdHolder);
     Assert.assertEquals(lookupsToLoad, dimensionIdHolder.getLookupsToLoad());
