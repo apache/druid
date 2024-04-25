@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
