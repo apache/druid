@@ -17,39 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.jupiter.api.Test;
-
-public class SqlTestFrameworkConfigTest
+public class Launch
 {
-  @Test
-  public void testEquals()
+  public static void main(String[] args)
   {
-    EqualsVerifier.forClass(SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance.class)
-        .usingGetClass()
-        .verify();
-  }
-
-
-  @SqlTestFrameworkConfig(minTopNThreshold = 111)
-  static class C {
-  }
-  @SqlTestFrameworkConfig(numMergeBuffers =  222)
-  static class D {
-  }
-
-  @Test
-  public void testA()
-  {
-
-    SqlTestFrameworkConfig[] ann=new SqlTestFrameworkConfig[] {
-        C.class.getAnnotation(SqlTestFrameworkConfig.class),
-        D.class.getAnnotation(SqlTestFrameworkConfig.class)
-    }
-    ;
-    new SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance(ann);
+    SqlTestFrameworkConfigStore store =new SqlTestFrameworkConfigStore();
   }
 
 }
