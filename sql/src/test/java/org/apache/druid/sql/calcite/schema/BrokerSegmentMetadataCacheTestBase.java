@@ -28,7 +28,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheCommon;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheTestBase;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-public class BrokerSegmentMetadataCacheCommon extends SegmentMetadataCacheCommon
+public class BrokerSegmentMetadataCacheTestBase extends SegmentMetadataCacheTestBase
 {
   public List<ImmutableDruidServer> druidServers;
   SegmentManager segmentManager;

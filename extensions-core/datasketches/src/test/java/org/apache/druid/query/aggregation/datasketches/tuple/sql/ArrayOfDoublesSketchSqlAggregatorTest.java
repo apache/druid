@@ -441,6 +441,40 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNoInputGroupByAll()
+  {
+    cannotVectorize();
+
+    final String sql = "SELECT\n"
+                       + "  DS_TUPLE_DOUBLES(tuplesketch_dim2),\n"
+                       + "  DS_TUPLE_DOUBLES(dim2, m1)\n"
+                       + "FROM druid.foo\n"
+                       + "WHERE dim2 = 'nonexistent'\n"
+                       + "GROUP BY ()";
+
+    testQuery(
+        sql,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "'nonexistent'", ColumnType.STRING))
+                  .filters(equality("dim2", "nonexistent", ColumnType.STRING))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      new ArrayOfDoublesSketchAggregatorFactory("a0", "tuplesketch_dim2", null, null, 1),
+                      new ArrayOfDoublesSketchAggregatorFactory("a1", "v0", null, ImmutableList.of("m1"), 1)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"0.0", "0.0"}
+        )
+    );
+  }
+
+  @Test
   public void testArrayOfDoublesSketchIntersectOnScalarExpression()
   {
     assertQueryIsUnplannable(

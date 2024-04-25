@@ -78,7 +78,7 @@ public class ActionsTestTask extends CommandQueueTask
   public SegmentPublishResult commitReplaceSegments(DataSegment... segments)
   {
     return runAction(
-        SegmentTransactionalReplaceAction.create(Sets.newHashSet(segments))
+        SegmentTransactionalReplaceAction.create(Sets.newHashSet(segments), null)
     );
   }
 
@@ -90,7 +90,7 @@ public class ActionsTestTask extends CommandQueueTask
   public SegmentPublishResult commitAppendSegments(DataSegment... segments)
   {
     SegmentPublishResult publishResult = runAction(
-        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments))
+        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments), null)
     );
     for (DataSegment segment : publishResult.getSegments()) {
       announcedSegmentsToParentSegments.remove(segment.getId());

@@ -61,7 +61,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public abstract class SegmentMetadataCacheCommon extends InitializedNullHandlingTest
+public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandlingTest
 {
   public static final String DATASOURCE1 = "foo";
   public static final String DATASOURCE2 = "foo2";

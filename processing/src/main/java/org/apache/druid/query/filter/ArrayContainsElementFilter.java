@@ -26,6 +26,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
@@ -108,7 +109,15 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     final NullableTypeStrategy<Object> typeStrategy = elementMatchValueEval.type().getNullableStrategy();
     final int size = typeStrategy.estimateSizeBytes(elementMatchValueEval.value());
     final ByteBuffer valueBuffer = ByteBuffer.allocate(size);
-    typeStrategy.write(valueBuffer, elementMatchValueEval.value(), size);
+    if (typeStrategy.write(valueBuffer, elementMatchValueEval.value(), size) < 0) {
+      // Defensive check, since the size had already been estimated from the same type strategy
+      throw DruidException.defensive(
+          "Unable to write the for the column [%s] with value [%s] and size [%d]",
+          elementMatchValueEval.value(),
+          column,
+          size
+      );
+    }
     return new CacheKeyBuilder(DimFilterUtils.ARRAY_CONTAINS_CACHE_ID)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendString(column)

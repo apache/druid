@@ -68,6 +68,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -134,6 +135,8 @@ public class CliIndexer extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            validateCentralizedDatasourceSchemaConfig(properties);
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
@@ -145,6 +148,9 @@ public class CliIndexer extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
+
+
+            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
 
             CliPeon.configureIntermediaryData(binder);
             CliPeon.bindTaskConfigAndClients(binder);

@@ -47,6 +47,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -245,7 +246,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -260,7 +262,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
 
           break;
@@ -276,7 +279,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
           break;
         default:
