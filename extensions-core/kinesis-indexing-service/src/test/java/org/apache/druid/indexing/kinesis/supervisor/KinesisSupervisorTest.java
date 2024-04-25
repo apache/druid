@@ -4218,8 +4218,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .andReturn(new LagStats(1, 2, 3)).anyTimes();
     EasyMock.replay(kinesisSupervisor);
 
-    Assert.assertEquals(kinesisSupervisor.computeLagForAutoScaler(true), 1);
-    Assert.assertEquals(kinesisSupervisor.computeLagForAutoScaler(false), 2);
+    Assert.assertEquals(kinesisSupervisor.computeLagForAutoScaler(true), 2);
+    Assert.assertEquals(kinesisSupervisor.computeLagForAutoScaler(false), 1);
   }
 
   private List<Task> testShardSplitPhaseOne() throws Exception
