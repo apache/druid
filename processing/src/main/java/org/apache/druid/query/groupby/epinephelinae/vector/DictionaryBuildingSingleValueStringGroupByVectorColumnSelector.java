@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
+import org.apache.druid.query.groupby.epinephelinae.DictionaryBuildingUtils;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -36,7 +36,8 @@ import java.util.List;
  * single-valued STRING columns which are not natively dictionary encoded, e.g. expression virtual columns.
  *
  * This is effectively the {@link VectorGroupByEngine} analog of
- * {@link org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy}
+ * {@link org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy} for
+ * String columns
  */
 public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
@@ -82,7 +83,7 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
 
         // Use same ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY as the nonvectorized version; dictionary structure is the same.
         stateFootprintIncrease +=
-            DictionaryBuilding.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
+            DictionaryBuildingUtils.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
       } else {
         keySpace.putInt(j, dictId);
       }

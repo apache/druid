@@ -455,6 +455,7 @@ public class DruidCoordinatorConfigTest
     MetadataCleanupConfig rules;
     MetadataCleanupConfig supervisors;
     MetadataCleanupConfig pendingSegments;
+    MetadataCleanupConfig segmentSchema;
     KillUnusedSegmentsConfig unusedSegments;
 
     KillConfigBuilder audit(MetadataCleanupConfig config)
@@ -487,6 +488,12 @@ public class DruidCoordinatorConfigTest
       return this;
     }
 
+    KillConfigBuilder segmentSchema(MetadataCleanupConfig config)
+    {
+      this.segmentSchema = config;
+      return this;
+    }
+
     KillConfigBuilder unusedSegments(KillUnusedSegmentsConfig config)
     {
       this.unusedSegments = config;
@@ -502,6 +509,7 @@ public class DruidCoordinatorConfigTest
           datasource,
           rules,
           compaction,
+          segmentSchema,
           unusedSegments == null ? null : unusedSegments.isCleanupEnabled(),
           unusedSegments == null ? null : unusedSegments.getCleanupPeriod(),
           unusedSegments == null ? null : unusedSegments.getDurationToRetain(),

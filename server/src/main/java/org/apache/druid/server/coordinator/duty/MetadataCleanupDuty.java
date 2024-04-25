@@ -73,7 +73,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
       return params;
     }
 
-    final DateTime now = DateTimes.nowUtc();
+    final DateTime now = getCurrentTime();
 
     // Perform cleanup only if cleanup period has elapsed
     if (lastCleanupTime.plus(cleanupConfig.getCleanupPeriod()).isBefore(now)) {
@@ -104,4 +104,34 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
    */
   protected abstract int cleanupEntriesCreatedBefore(DateTime minCreatedTime);
 
+<<<<<<< HEAD
+=======
+  private void validatePeriod(Duration period, Duration metadataManagementPeriod)
+  {
+    Preconditions.checkArgument(
+        period != null && period.getMillis() >= metadataManagementPeriod.getMillis(),
+        "[%s.period] must be greater than [druid.coordinator.period.metadataStoreManagementPeriod]",
+        propertyPrefix
+    );
+  }
+
+  private void validateRetainDuration(Duration retainDuration)
+  {
+    Preconditions.checkArgument(
+        retainDuration != null && retainDuration.getMillis() >= 0,
+        "[%s.durationToRetain] must be 0 milliseconds or higher",
+        propertyPrefix
+    );
+    Preconditions.checkArgument(
+        retainDuration.getMillis() < System.currentTimeMillis(),
+        "[%s.durationToRetain] cannot be greater than current time in milliseconds",
+        propertyPrefix
+    );
+  }
+
+  protected DateTime getCurrentTime()
+  {
+    return DateTimes.nowUtc();
+  }
+>>>>>>> e74da6a6b6d0b614025660023af4644f4e9b54e8
 }

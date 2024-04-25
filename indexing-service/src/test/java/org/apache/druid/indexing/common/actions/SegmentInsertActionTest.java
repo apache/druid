@@ -102,7 +102,7 @@ public class SegmentInsertActionTest
   public void testSimple() throws Exception
   {
     final Task task = NoopTask.create();
-    final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
+    final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2), null);
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
     actionTestKit.getTaskLockbox().doInCriticalSection(
@@ -129,7 +129,7 @@ public class SegmentInsertActionTest
   public void testFailBadVersion() throws Exception
   {
     final Task task = NoopTask.create();
-    final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
+    final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3), null);
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 

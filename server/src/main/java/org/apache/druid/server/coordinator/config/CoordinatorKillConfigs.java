@@ -27,7 +27,7 @@ import org.joda.time.Duration;
 public class CoordinatorKillConfigs
 {
   public static CoordinatorKillConfigs STANDARD
-      = new CoordinatorKillConfigs(null, null, null, null, null, null, null, null, null, null, null, null);
+      = new CoordinatorKillConfigs(null, null, null, null, null, null, null, null, null, null, null, null, null);
 
   @JsonProperty("supervisor")
   private final MetadataCleanupConfig supervisors;
@@ -46,6 +46,9 @@ public class CoordinatorKillConfigs
 
   @JsonProperty("pendingSegments")
   private final MetadataCleanupConfig pendingSegments;
+
+  @JsonProperty("segmentSchema")
+  private final MetadataCleanupConfig segmentSchema;
 
   // Raw configs for killing unused segments
   // These have been added as fields because KillUnusedSegmentsConfig is initialized lazily
@@ -75,6 +78,7 @@ public class CoordinatorKillConfigs
       @JsonProperty("datasource") MetadataCleanupConfig datasource,
       @JsonProperty("rule") MetadataCleanupConfig rules,
       @JsonProperty("compaction") MetadataCleanupConfig compaction,
+      @JsonProperty("segmentSchema") MetadataCleanupConfig segmentSchema,
       // Configs for cleanup of unused segments
       @JsonProperty("on") Boolean killUnusedEnabled,
       @JsonProperty("period") Duration killUnusedPeriod,
@@ -90,6 +94,9 @@ public class CoordinatorKillConfigs
     this.datasource = Configs.valueOrDefault(datasource, MetadataCleanupConfig.DEFAULT);
     this.rules = Configs.valueOrDefault(rules, MetadataCleanupConfig.DEFAULT);
     this.compaction = Configs.valueOrDefault(compaction, MetadataCleanupConfig.DEFAULT);
+
+    // TODO: Defaults here should be enabled=true, period=1H, retain=6H
+    this.segmentSchema = Configs.valueOrDefault(segmentSchema, MetadataCleanupConfig.DEFAULT);
 
     this.killUnusedEnabled = killUnusedEnabled;
     this.killUnusedPeriod = killUnusedPeriod;
@@ -127,6 +134,11 @@ public class CoordinatorKillConfigs
   public MetadataCleanupConfig supervisors()
   {
     return supervisors;
+  }
+
+  public MetadataCleanupConfig segmentSchema()
+  {
+    return segmentSchema;
   }
 
   /**

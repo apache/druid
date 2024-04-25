@@ -48,6 +48,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
@@ -187,7 +188,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 
@@ -199,6 +202,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         null,
         metadataRuleManager,
+        null,
         null
     );
   }
@@ -612,7 +616,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
         emptyCustomDutyGroups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -650,7 +656,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
         customDutyGroups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -688,7 +696,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
         customDutyGroups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -791,7 +801,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
         groups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
     coordinator.start();
 

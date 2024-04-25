@@ -75,6 +75,12 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`metadatacache/schemaPoll/count`|Number of coordinator polls to fetch datasource schema.||
 |`metadatacache/schemaPoll/failed`|Number of failed coordinator polls to fetch datasource schema.||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.||
+|`metadatacache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`|
+|`schemacache/realtime/count`|Number of realtime segments for which schema is cached.||Depends on the number of realtime segments.|
+|`schemacache/finalizedSegmentMetadata/count`|Number of finalized segments for which schema metadata is cached.||Depends on the number of segments in the cluster.|
+|`schemacache/finalizedSchemaPayload/count`|Number of finalized segment schema cached.||Depends on the number of distinct schema in the cluster.|
+|`schemacache/inTransitSMQResults/count`|Number of segments for which schema was fetched by executing segment metadata query.||Eventually it should be 0.|
+|`schemacache/inTransitSMQPublishedResults/count`|Number of segments for which schema is cached after back filling in the database.||Eventually it should be 0.|
 |`serverview/sync/healthy`|Sync status of the Broker with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `serverview/sync/unstableTime` to debug slow startup of Brokers.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Broker has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`subquery/rowLimit/count`|Number of subqueries whose results are materialized as rows (Java objects on heap).|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |

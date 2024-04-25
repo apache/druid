@@ -125,6 +125,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -468,6 +469,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             new NamedType(NoopInputFormat.class, "noopInputFormat")
         );
         testDerbyConnector.createTaskTables();
+        testDerbyConnector.createSegmentSchemasTable();
         testDerbyConnector.createSegmentTable();
         taskStorage = new MetadataTaskStorage(
             testDerbyConnector,
@@ -567,9 +569,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new TestIndexerMetadataStorageCoordinator()
     {
       @Override
-      public Set<DataSegment> commitSegments(Set<DataSegment> segments)
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments, final SegmentSchemaMapping segmentSchemaMapping)
       {
-        Set<DataSegment> retVal = super.commitSegments(segments);
+        Set<DataSegment> retVal = super.commitSegments(segments, segmentSchemaMapping);
         if (publishCountDown != null) {
           publishCountDown.countDown();
         }
@@ -1154,7 +1156,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment), null));
         return TaskStatus.success(getId());
       }
     };
@@ -1195,7 +1197,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment), null));
         return TaskStatus.success(getId());
       }
     };
@@ -1237,7 +1239,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment), null));
         return TaskStatus.success(getId());
       }
     };
