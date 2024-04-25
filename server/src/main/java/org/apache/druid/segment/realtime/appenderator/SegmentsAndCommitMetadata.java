@@ -40,7 +40,6 @@ public class SegmentsAndCommitMetadata
   private final ImmutableList<DataSegment> segments;
   private final SegmentSchemaMapping segmentSchemaMapping;
 
-  // This set corresponds to the set of extra segments committed due to a concurrent replace.
   private final ImmutableSet<DataSegment> upgradedSegments;
 
   public SegmentsAndCommitMetadata(
@@ -94,6 +93,9 @@ public class SegmentsAndCommitMetadata
     return segments;
   }
 
+  /**
+   * @return the set of extra upgraded segments committed due to a concurrent replace.
+   */
   @Nullable
   public Set<DataSegment> getUpgradedSegments()
   {

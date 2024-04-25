@@ -1439,9 +1439,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                    .collect(Collectors.toList()),
                 100
             );
+            int numDeletedPendingSegments = 0;
             for (List<String> pendingSegmentIdBatch : pendingSegmentIdBatches) {
-              deletePendingSegmentsById(handle, dataSource, pendingSegmentIdBatch);
+              numDeletedPendingSegments += deletePendingSegmentsById(handle, dataSource, pendingSegmentIdBatch);
             }
+            log.info("Deleted [%d] entries from pending segments table upon commit.", numDeletedPendingSegments);
 
             return SegmentPublishResult.ok(
                 insertSegments(

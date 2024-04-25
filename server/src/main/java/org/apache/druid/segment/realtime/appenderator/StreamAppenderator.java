@@ -168,10 +168,23 @@ public class StreamAppenderator implements Appenderator
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
+  /**
+   * Map from base segment identifier of a sink to the set of all the segment ids associated with it.
+   * The set contains the base segment itself and its upgraded versions announced as a result of a concurrent replace.
+   * The map contains all the available sinks' identifiers in its keyset.
+   */
   private final ConcurrentMap<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> baseSegmentToUpgradedSegments
       = new ConcurrentHashMap<>();
+  /**
+   * Map from the id of an upgraded pending segment to the segment corresponding to its upgradedFromSegmentId.
+   * The set contains the base segment itself and its upgraded versions announced as a result of a concurrent replace.
+   */
   private final ConcurrentMap<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedSegmentToBaseSegment
       = new ConcurrentHashMap<>();
+  /**
+   * Set of all segment identifiers that have been marked to be abandoned.
+   * This is used to determine if all the segments corresponding to a sink have been abandoned and it can be dropped.
+   */
   private final ConcurrentHashMap.KeySetView<SegmentIdWithShardSpec, Boolean> abandonedSegments
       = ConcurrentHashMap.newKeySet();
 
@@ -534,12 +547,7 @@ public class StreamAppenderator implements Appenderator
            .emit();
       }
 
-      sinks.put(identifier, retVal);
-      idToPendingSegment.put(identifier.asSegmentId().toString(), identifier);
-      baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
-      baseSegmentToUpgradedSegments.get(identifier).add(identifier);
-      upgradedSegmentToBaseSegment.put(identifier, identifier);
-      metrics.setSinkCount(sinks.size());
+      addSink(identifier, retVal);
       sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
 
@@ -1398,17 +1406,8 @@ public class StreamAppenderator implements Appenderator
             hydrants
         );
         rowsSoFar += currSink.getNumRows();
-        sinks.put(identifier, currSink);
-        idToPendingSegment.put(identifier.asSegmentId().toString(), identifier);
-        baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
-        baseSegmentToUpgradedSegments.get(identifier).add(identifier);
-        upgradedSegmentToBaseSegment.put(identifier, identifier);
-        sinkTimeline.add(
-            currSink.getInterval(),
-            currSink.getVersion(),
-            identifier.getShardSpec().createChunk(currSink)
-        );
 
+        addSink(identifier, currSink);
         segmentAnnouncer.announceSegment(currSink.getSegment());
       }
       catch (IOException e) {
@@ -1429,6 +1428,31 @@ public class StreamAppenderator implements Appenderator
 
     totalRows.set(rowsSoFar);
     return committed.getMetadata();
+  }
+
+  /**
+   * Update the state of the appenderator when adding a sink.
+   *
+   * @param identifier sink identifier
+   * @param sink sink to be added
+   */
+  private void addSink(SegmentIdWithShardSpec identifier, Sink sink)
+  {
+    sinks.put(identifier, sink);
+    // Asoociate the base segment of a sink with its string identifier
+    // Needed to get the base segment using upgradedFromSegmentId of a pending segment
+    idToPendingSegment.put(identifier.asSegmentId().toString(), identifier);
+
+    // The base segment is associated with itself in the maps to maintain all the upgraded ids of a sink.
+    baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
+    baseSegmentToUpgradedSegments.get(identifier).add(identifier);
+    upgradedSegmentToBaseSegment.put(identifier, identifier);
+
+    sinkTimeline.add(
+        sink.getInterval(),
+        sink.getVersion(),
+        identifier.getShardSpec().createChunk(sink)
+    );
   }
 
   private ListenableFuture<?> abandonSegment(
