@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
+import org.apache.druid.server.coordinator.config.KillUnusedSchemasConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.hamcrest.MatcherAssert;
@@ -222,6 +223,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.datasource());
     Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.rules());
     Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.pendingSegments());
+    Assert.assertEquals(KillUnusedSchemasConfig.DEFAULT, killConfigs.segmentSchema());
   }
 
   @Test
@@ -250,6 +252,10 @@ public class DruidCoordinatorConfigTest
 
     props.setProperty("druid.coordinator.kill.pendingSegments.on", "false");
 
+    props.setProperty("druid.coordinator.kill.segmentSchema.on", "false");
+    props.setProperty("druid.coordinator.kill.segmentSchema.period", "PT2H");
+    props.setProperty("druid.coordinator.kill.segmentSchema.durationToRetain", "PT8H");
+
     final CoordinatorKillConfigs killConfigs
         = deserializeFrom(props, "druid.coordinator.kill", CoordinatorKillConfigs.class);
 
@@ -272,6 +278,10 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(1), Duration.standardHours(2)),
         killConfigs.supervisors()
+    );
+    Assert.assertEquals(
+        new KillUnusedSchemasConfig(false, Duration.standardHours(2), Duration.standardHours(8)),
+        killConfigs.segmentSchema()
     );
     Assert.assertFalse(killConfigs.pendingSegments().isCleanupEnabled());
   }
@@ -314,6 +324,14 @@ public class DruidCoordinatorConfigTest
         "'druid.coordinator.kill.supervisor.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
+    verifyCoordinatorConfigFailsWith(
+        createKillConfig().segmentSchema(
+            new KillUnusedSchemasConfig(true, cleanupConfig.getCleanupPeriod(), null)
+        ).build(),
+        periodConfig,
+        "'druid.coordinator.kill.segmentSchema.period'[PT1800S] must be greater than"
+        + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
+    );
   }
 
   @Test
@@ -347,6 +365,13 @@ public class DruidCoordinatorConfigTest
         createKillConfig().supervisors(cleanupConfig).build(),
         defaultPeriodConfig,
         "'druid.coordinator.kill.supervisor.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
+    );
+    verifyCoordinatorConfigFailsWith(
+        createKillConfig().segmentSchema(
+            new KillUnusedSchemasConfig(true, null, cleanupConfig.getDurationToRetain())
+        ).build(),
+        defaultPeriodConfig,
+        "'druid.coordinator.kill.segmentSchema.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
   }
 
@@ -384,6 +409,15 @@ public class DruidCoordinatorConfigTest
         createKillConfig().supervisors(cleanupConfig).build(),
         defaultPeriodConfig,
         "'druid.coordinator.kill.supervisor.durationToRetain'[%s] cannot be greater than current time in milliseconds",
+        futureRetainDuration
+    );
+    verifyCoordinatorConfigFailsWith(
+        createKillConfig().segmentSchema(
+            new KillUnusedSchemasConfig(true, null, futureRetainDuration)
+        ).build(),
+        defaultPeriodConfig,
+        "'druid.coordinator.kill.segmentSchema.durationToRetain'[%s] cannot be"
+        + " greater than current time in milliseconds",
         futureRetainDuration
     );
   }
@@ -455,7 +489,7 @@ public class DruidCoordinatorConfigTest
     MetadataCleanupConfig rules;
     MetadataCleanupConfig supervisors;
     MetadataCleanupConfig pendingSegments;
-    MetadataCleanupConfig segmentSchema;
+    KillUnusedSchemasConfig segmentSchema;
     KillUnusedSegmentsConfig unusedSegments;
 
     KillConfigBuilder audit(MetadataCleanupConfig config)
@@ -488,7 +522,7 @@ public class DruidCoordinatorConfigTest
       return this;
     }
 
-    KillConfigBuilder segmentSchema(MetadataCleanupConfig config)
+    KillConfigBuilder segmentSchema(KillUnusedSchemasConfig config)
     {
       this.segmentSchema = config;
       return this;
