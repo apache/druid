@@ -447,12 +447,12 @@ function TableModule(props: TableModuleProps) {
           queryResult={resultData.result}
           groupHints={resultData.groupHints}
           showTypeIcons={false}
-          onOrderByChange={(headerIndex, desc) => {
-            const idx = SqlLiteral.index(headerIndex);
-            if (orderBy && String(orderBy.expression) === String(idx)) {
+          onOrderByChange={(columnName, desc) => {
+            const column = C(columnName);
+            if (orderBy && orderBy.expression.equals(column)) {
               setOrderBy(orderBy.reverseDirection());
             } else {
-              setOrderBy(idx.toOrderByExpression(desc ? 'DESC' : 'ASC'));
+              setOrderBy(column.toOrderByExpression(desc ? 'DESC' : 'ASC'));
             }
           }}
           onQueryAction={action => {

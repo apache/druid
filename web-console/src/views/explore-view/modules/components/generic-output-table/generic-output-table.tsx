@@ -94,7 +94,7 @@ function columnNester(columns: TableColumn[], groupHints: string[] | undefined):
 export interface GenericOutputTableProps {
   queryResult: QueryResult;
   onQueryAction(action: QueryAction): void;
-  onOrderByChange?(columnIndex: number, desc: boolean): void;
+  onOrderByChange?(columnName: string, desc: boolean): void;
   onExport?(): void;
   runeMode: boolean;
   showTypeIcons: boolean;
@@ -159,7 +159,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               icon={reverseOrderByDirection === 'ASC' ? IconNames.SORT_ASC : IconNames.SORT_DESC}
               text={`Order ${reverseOrderByDirection === 'ASC' ? 'ascending' : 'descending'}`}
               onClick={() => {
-                onOrderByChange(headerIndex, reverseOrderByDirection !== 'ASC');
+                onOrderByChange(header, reverseOrderByDirection !== 'ASC');
               }}
             />,
           );
@@ -170,7 +170,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               icon={IconNames.SORT_DESC}
               text="Order descending"
               onClick={() => {
-                onOrderByChange(headerIndex, true);
+                onOrderByChange(header, true);
               }}
             />,
             <MenuItem
@@ -178,7 +178,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               icon={IconNames.SORT_ASC}
               text="Order ascending"
               onClick={() => {
-                onOrderByChange(headerIndex, false);
+                onOrderByChange(header, false);
               }}
             />,
           );
