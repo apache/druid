@@ -393,8 +393,7 @@ public class GroupByQueryConfig
            ", forcePushDownNestedQuery=" + forcePushDownNestedQuery +
            ", enableMultiValueUnnesting=" + enableMultiValueUnnesting +
            ", mergeThreadLocal=" + mergeThreadLocal +
-           ", deferExpressionDimensions=" + deferExpressionDimensions
-           +
+           ", deferExpressionDimensions=" + deferExpressionDimensions +
            '}';
   }
 }
