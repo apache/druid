@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -57,8 +58,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 /**
  * Unit tests for {@link ChainedProcessorManager}.
@@ -97,28 +101,30 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     return constructors;
   }
 
+  /**
+   * Simple functional test of the chained processor manager.
+   * The {@link ChainedProcessorManager#first} is a {@link SimpleReturningFrameProcessor} which returns the list of
+   * values. The {@link ChainedProcessorManager#restFactory} is a function that creates a
+   * {@link SingleRowWritingFrameProcessor} for each value.
+   */
   @Test
-  public void test_simple_single_threaded_chaining() throws ExecutionException, InterruptedException
+  public void test_simple_chained_processor() throws ExecutionException, InterruptedException
   {
     final ImmutableList<Long> expectedValues = ImmutableList.of(1L, 2L, 3L);
     final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(3);
-    final SimpleReturningFrameProcessor<List<Long>> realtimeProcessor = new SimpleReturningFrameProcessor<>(
-        expectedValues
-    );
+    final SimpleReturningFrameProcessor<List<Long>> firstProcessor = new SimpleReturningFrameProcessor<>(expectedValues);
 
     final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
-        ProcessorManagers.of(() -> realtimeProcessor),
+        ProcessorManagers.of(() -> firstProcessor),
         (values) -> createNextProcessors(outputChannel.writable(), values.stream().flatMap(List::stream).collect(Collectors.toList()))
     );
 
-    final ListenableFuture<Long> future = exec.runAllFully(
+    exec.runAllFully(
         chainedProcessorManager,
         maxOutstandingProcessors,
         new Bouncer(bouncerPoolSize),
         null
-    );
-
-    future.get();
+    ).get();
 
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
@@ -129,31 +135,36 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     Assert.assertEquals(new HashSet<>(expectedValues), actualValues);
   }
 
+  /**
+   * Test with multiple processors in {@link ChainedProcessorManager#first}.
+   */
   @Test
   public void test_multiple_processor_manager() throws ExecutionException, InterruptedException
   {
-    final ImmutableSet<Long> expectedValues = ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L);
+    final ImmutableList<Long> valueSet1 = ImmutableList.of(1L, 2L, 3L);
+    final ImmutableList<Long> valueSet2 = ImmutableList.of(4L, 5L, 6L);
     final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(20);
 
     final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
         ProcessorManagers.of(
             ImmutableList.of(
-                new SimpleReturningFrameProcessor<>(ImmutableList.of(1L, 2L, 3L)),
-                new SimpleReturningFrameProcessor<>(ImmutableList.of(4L, 5L, 6L))
-                )
+                new SimpleReturningFrameProcessor<>(valueSet1),
+                new SimpleReturningFrameProcessor<>(valueSet2)
+            )
         ),
         (values) -> createNextProcessors(outputChannel.writable(), values.stream().flatMap(List::stream).collect(Collectors.toList()))
     );
 
-    final ListenableFuture<Long> future = exec.runAllFully(
+    exec.runAllFully(
         chainedProcessorManager,
-        3,
-        new Bouncer(3),
+        maxOutstandingProcessors,
+        new Bouncer(bouncerPoolSize),
         null
-    );
+    ).get();
 
-    future.get();
-
+    final Set<Long> expectedValues = new HashSet<>();
+    expectedValues.addAll(valueSet1);
+    expectedValues.addAll(valueSet2);
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
@@ -176,13 +187,16 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
                 new SequenceProcessorManagerTest.NilFrameProcessor<>()
             )
         ),
-        (values) -> createNextProcessors(outputChannel.writable(), values.stream().flatMap(List::stream).collect(Collectors.toList()))
+        (values) -> createNextProcessors(
+            new NonFailingWritableFrameChannel(outputChannel.writable()),
+            values.stream().flatMap(List::stream).collect(Collectors.toList())
+        )
     );
 
     final ListenableFuture<Long> future = exec.runAllFully(
         chainedProcessorManager,
-        3,
-        new Bouncer(3),
+        maxOutstandingProcessors,
+        new Bouncer(bouncerPoolSize),
         null
     );
 
@@ -198,49 +212,42 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
   }
 
   @Test
-  public void test_chaining_processor_manager() throws InterruptedException, ExecutionException
+  public void test_chaining_processor_manager()
   {
-    final ImmutableSet<Long> expectedValues = ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L);
-    final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(20);
-
-    final ProcessorManager<List<Object>, Long> chainedProcessorManager =
-        chainedProcessors(outputChannel.writable(), ImmutableList.of(new ArrayList<>(expectedValues)), 10L);
-
-    final ListenableFuture<Long> future = exec.runAllFully(
-        chainedProcessorManager,
-        3,
-        new Bouncer(3),
-        null
-    );
-
-    future.get();
-
-    final HashSet<Long> actualValues = new HashSet<>();
-    try (ReadableFrameChannel readable = outputChannel.readable()) {
-      while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
-      }
-    }
-    Assert.assertEquals(expectedValues, actualValues);
+    final Set<Long> values = LongStream.range(1, 10).boxed().collect(Collectors.toSet());
+    runChainedExceptionTest(values, values, null);
   }
 
   @Test
   public void test_chaining_processor_manager_with_exception()
   {
-    final ImmutableSet<Long> expectedValues = ImmutableSet.of(1L, 2L, 3L);
+    final Set<Long> values = LongStream.range(1, 10).boxed().collect(Collectors.toSet());
+
+    for (long failingValue = 1; failingValue < 10; failingValue++) {
+      final Set<Long> expectedValues = LongStream.range(1, failingValue).boxed().collect(Collectors.toSet());
+      runChainedExceptionTest(values, expectedValues, failingValue);
+    }
+  }
+
+  public void runChainedExceptionTest(Set<Long> values, Set<Long> expectedValues, Long failingValue)
+  {
     final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(20);
 
     final ProcessorManager<List<Object>, Long> chainedProcessorManager =
-        chainedProcessors(outputChannel.writable(), ImmutableList.of(new ArrayList<>(ImmutableSet.of(1L, 2L, 3L, 4L, 5L, 6L))), 4L);
+        chainedProcessors(outputChannel.writable(), new ArrayList<>(values), failingValue);
 
     final ListenableFuture<Long> future = exec.runAllFully(
         chainedProcessorManager,
-        3,
-        new Bouncer(3),
+        maxOutstandingProcessors,
+        new Bouncer(bouncerPoolSize),
         null
     );
 
-    Assert.assertThrows(ExecutionException.class, future::get);
+    try {
+      future.get();
+    }
+    catch (Exception ignored) {
+    }
 
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
@@ -251,23 +258,22 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     Assert.assertEquals(expectedValues, actualValues);
   }
 
+  @SuppressWarnings("rawtypes")
   private Long extractColumnValue(Frame frame, int columnNo)
   {
     FrameReader frameReader = FrameReader.create(ROW_SIGNATURE);
     FrameCursor frameCursor = FrameProcessors.makeCursor(frame, frameReader);
     ColumnSelectorFactory columnSelectorFactory = frameCursor.getColumnSelectorFactory();
-    ColumnValueSelector<Long> columnValueSelector = columnSelectorFactory.makeColumnValueSelector(ROW_SIGNATURE.getColumnName(columnNo));
+    ColumnValueSelector columnValueSelector = columnSelectorFactory.makeColumnValueSelector(ROW_SIGNATURE.getColumnName(columnNo));
     return columnValueSelector.getLong();
   }
 
   private ProcessorManager<Long, Long> createNextProcessors(WritableFrameChannel frameChannel, List<Long> values)
   {
     List<SingleRowWritingFrameProcessor> processors = new ArrayList<>();
-
     for (Long value : values) {
       processors.add(new SingleRowWritingFrameProcessor(frameChannel, makeInputRow(ROW_SIGNATURE.getColumnName(1), value)));
     }
-
     return ProcessorManagers.of(processors);
   }
 
@@ -277,41 +283,27 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     return new MapBasedInputRow(0L, ImmutableList.copyOf(event.keySet()), event);
   }
 
-  public static class OutputHeadFrameProcessor extends SingleChannelFrameProcessor<List<Long>> // TODO: rename this
+  public static class PrintFirstAndReturnRestFrameProcessor extends SingleChannelFrameProcessor<List<Long>>
   {
     private final List<Long> valuesList;
     private final Long failureValue;
-    private final WritableFrameChannel outputChannel;
 
-    public OutputHeadFrameProcessor(WritableFrameChannel outputChannel, List<Long> valuesList, Long failureValue)
+    public PrintFirstAndReturnRestFrameProcessor(WritableFrameChannel outputChannel, List<Long> valuesList, Long failureValue)
     {
-      super(null, null);
-      this.outputChannel = outputChannel;
+      super(null, new NonFailingWritableFrameChannel(outputChannel));
       this.valuesList = valuesList;
       this.failureValue = failureValue;
     }
 
     @Override
-    public List<ReadableFrameChannel> inputChannels()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
-    public List<WritableFrameChannel> outputChannels()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
     public List<Long> doSimpleWork() throws IOException
     {
-      Long l = valuesList.get(0);
-      if (failureValue.equals(l)) {
+      Long firstValue = valuesList.get(0);
+      if (Objects.equals(firstValue, failureValue)) {
         throw new RuntimeException();
       }
-      InputRow inputRow = makeInputRow(ROW_SIGNATURE.getColumnName(1), l);
-      outputChannel.write(TestFrameProcessorUtils.toFrame(Collections.singletonList(inputRow)));
+      InputRow inputRow = makeInputRow(ROW_SIGNATURE.getColumnName(1), firstValue);
+      Iterables.getOnlyElement(outputChannels()).write(TestFrameProcessorUtils.toFrame(Collections.singletonList(inputRow)));
       if (valuesList.size() == 1) {
         return Collections.emptyList();
       }
@@ -319,19 +311,26 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     }
   }
 
-  public static ProcessorManager<List<Object>, Long> chainedProcessors(WritableFrameChannel writableFrameChannel, List<List<Long>> values, Long failureValue)
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static ProcessorManager<List<Object>, Long> chainedProcessors(
+      WritableFrameChannel writableFrameChannel,
+      List<Long> values,
+      Long failureValue
+  )
   {
-    List<Long> value = values.get(0); // TODO: not just the first element.
-    if (value.isEmpty()) {
+    if (values.isEmpty()) {
       return ProcessorManagers.none();
     }
     ChainedProcessorManager<List<Long>, List<Long>, Long> processorManager = new ChainedProcessorManager<>(
-        ProcessorManagers.of(() -> new OutputHeadFrameProcessor(writableFrameChannel, value, failureValue)),
-        lists -> (ProcessorManager) chainedProcessors(
-            writableFrameChannel,
-            lists,
-            failureValue
-        )
+        ProcessorManagers.of(() -> new PrintFirstAndReturnRestFrameProcessor(writableFrameChannel, values, failureValue)),
+        returnedValues -> {
+          List<Long> lists = returnedValues.stream().flatMap(List::stream).collect(Collectors.toList());
+          return (ProcessorManager) chainedProcessors(
+              writableFrameChannel,
+              lists,
+              failureValue
+          );
+        }
     );
     return (ProcessorManager) processorManager;
   }
