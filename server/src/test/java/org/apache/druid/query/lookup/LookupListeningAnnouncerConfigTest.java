@@ -32,6 +32,7 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.junit.Assert;
 import org.junit.Before;
@@ -138,10 +139,9 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
     final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
     injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(lookupsToLoad, dimensionIdHolder.getLookupLoadingSpec());
+    Assert.assertEquals(LookupLoadingSpec.LookupLoadingMode.ALL, dimensionIdHolder.getLookupLoadingSpec().getLookupLoadingMode());
   }
 
   @Test(expected = IllegalArgumentException.class)
