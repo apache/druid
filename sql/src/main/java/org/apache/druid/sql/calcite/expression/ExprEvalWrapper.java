@@ -23,8 +23,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 
 /**
- * Wraps an {@link ExprEval} and provides an additional {@link #trueValue()} method to allow callers in
- * {@link NullHandling#replaceWithDefault()} mode to determine whether the {@link ExprEval} represents a true
+ * Wraps an {@link ExprEval} and provides an additional {@link #actualValue()} method to allow callers in
+ * {@link NullHandling#replaceWithDefault()} mode to determine whether the {@link ExprEval} represents an actual
  * null or an empty string.
  */
 public class ExprEvalWrapper
@@ -46,8 +46,10 @@ public class ExprEvalWrapper
   /**
    * Like calling {@link ExprEval#value()} on {@link #exprEval()}, but in {@link NullHandling#replaceWithDefault()}
    * mode, returns empty string rather than null if eval should truly be an empty string.
+   *
+   * In {@link NullHandling#sqlCompatible()} mode, this is equivalent to {@link ExprEval#value()}.
    */
-  public Object trueValue()
+  public Object actualValue()
   {
     return isEmptyString ? "" : eval.value();
   }

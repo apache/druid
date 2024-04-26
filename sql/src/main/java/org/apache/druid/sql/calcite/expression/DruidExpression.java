@@ -192,7 +192,7 @@ public class DruidExpression
     final ColumnType evalColumnType = ExpressionType.toColumnType(eval.type());
 
     if (eval.type().is(ExprType.STRING)) {
-      return ofStringLiteral((String) evalWrapper.trueValue());
+      return ofStringLiteral((String) evalWrapper.actualValue());
     } else {
       return ofLiteral(evalColumnType, eval.toExpr().stringify());
     }

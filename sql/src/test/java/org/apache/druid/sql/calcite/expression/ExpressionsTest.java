@@ -2991,8 +2991,8 @@ public class ExpressionsTest extends CalciteTestBase
   )
   {
     Assert.assertEquals(
-        StringUtils.format("%s: %s", expected.exprEval().type(), expected.trueValue()),
-        StringUtils.format("%s: %s", actual.exprEval().type(), actual.trueValue())
+        StringUtils.format("%s: %s", expected.exprEval().type(), expected.actualValue()),
+        StringUtils.format("%s: %s", actual.exprEval().type(), actual.actualValue())
     );
   }
 }

@@ -113,7 +113,7 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
           return null;
         }
 
-        arrayElementLiteralValues.add(arrayElementEval.trueValue());
+        arrayElementLiteralValues.add(arrayElementEval.actualValue());
       }
 
       return makeInFilter(
