@@ -28,7 +28,7 @@ import {
 } from './supervisor-statistics-table';
 
 let supervisorStatisticsState: QueryState<SupervisorStatisticsTableRow[]> = QueryState.INIT;
-jest.mock('../../../hooks', () => {
+jest.mock('../../../hooks/use-query-manager', () => {
   return {
     useQueryManager: () => [supervisorStatisticsState],
   };
