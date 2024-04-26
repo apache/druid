@@ -39,7 +39,6 @@ To enable durable storage, you need to set the following common service properti
 
 ```
 druid.msq.intermediate.storage.enable=true
-druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
 
 # Include these configs if you're using S3
 # druid.msq.intermediate.storage.type=s3
