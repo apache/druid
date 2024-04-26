@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.cache;
 
-import java.util.Collections;
 import java.util.List;
 
 public class LookupLoadingSpec
