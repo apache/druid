@@ -1,8 +1,8 @@
 ---
-id: tutorial-update-data
-title: Update data
-sidebar_label: Update data
-description: Learn how to update data in Apache Druid.
+id: tutorial-latest-by-any
+title: Query for latest values and deduplicated data
+sidebar_label: Query for latest and deduplicated data
+description: How to use LATEST_BY or deltas for up-to-date values and ANY for deduplication.
 ---
 
 <!--
@@ -24,55 +24,98 @@ description: Learn how to update data in Apache Druid.
   ~ under the License.
   -->
 
-Apache Druid stores data and indexes in [segment files](../design/segments.md) partitioned by time.
-After Druid creates a segment, its contents can't be modified.
-You can either replace data for the whole segment, or, in some cases, overshadow a portion of the segment data.
+This tutorial describes potential uses for LATEST_BY, deltas, and ANY aggregations to solve certain UPSERT and deduplication use cases for Apache Druid.
 
-In Druid, use time ranges to specify the data you want to update, as opposed to a primary key or dimensions often used in transactional databases. Data outside the specified replacement time range remains unaffected.
-You can use this Druid functionality to perform data updates, inserts, and deletes, similar to UPSERT functionality for transactional databases.
+The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to updadate data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements for updates.
 
-This tutorial shows you how to use the Druid SQL [REPLACE](../multi-stage-query/reference.md#replace) function with the OVERWRITE clause to update existing data.
-
-The tutorial walks you through the following use cases:
-
-* [Overwrite all data](#overwrite-all-data)
-* [Overwrite records for a specific time range](#overwrite-records-for-a-specific-time-range)
-* [Update a row using partial segment overshadowing](#update-a-row-using-partial-segment-overshadowing)
-
-All examples use the [multi-stage query (MSQ)](../multi-stage-query/index.md) task engine to executes SQL statements.
+Additionally, the ANY function can solve for cases where you would otherwise want to perform deduplication.
 
 ## Prerequisites
 
-Before you follow the steps in this tutorial, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before you follow the steps in this tutorial, download Druid as described in the [Local quickstart](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
-## Load sample data
+## Use LATEST_BY to get the current value for a field
 
-Load a sample dataset using [REPLACE](../multi-stage-query/reference.md#replace) and [EXTERN](../multi-stage-query/reference.md#extern-function) functions.
-In Druid SQL, the REPLACE function can create a new [datasource](../design/storage.md) or update an existing datasource.
-
-In the Druid [web console](../operations/web-console.md), go to the **Query** view and run the following query:
+Sometimes you want to read the latest value of a measure `my-measure` for a corresponding dimension `my-diimension`. Instead of updating your data or using UPSERT, if you append all updates during ingestion, then you can preform the following type of query:
 
 ```sql
-REPLACE INTO "update_tutorial" OVERWRITE ALL
+SELECT my_dimession,
+       LATEST_BY(my_measure, update_timestamp)
+FROM my_table
+GROUP BY 1
+```
+
+For example, consider the following table of events that log the total number of points for a user:
+
+| `__time` |  `user_id`| `total_points`|
+| --- | --- | --- | --- |
+| `2024-01-01T01:00:00.000Z`|`funny_bunny1`| 10 |
+| `2024-01-01T01:05:00.000Z`|`funny_bunny1`| 30 |
+| `2024-01-01T02:00:00.000Z`|`funny_bunny1`| 35 |
+| `2024-01-01T02:00:00.000Z`|`creepy_monkey2`| 30 |
+| `2024-01-01T02:05:00.000Z`|`creepy_monkey2`| 55 |
+| `2024-01-01T03:00:00.000Z`|`funny_bunny1`| 40 |
+
+<details>
+<summary>Insert sample data</summary>
+
+```sql
+REPLACE INTO "latest_by_tutorial1" OVERWRITE ALL
 WITH "ext" AS (
   SELECT *
   FROM TABLE(
     EXTERN(
-     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T07:01:35Z\",\"animal\":\"octopus\", \"number\":115}\n{\"timestamp\":\"2024-01-01T05:01:35Z\",\"animal\":\"mongoose\", \"number\":737}\n{\"timestamp\":\"2024-01-01T06:01:35Z\",\"animal\":\"snake\", \"number\":1234}\n{\"timestamp\":\"2024-01-01T01:01:35Z\",\"animal\":\"lion\", \"number\":300}\n{\"timestamp\":\"2024-01-02T07:01:35Z\",\"animal\":\"seahorse\", \"number\":115}\n{\"timestamp\":\"2024-01-02T05:01:35Z\",\"animal\":\"skunk\", \"number\":737}\n{\"timestamp\":\"2024-01-02T06:01:35Z\",\"animal\":\"iguana\", \"number\":1234}\n{\"timestamp\":\"2024-01-02T01:01:35Z\",\"animal\":\"opossum\", \"number\":300}"}',
+     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T01:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}\n{\"timestamp\":\"2024-01-01T01:05:00Z\",\"user_id\":\"funny_bunny1\", \"points\":30}\n{\"timestamp\": \"2024-01-01T02:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":35}\n{\"timestamp\":\"2024-01-01T02:00:00Z\",\"user_id\":\"creepy_monkey2\", \"points\":30}\n{\"timestamp\":\"2024-01-01T02:05:00Z\",\"user_id\":\"creepy_monkey2\", \"points\":55}\n{\"timestamp\":\"2024-01-01T03:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":40}"}',
      '{"type":"json"}'
     )
-  ) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "number" BIGINT)
+  ) EXTEND ("timestamp" VARCHAR, "user_id" VARCHAR, "points" BIGINT)
 )
 SELECT
   TIME_PARSE("timestamp") AS "__time",
-  "animal",
-  "number"
+  "user_id",
+  "points"
 FROM "ext"
 PARTITIONED BY DAY
-
 ```
+</details>
+
+The following query gives us the latest points value for each user_id. In the example, the values increase each time, but this method works if the values fluctuate:
+
+```sql
+SELECT user_id,
+     LATEST_BY("points", "__time") AS latest_points
+FROM latest_by_tutorial1
+GROUP BY 1
+```
+
+This method requires an additional timestamp to track the update times so that Druid can track the latest version.
+
+You can use this query shape as a subquery to do additional processing. However, if there a lot of values for "my_dimesion", the query can be expensive.
+
+Consider the following data that represents points for various users:
+
+
+
+The following query demonstrates how to query for the latest points value by user for each hour:
+
+```sql
+SELECT FLOOR("__time" TO HOUR) AS "hour_time",
+      "user_id",
+       LATEST_BY("points", TIME_PARSE(updated_timestamp)) AS latest_points_hour
+FROM latest_by_tutorial
+GROUP BY 1,2
+```
+
+The results are as follows:
+
+| `hour_time` | `user_id` | `latest_points_hour`|
+|---|---|---|
+|`2024-01-01T01:00:00.000Z`|`funny_bunny1`|20|
+|`2024-01-01T02:00:00.000Z`|`funny_bunny1`|5|
+|`2024-01-01T02:00:00.000Z`|`creepy_monkey2`|25|
+|`2024-01-01T03:00:00.000Z`|`funny_bunny1`|10|
 
 In the resulting `update_tutorial` datasource, individual rows are uniquely identified by `__time`, `animal`, and `number`.
 To view the results, open a new tab and run the following query:
