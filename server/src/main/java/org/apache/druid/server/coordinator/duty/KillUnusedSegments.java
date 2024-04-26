@@ -239,7 +239,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     log.info(
         "Submitted [%d] kill tasks for [%d] datasources. Remaining datasources to kill: %s",
-        submittedTasks, dataSourcesToKill.size(), remainingDatasourcesToKill
+        submittedTasks, dataSourcesToKill.size() - remainingDatasourcesToKill.size(), remainingDatasourcesToKill
     );
 
     stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
