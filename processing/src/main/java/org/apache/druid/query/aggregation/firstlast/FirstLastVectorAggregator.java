@@ -49,12 +49,7 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
 
 
   /**
-   * TODO(laksh): valueSelector isn't used much here, only checked for nullity. However while calling the methods of the subclasses,
-   *  it gets used because it is clearer to know which selector is getting used. This gets used
-   *
-   *  timeSelector can be null, however aggregate functions are no-op then. Weird, since all numeric versions supply the selector,
-   *  only the case when the aggregator's capabilities are not present in the string version do we hit this case (not sure why this is
-   *  a possibility, and what benefit does it provides)
+   *  timeSelector can be null, however aggregate functions are no-op then.
    */
   public FirstLastVectorAggregator(
       @Nullable VectorValueSelector timeSelector,
@@ -183,11 +178,11 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
       for (int i = 0; i < numRows; ++i) {
         int position = positions[i] + positionOffset;
         int row = rows == null ? i : rows[i];
-        long lastTime = buf.getLong(position);
         // All the information about the object would be in the single selector. This method will check the folding of the object selector,
         // casting, and everything........
         PairType pair = readPairFromVectorSelectors(timeNullityVector, timeVector, maybeFoldedObjects, row);
         if (pair != null) {
+          long lastTime = buf.getLong(position);
           if (selectionPredicate.apply(pair.lhs, lastTime)) {
             if (pair.rhs != null) {
               putValue(buf, position, pair.lhs, pair.rhs);

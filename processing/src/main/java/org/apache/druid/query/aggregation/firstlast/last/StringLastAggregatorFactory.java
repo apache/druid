@@ -182,7 +182,6 @@ public class StringLastAggregatorFactory extends AggregatorFactory
           SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
               DefaultDimensionSpec.of(
                   fieldName));
-          // TODO(laksh): Get this change vetted
           // Relies on storing the id, and possibly retrieving it at a later stage, therefore name lookup should be
           // possible for non current rows
           if (sSelector.nameLookupPossibleInAdvance()) {

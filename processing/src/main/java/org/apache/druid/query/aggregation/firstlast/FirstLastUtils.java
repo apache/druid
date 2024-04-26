@@ -78,8 +78,7 @@ public class FirstLastUtils
       if (pair.lhs == null) {
         return null;
       }
-      time = pair.lhs;
-      value = pair.rhs;
+      return pair;
     } else {
       if (timeNullityVector != null && timeNullityVector[index]) {
         // Donot aggregate pairs where time is unknown
@@ -111,8 +110,7 @@ public class FirstLastUtils
       if (pair.lhs == null) {
         return null;
       }
-      time = pair.lhs;
-      value = pair.rhs;
+      return pair;
     } else {
       if (timeNullityVector != null && timeNullityVector[index]) {
         // Donot aggregate pairs where time is unknown
@@ -143,8 +141,7 @@ public class FirstLastUtils
       if (pair.lhs == null) {
         return null;
       }
-      time = pair.lhs;
-      value = pair.rhs;
+      return pair;
     } else {
       if (timeNullityVector != null && timeNullityVector[index]) {
         // Donot aggregate pairs where time is unknown

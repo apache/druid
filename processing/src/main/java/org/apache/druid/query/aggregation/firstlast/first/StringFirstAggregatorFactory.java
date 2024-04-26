@@ -209,10 +209,11 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
         // For multivalue string we need to iterate a list of indexedInts which is also similar to iterating
         // over elements for an ARRAY typed column. These two which requires an iteration will be done together.
         if (!capabilities.hasMultipleValues().isTrue()) {
-          SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
-              DefaultDimensionSpec.of(
-                  fieldName));
-          return new SingleStringFirstDimensionVectorAggregator(timeSelector, sSelector, maxStringBytes);
+          SingleValueDimensionVectorSelector sSelector =
+              selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName));
+          if (sSelector.nameLookupPossibleInAdvance()) {
+            return new SingleStringFirstDimensionVectorAggregator(timeSelector, sSelector, maxStringBytes);
+          }
         }
       }
     }
