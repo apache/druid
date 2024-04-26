@@ -84,11 +84,6 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
       values = new double[valueSelectors.length];
     }
 
-    if (sketch == null) {
-      sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
-                                                         .setNumberOfValues(valueSelectors.length).build();
-    }
-
     final IndexedInts keys = keySelector.getRow();
     for (int i = 0; i < valueSelectors.length; i++) {
       if (valueSelectors[i].isNull()) {
@@ -113,6 +108,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
             key.get(bytes);
             key.reset();
 
+            initializeSketchIfNeeded();
             sketch.update(bytes, values);
           }
         }
@@ -125,6 +121,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
             key = keySelector.lookupName(keys.get(i));
           }
 
+          initializeSketchIfNeeded();
           sketch.update(key, values);
         }
       }
@@ -142,6 +139,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   @Override
   public synchronized Object get()
   {
+    initializeSketchIfNeeded();
     return sketch.compact();
   }
 
@@ -164,4 +162,14 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
     values = null;
   }
 
+  /**
+   * Initialize {@link #sketch} if it is null.
+   */
+  private void initializeSketchIfNeeded()
+  {
+    if (sketch == null) {
+      sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
+                                                         .setNumberOfValues(valueSelectors.length).build();
+    }
+  }
 }
