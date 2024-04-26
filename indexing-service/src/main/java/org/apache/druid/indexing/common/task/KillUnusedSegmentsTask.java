@@ -43,6 +43,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
@@ -342,8 +343,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   }
 
   @Override
-  public List<String> getLookupsToLoad()
+  public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return Collections.emptyList();
+    return new LookupLoadingSpec(LookupLoadingSpec.LookupLoadingMode.NONE, Collections.emptyList());
   }
 }

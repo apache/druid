@@ -141,7 +141,7 @@ public class LookupListeningAnnouncerConfigTest
     final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
     final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
     injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(lookupsToLoad, dimensionIdHolder.getLookupsToLoad());
+    Assert.assertEquals(lookupsToLoad, dimensionIdHolder.getLookupLoadingSpec());
   }
 
   @Test(expected = IllegalArgumentException.class)

@@ -41,13 +41,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -335,13 +335,13 @@ public interface Task
   }
 
   /**
-   * Returns the list of lookup names to be loaded for the given task.
+   * Returns the {@link LookupLoadingSpec} for the given task, which can be used to determine the list of lookups to be loaded.
    *
-   * @return null if all lookups need to be loaded, list of lookup names otherwise.
+   * @return {@link LookupLoadingSpec}
    */
   @Nullable
-  default List<String> getLookupsToLoad()
+  default LookupLoadingSpec getLookupLoadingSpec()
   {
-    return null;
+    return new LookupLoadingSpec();
   }
 }

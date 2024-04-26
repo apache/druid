@@ -21,9 +21,9 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 public class DataSourceTaskIdHolder
 {
@@ -40,7 +40,7 @@ public class DataSourceTaskIdHolder
   @Nullable
   @Named(LOOKUPS_TO_LOAD_FOR_TASK)
   @Inject(optional = true)
-  List<String> lookupsToLoad = null;
+  LookupLoadingSpec lookupLoadingSpec = new LookupLoadingSpec();
 
   public String getDataSource()
   {
@@ -52,8 +52,8 @@ public class DataSourceTaskIdHolder
     return taskId;
   }
 
-  public List<String> getLookupsToLoad()
+  public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return lookupsToLoad;
+    return lookupLoadingSpec;
   }
 }

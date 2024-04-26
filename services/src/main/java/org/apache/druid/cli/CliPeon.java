@@ -134,6 +134,7 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.tasklogs.TaskPayloadManager;
@@ -360,9 +361,9 @@ public class CliPeon extends GuiceRunnable
           @Provides
           @LazySingleton
           @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
-          public List<String> getLookupsToLoad(final Task task)
+          public LookupLoadingSpec getLookupsToLoad(final Task task)
           {
-            return task.getLookupsToLoad();
+            return task.getLookupLoadingSpec();
           }
         },
         new QueryablePeonModule(),
