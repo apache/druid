@@ -24,8 +24,11 @@ import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -46,22 +49,40 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
   private final List<KeyColumn> keyColumns;
   private final int firstFieldPosition;
   private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
+  private final RowSignature rowSignature;
 
   private ByteRowKeyComparator(
       final List<KeyColumn> keyColumns,
-      final RowKeyComparisonRunLengths rowKeyComparisonRunLengths
-  )
+      final RowKeyComparisonRunLengths rowKeyComparisonRunLengths,
+      final RowSignature rowSignature
+      )
   {
     this.keyColumns = keyColumns;
     this.firstFieldPosition = computeFirstFieldPosition(keyColumns.size());
     this.rowKeyComparisonRunLengths = rowKeyComparisonRunLengths;
+    this.rowSignature = relevantRowSignature(keyColumns, rowSignature);
   }
 
-  public static ByteRowKeyComparator create(final List<KeyColumn> keyColumns)
+  // Trims down the rowSignature to relevant portion
+  private static RowSignature relevantRowSignature(final List<KeyColumn> keyColumns, final RowSignature completeRowSignature)
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final KeyColumn keyColumn : keyColumns) {
+      builder.add(
+          keyColumn.columnName(),
+          completeRowSignature.getColumnType(keyColumn.columnName())
+                              .orElseThrow(() -> DruidException.defensive("Expected type from the comparison key"))
+      );
+    }
+    return builder.build();
+  }
+
+  public static ByteRowKeyComparator create(final List<KeyColumn> keyColumns, final RowSignature rowSignature)
   {
     return new ByteRowKeyComparator(
         keyColumns,
-        RowKeyComparisonRunLengths.create(keyColumns)
+        RowKeyComparisonRunLengths.create(keyColumns, rowSignature),
+        rowSignature
     );
   }
 
@@ -100,8 +121,10 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
         assert runLengthEntry.getRunLength() == 1;
         // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
         // a known complex type
+        ColumnType columnType = rowSignature.getColumnType(keyColumns.get(fieldsComparedTillNow).columnName())
+                                            .orElseThrow(() -> DruidException.defensive("Expecting a complex column with known type"));
         String complexTypeName = Preconditions.checkNotNull(
-            keyColumns.get(fieldsComparedTillNow).columnType().getComplexTypeName(),
+            columnType.getComplexTypeName(),
             "complexType must be present for comparison"
         );
 
@@ -123,7 +146,7 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
             keyArray2,
             currentRunStartPosition2,
             currentRunEndPosition2 - currentRunStartPosition2,
-            keyColumns.get(fieldsComparedTillNow).columnType(),
+            columnType,
             serde
         );
         if (cmp != 0) {
@@ -170,13 +193,14 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
     ByteRowKeyComparator that = (ByteRowKeyComparator) o;
     return firstFieldPosition == that.firstFieldPosition
            && Objects.equals(keyColumns, that.keyColumns)
-           && Objects.equals(rowKeyComparisonRunLengths, that.rowKeyComparisonRunLengths);
+           && Objects.equals(rowKeyComparisonRunLengths, that.rowKeyComparisonRunLengths)
+           && Objects.equals(rowSignature, that.rowSignature);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(keyColumns, firstFieldPosition, rowKeyComparisonRunLengths);
+    return Objects.hash(keyColumns, firstFieldPosition, rowKeyComparisonRunLengths, rowSignature);
   }
 
   @Override
@@ -186,6 +210,7 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
            "keyColumns=" + keyColumns +
            ", firstFieldPosition=" + firstFieldPosition +
            ", rowKeyComparisonRunLengths=" + rowKeyComparisonRunLengths +
+           ", rowSignature=" + rowSignature +
            '}';
   }
 }

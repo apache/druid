@@ -2,6 +2,7 @@ package org.apache.druid.frame.key;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -12,7 +13,7 @@ import java.util.Objects;
 public class RowKeyComparisonRunLengths
 {
 
-  public static RowKeyComparisonRunLengths create(final List<KeyColumn> keyColumns)
+  public static RowKeyComparisonRunLengths create(final List<KeyColumn> keyColumns, RowSignature rowSignature)
   {
     final List<RunLengthEntry> runLengthEntries = new ArrayList<>();
     for (KeyColumn keyColumn : keyColumns) {
@@ -21,10 +22,13 @@ public class RowKeyComparisonRunLengths
         throw DruidException.defensive("Cannot sort on column [%s] and type [%s] when the sorting order isn't provided");
       }
 
+      ColumnType columnType = rowSignature.getColumnType(keyColumn.columnName())
+                                          .orElseThrow(() -> DruidException.defensive("Need column types"));
+
       if (runLengthEntries.size() == 0) {
         runLengthEntries.add(
             new RunLengthEntry(
-                isByteComparable(keyColumn.columnType()),
+                isByteComparable(columnType),
                 1,
                 keyColumn.order()
             )
@@ -34,7 +38,7 @@ public class RowKeyComparisonRunLengths
 
       // There is atleast one RunLengthEntry present in the array. Check if we can find a way to merge the current entry
       // with the previous one
-      boolean isCurrentColumnByteComparable = isByteComparable(keyColumn.columnType());
+      boolean isCurrentColumnByteComparable = isByteComparable(columnType);
       RunLengthEntry lastRunLengthEntry = runLengthEntries.get(runLengthEntries.size() - 1);
       if (lastRunLengthEntry.isByteComparable()
           && isCurrentColumnByteComparable

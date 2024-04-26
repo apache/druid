@@ -26,17 +26,23 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
+import org.apache.druid.frame.field.ReadableFieldPointer;
+import org.apache.druid.frame.field.SettableFieldPointer;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Implementation of {@link FrameComparisonWidget} for pairs of {@link FrameType#ROW_BASED} frames.
@@ -110,7 +116,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         keyColumns,
         keyColumnReaders,
         ByteRowKeyComparator.computeFirstFieldPosition(signature.size()),
-        RowKeyComparisonRunLengths.create(keyColumns)
+        RowKeyComparisonRunLengths.create(keyColumns, signature)
     );
   }
 
@@ -207,8 +213,10 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         assert runLengthEntry.getRunLength() == 1;
         // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
         // a known complex type
+        ColumnType columnType = signature.getColumnType(keyColumns.get(fieldsComparedTillNow).columnName())
+                                         .orElseThrow(() -> DruidException.defensive("Complex type expected"));
         String complexTypeName = Preconditions.checkNotNull(
-            keyColumns.get(fieldsComparedTillNow).columnType().getComplexTypeName(),
+            columnType.getComplexTypeName(),
             "complexType must be present for comparison"
         );
 
@@ -230,7 +238,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             keyArray,
             comparableBytesStartPositionInKey,
             comparableBytesEndPositionInKey - comparableBytesStartPositionInKey,
-            keyColumns.get(fieldsComparedTillNow).columnType(),
+            columnType,
             serde
         );
 
@@ -285,6 +293,11 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
+    final Map<Integer, ColumnValueSelector> complexValueSelectors = new HashMap<>();
+    final Map<Integer, ColumnValueSelector> otherComplexValueSelectors = new HashMap<>();
+    final Map<Integer, SettableFieldPointer> fieldPointers = new HashMap<>();
+    final Map<Integer, SettableFieldPointer> otherFieldPointers = new HashMap<>();
+
     for (RowKeyComparisonRunLengths.RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
 
       if (runLengthEntry.getRunLength() <= 0) {
@@ -297,16 +310,23 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         assert runLengthEntry.getRunLength() == 1;
         // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
         // a known complex type
+        ColumnType columnType1 = signature.getColumnType(keyColumns.get(fieldsComparedTillNow).columnName())
+                                          .orElseThrow(() -> DruidException.defensive("Expected column type"));
         String complexTypeName = Preconditions.checkNotNull(
-            keyColumns.get(fieldsComparedTillNow).columnType().getComplexTypeName(),
+            columnType1.getComplexTypeName(),
             "complexType must be present for comparison"
         );
 
-        // TODO(laksh): Do we check if they are the same
+        ColumnType columnType2 = otherWidgetImpl.signature
+            .getColumnType(otherWidgetImpl.keyColumns.get(fieldsComparedTillNow).columnName())
+            .orElseThrow(() -> DruidException.defensive("Expected column type for other frame"));
+
         Preconditions.checkNotNull(
-            otherWidgetImpl.keyColumns.get(fieldsComparedTillNow).columnType().getComplexTypeName(),
+            columnType2.getComplexTypeName(),
             "complexType must be present for comparison"
         );
+
+        Preconditions.checkArgument(columnType1.equals(columnType2), "Different complex types cannot be compared");
 
         // Use serde for the current implementation.
         ComplexMetricSerde serde = Preconditions.checkNotNull(
@@ -318,6 +338,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         int nextField = fieldsComparedTillNow + 1;
         final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
         final int otherComparableBytesEndPositionInRow = getFieldEndPositionInRow(otherRowPosition, nextField - 1);
+
+        complexValueSelectors.computeIfAbsent()
+
         int cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
@@ -325,7 +348,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             otherWidgetImpl.dataRegion,
             otherRowPosition + otherComparableBytesStartPositionInRow,
             otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow,
-            keyColumns.get(fieldsComparedTillNow).columnType(),
+            columnType1,
             serde
         );
 

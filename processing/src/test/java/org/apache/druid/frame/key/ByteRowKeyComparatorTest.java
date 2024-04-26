@@ -147,7 +147,7 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
   {
     return objectss.stream()
                    .map(objects -> KeyTestUtils.createKey(SIGNATURE, objects).array())
-                   .sorted(ByteRowKeyComparator.create(keyColumns))
+                   .sorted(ByteRowKeyComparator.create(keyColumns, SIGNATURE))
                    .map(RowKey::wrap)
                    .collect(Collectors.toList());
   }

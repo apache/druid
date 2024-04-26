@@ -152,7 +152,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
       sortedKeys.add(KeyTestUtils.createKey(SIGNATURE, objects));
     }
 
-    sortedKeys.sort(RowKeyComparator.create(keyColumns));
+    sortedKeys.sort(RowKeyComparator.create(keyColumns, SIGNATURE));
     return sortedKeys;
   }
 

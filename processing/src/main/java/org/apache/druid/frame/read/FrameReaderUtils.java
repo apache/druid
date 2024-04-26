@@ -20,6 +20,7 @@
 package org.apache.druid.frame.read;
 
 import com.google.common.primitives.Ints;
+import io.netty.buffer.ByteBuf;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;

@@ -473,7 +473,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     }
 
     final RowSignature keySignature = KeyTestUtils.createKeySignature(keyColumns, signature);
-    final Comparator<RowKey> keyComparator = RowKeyComparator.create(keyColumns);
+    final Comparator<RowKey> keyComparator = RowKeyComparator.create(keyColumns, signature);
 
     return Sequences.sort(
         rows,
@@ -514,14 +514,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       return Collections.emptyList();
     } else {
       return sortColumnNames.stream()
-                            .map(
-                                columnName ->
-                                    new KeyColumn(
-                                        columnName,
-                                        rowSignature.getColumnType(columnName).orElse(null),
-                                        sortedness
-                                    )
-                            )
+                            .map(columnName -> new KeyColumn(columnName, sortedness))
                             .collect(Collectors.toList());
     }
   }

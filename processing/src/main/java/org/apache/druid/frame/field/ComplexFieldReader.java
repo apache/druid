@@ -33,6 +33,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  * Reads values written by {@link ComplexFieldWriter}.
@@ -95,6 +96,29 @@ public class ComplexFieldReader implements FieldReader
     return true;
   }
 
+  @Nullable
+  public static Object readFieldFromBuffer(
+      ComplexMetricSerde serde,
+      Memory memory,
+      long position,
+      long completeFieldLength
+  )
+  {
+    final byte nullByte = memory.getByte(position);
+
+    if (nullByte == ComplexFieldWriter.NULL_BYTE) {
+      return null;
+    } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
+      final int length = memory.getInt(position + Byte.BYTES);
+      final byte[] bytes = new byte[length];
+      memory.getByteArray(position + ComplexFieldWriter.HEADER_SIZE, bytes, 0, length);
+
+      return serde.fromBytes(bytes, 0, length);
+    } else {
+      throw new ISE("Unexpected null byte [%s]", nullByte);
+    }
+  }
+
   /**
    * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
    */
@@ -115,21 +139,8 @@ public class ComplexFieldReader implements FieldReader
     @Override
     public T getObject()
     {
-      final long fieldPosition = fieldPointer.position();
-      final byte nullByte = memory.getByte(fieldPosition);
-
-      if (nullByte == ComplexFieldWriter.NULL_BYTE) {
-        return null;
-      } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
-        final int length = memory.getInt(fieldPosition + Byte.BYTES);
-        final byte[] bytes = new byte[length];
-        memory.getByteArray(fieldPosition + ComplexFieldWriter.HEADER_SIZE, bytes, 0, length);
-
-        //noinspection unchecked
-        return (T) serde.fromBytes(bytes, 0, length);
-      } else {
-        throw new ISE("Unexpected null byte [%s]", nullByte);
-      }
+      //noinspection unchecked
+      return (T) readFieldFromBuffer(serde, memory, fieldPointer.position(), fieldPointer.length());
     }
 
     @Override

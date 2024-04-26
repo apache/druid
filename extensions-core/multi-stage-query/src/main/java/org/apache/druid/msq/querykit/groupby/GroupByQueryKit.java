@@ -313,7 +313,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     List<KeyColumn> resultClusterByWithPartitionBoostColumns = new ArrayList<>(resultClusterByWithoutPartitionBoost.getColumns());
     resultClusterByWithPartitionBoostColumns.add(new KeyColumn(
         QueryKitUtils.PARTITION_BOOST_COLUMN,
-        ColumnType.LONG,
         KeyOrder.ASCENDING
     ));
     return new ClusterBy(
@@ -368,7 +367,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final List<KeyColumn> columns = new ArrayList<>();
 
     for (final DimensionSpec dimension : query.getDimensions()) {
-      columns.add(new KeyColumn(dimension.getOutputName(), dimension.getOutputType(), KeyOrder.ASCENDING));
+      columns.add(new KeyColumn(dimension.getOutputName(), KeyOrder.ASCENDING));
     }
 
     // Note: ignoring time because we assume granularity = all.
@@ -391,7 +390,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
           clusterByColumns.add(
               new KeyColumn(
                   orderBy.getDimension(),
-                  resultSignature.getColumnType(orderBy.getDimension()).orElse(null),
                   orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING
                   ? KeyOrder.DESCENDING
                   : KeyOrder.ASCENDING
