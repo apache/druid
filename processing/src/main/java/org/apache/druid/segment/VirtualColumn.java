@@ -251,6 +251,7 @@ public interface VirtualColumn extends Cacheable
    *
    * @return selector, or null if this virtual column does not have a specialized one
    */
+  @SuppressWarnings("unused")
   @Nullable
   default GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
       String columnName,

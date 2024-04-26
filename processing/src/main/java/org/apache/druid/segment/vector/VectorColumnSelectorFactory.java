@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
  *
  * If you need to write code that adapts to different input types, you should write a
  * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
- * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this class.
+ * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this class.
  *
  * @see org.apache.druid.segment.ColumnSelectorFactory the non-vectorized version.
  */
@@ -65,7 +65,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec);
 
@@ -76,7 +76,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec);
 
@@ -86,7 +86,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   VectorValueSelector makeValueSelector(String column);
 
@@ -101,7 +101,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   VectorObjectSelector makeObjectSelector(String column);
 
