@@ -42,6 +42,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchTo
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilesPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToRankPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToStringPostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSqlAggregatorTest.DoublesSketchComponentSupplier;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -57,8 +58,11 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -69,55 +73,64 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SqlTestFramework.SqlTestFrameWorkModule(DoublesSketchComponentSupplier.class)
 public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class DoublesSketchComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new DoublesSketchModule());
-  }
+    public DoublesSketchComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    DoublesSketchModule.registerSerde();
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new DoublesSketchModule());
+    }
 
-    final QueryableIndex index =
-        IndexBuilder.create(CalciteTests.getJsonMapper())
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt"),
-                                new DoubleSumAggregatorFactory("m1", "m1"),
-                                new DoublesSketchAggregatorFactory(
-                                    "qsketch_m1",
-                                    "m1",
-                                    128
-                                )
-                            )
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(TestDataBuilder.ROWS1)
-                    .buildMMappedIndex();
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      DoublesSketchModule.registerSerde();
 
-    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
+      final QueryableIndex index =
+          IndexBuilder.create(CalciteTests.getJsonMapper())
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt"),
+                                  new DoubleSumAggregatorFactory("m1", "m1"),
+                                  new DoublesSketchAggregatorFactory(
+                                      "qsketch_m1",
+                                      "m1",
+                                      128
+                                  )
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(TestDataBuilder.ROWS1)
+                      .buildMMappedIndex();
+
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(CalciteTests.DATASOURCE1)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   @Test

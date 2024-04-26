@@ -42,6 +42,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -49,8 +50,10 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.Test;
 
+@SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
   private final String operationName;
@@ -65,184 +68,192 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   public abstract String getOperationName();
   public abstract String getDmlPrefixPattern();
 
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  public static ImmutableMap<String, DatasourceTable> RESOLVED_TABLES = ImmutableMap.of(
-      "hourDs", new DatasourceTable(
-          RowSignature.builder().addTimeColumn().build(),
-          new DatasourceTable.PhysicalDatasourceMetadata(
-              new TableDataSource("hourDs"),
-              RowSignature.builder().addTimeColumn().build(),
-              false,
-              false
-          ),
-          new DatasourceTable.EffectiveMetadata(
-              new DatasourceFacade(new ResolvedTable(
-                  new TableDefn(
-                      "foo",
-                      DatasourceDefn.TABLE_TYPE,
-                      null,
-                      null
-                  ),
-                  new TableSpec(
-                      DatasourceDefn.TABLE_TYPE,
-                      ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H"),
-                      ImmutableList.of(
-                          new ColumnSpec("__time", Columns.TIME_COLUMN, null)
-                      )
-                  ),
-                  MAPPER
-              )),
-              DatasourceTable.EffectiveMetadata.toEffectiveColumns(
-                  RowSignature.builder()
-                      .addTimeColumn()
-                      .build()),
-              false
-          )
-      ),
-      "noPartitonedBy", new DatasourceTable(
-          RowSignature.builder().addTimeColumn().build(),
-          new DatasourceTable.PhysicalDatasourceMetadata(
-              new TableDataSource("hourDs"),
-              RowSignature.builder().addTimeColumn().build(),
-              false,
-              false
-          ),
-          new DatasourceTable.EffectiveMetadata(
-              new DatasourceFacade(new ResolvedTable(
-                  new TableDefn(
-                      "foo",
-                      DatasourceDefn.TABLE_TYPE,
-                      null,
-                      null
-                  ),
-                  new TableSpec(
-                      DatasourceDefn.TABLE_TYPE,
-                      ImmutableMap.of(),
-                      ImmutableList.of(
-                          new ColumnSpec("__time", Columns.TIME_COLUMN, null)
-                      )
-                  ),
-                  MAPPER
-              )),
-              DatasourceTable.EffectiveMetadata.toEffectiveColumns(
-                  RowSignature.builder()
-                      .addTimeColumn()
-                      .build()),
-              false
-          )
-      ),
-      "strictTableWithNoDefinedSchema", new DatasourceTable(
-          RowSignature.builder().build(),
-          new DatasourceTable.PhysicalDatasourceMetadata(
-              new TableDataSource("strictTableWithNoDefinedSchema"),
-              RowSignature.builder().build(),
-              false,
-              false
-          ),
-          new DatasourceTable.EffectiveMetadata(
-              new DatasourceFacade(new ResolvedTable(
-                  new TableDefn(
-                      "strictTableWithNoDefinedSchema",
-                      DatasourceDefn.TABLE_TYPE,
-                      null,
-                      null
-                  ),
-                  new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true), null),
-                  MAPPER
-              )),
-              DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder().build()),
-              false
-          )
-      ),
-      "foo", new DatasourceTable(
-          FOO_TABLE_SIGNATURE,
-          new DatasourceTable.PhysicalDatasourceMetadata(
-              new TableDataSource("foo"),
-              FOO_TABLE_SIGNATURE,
-              false,
-              false
-          ),
-          new DatasourceTable.EffectiveMetadata(
-              new DatasourceFacade(new ResolvedTable(
-                  new TableDefn(
-                      "foo",
-                      DatasourceDefn.TABLE_TYPE,
-                      null,
-                      null
-                  ),
-                  new TableSpec(
-                      DatasourceDefn.TABLE_TYPE,
-                      ImmutableMap.of(),
-                      ImmutableList.of(
-                          new ColumnSpec("__time", Columns.TIME_COLUMN, null),
-                          new ColumnSpec("dim1", Columns.STRING, null),
-                          new ColumnSpec("dim2", Columns.STRING, null),
-                          new ColumnSpec("dim3", Columns.STRING, null),
-                          new ColumnSpec("cnt", Columns.LONG, null),
-                          new ColumnSpec("m1", Columns.FLOAT, null),
-                          new ColumnSpec("m2", Columns.DOUBLE, null),
-                          new ColumnSpec("unique_dim1", HyperUniquesAggregatorFactory.TYPE.asTypeString(), null)
-                      )
-                  ),
-                  MAPPER
-              )),
-              DatasourceTable.EffectiveMetadata.toEffectiveColumns(FOO_TABLE_SIGNATURE),
-              false
-          )
-      ),
-      "fooSealed", new DatasourceTable(
-          FOO_TABLE_SIGNATURE,
-          new DatasourceTable.PhysicalDatasourceMetadata(
-              new TableDataSource("foo"),
-              FOO_TABLE_SIGNATURE,
-              false,
-              false
-          ),
-          new DatasourceTable.EffectiveMetadata(
-              new DatasourceFacade(new ResolvedTable(
-                  new TableDefn(
-                      "foo",
-                      DatasourceDefn.TABLE_TYPE,
-                      null,
-                      null
-                  ),
-                  new TableSpec(
-                      DatasourceDefn.TABLE_TYPE,
-                      ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true),
-                      ImmutableList.of(
-                          new ColumnSpec("__time", Columns.TIME_COLUMN, null),
-                          new ColumnSpec("dim1", Columns.STRING, null),
-                          new ColumnSpec("dim2", Columns.STRING, null),
-                          new ColumnSpec("dim3", Columns.STRING, null),
-                          new ColumnSpec("cnt", Columns.LONG, null),
-                          new ColumnSpec("m1", Columns.FLOAT, null),
-                          new ColumnSpec("m2", Columns.DOUBLE, null)
-                      )
-                  ),
-                  MAPPER
-              )),
-              DatasourceTable.EffectiveMetadata.toEffectiveColumns(FOO_TABLE_SIGNATURE),
-              false
-          )
-      )
-  );
-
-  @Override
-  public CatalogResolver createCatalogResolver()
+  public static class CatalogIngestionDmlComponentSupplier extends IngestionDmlComponentSupplier
   {
-    return new CatalogResolver.NullCatalogResolver() {
-      @Override
-      public DruidTable resolveDatasource(
-          final String tableName,
-          final DatasourceTable.PhysicalDatasourceMetadata dsMetadata
-      )
-      {
-        if (RESOLVED_TABLES.get(tableName) != null) {
-          return RESOLVED_TABLES.get(tableName);
+    public CatalogIngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+    public static ImmutableMap<String, DatasourceTable> RESOLVED_TABLES = ImmutableMap.of(
+        "hourDs", new DatasourceTable(
+            RowSignature.builder().addTimeColumn().build(),
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("hourDs"),
+                RowSignature.builder().addTimeColumn().build(),
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "foo",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H"),
+                        ImmutableList.of(
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(
+                    RowSignature.builder()
+                        .addTimeColumn()
+                        .build()),
+                false
+            )
+        ),
+        "noPartitonedBy", new DatasourceTable(
+            RowSignature.builder().addTimeColumn().build(),
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("hourDs"),
+                RowSignature.builder().addTimeColumn().build(),
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "foo",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(),
+                        ImmutableList.of(
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(
+                    RowSignature.builder()
+                        .addTimeColumn()
+                        .build()),
+                false
+            )
+        ),
+        "strictTableWithNoDefinedSchema", new DatasourceTable(
+            RowSignature.builder().build(),
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("strictTableWithNoDefinedSchema"),
+                RowSignature.builder().build(),
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "strictTableWithNoDefinedSchema",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true), null),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder().build()),
+                false
+            )
+        ),
+        "foo", new DatasourceTable(
+            FOO_TABLE_SIGNATURE,
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("foo"),
+                FOO_TABLE_SIGNATURE,
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "foo",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(),
+                        ImmutableList.of(
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null),
+                            new ColumnSpec("dim1", Columns.STRING, null),
+                            new ColumnSpec("dim2", Columns.STRING, null),
+                            new ColumnSpec("dim3", Columns.STRING, null),
+                            new ColumnSpec("cnt", Columns.LONG, null),
+                            new ColumnSpec("m1", Columns.FLOAT, null),
+                            new ColumnSpec("m2", Columns.DOUBLE, null),
+                            new ColumnSpec("unique_dim1", HyperUniquesAggregatorFactory.TYPE.asTypeString(), null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(FOO_TABLE_SIGNATURE),
+                false
+            )
+        ),
+        "fooSealed", new DatasourceTable(
+            FOO_TABLE_SIGNATURE,
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("foo"),
+                FOO_TABLE_SIGNATURE,
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "foo",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true),
+                        ImmutableList.of(
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null),
+                            new ColumnSpec("dim1", Columns.STRING, null),
+                            new ColumnSpec("dim2", Columns.STRING, null),
+                            new ColumnSpec("dim3", Columns.STRING, null),
+                            new ColumnSpec("cnt", Columns.LONG, null),
+                            new ColumnSpec("m1", Columns.FLOAT, null),
+                            new ColumnSpec("m2", Columns.DOUBLE, null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(FOO_TABLE_SIGNATURE),
+                false
+            )
+        )
+    );
+
+    @Override
+    public CatalogResolver createCatalogResolver()
+    {
+      return new CatalogResolver.NullCatalogResolver() {
+        @Override
+        public DruidTable resolveDatasource(
+            final String tableName,
+            final DatasourceTable.PhysicalDatasourceMetadata dsMetadata
+        )
+        {
+          if (RESOLVED_TABLES.get(tableName) != null) {
+            return RESOLVED_TABLES.get(tableName);
+          }
+          return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
         }
-        return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
-      }
-    };
+      };
+    }
   }
 
   /**

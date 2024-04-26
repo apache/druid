@@ -36,6 +36,7 @@ export * from './metric-spec/metric-spec';
 export * from './overlord-dynamic-config/overlord-dynamic-config';
 export * from './query-context/query-context';
 export * from './stages/stages';
+export * from './supervisor-status/supervisor-status';
 export * from './task/task';
 export * from './time/time';
 export * from './timestamp-spec/timestamp-spec';

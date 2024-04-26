@@ -89,8 +89,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -743,7 +745,8 @@ public class RowBasedGrouperHelper
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
         ColumnCapabilities capabilities,
-        ColumnValueSelector selector
+        ColumnValueSelector selector,
+        String dimension
     )
     {
       switch (capabilities.getType()) {
@@ -759,27 +762,19 @@ public class RowBasedGrouperHelper
           return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> () -> columnSelector.isNull() ? null : columnSelector.getDouble();
         case ARRAY:
-          switch (capabilities.getElementType().getType()) {
-            case STRING:
-              return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
-                  columnSelector ->
-                      () -> DimensionHandlerUtils.coerceToStringArray(columnSelector.getObject());
-            case FLOAT:
-            case LONG:
-            case DOUBLE:
-              return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
-                  columnSelector ->
-                      () -> DimensionHandlerUtils.convertToArray(columnSelector.getObject(),
-                                                                 capabilities.getElementType());
-            default:
-              throw new IAE(
-                  "Cannot create query type helper from invalid type [%s]",
-                  capabilities.asTypeString()
-              );
-          }
+        case COMPLEX:
+          return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
+              columnSelector ->
+                  () -> DimensionHandlerUtils.convertObjectToType(columnSelector.getObject(), capabilities.toColumnType());
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
+    }
+
+    @Override
+    public boolean supportsComplexTypes()
+    {
+      return true;
     }
   }
 
@@ -1157,7 +1152,7 @@ public class RowBasedGrouperHelper
 
   static long estimateStringKeySize(@Nullable String key)
   {
-    return DictionaryBuilding.estimateEntryFootprint((key == null ? 0 : key.length()) * Character.BYTES);
+    return DictionaryBuildingUtils.estimateEntryFootprint((key == null ? 0 : key.length()) * Character.BYTES);
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
@@ -1172,7 +1167,6 @@ public class RowBasedGrouperHelper
     private final BufferComparator[] serdeHelperComparators;
     private final DefaultLimitSpec limitSpec;
     private final List<ColumnType> valueTypes;
-
     private final boolean enableRuntimeDictionaryGeneration;
 
     private final List<String> dictionary;
@@ -1190,6 +1184,8 @@ public class RowBasedGrouperHelper
     private final List<Object[]> doubleArrayDictionary;
     private final Object2IntMap<Object[]> reverseDoubleArrayDictionary;
 
+    private final Map<String, List<Object>> genericDictionaries = new HashMap<>();
+    private final Map<String, Object2IntMap<Object>> genericReverseDictionaries = new HashMap<>();
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -1219,20 +1215,21 @@ public class RowBasedGrouperHelper
       this.valueTypes = valueTypes;
       this.limitSpec = limitSpec;
       this.enableRuntimeDictionaryGeneration = dictionary == null;
-      this.dictionary = enableRuntimeDictionaryGeneration ? DictionaryBuilding.createDictionary() : dictionary;
-      this.reverseDictionary = DictionaryBuilding.createReverseDictionary();
 
-      this.stringArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseStringArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.STRING_ARRAY);
+      this.dictionary = enableRuntimeDictionaryGeneration ? DictionaryBuildingUtils.createDictionary() : dictionary;
+      this.reverseDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.STRING.getNullableStrategy());
 
-      this.longArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseLongArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.LONG_ARRAY);
+      this.stringArrayDictionary = DictionaryBuildingUtils.createDictionary();
+      this.reverseStringArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.STRING_ARRAY.getNullableStrategy());
 
-      this.floatArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseFloatArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.FLOAT_ARRAY);
+      this.longArrayDictionary = DictionaryBuildingUtils.createDictionary();
+      this.reverseLongArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.LONG_ARRAY.getNullableStrategy());
 
-      this.doubleArrayDictionary = DictionaryBuilding.createDictionary();
-      this.reverseDoubleArrayDictionary = DictionaryBuilding.createReverseDictionaryForPrimitiveArray(ColumnType.DOUBLE_ARRAY);
+      this.floatArrayDictionary = DictionaryBuildingUtils.createDictionary();
+      this.reverseFloatArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.FLOAT_ARRAY.getNullableStrategy());
+
+      this.doubleArrayDictionary = DictionaryBuildingUtils.createDictionary();
+      this.reverseDoubleArrayDictionary = DictionaryBuildingUtils.createReverseDictionary(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
 
       this.maxDictionarySize = maxDictionarySize;
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
@@ -1388,6 +1385,8 @@ public class RowBasedGrouperHelper
         reverseFloatArrayDictionary.clear();
         longArrayDictionary.clear();
         reverseLongArrayDictionary.clear();
+        genericDictionaries.clear();
+        genericReverseDictionaries.clear();
         rankOfDictionaryIds = null;
         currentEstimatedSize = 0;
       }
@@ -1443,6 +1442,12 @@ public class RowBasedGrouperHelper
     )
     {
       switch (valueType.getType()) {
+        case COMPLEX:
+          if (stringComparator != null
+              && !DimensionComparisonUtils.isNaturalComparator(valueType.getType(), stringComparator)) {
+            throw DruidException.defensive("Unexpected string comparator supplied");
+          }
+          return new GenericRowBasedKeySerdeHelper(keyBufferPosition, valueType);
         case ARRAY:
           switch (valueType.getElementType().getType()) {
             case STRING:
@@ -1531,11 +1536,123 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private class ArrayNumericRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    private abstract class DictionaryBuildingSingleValuedRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
-      final int keyBufferPosition;
+      private final int keyBufferPosition;
+
+      public DictionaryBuildingSingleValuedRowBasedKeySerdeHelper(final int keyBufferPosition)
+      {
+        this.keyBufferPosition = keyBufferPosition;
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Integer.BYTES;
+      }
+
+      @Override
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
+      {
+        final Object obj = key.getKey()[idx];
+        int id = getReverseDictionary().getInt(obj);
+        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
+          id = getDictionary().size();
+          getReverseDictionary().put(obj, id);
+          getDictionary().add(obj);
+        }
+        keyBuffer.putInt(id);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
+      {
+        dimValues[dimValIdx] = getDictionary().get(buffer.getInt(initialOffset + keyBufferPosition));
+      }
+
+      /**
+       * Raw type used because arrays and object dictionaries differ
+       */
+      @SuppressWarnings("rawtypes")
+      public abstract List getDictionary();
+
+      /**
+       * Raw types used because arrays and object dictionaries differ
+       */
+      @SuppressWarnings("rawtypes")
+      public abstract Object2IntMap getReverseDictionary();
+    }
+
+    private class GenericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
+    {
       final BufferComparator bufferComparator;
-      final TypeSignature<ValueType> elementType;
+      final String columnTypeName;
+
+      final List<Object> dictionary;
+      final Object2IntMap<Object> reverseDictionary;
+
+      public GenericRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          ColumnType columnType
+      )
+      {
+        super(keyBufferPosition);
+        validateColumnType(columnType);
+        this.columnTypeName = columnType.asTypeString();
+        this.dictionary = genericDictionaries.computeIfAbsent(
+            columnTypeName,
+            ignored -> DictionaryBuildingUtils.createDictionary()
+        );
+        this.reverseDictionary = genericReverseDictionaries.computeIfAbsent(
+            columnTypeName,
+            ignored -> DictionaryBuildingUtils.createReverseDictionary(columnType.getNullableStrategy())
+        );
+        this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
+            columnType.getNullableStrategy().compare(
+                dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+            );
+      }
+
+      // Asserts that we don't entertain any complex types without a typename, to prevent intermixing dictionaries of
+      // different types.
+      private void validateColumnType(TypeSignature<ValueType> columnType)
+      {
+        if (columnType.isArray()) {
+          validateColumnType(columnType.getElementType());
+        } else if (columnType.is(ValueType.COMPLEX)) {
+          if (columnType.getComplexTypeName() == null) {
+            throw DruidException.defensive("complex type name expected");
+          }
+        }
+      }
+
+      @Override
+      public BufferComparator getBufferComparator()
+      {
+        return bufferComparator;
+      }
+
+      @Override
+      public List<Object> getDictionary()
+      {
+        return dictionary;
+      }
+
+      @Override
+      public Object2IntMap<Object> getReverseDictionary()
+      {
+        return reverseDictionary;
+      }
+    }
+
+
+    private class ArrayNumericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
+    {
+      private final BufferComparator bufferComparator;
+      private final List<Object[]> dictionary;
+      private final Object2IntMap<Object[]> reverseDictionary;
 
       public ArrayNumericRowBasedKeySerdeHelper(
           int keyBufferPosition,
@@ -1543,20 +1660,22 @@ public class RowBasedGrouperHelper
           ColumnType arrayType
       )
       {
-        this.keyBufferPosition = keyBufferPosition;
-        this.elementType = arrayType.getElementType();
+        super(keyBufferPosition);
+        final TypeSignature<ValueType> elementType = arrayType.getElementType();
+        this.dictionary = getDictionaryForType(elementType);
+        this.reverseDictionary = getReverseDictionaryForType(elementType);
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
           if (stringComparator == null
               || StringComparators.NUMERIC.equals(stringComparator)
               || StringComparators.NATURAL.equals(stringComparator)) {
             return arrayType.getNullableStrategy().compare(
-                getDictionaryForType(elementType).get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                getDictionaryForType(elementType).get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+                this.dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                this.dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
           } else {
             return new DimensionComparisonUtils.ArrayComparatorForUnnaturalStringComparator(stringComparator).compare(
-                getDictionaryForType(elementType).get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                getDictionaryForType(elementType).get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+                this.dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                this.dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
           }
         };
@@ -1590,43 +1709,27 @@ public class RowBasedGrouperHelper
         }
       }
 
-
-      @Override
-      public int getKeyBufferValueSize()
-      {
-        return Integer.BYTES;
-      }
-
-      @Override
-      public boolean putToKeyBuffer(RowBasedKey key, int idx)
-      {
-        final Object[] listArray = (Object[]) key.getKey()[idx];
-        int id = getReverseDictionaryForType(elementType).getInt(listArray);
-        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
-          id = getDictionaryForType(elementType).size();
-          getReverseDictionaryForType(elementType).put(listArray, id);
-          getDictionaryForType(elementType).add(listArray);
-        }
-        keyBuffer.putInt(id);
-        return true;
-      }
-
-      @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
-      {
-        dimValues[dimValIdx] = getDictionaryForType(elementType).get(buffer.getInt(initialOffset + keyBufferPosition));
-      }
-
       @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
       }
+
+      @Override
+      public List<Object[]> getDictionary()
+      {
+        return dictionary;
+      }
+
+      @Override
+      public Object2IntMap<Object[]> getReverseDictionary()
+      {
+        return reverseDictionary;
+      }
     }
 
-    private class ArrayStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    private class ArrayStringRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
-      final int keyBufferPosition;
       final BufferComparator bufferComparator;
 
       ArrayStringRowBasedKeySerdeHelper(
@@ -1634,9 +1737,10 @@ public class RowBasedGrouperHelper
           @Nullable StringComparator stringComparator
       )
       {
-        this.keyBufferPosition = keyBufferPosition;
+        super(keyBufferPosition);
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            new DimensionComparisonUtils.ArrayComparator<String>(stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
+            new DimensionComparisonUtils.ArrayComparator<>(
+                stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
                 .compare(
                     stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                     stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
@@ -1650,38 +1754,21 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public boolean putToKeyBuffer(RowBasedKey key, int idx)
-      {
-        Object[] stringArray = (Object[]) key.getKey()[idx];
-        final int id = addToArrayDictionary(stringArray);
-        if (id < 0) {
-          return false;
-        }
-        keyBuffer.putInt(id);
-        return true;
-      }
-
-      @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
-      {
-        dimValues[dimValIdx] = stringArrayDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
-      }
-
-      @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
       }
 
-      private int addToArrayDictionary(final Object[] s)
+      @Override
+      public List<Object[]> getDictionary()
       {
-        int idx = reverseStringArrayDictionary.getInt(s);
-        if (idx == DimensionDictionary.ABSENT_VALUE_ID) {
-          idx = stringArrayDictionary.size();
-          reverseStringArrayDictionary.put(s, idx);
-          stringArrayDictionary.add(s);
-        }
-        return idx;
+        return stringArrayDictionary;
+      }
+
+      @Override
+      public Object2IntMap<Object[]> getReverseDictionary()
+      {
+        return reverseStringArrayDictionary;
       }
     }
 

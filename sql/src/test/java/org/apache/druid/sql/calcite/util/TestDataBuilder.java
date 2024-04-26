@@ -55,6 +55,7 @@ import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFac
 import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -836,7 +837,8 @@ public class TestDataBuilder
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler
+        scheduler,
+        injector.getInstance(GroupByQueryConfig.class)
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)

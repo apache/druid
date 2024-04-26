@@ -88,7 +88,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
       return params;
     }
 
-    final DateTime now = DateTimes.nowUtc();
+    final DateTime now = getCurrentTime();
 
     // Perform cleanup only if cleanup period has elapsed
     if (lastCleanupTime.plus(cleanupPeriod).isBefore(now)) {
@@ -140,5 +140,10 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
         "[%s.durationToRetain] cannot be greater than current time in milliseconds",
         propertyPrefix
     );
+  }
+
+  protected DateTime getCurrentTime()
+  {
+    return DateTimes.nowUtc();
   }
 }
