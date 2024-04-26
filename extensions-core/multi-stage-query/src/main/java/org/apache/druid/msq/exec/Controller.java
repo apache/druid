@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -32,7 +32,6 @@ import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Interface for the controller of a multi-stage query.
@@ -123,6 +122,6 @@ public interface Controller
   List<String> getTaskIds();
 
   @Nullable
-  Map<String, TaskReport> liveReports();
+  TaskReport.ReportMap liveReports();
 
 }

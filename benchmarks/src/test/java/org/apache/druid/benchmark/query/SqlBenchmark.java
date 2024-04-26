@@ -456,7 +456,9 @@ public class SqlBenchmark
       // 39: EARLIEST aggregator double
       "SELECT EARLIEST(double4) FROM foo",
       // 40: EARLIEST aggregator float
-      "SELECT EARLIEST(float3) FROM foo"
+      "SELECT EARLIEST(float3) FROM foo",
+      // 41: nested OR filter
+      "SELECT dimSequential, COUNT(*) from foo WHERE dimSequential = '1' AND (dimMultivalEnumerated IN ('Hello', 'World', 'Foo', 'Bar', 'Baz') OR sumLongSequential = 1) GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -520,7 +522,8 @@ public class SqlBenchmark
       "37",
       "38",
       "39",
-      "40"
+      "40",
+      "41"
   })
   private String query;
 
@@ -583,8 +586,8 @@ public class SqlBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+    catch (JsonProcessingException ignored) {
+
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
@@ -597,6 +600,9 @@ public class SqlBenchmark
         yielder.next(yielder.get());
       }
       log.info("Total result row count:" + rowCounter);
+    }
+    catch (Throwable ignored) {
+
     }
   }
 

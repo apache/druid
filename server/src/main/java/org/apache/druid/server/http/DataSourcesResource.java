@@ -40,7 +40,6 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
@@ -312,10 +311,7 @@ public class DataSourcesResource
       return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
     catch (DruidException e) {
-      return Response
-          .status(e.getStatusCode())
-          .entity(new ErrorResponse(e))
-          .build();
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
       log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);

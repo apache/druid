@@ -62,6 +62,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -78,6 +79,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -155,6 +157,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   private final TaskToolbox toolbox;
+  @Nullable
+  private Integer numSegmentsInTimeline;
 
   @JsonCreator
   public DruidInputSource(
@@ -362,11 +366,21 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   private List<TimelineObjectHolder<String, DataSegment>> createTimeline()
   {
+    List<TimelineObjectHolder<String, DataSegment>> timeline;
     if (interval == null) {
-      return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
+      timeline = getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
+      timeline = getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
     }
+
+    Set<SegmentId> ids = new HashSet<>();
+    for (TimelineObjectHolder<String, DataSegment> holder : timeline) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        ids.add(chunk.getObject().getId());
+      }
+    }
+    numSegmentsInTimeline = ids.size();
+    return timeline;
   }
 
   @Override
@@ -619,5 +633,14 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     return new ArrayList<>(timeline.values());
+  }
+
+  /**
+   * @return Number of segments read by this input source. This value is null until
+   *         the method {@link #fixedFormatReader} has been invoked on this input source.
+   */
+  public int getNumberOfSegmentsRead()
+  {
+    return numSegmentsInTimeline;
   }
 }

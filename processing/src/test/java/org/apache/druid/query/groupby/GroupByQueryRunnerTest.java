@@ -8204,16 +8204,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(query, "2011-04-01", "placement", "preferred", "market", null, "rows", 13L, "idx", 6619L),
-        makeRow(query, "2011-04-02", "placement", "preferred", "market", null, "rows", 13L, "idx", 5827L),
+        makeRow(query, "2011-04-01", "placement", null, "market", null, "rows", 13L, "idx", 6619L),
         makeRow(query, "2011-04-01", "placement", null, "market", "spot", "rows", 9L, "idx", 1102L),
         makeRow(query, "2011-04-01", "placement", null, "market", "total_market", "rows", 2L, "idx", 2836L),
         makeRow(query, "2011-04-01", "placement", null, "market", "upfront", "rows", 2L, "idx", 2681L),
+        makeRow(query, "2011-04-01", "placement", "preferred", "market", null, "rows", 13L, "idx", 6619L),
+        makeRow(query, "2011-04-02", "placement", null, "market", null, "rows", 13L, "idx", 5827L),
         makeRow(query, "2011-04-02", "placement", null, "market", "spot", "rows", 9L, "idx", 1120L),
         makeRow(query, "2011-04-02", "placement", null, "market", "total_market", "rows", 2L, "idx", 2514L),
         makeRow(query, "2011-04-02", "placement", null, "market", "upfront", "rows", 2L, "idx", 2193L),
-        makeRow(query, "2011-04-01", "placement", null, "market", null, "rows", 13L, "idx", 6619L),
-        makeRow(query, "2011-04-02", "placement", null, "market", null, "rows", 13L, "idx", 5827L)
+        makeRow(query, "2011-04-02", "placement", "preferred", "market", null, "rows", 13L, "idx", 5827L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

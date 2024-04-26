@@ -28,6 +28,10 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -335,6 +339,38 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   }
 
   @Test
+  public void testGetRunningTaskReports() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2017-12/P1M"),
+        Granularities.DAY,
+        false,
+        true
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    task.addToContext(DISABLE_TASK_INJECT_CONTEXT_KEY, true);
+
+    // Keep tasks running until finish is triggered
+    getIndexingServiceClient().keepTasksRunning();
+    getIndexingServiceClient().runTask(task.getId(), task);
+
+    // Allow enough time for sub-tasks to be in running state
+    Thread.sleep(2000);
+
+    // Fetch and verify live reports
+    TaskReport.ReportMap reportMap = task.doGetLiveReports(true);
+    IngestionStatsAndErrors statsAndErrors = ((IngestionStatsAndErrorsTaskReport)
+        reportMap.get("ingestionStatsAndErrors")).getPayload();
+    Map<String, Object> rowStats = statsAndErrors.getRowStats();
+    Assert.assertTrue(rowStats.containsKey("totals"));
+
+    getIndexingServiceClient().allowTasksToFinish();
+
+    TaskStatus taskStatus = getIndexingServiceClient().waitToFinish(task, 2, TimeUnit.MINUTES);
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test
   public void testRunInParallelIngestNullColumn()
   {
     if (!useInputFormatApi) {
@@ -446,9 +482,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         false,
         Collections.emptyList()
     );
-    Map<String, Object> actualReports = task.doGetLiveReports("full");
-    final long processedBytes = useInputFormatApi ? 335 : 0;
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
+    TaskReport.ReportMap actualReports = task.doGetLiveReports(true);
+    TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
             new ParseExceptionReport(
@@ -464,7 +499,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1)
+        new RowIngestionMetersTotals(10, 335, 1, 1, 1)
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -497,10 +532,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     TaskContainer taskContainer = getIndexingServiceClient().getTaskContainer(task.getId());
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
-    Map<String, Object> actualReports = executedTask.doGetLiveReports("full");
+    TaskReport.ReportMap actualReports = executedTask.doGetLiveReports(true);
 
-    final long processedBytes = useInputFormatApi ? 335 : 0;
-    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1);
+    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 335, 1, 1, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(
             "{ts=2017unparseable}",
@@ -516,7 +550,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         )
     );
 
-    Map<String, Object> expectedReports;
+    TaskReport.ReportMap expectedReports;
     if (useInputFormatApi) {
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),

@@ -25,6 +25,8 @@ services:
   # Uses the official Zookeeper image
   # See https://hub.docker.com/_/zookeeper
   zookeeper:
+    # Uncomment the following when running on Apple Silicon processors:
+    # platform: linux/x86_64
     image: zookeeper:${ZK_VERSION}
     container_name: zookeeper
     labels:
@@ -71,7 +73,7 @@ services:
   # See https://hub.docker.com/_/mysql
   # The image will intialize the user and DB upon first start.
   metadata:
-    # Uncomment the following when running on M1 Macs:
+    # Uncomment the following when running on Apple Silicon processors:
     # platform: linux/x86_64
     image: mysql:$MYSQL_IMAGE_VERSION
     container_name: metadata

@@ -39,6 +39,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -425,6 +426,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         expiredPartitionIds,
         KinesisSequenceNumber.EXPIRED_MARKER
     );
+  }
+
+  @Override
+  public LagMetric getLagMetricForAutoScaler()
+  {
+    return LagMetric.MAX;
   }
 
   private SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedOrExpiredPartitions(

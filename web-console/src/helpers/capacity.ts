@@ -25,7 +25,6 @@ export async function getClusterCapacity(): Promise<CapacityInfo> {
   });
 
   const usedTaskSlots = Number(workersResponse.data.usedClusterCapacity);
-
   const totalTaskSlots = Number(workersResponse.data.currentClusterCapacity);
 
   return {

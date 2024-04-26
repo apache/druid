@@ -36,8 +36,11 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -57,6 +60,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -97,6 +101,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
@@ -114,6 +119,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
   private File baseDir;
+  private SupervisorManager supervisorManager;
+  protected File reportsFile;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
@@ -139,6 +146,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
+    reportsFile = temporaryFolder.newFile();
   }
 
   @After
@@ -221,13 +229,14 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null,
+        supervisorManager,
         objectMapper
     );
   }
 
-  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
   {
+    this.supervisorManager = supervisorManager;
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -263,9 +272,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   /**
    * Converts ParseSpec to InputFormat for indexing tests. To be used until {@link FirehoseFactory}
    * & {@link InputRowParser} is deprecated and removed.
-   *
-   * @param parseSpec
-   * @return
    */
   public static InputFormat createInputFormatFromParseSpec(ParseSpec parseSpec)
   {
@@ -501,5 +507,19 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+  }
+
+  public TaskReport.ReportMap getReports() throws IOException
+  {
+    return objectMapper.readValue(reportsFile, TaskReport.ReportMap.class);
+  }
+
+  public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
+  {
+    return getReports().entrySet()
+                       .stream()
+                       .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+                       .map(entry -> (IngestionStatsAndErrors) entry.getValue().getPayload())
+                       .collect(Collectors.toList());
   }
 }
