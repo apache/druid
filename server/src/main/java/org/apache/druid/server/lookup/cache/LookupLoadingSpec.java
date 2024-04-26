@@ -63,13 +63,6 @@ public class LookupLoadingSpec
 
   public List<String> getLookupsToLoad()
   {
-    switch (this.lookupLoadingMode) {
-      case PARTIAL:
-        return this.lookupsToLoad;
-      case NONE:
-        return Collections.emptyList();
-      default:
-        throw new IllegalArgumentException("Unable to provide lookups to load for loading mode: " + this.lookupLoadingMode);
-    }
+    return lookupsToLoad;
   }
 }
