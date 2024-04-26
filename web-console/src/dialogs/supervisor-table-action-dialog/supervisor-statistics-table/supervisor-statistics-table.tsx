@@ -23,7 +23,7 @@ import ReactTable from 'react-table';
 
 import { Loader } from '../../../components/loader/loader';
 import type { RowStats, RowStatsCounter, SupervisorStats } from '../../../druid-models';
-import { useQueryManager } from '../../../hooks';
+import { useInterval, useQueryManager } from '../../../hooks';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
 import { deepGet, formatByteRate, formatBytes, formatInteger, formatRate } from '../../../utils';
@@ -53,15 +53,22 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
   props: SupervisorStatisticsTableProps,
 ) {
   const { supervisorId } = props;
-  const endpoint = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/stats`;
+  const statsEndpoint = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/stats`;
 
-  const [supervisorStatisticsState] = useQueryManager<null, SupervisorStatisticsTableRow[]>({
+  const [supervisorStatisticsState, supervisorStatisticsQueryManager] = useQueryManager<
+    null,
+    SupervisorStatisticsTableRow[]
+  >({
+    initQuery: null,
     processQuery: async () => {
-      const resp = await Api.instance.get<SupervisorStats>(endpoint);
+      const resp = await Api.instance.get<SupervisorStats>(statsEndpoint);
       return normalizeSupervisorStatisticsResults(resp.data);
     },
-    initQuery: null,
   });
+
+  useInterval(() => {
+    supervisorStatisticsQueryManager.rerunLastQuery(true);
+  }, 1500);
 
   function renderCounters(cell: CellInfo, isRate: boolean) {
     const c: RowStatsCounter = cell.value;
@@ -148,7 +155,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
             text="View raw"
             disabled={supervisorStatisticsState.loading}
             minimal
-            onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
+            onClick={() => window.open(UrlBaser.base(statsEndpoint), '_blank')}
           />
         </ButtonGroup>
       </div>
