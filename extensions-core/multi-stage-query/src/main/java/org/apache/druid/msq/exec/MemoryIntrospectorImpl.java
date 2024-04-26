@@ -85,7 +85,7 @@ public class MemoryIntrospectorImpl implements MemoryIntrospector
   }
 
   @Override
-  public long jvmMemoryRequiredForUsableMemory(long usableMemory)
+  public long computeJvmMemoryRequiredForUsableMemory(long usableMemory)
   {
     final long totalLookupFootprint = computeTotalLookupFootprint(false);
     return (long) Math.ceil(usableMemory / usableMemoryFraction + totalLookupFootprint);

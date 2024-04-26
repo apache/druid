@@ -87,7 +87,7 @@ public class ControllerMemoryParameters
       final long requiredMemory = memoryForInputChannels + PARTITION_STATS_MIN_MEMORY;
       throw new MSQException(
           new NotEnoughMemoryFault(
-              memoryIntrospector.jvmMemoryRequiredForUsableMemory(requiredMemory),
+              memoryIntrospector.computeJvmMemoryRequiredForUsableMemory(requiredMemory),
               memoryIntrospector.totalMemoryInJvm(),
               usableMemoryInJvm,
               numControllersInJvm,

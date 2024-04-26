@@ -45,7 +45,7 @@ public interface MemoryIntrospector
    * This may be an expensive operation. For example, the production implementation {@link MemoryIntrospectorImpl}
    * estimates size of all lookups as part of computing this value.
    */
-  long jvmMemoryRequiredForUsableMemory(long usableMemory);
+  long computeJvmMemoryRequiredForUsableMemory(long usableMemory);
 
   /**
    * Maximum number of queries that run simultaneously in this JVM.
