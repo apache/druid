@@ -28,6 +28,7 @@ import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -40,6 +41,7 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
@@ -52,6 +54,8 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.Test;
+
+import javax.annotation.Nullable;
 
 @SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
@@ -88,7 +92,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             new DatasourceTable.EffectiveMetadata(
                 new DatasourceFacade(new ResolvedTable(
                     new TableDefn(
-                        "foo",
+                        "hourDs",
                         DatasourceDefn.TABLE_TYPE,
                         null,
                         null
@@ -112,7 +116,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         "noPartitonedBy", new DatasourceTable(
             RowSignature.builder().addTimeColumn().build(),
             new DatasourceTable.PhysicalDatasourceMetadata(
-                new TableDataSource("hourDs"),
+                new TableDataSource("noPartitonedBy"),
                 RowSignature.builder().addTimeColumn().build(),
                 false,
                 false
@@ -120,7 +124,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             new DatasourceTable.EffectiveMetadata(
                 new DatasourceFacade(new ResolvedTable(
                     new TableDefn(
-                        "foo",
+                        "noPartitonedBy",
                         DatasourceDefn.TABLE_TYPE,
                         null,
                         null
@@ -157,7 +161,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                         null,
                         null
                     ),
-                    new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true), null),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true),
+                        null
+                    ),
                     MAPPER
                 )),
                 DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder().build()),
@@ -203,7 +211,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         "fooSealed", new DatasourceTable(
             FOO_TABLE_SIGNATURE,
             new DatasourceTable.PhysicalDatasourceMetadata(
-                new TableDataSource("foo"),
+                new TableDataSource("fooSealed"),
                 FOO_TABLE_SIGNATURE,
                 false,
                 false
@@ -211,7 +219,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             new DatasourceTable.EffectiveMetadata(
                 new DatasourceFacade(new ResolvedTable(
                     new TableDefn(
-                        "foo",
+                        "fooSealed",
                         DatasourceDefn.TABLE_TYPE,
                         null,
                         null
@@ -234,6 +242,54 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 DatasourceTable.EffectiveMetadata.toEffectiveColumns(FOO_TABLE_SIGNATURE),
                 false
             )
+        ),
+        "tableWithClustering", new DatasourceTable(
+            FOO_TABLE_SIGNATURE,
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("tableWithClustering"),
+                RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim1", ColumnType.STRING)
+                    .add("dim2", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build(),
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "tableWithClustering",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(
+                            DatasourceDefn.CLUSTER_KEYS_PROPERTY,
+                            ImmutableList.of(
+                                new ClusterKeySpec("dim1", false),
+                                new ClusterKeySpec("dim2", true)
+                            )
+                        ),
+                        ImmutableList.of(
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null),
+                            new ColumnSpec("dim1", Columns.STRING, null),
+                            new ColumnSpec("dim2", Columns.STRING, null),
+                            new ColumnSpec("cnt", Columns.LONG, null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim1", ColumnType.STRING)
+                    .add("dim2", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build()),
+                false
+            )
         )
     );
 
@@ -241,6 +297,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
     public CatalogResolver createCatalogResolver()
     {
       return new CatalogResolver.NullCatalogResolver() {
+        @Nullable
         @Override
         public DruidTable resolveDatasource(
             final String tableName,
@@ -413,6 +470,223 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition. Should use
+   * the catalog defined clustering
+   */
+  @Test
+  public void testInsertTableWithClusteringWithClusteringFromCatalog()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("dim2", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  d AS dim2,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("tableWithClustering", signature)
+        .expectResources(dataSourceWrite("tableWithClustering"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "1", ColumnType.LONG)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("d", ScanQuery.Order.DESCENDING)
+                    )
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("b", "d", "v0", "v1")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but user specifies
+   * clustering on the ingest query. Should use the query defined clustering
+   */
+  @Test
+  public void testInsertTableWithClusteringWithClusteringFromQuery()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("dim2", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  d AS dim2,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME\n" +
+             "CLUSTERED BY dim1")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("tableWithClustering", signature)
+        .expectResources(dataSourceWrite("tableWithClustering"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "1", ColumnType.LONG)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("b", "d", "v0", "v1")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but user specifies
+   * clustering on the ingest query on column that has not been defined in the table catalog definition.
+   * Should use the query defined clustering
+   */
+  @Test
+  public void testInsertTableWithClusteringWithClusteringOnNewColumnFromQuery()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("dim2", ColumnType.STRING)
+        .add("dim3", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  d AS dim2,\n" +
+             "  e AS dim3,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME\n" +
+             "CLUSTERED BY dim3")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("tableWithClustering", signature)
+        .expectResources(dataSourceWrite("tableWithClustering"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "1", ColumnType.LONG)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("e", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("b", "d", "e", "v0", "v1")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but user specifies
+   * clustering on the ingest query on column that has not been defined in the table catalog definition.
+   * or in the select clause. Should fail with validation error.
+   */
+  @Test
+  public void testInsertTableWithClusteringWithClusteringOnBadColumn()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  d AS dim2,\n" +
+             "  e AS dim3,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME\n" +
+             "CLUSTERED BY blah")
+        .expectValidationError(
+            DruidException.class,
+            "Column 'blah' not found in any table (line [13], column [14])")
         .verify();
   }
 
