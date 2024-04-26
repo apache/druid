@@ -3786,42 +3786,52 @@ public interface Function extends NamedFunction
           return this;
         }
 
-        final ExprEval<?> rhsEval = args.get(ARRAY_ARG).eval(InputBindings.nilBindings());
-        return new WithConstantArray(rhsEval);
+        final ExprEval<?> arrayEval = args.get(ARRAY_ARG).eval(InputBindings.nilBindings());
+        final Object[] arrayValues = arrayEval.asArray();
+
+        if (arrayValues == null) {
+          return WithNullArray.INSTANCE;
+        } else {
+          final Set<Object> matchValues = new HashSet<>(Arrays.asList(arrayValues));
+          final ExpressionType matchType = arrayEval.elementType();
+          return new WithConstantArray(matchValues, matchType);
+        }
       }
       return this;
     }
 
     /**
-     * Specialization of {@link ScalarInArrayFunction} for constant {@link #ARRAY_ARG}.
+     * Specialization of {@link ScalarInArrayFunction} for null {@link #ARRAY_ARG}.
+     */
+    private static final class WithNullArray extends ScalarInArrayFunction
+    {
+      private static final WithNullArray INSTANCE = new WithNullArray();
+
+      @Override
+      public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+      {
+        return ExprEval.of(null);
+      }
+    }
+
+    /**
+     * Specialization of {@link ScalarInArrayFunction} for constant, non-null {@link #ARRAY_ARG}.
      */
     private static final class WithConstantArray extends ScalarInArrayFunction
     {
       private final Set<Object> matchValues;
-
-      @Nullable
       private final ExpressionType matchType;
 
-      public WithConstantArray(final ExprEval<?> arrayEval)
+      public WithConstantArray(Set<Object> matchValues, ExpressionType matchType)
       {
-        final Object[] arrayValues = arrayEval.asArray();
-
-        if (arrayValues == null) {
-          matchValues = Collections.emptySet();
-          matchType = null;
-        } else {
-          matchValues = new HashSet<>();
-          Collections.addAll(matchValues, arrayValues);
-          matchType = arrayEval.elementType();
-        }
+        this.matchValues = Preconditions.checkNotNull(matchValues, "matchValues");
+        this.matchType = Preconditions.checkNotNull(matchType, "matchType");
       }
 
       @Override
-      ExprEval doApply(final ExprEval arrayExpr, final ExprEval scalarEval)
+      public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
       {
-        if (matchType == null) {
-          return ExprEval.ofLong(null);
-        }
+        final ExprEval scalarEval = args.get(SCALAR_ARG).eval(bindings);
 
         if (scalarEval.value() == null) {
           return matchValues.contains(null) ? ExprEval.ofLongBoolean(true) : ExprEval.ofLong(null);
