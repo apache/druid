@@ -384,7 +384,7 @@ public class GroupByQueryConfig
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
            ", maxOnDiskStorage=" + maxOnDiskStorage.getBytes() +
-           ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() +// use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
+           ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
            ", intermediateCombineDegree=" + intermediateCombineDegree +
