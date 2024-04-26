@@ -1336,6 +1336,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    autoScalerConfig.put("lagStatsType", "MAX");
     return autoScalerConfig;
   }
 

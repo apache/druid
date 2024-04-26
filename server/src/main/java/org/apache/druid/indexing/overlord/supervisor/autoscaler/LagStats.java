@@ -24,12 +24,19 @@ public class LagStats
   private final long maxLag;
   private final long totalLag;
   private final long avgLag;
+  private final ScalingMetric preferredScalingMetric;
 
   public LagStats(long maxLag, long totalLag, long avgLag)
+  {
+    this(maxLag, totalLag, avgLag, ScalingMetric.TOTAL);
+  }
+
+  public LagStats(long maxLag, long totalLag, long avgLag, ScalingMetric preferredScalingMetric)
   {
     this.maxLag = maxLag;
     this.totalLag = totalLag;
     this.avgLag = avgLag;
+    this.preferredScalingMetric = preferredScalingMetric;
   }
 
   public long getMaxLag()
@@ -45,5 +52,23 @@ public class LagStats
   public long getAvgLag()
   {
     return avgLag;
+  }
+
+  public long getPrefferedScalingMetric()
+  {
+    return getMetric(preferredScalingMetric);
+  }
+
+  public long getMetric(ScalingMetric metric)
+  {
+    switch (metric) {
+      case MAX:
+        return getMaxLag();
+      case TOTAL:
+        return getTotalLag();
+      case AVG:
+        return getAvgLag();
+    }
+    throw new IllegalStateException("Unknown scale metric");
   }
 }

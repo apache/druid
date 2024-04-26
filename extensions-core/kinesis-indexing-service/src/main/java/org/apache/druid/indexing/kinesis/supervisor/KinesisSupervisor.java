@@ -427,17 +427,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     );
   }
 
-  @Override
-  public long computeLagForAutoScaler(boolean useDefault)
-  {
-    if (useDefault) {
-      return super.computeLagForAutoScaler(true);
-    }
-
-    LagStats lagStats = computeLagStats();
-    return lagStats == null ? 0L : lagStats.getMaxLag();
-  }
-
   private SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedOrExpiredPartitions(
       SeekableStreamDataSourceMetadata<String, String> currentMetadata,
       Set<String> terminatedPartitionIds,

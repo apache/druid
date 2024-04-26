@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.ScalingMetric;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -45,7 +46,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
-  private final boolean useDefaultTotalLag;
+  private final ScalingMetric lagStatsType;
 
   @JsonCreator
   public LagBasedAutoScalerConfig(
@@ -63,7 +64,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
           @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
-          @Nullable @JsonProperty("useDefaultTotalLag") Boolean useDefaultTotalLag
+          @Nullable @JsonProperty("lagStatsType") ScalingMetric lagStatsType
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -75,7 +76,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleInThreshold = scaleInThreshold != null ? scaleInThreshold : 1000000;
     this.triggerScaleOutFractionThreshold = triggerScaleOutFractionThreshold != null ? triggerScaleOutFractionThreshold : 0.3;
     this.triggerScaleInFractionThreshold = triggerScaleInFractionThreshold != null ? triggerScaleInFractionThreshold : 0.9;
-    this.useDefaultTotalLag = useDefaultTotalLag != null ? useDefaultTotalLag : true;
+    this.lagStatsType = lagStatsType;
 
     // Only do taskCountMax and taskCountMin check when autoscaler is enabled. So that users left autoConfig empty{} will not throw any exception and autoscaler is disabled.
     // If autoscaler is disabled, no matter what configs are set, they are not used.
@@ -190,9 +191,9 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @JsonProperty
-  public boolean isUseDefaultTotalLag()
+  public ScalingMetric getLagStatsType()
   {
-    return useDefaultTotalLag;
+    return lagStatsType;
   }
 
   @Override
@@ -213,7 +214,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
             ", scaleInStep=" + scaleInStep +
             ", scaleOutStep=" + scaleOutStep +
-           ", useDefaultTotalLag=" + useDefaultTotalLag +
+           ", lagStatsType=" + lagStatsType +
             '}';
   }
 }
