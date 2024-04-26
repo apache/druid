@@ -464,9 +464,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 if (lock == null) {
                   return false;
                 }
-                if (lock.isRevoked()) {
-                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
-                }
+                lock.assertNotRevoked();
                 return true;
               }
             }
