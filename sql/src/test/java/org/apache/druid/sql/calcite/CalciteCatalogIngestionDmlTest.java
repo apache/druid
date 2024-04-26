@@ -72,8 +72,10 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   public abstract String getOperationName();
   public abstract String getDmlPrefixPattern();
 
-  public static class CatalogIngestionDmlComponentSupplier extends IngestionDmlComponentSupplier {
-    public CatalogIngestionDmlComponentSupplier(TempDirProducer tempFolderProducer) {
+  public static class CatalogIngestionDmlComponentSupplier extends IngestionDmlComponentSupplier
+  {
+    public CatalogIngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
+    {
       super(tempFolderProducer);
     }
 
