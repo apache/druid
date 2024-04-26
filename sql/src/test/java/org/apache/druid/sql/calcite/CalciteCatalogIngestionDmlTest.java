@@ -664,11 +664,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   /**
    * Insert into a catalog table that has clustering defined on the table definition, but user specifies
-   * clustering on the ingest query on column that has not been defined in the table catalog definition.
-   * or in the select clause. Should fail with validation error.
+   * clustering on the ingest query on column that has not been specified in the select clause. Should fail with
+   * validation error.
    */
   @Test
-  public void testInsertTableWithClusteringWithClusteringOnBadColumn()
+  public void testInsertTableWithQueryDefinedClusteringOnNonSelectedColumn()
   {
     testIngestionQuery()
         .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
@@ -687,6 +687,31 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .expectValidationError(
             DruidException.class,
             "Column 'blah' not found in any table (line [13], column [14])")
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but one of the clustering
+   * columns specified has not been specified in the select clause. Should fail with validation error.
+   */
+  @Test
+  public void testInsertTableWithCatalogDefinedClusteringOnNonSelectedColumn()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  e AS dim3,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            DruidException.class,
+            "Column 'dim2' not found in any table (line [0], column [0])")
         .verify();
   }
 
