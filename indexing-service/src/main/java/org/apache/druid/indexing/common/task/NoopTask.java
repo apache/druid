@@ -41,6 +41,7 @@ import java.util.UUID;
  */
 public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
+  public static final String TYPE = "noop";
   private static final int DEFAULT_RUN_TIME = 2500;
 
   @JsonIgnore
