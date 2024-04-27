@@ -84,8 +84,8 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -105,6 +105,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -113,6 +114,7 @@ import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.entity.PageInformation;
+import org.apache.druid.msq.test.MSQTestBase.MSQBaseComponentSupplier;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -158,11 +160,16 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -172,11 +179,16 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -185,17 +197,15 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
 import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -211,14 +221,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -241,6 +254,7 @@ import static org.mockito.Mockito.mock;
  * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
+@SqlTestFramework.SqlTestFrameWorkModule(MSQBaseComponentSupplier.class)
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
@@ -251,6 +265,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
+                  .put(PlannerContext.CTX_ENABLE_WINDOW_FNS, true)
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -306,16 +321,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected SqlStatementFactory sqlStatementFactory;
   protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
-
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
-  protected LoadedSegmentDataProvider loadedSegmentDataProvider = mock(LoadedSegmentDataProvider.class);
+  protected DataServerQueryHandler dataServerQueryHandler = mock(DataServerQueryHandler.class);
 
   private MSQTestSegmentManager segmentManager;
   private SegmentCacheManager segmentCacheManager;
-  @Rule
-  public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private TestGroupByBuffers groupByBuffers;
   protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(
@@ -329,36 +341,47 @@ public class MSQTestBase extends BaseCalciteQueryTest
       )
   );
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
+    public MSQBaseComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-    builder
-        .addModule(new HllSketchModule())
-        .addModule(new DruidModule()
-        {
-          // Small subset of MsqSqlModule
-          @Override
-          public void configure(Binder binder)
-          {
-            // We want this module to bring InputSourceModule along for the ride.
-            binder.install(new InputSourceModule());
-            binder.install(new NestedDataModule());
-            NestedDataModule.registerHandlersAndSerde();
-            SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-          }
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
 
-          @Override
-          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+      builder
+          .addModule(new HllSketchModule())
+          .addModule(new DruidModule()
           {
-            // We want this module to bring input sources along for the ride.
-            return new InputSourceModule().getJacksonModules();
-          }
-        });
+            // Small subset of MsqSqlModule
+            @Override
+            public void configure(Binder binder)
+            {
+              // We want this module to bring InputSourceModule along for the ride.
+              binder.install(new InputSourceModule());
+              binder.install(new NestedDataModule());
+              NestedDataModule.registerHandlersAndSerde();
+              SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+            }
+
+            @Override
+            public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+            {
+              // We want this module to bring input sources along for the ride.
+              return new InputSourceModule().getJacksonModules();
+            }
+          });
+    }
   }
 
-  @After
+  @AfterEach
   public void tearDown2()
   {
     groupByBuffers.close();
@@ -381,7 +404,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // is created in the main injector, but it depends on the SegmentCacheManagerFactory
   // which depends on the object mapper that the injector will provide, once it
   // is built, but has not yet been build while we build the SQL engine.
-  @Before
+  @BeforeEach
   public void setUp2() throws Exception
   {
     groupByBuffers = TestGroupByBuffers.createDefault();
@@ -398,12 +421,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
     indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
-    try {
-      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
-    }
-    catch (IOException exception) {
-      throw new ISE(exception, "Unable to create segmentCacheManager");
-    }
+    segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(newTempFolder("cacheManager"));
 
     MSQSqlModule sqlModule = new MSQSqlModule();
 
@@ -435,18 +453,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(QueryProcessingPool.class)
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
-          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(this::newTempFolder, segmentId));
+          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-          try {
-            config.storageDirectory = tmpFolder.newFolder("localsegments");
-          }
-          catch (IOException e) {
-            throw new ISE(e, "Unable to create folder");
-          }
+          config.storageDirectory = newTempFolder("storageDir");
           binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
               new LocalDataSegmentPusher(config),
               segmentManager
@@ -464,12 +477,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 StorageConnectorProvider.class,
                 MultiStageQuery.class
             );
-            localFileStorageDir = tmpFolder.newFolder("fault");
+            localFileStorageDir = newTempFolder("faultStorageDir");
             localFileStorageConnector = Mockito.spy(
                 new LocalFileStorageConnector(localFileStorageDir)
             );
             binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                   .toProvider(() -> localFileStorageConnector);
+            binder.bind(StorageConfig.class).toInstance(new StorageConfig("/"));
           }
           catch (IOException e) {
             throw new ISE(e, "Unable to create setup storage connector");
@@ -508,6 +522,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .build();
 
     objectMapper = setupObjectMapper(injector);
+    objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
@@ -592,81 +607,72 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return array;
   }
 
-  private LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  private DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
-    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
-    doReturn(loadedSegmentDataProvider)
+    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
+    doReturn(dataServerQueryHandler)
         .when(mockFactory)
-        .createLoadedSegmentDataProvider(anyString(), any());
+        .createDataServerQueryHandler(anyString(), any(), any());
     return mockFactory;
   }
 
   @Nonnull
-  private Supplier<ResourceHolder<Segment>> getSupplierForSegment(SegmentId segmentId)
+  private Supplier<ResourceHolder<Segment>> getSupplierForSegment(Function<String, File> tempFolderProducer, SegmentId segmentId)
   {
     if (segmentManager.getSegment(segmentId) == null) {
       final QueryableIndex index;
-      TemporaryFolder temporaryFolder = new TemporaryFolder();
-      try {
-        temporaryFolder.create();
-      }
-      catch (IOException e) {
-        throw new ISE(e, "Unable to create temporary folder for tests");
-      }
-      try {
-        switch (segmentId.getDataSource()) {
-          case DATASOURCE1:
-            IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
-                .withMetrics(
-                    new CountAggregatorFactory("cnt"),
-                    new FloatSumAggregatorFactory("m1", "m1"),
-                    new DoubleSumAggregatorFactory("m2", "m2"),
-                    new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                )
-                .withRollup(false)
-                .build();
-            index = IndexBuilder
-                .create()
-                .tmpDir(new File(temporaryFolder.newFolder(), "1"))
-                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                .schema(foo1Schema)
-                .rows(ROWS1)
-                .buildMMappedIndex();
-            break;
-          case DATASOURCE2:
-            final IncrementalIndexSchema indexSchemaDifferentDim3M1Types = new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(
-                    new DimensionsSpec(
-                        ImmutableList.of(
-                            new StringDimensionSchema("dim1"),
-                            new StringDimensionSchema("dim2"),
-                            new LongDimensionSchema("dim3")
-                        )
-                    )
-                )
-                .withMetrics(
-                    new CountAggregatorFactory("cnt"),
-                    new LongSumAggregatorFactory("m1", "m1"),
-                    new DoubleSumAggregatorFactory("m2", "m2"),
-                    new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                )
-                .withRollup(false)
-                .build();
-            index = IndexBuilder
-                .create()
-                .tmpDir(new File(temporaryFolder.newFolder(), "1"))
-                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                .schema(indexSchemaDifferentDim3M1Types)
-                .rows(ROWS2)
-                .buildMMappedIndex();
-            break;
-          default:
-            throw new ISE("Cannot query segment %s in test runner", segmentId);
+      switch (segmentId.getDataSource()) {
+        case DATASOURCE1:
+          IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
+              .withMetrics(
+                  new CountAggregatorFactory("cnt"),
+                  new FloatSumAggregatorFactory("m1", "m1"),
+                  new DoubleSumAggregatorFactory("m2", "m2"),
+                  new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+              )
+              .withRollup(false)
+              .build();
+          index = IndexBuilder
+              .create()
+              .tmpDir(new File(tempFolderProducer.apply("tmpDir"), "1"))
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(foo1Schema)
+              .rows(ROWS1)
+              .buildMMappedIndex();
+          break;
+        case DATASOURCE2:
+          final IncrementalIndexSchema indexSchemaDifferentDim3M1Types = new IncrementalIndexSchema.Builder()
+              .withDimensionsSpec(
+                  new DimensionsSpec(
+                      ImmutableList.of(
+                          new StringDimensionSchema("dim1"),
+                          new StringDimensionSchema("dim2"),
+                          new LongDimensionSchema("dim3")
+                      )
+                  )
+              )
+              .withMetrics(
+                  new CountAggregatorFactory("cnt"),
+                  new LongSumAggregatorFactory("m1", "m1"),
+                  new DoubleSumAggregatorFactory("m2", "m2"),
+                  new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+              )
+              .withRollup(false)
+              .build();
+          index = IndexBuilder
+              .create()
+              .tmpDir(new File(tempFolderProducer.apply("tmpDir"), "1"))
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(indexSchemaDifferentDim3M1Types)
+              .rows(ROWS2)
+              .buildMMappedIndex();
+          break;
+        case WIKIPEDIA:
+          index = TestDataBuilder.makeWikipediaIndex(newTempFolder());
+          break;
+        default:
+          throw new ISE("Cannot query segment %s in test runner", segmentId);
 
-        }
-      }
-      catch (IOException e) {
-        throw new ISE(e, "Unable to load index for segment %s", segmentId);
       }
       Segment segment = new Segment()
       {
@@ -854,6 +860,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
+    protected CompactionState expectedLastCompactionState = null;
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
@@ -861,6 +868,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected MSQSegmentReport expectedSegmentReport = null;
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
@@ -895,8 +903,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
-      Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
+      Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
+      return asBuilder();
+    }
+
+    public Builder setExpectedLastCompactionState(CompactionState expectedLastCompactionState)
+    {
+      this.expectedLastCompactionState = expectedLastCompactionState;
       return asBuilder();
     }
 
@@ -949,6 +963,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedMSQSegmentReport(MSQSegmentReport expectedSegmentReport)
+    {
+      this.expectedSegmentReport = expectedSegmentReport;
+      return asBuilder();
+    }
+
     public Builder setExpectedCountersForStageWorkerChannel(
         CounterSnapshotMatcher counterSnapshot,
         int stage,
@@ -997,7 +1017,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           () -> runMultiStageQuery(sql, queryContext)
       );
 
-      MatcherAssert.assertThat(e, expectedValidationErrorMatcher);
+      assertThat(e, expectedValidationErrorMatcher);
     }
 
     protected void verifyWorkerCount(CounterSnapshotsTree counterSnapshotsTree)
@@ -1240,6 +1260,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedTuningConfig != null) {
           assertTuningConfig(expectedTuningConfig, foundSpec.getTuningConfig());
         }
+        if (expectedSegmentReport != null) {
+          Assert.assertEquals(expectedSegmentReport, reportPayload.getStatus().getSegmentReport());
+        }
         if (expectedDestinationIntervals != null) {
           Assert.assertNotNull(foundSpec);
           DataSourceMSQDestination destination = (DataSourceMSQDestination) foundSpec.getDestination();
@@ -1267,6 +1290,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
+          if (expectedLastCompactionState != null) {
+            CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
+                                                                  .getLastCompactionState();
+            Assert.assertEquals(expectedLastCompactionState, compactionState);
+
+          }
           Set<SegmentId> publishedSegmentIds = testTaskActionClient.getPublishedSegments()
                                                                    .stream()
                                                                    .map(DataSegment::getId)
@@ -1321,7 +1350,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         Assert.fail(StringUtils.format("Query did not throw an exception (sql = [%s])", sql));
       }
       catch (Exception e) {
-        MatcherAssert.assertThat(
+        assertThat(
             StringUtils.format("Query error did not match expectations (sql = [%s])", sql),
             e,
             expectedExecutionErrorMatcher
@@ -1439,7 +1468,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedExecutionErrorMatcher == null) {
           throw new ISE(e, "Query %s failed", sql);
         }
-        MatcherAssert.assertThat(e, expectedExecutionErrorMatcher);
+        assertThat(e, expectedExecutionErrorMatcher);
         return null;
       }
     }
@@ -1484,4 +1513,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
     return retVal;
   }
+
 }
+

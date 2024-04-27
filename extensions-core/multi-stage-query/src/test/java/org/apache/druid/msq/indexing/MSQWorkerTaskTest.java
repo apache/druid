@@ -47,7 +47,6 @@ public class MSQWorkerTaskTest
   @Test
   public void testEquals()
   {
-    Assert.assertNotEquals(msqWorkerTask, 0);
     Assert.assertEquals(msqWorkerTask, msqWorkerTask);
     Assert.assertEquals(
         msqWorkerTask,
@@ -109,5 +108,4 @@ public class MSQWorkerTaskTest
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
   }
-
 }

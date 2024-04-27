@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -40,15 +41,17 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.SQLStatement;
+import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -111,16 +114,30 @@ public class SqlSegmentsMetadataQuery
    *
    * This call does not return any information about realtime segments.
    *
-   * Returns a closeable iterator. You should close it when you are done.
+   * @return a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,
       final Collection<Interval> intervals
   )
   {
+    return retrieveUsedSegments(dataSource, intervals, null);
+  }
+
+  /**
+   * Similar to {@link #retrieveUsedSegments}, but with an additional {@code versions} argument. When {@code versions}
+   * is specified, all used segments in the specified {@code intervals} and {@code versions} are retrieved.
+   */
+  public CloseableIterator<DataSegment> retrieveUsedSegments(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final List<String> versions
+  )
+  {
     return retrieveSegments(
         dataSource,
         intervals,
+        versions,
         IntervalMode.OVERLAPS,
         true,
         null,
@@ -131,9 +148,59 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
+   * Retrieves segments for a given datasource that are marked unused and that are <b>fully contained by</b> any interval
    * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
    * unused segments.
+   * <p>
+   * This call does not return any information about realtime segments.
+   * </p>
+   *
+   * @param dataSource    The name of the datasource
+   * @param intervals     The intervals to search over
+   * @param versions      An optional list of unused segment versions to retrieve in the given {@code intervals}.
+   *                      If unspecified, all versions of unused segments in the {@code intervals} must be retrieved. If an
+   *                      empty list is passed, no segments are retrieved.
+   * @param limit         The limit of segments to return
+   * @param lastSegmentId the last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or ASC, or < this segment
+   *                      lexigraphically if sortOrder is DESC.
+   * @param sortOrder     Specifies the order with which to return the matching segments by start time, end time.
+   *                      A null value indicates that order does not matter.
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code intervals}
+   *                                     with {@code used_status_last_updated} no later than this time will be included in the
+   *                                     iterator. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                     from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
+   *
+   * @return a closeable iterator. You should close it when you are done.
+   *
+   */
+  public CloseableIterator<DataSegment> retrieveUnusedSegments(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
+      @Nullable final Integer limit,
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime
+  )
+  {
+    return retrieveSegments(
+        dataSource,
+        intervals,
+        versions,
+        IntervalMode.CONTAINS,
+        false,
+        limit,
+        lastSegmentId,
+        sortOrder,
+        maxUsedStatusLastUpdatedTime
+    );
+  }
+
+  /**
+   * Similar to {@link #retrieveUnusedSegments}, but also retrieves associated metadata for the segments for a given
+   * datasource that are marked unused and that are <b>fully contained by</b> any interval in a particular collection of
+   * intervals. If the collection of intervals is empty, this method will retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
    *
@@ -150,20 +217,22 @@ public class SqlSegmentsMetadataQuery
    *                                   iterator. Segments without {@code used_status_last_updated} time (due to an upgrade
    *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
 
-   * Returns a closeable iterator. You should close it when you are done.
+   * @return a closeable iterator. You should close it when you are done.
    */
-  public CloseableIterator<DataSegment> retrieveUnusedSegments(
+  public CloseableIterator<DataSegmentPlus> retrieveUnusedSegmentsPlus(
       final String dataSource,
       final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    return retrieveSegments(
+    return retrieveSegmentsPlus(
         dataSource,
         intervals,
+        versions,
         IntervalMode.CONTAINS,
         false,
         limit,
@@ -173,6 +242,104 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
+  public List<DataSegmentPlus> retrieveSegmentsById(
+      String datasource,
+      Set<String> segmentIds
+  )
+  {
+    final List<List<String>> partitionedSegmentIds
+        = Lists.partition(new ArrayList<>(segmentIds), 100);
+
+    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    for (List<String> partition : partitionedSegmentIds) {
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, false));
+    }
+    return fetchedSegments;
+  }
+
+  public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
+      String datasource,
+      Set<String> segmentIds
+  )
+  {
+    final List<List<String>> partitionedSegmentIds
+        = Lists.partition(new ArrayList<>(segmentIds), 100);
+
+    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    for (List<String> partition : partitionedSegmentIds) {
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, true));
+    }
+    return fetchedSegments;
+  }
+
+  private List<DataSegmentPlus> retrieveSegmentBatchById(
+      String datasource,
+      List<String> segmentIds,
+      boolean includeSchemaInfo
+  )
+  {
+    if (segmentIds.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    ResultIterator<DataSegmentPlus> resultIterator;
+    if (includeSchemaInfo) {
+      final Query<Map<String, Object>> query = handle.createQuery(
+          StringUtils.format(
+              "SELECT payload, used, schema_fingerprint, num_rows FROM %s WHERE dataSource = :dataSource %s",
+              dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
+          )
+      );
+
+      bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+
+      resultIterator = query
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> {
+                String schemaFingerprint = (String) r.getObject(3);
+                Long numRows = (Long) r.getObject(4);
+                return new DataSegmentPlus(
+                    JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                    null,
+                    null,
+                    r.getBoolean(2),
+                    schemaFingerprint,
+                    numRows
+                );
+              }
+          )
+          .iterator();
+    } else {
+      final Query<Map<String, Object>> query = handle.createQuery(
+          StringUtils.format(
+              "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
+              dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
+          )
+      );
+
+      bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+
+      resultIterator = query
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> new DataSegmentPlus(
+                  JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                  null,
+                  null,
+                  r.getBoolean(2),
+                  null,
+                  null
+              )
+          )
+          .iterator();
+    }
+
+    return Lists.newArrayList(resultIterator);
+  }
+
   /**
    * Marks the provided segments as either used or unused.
    *
@@ -180,7 +347,7 @@ public class SqlSegmentsMetadataQuery
    * 1) ensure that the caller passes only used segments to this method when marking them as unused.
    * 2) Similarly, please try to call this method only on unused segments when marking segments as used with this method.
    *
-   * Returns the number of segments actually modified.
+   * @return the number of segments actually modified.
    */
   public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
   {
@@ -215,45 +382,83 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all used segments that are *fully contained by* a particular interval as unused.
+   * Marks all used segments that are <b>fully contained by</b> a particular interval as unused.
    *
-   * Returns the number of segments actually modified.
+   * @return Number of segments updated.
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval)
   {
+    return markSegmentsUnused(dataSource, interval, null);
+  }
+
+  /**
+   * Marks all used segments that are <b>fully contained by</b> a particular interval filtered by an optional list of versions
+   * as unused.
+   *
+   * @return Number of segments updated.
+   */
+  public int markSegmentsUnused(final String dataSource, final Interval interval, @Nullable final List<String> versions)
+  {
+    if (versions != null && versions.isEmpty()) {
+      return 0;
+    }
+
     if (Intervals.isEternity(interval)) {
-      return handle
-          .createStatement(
-              StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
-                  + "WHERE dataSource = :dataSource AND used = true",
-                  dbTables.getSegmentsTable()
-              )
+      final StringBuilder sb = new StringBuilder();
+      sb.append(
+          StringUtils.format(
+              "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+              + "WHERE dataSource = :dataSource AND used = true",
+              dbTables.getSegmentsTable()
           )
+      );
+
+      if (versions != null) {
+        sb.append(getParameterizedInConditionForColumn("version", versions));
+      }
+
+      final Update stmt = handle
+          .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-          .execute();
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+
+      if (versions != null) {
+        bindColumnValuesToQueryWithInCondition("version", versions, stmt);
+      }
+
+      return stmt.execute();
     } else if (Intervals.canCompareEndpointsAsStrings(interval)
                && interval.getStart().getYear() == interval.getEnd().getYear()) {
       // Safe to write a WHERE clause with this interval. Note that it is unsafe if the years are different, because
       // that means extra characters can sneak in. (Consider a query interval like "2000-01-01/2001-01-01" and a
       // segment interval like "20001/20002".)
-      return handle
-          .createStatement(
-              StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
-                  + "WHERE dataSource = :dataSource AND used = true AND %s",
-                  dbTables.getSegmentsTable(),
-                  IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
-              )
+      final StringBuilder sb = new StringBuilder();
+      sb.append(
+          StringUtils.format(
+              "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+              + "WHERE dataSource = :dataSource AND used = true AND %s",
+              dbTables.getSegmentsTable(),
+              IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
           )
+      );
+
+      if (versions != null) {
+        sb.append(getParameterizedInConditionForColumn("version", versions));
+      }
+
+      final Update stmt = handle
+          .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-          .execute();
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+
+      if (versions != null) {
+        bindColumnValuesToQueryWithInCondition("version", versions, stmt);
+      }
+      return stmt.execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
@@ -261,6 +466,7 @@ public class SqlSegmentsMetadataQuery
               retrieveSegments(
                   dataSource,
                   Collections.singletonList(interval),
+                  versions,
                   IntervalMode.CONTAINS,
                   true,
                   null,
@@ -280,7 +486,6 @@ public class SqlSegmentsMetadataQuery
    */
   public DataSegment retrieveUsedSegmentForId(String id)
   {
-
     final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
 
     final Query<Map<String, Object>> sql = handle
@@ -303,7 +508,6 @@ public class SqlSegmentsMetadataQuery
    */
   public DataSegment retrieveSegmentForId(String id)
   {
-
     final String query = "SELECT payload FROM %s WHERE id = :id";
 
     final Query<Map<String, Object>> sql = handle
@@ -322,28 +526,28 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Append the condition for the interval and match mode to the given string builder with a partial query
-   * @param sb - StringBuilder containing the paritial query with SELECT clause and WHERE condition for used, datasource
+   * Get the condition for the interval and match mode.
    * @param intervals - intervals to fetch the segments for
    * @param matchMode - Interval match mode - overlaps or contains
-   * @param connector - SQL connector
+   * @param quoteString - the connector-specific quote string
    */
-  public static void appendConditionForIntervalsAndMatchMode(
-      final StringBuilder sb,
+  public static String getConditionForIntervalsAndMatchMode(
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
-      final SQLMetadataConnector connector
+      final String quoteString
   )
   {
     if (intervals.isEmpty()) {
-      return;
+      return "";
     }
+
+    final StringBuilder sb = new StringBuilder();
 
     sb.append(" AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
           matchMode.makeSqlCondition(
-              connector.getQuoteString(),
+              quoteString,
               StringUtils.format(":start%d", i),
               StringUtils.format(":end%d", i)
           )
@@ -376,14 +580,14 @@ public class SqlSegmentsMetadataQuery
       ));
     }
     sb.append(")");
+    return sb.toString();
   }
 
   /**
-   * Given a Query object bind the input intervals to it
-   * @param query Query to fetch segments
-   * @param intervals Intervals to fetch segments for
+   * Bind the supplied {@code intervals} to {@code query}.
+   * @see #getConditionForIntervalsAndMatchMode(Collection, IntervalMode, String)
    */
-  public static void bindQueryIntervals(final Query<Map<String, Object>> query, final Collection<Interval> intervals)
+  public static void bindIntervalsToQuery(final Query<Map<String, Object>> query, final Collection<Interval> intervals)
   {
     if (intervals.isEmpty()) {
       return;
@@ -400,6 +604,7 @@ public class SqlSegmentsMetadataQuery
   private CloseableIterator<DataSegment> retrieveSegments(
       final String dataSource,
       final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -408,9 +613,13 @@ public class SqlSegmentsMetadataQuery
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
+    if (versions != null && versions.isEmpty()) {
+      return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
+    }
+
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, versions, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -421,6 +630,7 @@ public class SqlSegmentsMetadataQuery
         final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(
             dataSource,
             intervalList,
+            versions,
             matchMode,
             used,
             limitPerBatch,
@@ -445,9 +655,10 @@ public class SqlSegmentsMetadataQuery
     }
   }
 
-  private UnmodifiableIterator<DataSegment> retrieveSegmentsInIntervalsBatch(
+  private CloseableIterator<DataSegmentPlus> retrieveSegmentsPlus(
       final String dataSource,
       final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
@@ -456,14 +667,133 @@ public class SqlSegmentsMetadataQuery
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
+    if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
+      return CloseableIterators.withEmptyBaggage(
+          retrieveSegmentsPlusInIntervalsBatch(dataSource, intervals, versions, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
+      );
+    } else {
+      final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
+      final List<Iterator<DataSegmentPlus>> resultingIterators = new ArrayList<>();
+      Integer limitPerBatch = limit;
+
+      for (final List<Interval> intervalList : intervalsLists) {
+        final UnmodifiableIterator<DataSegmentPlus> iterator = retrieveSegmentsPlusInIntervalsBatch(
+            dataSource,
+            intervalList,
+            versions,
+            matchMode,
+            used,
+            limitPerBatch,
+            lastSegmentId,
+            sortOrder,
+            maxUsedStatusLastUpdatedTime
+        );
+        if (limitPerBatch != null) {
+          // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
+          // we have reached what was requested for.
+          final List<DataSegmentPlus> dataSegments = ImmutableList.copyOf(iterator);
+          resultingIterators.add(dataSegments.iterator());
+          if (dataSegments.size() >= limitPerBatch) {
+            break;
+          }
+          limitPerBatch -= dataSegments.size();
+        } else {
+          resultingIterators.add(iterator);
+        }
+      }
+      return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));
+    }
+  }
+
+  private UnmodifiableIterator<DataSegment> retrieveSegmentsInIntervalsBatch(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
+      final IntervalMode matchMode,
+      final boolean used,
+      @Nullable final Integer limit,
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime
+  )
+  {
+    final Query<Map<String, Object>> sql = buildSegmentsTableQuery(
+        dataSource,
+        intervals,
+        versions,
+        matchMode,
+        used,
+        limit,
+        lastSegmentId,
+        sortOrder,
+        maxUsedStatusLastUpdatedTime,
+        false
+    );
+
+    final ResultIterator<DataSegment> resultIterator = getDataSegmentResultIterator(sql);
+
+    return filterDataSegmentIteratorByInterval(resultIterator, intervals, matchMode);
+  }
+
+  private UnmodifiableIterator<DataSegmentPlus> retrieveSegmentsPlusInIntervalsBatch(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
+      final IntervalMode matchMode,
+      final boolean used,
+      @Nullable final Integer limit,
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime
+  )
+  {
+
+    final Query<Map<String, Object>> sql = buildSegmentsTableQuery(
+        dataSource,
+        intervals,
+        versions,
+        matchMode,
+        used,
+        limit,
+        lastSegmentId,
+        sortOrder,
+        maxUsedStatusLastUpdatedTime,
+        true
+    );
+
+    final ResultIterator<DataSegmentPlus> resultIterator = getDataSegmentPlusResultIterator(sql);
+
+    return filterDataSegmentPlusIteratorByInterval(resultIterator, intervals, matchMode);
+  }
+
+  private Query<Map<String, Object>> buildSegmentsTableQuery(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      @Nullable final List<String> versions,
+      final IntervalMode matchMode,
+      final boolean used,
+      @Nullable final Integer limit,
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime,
+      final boolean includeExtraInfo
+  )
+  {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
-
     final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+    if (includeExtraInfo) {
+      sb.append("SELECT payload, created_date, used_status_last_updated FROM %s WHERE used = :used AND dataSource = :dataSource");
+    } else {
+      sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+    }
 
     if (compareAsString) {
-      appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
+      sb.append(getConditionForIntervalsAndMatchMode(intervals, matchMode, connector.getQuoteString()));
+    }
+
+    if (versions != null) {
+      sb.append(getParameterizedInConditionForColumn("version", versions));
     }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
@@ -510,13 +840,41 @@ public class SqlSegmentsMetadataQuery
     }
 
     if (compareAsString) {
-      bindQueryIntervals(sql, intervals);
+      bindIntervalsToQuery(sql, intervals);
     }
 
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
+    if (versions != null) {
+      bindColumnValuesToQueryWithInCondition("version", versions, sql);
+    }
 
+    return sql;
+  }
+
+  private ResultIterator<DataSegment> getDataSegmentResultIterator(Query<Map<String, Object>> sql)
+  {
+    return sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+        .iterator();
+  }
+
+  private ResultIterator<DataSegmentPlus> getDataSegmentPlusResultIterator(Query<Map<String, Object>> sql)
+  {
+    return sql.map((index, r, ctx) -> new DataSegmentPlus(
+            JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+            DateTimes.of(r.getString(2)),
+            DateTimes.of(r.getString(3)),
+            null,
+            null,
+            null
+        ))
+        .iterator();
+  }
+
+  private UnmodifiableIterator<DataSegment> filterDataSegmentIteratorByInterval(
+      ResultIterator<DataSegment> resultIterator,
+      final Collection<Interval> intervals,
+      final IntervalMode matchMode
+  )
+  {
     return Iterators.filter(
         resultIterator,
         dataSegment -> {
@@ -528,6 +886,33 @@ public class SqlSegmentsMetadataQuery
             // segment interval like "20010/20011".)
             for (Interval interval : intervals) {
               if (matchMode.apply(interval, dataSegment.getInterval())) {
+                return true;
+              }
+            }
+
+            return false;
+          }
+        }
+    );
+  }
+
+  private UnmodifiableIterator<DataSegmentPlus> filterDataSegmentPlusIteratorByInterval(
+      ResultIterator<DataSegmentPlus> resultIterator,
+      final Collection<Interval> intervals,
+      final IntervalMode matchMode
+  )
+  {
+    return Iterators.filter(
+        resultIterator,
+        dataSegment -> {
+          if (intervals.isEmpty()) {
+            return true;
+          } else {
+            // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
+            // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+            // segment interval like "20010/20011".)
+            for (Interval interval : intervals) {
+              if (matchMode.apply(interval, dataSegment.getDataSegment().getInterval())) {
                 return true;
               }
             }
@@ -562,6 +947,52 @@ public class SqlSegmentsMetadataQuery
       }
     }
     return numChangedSegments;
+  }
+
+  /**
+   * @return a parameterized {@code IN} clause for the specified {@code columnName}. The column values need to be bound
+   * to a query by calling {@link #bindColumnValuesToQueryWithInCondition(String, List, SQLStatement)}.
+   *
+   * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
+   */
+  static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
+  {
+    if (values == null) {
+      return "";
+    }
+
+    final StringBuilder sb = new StringBuilder();
+
+    sb.append(StringUtils.format(" AND %s IN (", columnName));
+    for (int i = 0; i < values.size(); i++) {
+      sb.append(StringUtils.format(":%s%d", columnName, i));
+      if (i != values.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append(")");
+    return sb.toString();
+  }
+
+  /**
+   * Binds the provided list of {@code values} to the specified {@code columnName} in the given SQL {@code query} that
+   * contains an {@code IN} clause.
+   *
+   * @see #getParameterizedInConditionForColumn(String, List)
+   */
+  private static void bindColumnValuesToQueryWithInCondition(
+      final String columnName,
+      final List<String> values,
+      final SQLStatement<?> query
+  )
+  {
+    if (values == null) {
+      return;
+    }
+
+    for (int i = 0; i < values.size(); i++) {
+      query.bind(StringUtils.format("%s%d", columnName, i), values.get(i));
+    }
   }
 
   enum IntervalMode

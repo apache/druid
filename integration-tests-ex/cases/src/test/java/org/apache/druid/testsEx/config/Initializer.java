@@ -60,7 +60,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.core.LoggingEmitterConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageProvider;
@@ -71,9 +73,11 @@ import org.apache.druid.metadata.storage.mysql.MySQLConnector;
 import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLConnectorSslConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
+import org.apache.druid.testing.clients.AdminClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.cluster.MetastoreClient;
@@ -184,6 +188,14 @@ public class Initializer
     )
     {
       return delegate;
+    }
+
+    @Provides
+    @AdminClient
+    public HttpClient getAdminClient(@Client HttpClient delegate)
+    {
+      BasicCredentials basicCredentials = new BasicCredentials("admin", "priest");
+      return new CredentialedHttpClient(basicCredentials, delegate);
     }
 
     @Provides
@@ -489,8 +501,8 @@ public class Initializer
             new EscalatorModule(),
             HttpClientModule.global(),
             HttpClientModule.escalatedGlobal(),
-            new HttpClientModule("druid.broker.http", Client.class),
-            new HttpClientModule("druid.broker.http", EscalatedClient.class),
+            new HttpClientModule("druid.broker.http", Client.class, true),
+            new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
             // For ZK discovery
             new CuratorModule(),
             new AnnouncerModule(),
@@ -499,6 +511,7 @@ public class Initializer
             new LegacyBrokerParallelMergeConfigModule(),
             // Dependencies from other modules
             new StorageNodeModule(),
+            new MSQExternalDataSourceModule(),
 
             // Test-specific items, including bits copy/pasted
             // from modules that don't play well in a client setting.

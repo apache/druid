@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.errorprone.annotations.Immutable;
 
 /**
  * This is a bridge between {@link ValueType} and {@link org.apache.druid.math.expr.ExprType}, so that they can both
@@ -35,6 +36,7 @@ package org.apache.druid.segment.column;
  * {@link org.apache.druid.math.expr.ExprType} to be removed and this interface merged into {@link ValueType} (along
  * with consolidation of several other interfaces, see {@link TypeSignature} javadoc for additional details).
  */
+@Immutable
 public interface TypeDescriptor
 {
   /**

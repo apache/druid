@@ -55,7 +55,8 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "range", value = RangeFilter.class),
     @JsonSubTypes.Type(name = "isfalse", value = IsFalseDimFilter.class),
     @JsonSubTypes.Type(name = "istrue", value = IsTrueDimFilter.class),
-    @JsonSubTypes.Type(name = "arrayContainsElement", value = ArrayContainsElementFilter.class)
+    @JsonSubTypes.Type(name = "arrayContainsElement", value = ArrayContainsElementFilter.class),
+    @JsonSubTypes.Type(name = "inType", value = TypedInFilter.class)
 })
 public interface DimFilter extends Cacheable
 {
@@ -126,7 +127,7 @@ public interface DimFilter extends Cacheable
     /**
      * Append dimension name OR {@link ExtractionFn#toString()} with dimension wrapped in parenthesis
      */
-    DimFilterToStringBuilder appendDimension(String dimension, @Nullable ExtractionFn extractionFn)
+    public DimFilterToStringBuilder appendDimension(String dimension, @Nullable ExtractionFn extractionFn)
     {
       if (extractionFn != null) {
         builder.append(extractionFn).append("(");
@@ -143,7 +144,7 @@ public interface DimFilter extends Cacheable
     /**
      * Add "=" expression
      */
-    DimFilterToStringBuilder appendEquals(String value)
+    public DimFilterToStringBuilder appendEquals(String value)
     {
       builder.append(" = ").append(value);
       return this;
@@ -152,7 +153,7 @@ public interface DimFilter extends Cacheable
     /**
      * Add filter tuning to {@link #builder} if tuning exists
      */
-    DimFilterToStringBuilder appendFilterTuning(@Nullable FilterTuning tuning)
+    public DimFilterToStringBuilder appendFilterTuning(@Nullable FilterTuning tuning)
     {
       if (tuning != null) {
         builder.append(" (filterTuning=").append(tuning).append(")");
@@ -164,7 +165,7 @@ public interface DimFilter extends Cacheable
     /**
      * Generic passthrough to {@link StringBuilder#append}
      */
-    <T> DimFilterToStringBuilder append(T s)
+    public <T> DimFilterToStringBuilder append(T s)
     {
       builder.append(s);
       return this;

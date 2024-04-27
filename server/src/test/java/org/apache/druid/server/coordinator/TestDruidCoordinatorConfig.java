@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import org.joda.time.Duration;
+import org.joda.time.Period;
 
 public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
 {
@@ -47,6 +48,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration httpLoadQueuePeonHostTimeout;
   private final int httpLoadQueuePeonBatchSize;
   private final Duration coordinatorKillBufferPeriod;
+  private final Duration segmentSchemaKillPeriod;
+  private final Duration segmentSchemaKillDurationToRetain;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -72,7 +75,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration httpLoadQueuePeonHostTimeout,
       int httpLoadQueuePeonBatchSize,
       int curatorLoadQueuePeonNumCallbackThreads,
-      Duration coordinatorKillBufferPeriod
+      Duration coordinatorKillBufferPeriod,
+      Duration segmentSchemaKillPeriod,
+      Duration segmentSchemaKillDurationToRetain
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -99,6 +104,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.httpLoadQueuePeonBatchSize = httpLoadQueuePeonBatchSize;
     this.curatorLoadQueuePeonNumCallbackThreads = curatorLoadQueuePeonNumCallbackThreads;
     this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
+    this.segmentSchemaKillPeriod = segmentSchemaKillPeriod;
+    this.segmentSchemaKillDurationToRetain = segmentSchemaKillDurationToRetain;
   }
 
   @Override
@@ -282,6 +289,24 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isSegmentSchemaKillEnabled()
+  {
+    return true;
+  }
+
+  @Override
+  public Duration getSegmentSchemaKillPeriod()
+  {
+    return segmentSchemaKillPeriod;
+  }
+
+  @Override
+  public Duration getSegmentSchemaKillDurationToRetain()
+  {
+    return segmentSchemaKillDurationToRetain;
+  }
+
+  @Override
   public Duration getCoordinatorKillBufferPeriod()
   {
     return coordinatorKillBufferPeriod;
@@ -289,31 +314,31 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
 
   public static class Builder
   {
-    private static final Duration DEFAULT_COORDINATOR_START_DELAY = new Duration("PT300s");
-    private static final Duration DEFAULT_COORDINATOR_PERIOD = new Duration("PT60s");
-    private static final Duration DEFAULT_COORDINATOR_INDEXING_PERIOD = new Duration("PT1800s");
-    private static final Duration DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD = new Duration("PT3600s");
-    private static final Duration DEFAULT_COORDINATOR_KILL_PERIOD = new Duration("PT86400s");
-    private static final Duration DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAION = new Duration("PT7776000s");
+    private static final Duration DEFAULT_COORDINATOR_START_DELAY = Period.parse("PT300s").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_PERIOD = Period.parse("PT60s").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_INDEXING_PERIOD = Period.parse("PT1800s").toStandardDuration();
+    private static final Duration DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD = Period.parse("PT1H").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD = Period.parse("P30D").toStandardDuration();
     private static final boolean DEFAULT_COORDINATOR_KILL_IGNORE_DURATION_TO_RETAIN = false;
     private static final int DEFAULT_COORDINATOR_KILL_MAX_SEGMENTS = 100;
-    private static final Duration DEFAULT_COORDINATOR_SUPERVISOR_KILL_PERIOD = new Duration("PT86400s");
-    private static final Duration DEFAULT_COORDINATOR_SUPERVISOR_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
-    private static final Duration DEFAULT_COORDINATOR_COMPACTION_KILL_PERIOD = new Duration("PT86400s");
-    private static final Duration DEFAULT_COORDINATOR_RULE_KILL_PERIOD = new Duration("PT86400s");
-    private static final Duration DEFAULT_COORDINATOR_RULE_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
-    private static final Duration DEFAULT_COORDINATOR_DATASOURCE_KILL_PERIOD = new Duration("PT86400s");
-    private static final Duration DEFAULT_COORDINATOR_DATASOURCE_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
+    private static final Duration DEFAULT_COORDINATOR_SUPERVISOR_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_SUPERVISOR_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_COMPACTION_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_RULE_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_RULE_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_DATASOURCE_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_DATASOURCE_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
     private static final Duration DEFAULT_LOAD_TIMEOUT_DELAY = new Duration(15 * 60 * 1000);
     private static final String DEFAULT_LOAD_QUEUE_PEON_TYPE = "curator";
     private static final int DEFAULT_CURATOR_LOAD_QUEUE_PEON_NUM_CALLBACK_THREADS = 2;
     private static final Duration DEFAULT_HTTP_LOAD_QUEUE_PEON_REPEAT_DELAY = Duration.millis(60000);
     private static final Duration DEFAULT_HTTP_LOAD_QUEUE_PEON_HOST_TIMEOUT = Duration.millis(300000);
     private static final int DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE = 1;
-    private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = new Duration("PT86400s");
-    private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
-    private static final Duration DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD = new Duration("PT86400s");
-
+    private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = Period.parse("P1D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = Period.parse("P90D").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_PERIOD = Period.parse("PT1H").toStandardDuration();
+    private static final Duration DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_DURATION_TO_RETAIN = Period.parse("PT6H").toStandardDuration();
 
     private Duration coordinatorStartDelay;
     private Duration coordinatorPeriod;
@@ -339,6 +364,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
     private Duration coordinatorKillBufferPeriod;
+    private Duration segmentSchemaKillPeriod;
+    private Duration segmentSchemaKillDurationToRetain;
 
     public Builder()
     {
@@ -488,6 +515,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
+    public Builder withSegmentSchemaKillPeriod(Duration segmentSchemaKillPeriod)
+    {
+      this.segmentSchemaKillPeriod = segmentSchemaKillPeriod;
+      return this;
+    }
+
+    public Builder withSegmentSchemaKillDurationToRetain(Duration segmentSchemaKillDurationToRetain)
+    {
+      this.segmentSchemaKillDurationToRetain = segmentSchemaKillDurationToRetain;
+      return this;
+    }
+
     public TestDruidCoordinatorConfig build()
     {
       return new TestDruidCoordinatorConfig(
@@ -496,8 +535,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           coordinatorIndexingPeriod == null ? DEFAULT_COORDINATOR_INDEXING_PERIOD : coordinatorIndexingPeriod,
           metadataStoreManagementPeriod == null ? DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD : metadataStoreManagementPeriod,
           loadTimeoutDelay == null ? DEFAULT_LOAD_TIMEOUT_DELAY : loadTimeoutDelay,
-          coordinatorKillPeriod == null ? DEFAULT_COORDINATOR_KILL_PERIOD : coordinatorKillPeriod,
-          coordinatorKillDurationToRetain == null ? DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAION : coordinatorKillDurationToRetain,
+          coordinatorKillPeriod == null ? (coordinatorIndexingPeriod == null ? DEFAULT_COORDINATOR_INDEXING_PERIOD : coordinatorIndexingPeriod)
+                                        : coordinatorKillPeriod,
+          coordinatorKillDurationToRetain == null ? DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAIN
+                                                  : coordinatorKillDurationToRetain,
           coordinatorSupervisorKillPeriod == null ? DEFAULT_COORDINATOR_SUPERVISOR_KILL_PERIOD : coordinatorSupervisorKillPeriod,
           coordinatorSupervisorKillDurationToRetain == null ? DEFAULT_COORDINATOR_SUPERVISOR_KILL_DURATION_TO_RETAIN : coordinatorSupervisorKillDurationToRetain,
           coordinatorAuditKillPeriod == null ? DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD : coordinatorAuditKillPeriod,
@@ -515,9 +556,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           httpLoadQueuePeonBatchSize == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE : httpLoadQueuePeonBatchSize,
           curatorLoadQueuePeonNumCallbackThreads == null ? DEFAULT_CURATOR_LOAD_QUEUE_PEON_NUM_CALLBACK_THREADS
                                                          : curatorLoadQueuePeonNumCallbackThreads,
-          coordinatorKillBufferPeriod == null ? DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD : coordinatorKillBufferPeriod
+          coordinatorKillBufferPeriod == null ? DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD : coordinatorKillBufferPeriod,
+          segmentSchemaKillPeriod == null ? DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_PERIOD : segmentSchemaKillPeriod,
+          segmentSchemaKillDurationToRetain == null ? DEFAULT_COORDINATOR_SEGMENT_SCHEMA_KILL_DURATION_TO_RETAIN : segmentSchemaKillDurationToRetain
       );
     }
-
   }
 }

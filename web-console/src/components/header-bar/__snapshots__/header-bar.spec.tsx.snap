@@ -33,7 +33,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="#streaming-data-loader"
             icon="feed"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Streaming"
@@ -51,7 +51,7 @@ exports[`HeaderBar matches snapshot 1`] = `
               </Blueprint4.Tag>
             }
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Batch - SQL"
@@ -62,7 +62,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="#classic-batch-data-loader"
             icon="list"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Batch - classic"
@@ -153,7 +153,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="#lookups"
             icon="properties"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Lookups"
@@ -166,7 +166,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="compass"
             label="(experimental)"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Explore"
@@ -225,7 +225,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="pulse"
             multiline={false}
             onClick={[Function]}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Druid Doctor"
@@ -236,7 +236,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="settings"
             multiline={false}
             onClick={[Function]}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Coordinator dynamic config"
@@ -247,7 +247,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="wrench"
             multiline={false}
             onClick={[Function]}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Overlord dynamic config"
@@ -258,7 +258,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="compressed"
             multiline={false}
             onClick={[Function]}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="Compaction dynamic config"
@@ -267,55 +267,53 @@ exports[`HeaderBar matches snapshot 1`] = `
           <Blueprint4.MenuItem
             active={false}
             disabled={false}
-            icon="cog"
+            icon="high-priority"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
-            text="Console options"
+            text="Capabilty detection"
           >
-            <React.Fragment>
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force Coordinator/Overlord mode"
-              />
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force Coordinator mode"
-              />
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force Overlord mode"
-              />
-              <Blueprint4.MenuItem
-                active={false}
-                disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                selected={false}
-                shouldDismissPopover={true}
-                text="Force no management proxy mode"
-              />
-            </React.Fragment>
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Coordinator/Overlord mode"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Coordinator mode"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Overlord mode"
+            />
+            <Blueprint4.MenuItem
+              active={false}
+              disabled={false}
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={{}}
+              selected={false}
+              shouldDismissPopover={true}
+              text="Manually set Router with no management proxy mode"
+            />
           </Blueprint4.MenuItem>
         </Blueprint4.Menu>
       }
@@ -354,7 +352,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="graph"
             multiline={false}
             onClick={[Function]}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             text="About"
@@ -365,7 +363,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="https://druid.apache.org/docs/latest"
             icon="th"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             target="_blank"
@@ -377,7 +375,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="https://groups.google.com/forum/#!forum/druid-user"
             icon="user"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             target="_blank"
@@ -389,7 +387,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="https://druid.apache.org/community/join-slack"
             icon="chat"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             target="_blank"
@@ -401,7 +399,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             href="https://github.com/apache/druid"
             icon="git-branch"
             multiline={false}
-            popoverProps={Object {}}
+            popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
             target="_blank"

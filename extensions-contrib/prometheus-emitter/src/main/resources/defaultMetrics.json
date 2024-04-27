@@ -17,7 +17,9 @@
   "query/count" : { "dimensions" : [], "type" : "count", "help": "Number of total queries" },
   "query/success/count" : { "dimensions" : [], "type" : "count", "help": "Number of queries successfully processed"},
   "query/failed/count" : { "dimensions" : [], "type" : "count", "help": "Number of failed queries"},
-  "query/interrupted/count" : { "dimensions" : [], "type" : "count", "help": "Number of queries interrupted due to cancellation or timeout"},
+  "query/interrupted/count" : { "dimensions" : [], "type" : "count", "help": "Number of queries interrupted due to cancellation."},
+  "query/timeout/count" : { "dimensions" : [], "type" : "count", "help": "Number of timed out queries."},
+  "mergeBuffer/pendingRequests" : { "dimensions" : [], "type" : "count", "help": "Number of requests waiting to acquire a batch of buffers from the merge buffer pool."},
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "gauge", "help": "Number of entries in cache"},
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "gauge", "help": "Size of cache in bytes."},
@@ -43,7 +45,9 @@
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected because the events are unparseable." },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected because the events are duplicated."},
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events successfully processed per emission period." },
+  "ingest/events/processedWithError" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events processed with some partial errors per emission period" },
   "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission."},
+  "ingest/notices/queueSize" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of pending notices to be processed by the coordinator."},
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of Druid rows persisted."},
   "ingest/persists/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of times persist occurred." },
   "ingest/persists/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds spent doing intermediate persist."},
@@ -85,6 +89,7 @@
   "segment/loadQueue/count" : { "dimensions" : ["server"], "type" : "gauge", "help": "Number of segments to load."},
   "segment/dropQueue/count" : { "dimensions" : ["server"], "type" : "gauge", "help": "Number of segments to drop."},
   "segment/size" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Size in bytes of available segments."},
+  "segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help" : "Number of used segments belonging to a data source." },
   "segment/overShadowed/count" : { "dimensions" : [], "type" : "gauge", "help": "Number of overShadowed segments."},
 
   "segment/max" : { "dimensions" : [], "type" : "gauge", "help": "Maximum byte limit available for segments."},
@@ -126,5 +131,8 @@
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge", "help": "CPU used"},
 
   "coordinator_segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of served segments."},
-  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."}
+  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."},
+
+  "service/heartbeat" : { "dimensions" : ["dataSource", "type"], "type" : "gauge", "help":  "Metric indicating the service is up. This metric is only available if the ServiceStatusMonitor module is included."},
+  "zk/connected" : { "dimensions" : [], "type" : "gauge", "help":  "Indicator of connection status to zookeeper."}
 }

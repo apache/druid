@@ -30,7 +30,7 @@ import {
 } from '../time/time';
 import type { Transform } from '../transform-spec/transform-spec';
 
-const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
+export const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
 
 export const TIME_COLUMN = '__time';
 

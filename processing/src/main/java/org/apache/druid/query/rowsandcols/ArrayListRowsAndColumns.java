@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
@@ -38,6 +39,8 @@ import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
 import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowBasedStorageAdapter;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -46,7 +49,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -71,7 +73,8 @@ import java.util.function.Function;
 public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumns
 {
   @SuppressWarnings("rawtypes")
-  private static final HashMap<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = makeAsMap();
+  private static final Map<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+      .makeAsMap(ArrayListRowsAndColumns.class);
 
   private final ArrayList<RowType> rows;
   private final RowAdapter<RowType> rowAdapter;
@@ -316,41 +319,42 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
     );
   }
 
-  @SuppressWarnings("rawtypes")
-  private static HashMap<Class<?>, Function<ArrayListRowsAndColumns, ?>> makeAsMap()
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public ClusteredGroupPartitioner toClusteredGroupPartitioner()
   {
-    HashMap<Class<?>, Function<ArrayListRowsAndColumns, ?>> retVal = new HashMap<>();
+    return new MyClusteredGroupPartitioner();
+  }
 
-    retVal.put(
-        ClusteredGroupPartitioner.class,
-        (Function<ArrayListRowsAndColumns, ClusteredGroupPartitioner>) rac -> rac.new MyClusteredGroupPartitioner()
-    );
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public NaiveSortMaker toNaiveSortMaker()
+  {
+    if (startOffset != 0) {
+      throw new ISE(
+          "The NaiveSortMaker should happen on the first RAC, start was [%,d], end was [%,d]",
+          startOffset,
+          endOffset
+      );
+    }
+    if (endOffset == rows.size()) {
+      // In this case, we are being sorted along with other RowsAndColumns objects, we don't have an optimized
+      // implementation for that, so just return null
+      //noinspection ReturnOfNull
+      return null;
+    }
 
-    retVal.put(
-        NaiveSortMaker.class,
-        (Function<ArrayListRowsAndColumns, NaiveSortMaker>) rac -> {
-          if (rac.startOffset != 0) {
-            throw new ISE(
-                "The NaiveSortMaker should happen on the first RAC, start was [%,d], end was [%,d]",
-                rac.startOffset,
-                rac.endOffset
-            );
-          }
-          if (rac.endOffset == rac.rows.size()) {
-            // In this case, we are being sorted along with other RowsAndColumns objects, we don't have an optimized
-            // implementation for that, so just return null
-            //noinspection ReturnOfNull
-            return null;
-          }
+    // When we are doing a naive sort and we are dealing with the first sub-window from ourselves, then we assume
+    // that we will see all of the other sub-windows as well, we can run through them and then sort the underlying
+    // rows at the very end.
+    return new MyNaiveSortMaker();
+  }
 
-          // When we are doing a naive sort and we are dealing with the first sub-window from ourselves, then we assume
-          // that we will see all of the other sub-windows as well, we can run through them and then sort the underlying
-          // rows at the very end.
-          return rac.new MyNaiveSortMaker();
-        }
-    );
-
-    return retVal;
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public StorageAdapter toStorageAdapter()
+  {
+    return new RowBasedStorageAdapter<RowType>(Sequences.simple(rows), rowAdapter, rowSignature);
   }
 
   private class MyClusteredGroupPartitioner implements ClusteredGroupPartitioner

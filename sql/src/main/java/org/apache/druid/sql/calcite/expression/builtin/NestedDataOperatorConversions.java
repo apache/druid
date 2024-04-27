@@ -253,7 +253,7 @@ public class NestedDataOperatorConversions
                 SqlTypeFamily.CHARACTER
             )
         )
-        .returnTypeInference(NESTED_ARRAY_RETURN_TYPE_INFERENCE)
+        .returnTypeInference(NESTED_ARRAY_RETURN_TYPE_INFERENCE.andThen(SqlTypeTransforms.FORCE_NULLABLE))
         .functionCategory(SqlFunctionCategory.SYSTEM)
         .build();
 

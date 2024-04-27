@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureDataSegmentConfig;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
@@ -74,6 +75,8 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureInputDataConfig inputDataConfig;
+  private AzureAccountConfig accountConfig;
+
 
   static {
     try {
@@ -96,7 +99,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     entityFactory = createMock(AzureEntityFactory.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
     inputDataConfig = createMock(AzureInputDataConfig.class);
-
+    accountConfig = createMock(AzureAccountConfig.class);
   }
 
   @Test
@@ -177,6 +180,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     injectableValues.addValue(AzureEntityFactory.class, entityFactory);
     injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
     injectableValues.addValue(AzureInputDataConfig.class, inputDataConfig);
+    injectableValues.addValue(AzureAccountConfig.class, accountConfig);
     return injectableValues;
   }
 

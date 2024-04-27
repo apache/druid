@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.RowSignature;
@@ -33,17 +34,12 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.rules.ExpectedException;
-
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -71,10 +67,6 @@ public class QueryTestBuilder
    */
   public interface QueryTestConfig
   {
-    QueryLogHook queryLogHook();
-
-    ExpectedException expectedException();
-
     ObjectMapper jsonMapper();
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
@@ -98,10 +90,7 @@ public class QueryTestBuilder
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
-  @Nullable
-  protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
-  protected boolean msqCompatible = true;
   protected boolean queryCannotVectorize;
   protected Predicate<List<Query<?>>> verifyNativeQueries = xs -> true;
   protected AuthConfig authConfig = new AuthConfig();
@@ -112,13 +101,12 @@ public class QueryTestBuilder
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
+    Preconditions.checkNotNull(
+        config.baseQueryContext(),
+        "config's queryContext is null - probably set it to BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT"
+    );
     this.config = config;
-    // Done to maintain backwards compat. So,
-    // 1. If no base context is provided in config, the queryContext is set to the default one
-    // 2. If some base context is provided in config, we set that context as the queryContext
-    // 3. If someone overrides the context, we merge the context with the empty/non-empty base context provided in the config
-    this.queryContext =
-        config.baseQueryContext() == null ? BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT : config.baseQueryContext();
+    this.queryContext = config.baseQueryContext();
   }
 
   public QueryTestBuilder plannerConfig(PlannerConfig plannerConfig)
@@ -218,12 +206,6 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedException(Consumer<ExpectedException> expectedExceptionInitializer)
-  {
-    this.expectedExceptionInitializer = expectedExceptionInitializer;
-    return this;
-  }
-
   public QueryTestBuilder skipVectorize()
   {
     return skipVectorize(true);
@@ -232,12 +214,6 @@ public class QueryTestBuilder
   public QueryTestBuilder skipVectorize(boolean skipVectorize)
   {
     this.skipVectorize = skipVectorize;
-    return this;
-  }
-
-  public QueryTestBuilder msqCompatible(boolean msqCompatible)
-  {
-    this.msqCompatible = msqCompatible;
     return this;
   }
 

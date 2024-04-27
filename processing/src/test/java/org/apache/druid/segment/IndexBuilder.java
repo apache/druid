@@ -101,7 +101,7 @@ public class IndexBuilder
 
   public static IndexBuilder create()
   {
-    return new IndexBuilder(TestHelper.JSON_MAPPER, ColumnConfig.ALWAYS_USE_INDEXES);
+    return new IndexBuilder(TestHelper.JSON_MAPPER, ColumnConfig.DEFAULT);
   }
 
   public static IndexBuilder create(ColumnConfig columnConfig)
@@ -111,7 +111,7 @@ public class IndexBuilder
 
   public static IndexBuilder create(ObjectMapper jsonMapper)
   {
-    return new IndexBuilder(jsonMapper, ColumnConfig.ALWAYS_USE_INDEXES);
+    return new IndexBuilder(jsonMapper, ColumnConfig.DEFAULT);
   }
 
   public static IndexBuilder create(ObjectMapper jsonMapper, ColumnConfig columnConfig)

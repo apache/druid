@@ -423,7 +423,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
-            compressionStrategy
+            compressionStrategy,
+            segmentWriteOutMedium.getCloser()
         );
       } else {
         encodedValueSerializer = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, cardinality);
@@ -684,7 +685,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
    * {@link DictionaryEncodedColumnMerger#writeIndexes(List)} is called, on top of the standard bitmap index created
    * with {@link DictionaryEncodedColumnMerger#mergeBitmaps}
    */
-  interface ExtendedIndexesMerger
+  protected interface ExtendedIndexesMerger
   {
     void initialize() throws IOException;
 

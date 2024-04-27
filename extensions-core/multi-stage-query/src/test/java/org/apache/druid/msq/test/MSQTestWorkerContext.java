@@ -22,14 +22,14 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -126,7 +126,7 @@ public class MSQTestWorkerContext implements WorkerContext
     final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
     {
       @Override
-      public void write(String taskId, Map<String, TaskReport> reports)
+      public void write(String taskId, TaskReport.ReportMap reports)
       {
 
       }
@@ -160,7 +160,7 @@ public class MSQTestWorkerContext implements WorkerContext
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),
-        injector.getInstance(LoadedSegmentDataProviderFactory.class),
+        injector.getInstance(DataServerQueryHandlerFactory.class),
         workerMemoryParameters
     );
   }
@@ -184,8 +184,8 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    return injector.getInstance(LoadedSegmentDataProviderFactory.class);
+    return injector.getInstance(DataServerQueryHandlerFactory.class);
   }
 }

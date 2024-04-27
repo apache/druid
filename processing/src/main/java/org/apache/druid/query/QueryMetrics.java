@@ -24,6 +24,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 
 import java.util.List;
@@ -242,9 +243,36 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void segment(String segmentIdentifier);
 
-  void preFilters(List<Filter> preFilters);
+  /**
+   * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
+   * used to construct {@link org.apache.druid.segment.BitmapOffset} or
+   * {@link org.apache.druid.segment.vector.BitmapVectorOffset}.
+   * This method will be removed in a future Druid release
+   */
+  @Deprecated
+  @SuppressWarnings({"unreachable", "unused"})
+  default void preFilters(List<Filter> preFilters)
+  {
+    // do nothing, nothing calls this
+  }
 
-  void postFilters(List<Filter> postFilters);
+  /**
+   * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
+   * used as value matchers for {@link org.apache.druid.segment.FilteredOffset} or
+   * {@link org.apache.druid.segment.vector.FilteredVectorOffset}
+   * This method will be removed in a future Druid release
+   */
+  @Deprecated
+  @SuppressWarnings({"unreachable", "unused"})
+  default void postFilters(List<Filter> postFilters)
+  {
+    // do nothing, nothing calls this
+  }
+
+  default void filterBundle(FilterBundle.BundleInfo bundleInfo)
+  {
+    // Emit nothing by default.
+  }
 
   /**
    * Sets identity of the requester for a query. See {@code AuthenticationResult}.
@@ -265,10 +293,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void parallelMergeParallelism(int parallelism);
 
   /**
-   * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from {@link
-   * #preFilters(List)}. The returned BitmapResultFactory may add some dimensions to this QueryMetrics from it's {@link
-   * BitmapResultFactory#toImmutableBitmap(Object)} method. See {@link BitmapResultFactory} Javadoc for more
-   * information.
+   * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from
+   * {@link #filterBundle(FilterBundle.BundleInfo)}. The returned BitmapResultFactory may add some dimensions to this
+   * QueryMetrics from it's {@link BitmapResultFactory#toImmutableBitmap(Object)} method. See
+   * {@link BitmapResultFactory} Javadoc for more information.
    */
   BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory);
 
@@ -348,8 +376,8 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportNodeBytes(long byteCount);
 
   /**
-   * Reports the time spent constructing bitmap from {@link #preFilters(List)} of the query. Not reported, if there are
-   * no preFilters.
+   * Reports the time spent constructing bitmap from {@link #filterBundle(FilterBundle.BundleInfo)} of the query. Not
+   * reported, if there are no indexes.
    */
   QueryMetrics<QueryType> reportBitmapConstructionTime(long timeNs);
 
@@ -359,8 +387,8 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportSegmentRows(long numRows);
 
   /**
-   * Reports the number of rows to scan in the segment after applying {@link #preFilters(List)}. If the are no
-   * preFilters, this metric is equal to {@link #reportSegmentRows(long)}.
+   * Reports the number of rows to scan in the segment after applying {@link #filterBundle(FilterBundle.BundleInfo)}.
+   * If the are no indexes, this metric is equal to {@link #reportSegmentRows(long)}.
    */
   QueryMetrics<QueryType> reportPreFilteredRows(long numRows);
 

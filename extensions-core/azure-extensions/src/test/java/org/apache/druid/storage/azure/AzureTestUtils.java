@@ -57,11 +57,13 @@ public class AzureTestUtils extends EasyMockSupport
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       int maxListingLength,
       URI PREFIX_URI,
-      List<CloudBlobHolder> objects)
+      List<CloudBlobHolder> objects,
+      AzureStorage azureStorage
+  )
   {
     AzureCloudBlobIterable azureCloudBlobIterable = EasyMock.createMock(AzureCloudBlobIterable.class);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(objects.iterator());
-    EasyMock.expect(azureCloudBlobIterableFactory.create(ImmutableList.of(PREFIX_URI), maxListingLength)).andReturn(azureCloudBlobIterable);
+    EasyMock.expect(azureCloudBlobIterableFactory.create(ImmutableList.of(PREFIX_URI), maxListingLength, azureStorage)).andReturn(azureCloudBlobIterable);
     return azureCloudBlobIterable;
   }
 

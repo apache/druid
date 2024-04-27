@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
@@ -51,7 +52,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
   @Inject
   public AzureDataSegmentPusher(
-      AzureStorage azureStorage,
+      @Global AzureStorage azureStorage,
       AzureAccountConfig accountConfig,
       AzureDataSegmentConfig segmentConfig
   )

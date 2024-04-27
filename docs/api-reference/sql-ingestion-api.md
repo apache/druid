@@ -31,41 +31,87 @@ import TabItem from '@theme/TabItem';
  ingestion method is right for you.
 :::
 
-The **Query** view in the web console provides a friendly experience for the multi-stage query task engine (MSQ task
-engine) and multi-stage query architecture. We recommend using the web console if you do not need a programmatic
-interface.
+The **Query** view in the web console provides a friendly experience for the multi-stage query task engine (MSQ task engine) and multi-stage query architecture. We recommend using the web console if you don't need a programmatic interface.
 
 When using the API for the MSQ task engine, the action you want to take determines the endpoint you use:
 
-- `/druid/v2/sql/task` endpoint: Submit a query for ingestion.
-- `/druid/indexer/v1/task` endpoint: Interact with a query, including getting its status, getting its details, or canceling it. This page describes a few of the Overlord Task APIs that you can use with the MSQ task engine. For information about Druid APIs, see the [API reference for Druid](../ingestion/tasks.md).
+- `/druid/v2/sql/task`: Submit a query for ingestion.
+- `/druid/indexer/v1/task`: Interact with a query, including getting its status or details, or canceling the query. This page describes a few of the Overlord Task APIs that you can use with the MSQ task engine. For information about Druid APIs, see the [API reference for Druid](../ingestion/tasks.md).
+
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Submit a query
 
-You submit queries to the MSQ task engine using the `POST /druid/v2/sql/task/` endpoint.
+Submits queries to the MSQ task engine.
 
-#### Request
+The `/druid/v2/sql/task` endpoint accepts the following:
 
-The SQL task endpoint accepts [SQL requests in the JSON-over-HTTP form](sql-api.md#request-body) using the
-`query`, `context`, and `parameters` fields, but ignoring the `resultFormat`, `header`, `typesHeader`, and
-`sqlTypesHeader` fields.
+- [SQL requests in the JSON-over-HTTP form](sql-api.md#request-body) using the
+`query`, `context`, and `parameters` fields. The endpoint ignores the `resultFormat`, `header`, `typesHeader`, and `sqlTypesHeader` fields.
+- [INSERT](../multi-stage-query/reference.md#insert) and [REPLACE](../multi-stage-query/reference.md#replace) statements.
+- SELECT queries (experimental feature). SELECT query results are collected from workers by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
 
-This endpoint accepts [INSERT](../multi-stage-query/reference.md#insert) and [REPLACE](../multi-stage-query/reference.md#replace) statements.
+### URL
 
-As an experimental feature, this endpoint also accepts SELECT queries. SELECT query results are collected from workers
-by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The
-behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
+`POST` `/druid/v2/sql/task`
+
+### Responses
 
 <Tabs>
 
-<TabItem value="1" label="HTTP">
+<TabItem value="1" label="200 SUCCESS">
 
 
-```
-POST /druid/v2/sql/task
-```
+*Successfully submitted query*
+
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
+
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
+{
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
+}
+```
+</TabItem>
+<TabItem value="3" label="500 INTERNAL SERVER ERROR">
+
+
+*Request not sent due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
+
+```json
+{
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
+}
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+### Sample request
+
+The following example shows a query that fetches data from an external JSON source and inserts it into a table named `wikipedia`.
+
+<Tabs>
+
+<TabItem value="4" label="HTTP">
+
+
+```HTTP
+POST /druid/v2/sql/task HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
 {
   "query": "INSERT INTO wikipedia\nSELECT\n  TIME_PARSE(\"timestamp\") AS __time,\n  *\nFROM TABLE(\n  EXTERN(\n    '{\"type\": \"http\", \"uris\": [\"https://druid.apache.org/data/wikipedia.json.gz\"]}',\n    '{\"type\": \"json\"}',\n    '[{\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"cityName\", \"type\": \"string\"}, {\"name\": \"comment\", \"type\": \"string\"}, {\"name\": \"commentLength\", \"type\": \"long\"}, {\"name\": \"countryIsoCode\", \"type\": \"string\"}, {\"name\": \"countryName\", \"type\": \"string\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}, {\"name\": \"deltaBucket\", \"type\": \"string\"}, {\"name\": \"diffUrl\", \"type\": \"string\"}, {\"name\": \"flags\", \"type\": \"string\"}, {\"name\": \"isAnonymous\", \"type\": \"string\"}, {\"name\": \"isMinor\", \"type\": \"string\"}, {\"name\": \"isNew\", \"type\": \"string\"}, {\"name\": \"isRobot\", \"type\": \"string\"}, {\"name\": \"isUnpatrolled\", \"type\": \"string\"}, {\"name\": \"metroCode\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"regionIsoCode\", \"type\": \"string\"}, {\"name\": \"regionName\", \"type\": \"string\"}, {\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n  )\n)\nPARTITIONED BY DAY",
   "context": {
@@ -76,12 +122,11 @@ POST /druid/v2/sql/task
 
 </TabItem>
 
-<TabItem value="2" label="curl">
+<TabItem value="5" label="cURL">
 
 
-```bash
-# Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
-curl --location --request POST 'https://<username>:<password>@<your-instance>:<port>/druid/v2/sql/task/' \
+```shell
+curl --location --request POST 'http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/task' \
   --header 'Content-Type: application/json' \
   --data-raw '{
     "query": "INSERT INTO wikipedia\nSELECT\n  TIME_PARSE(\"timestamp\") AS __time,\n  *\nFROM TABLE(\n  EXTERN(\n    '\''{\"type\": \"http\", \"uris\": [\"https://druid.apache.org/data/wikipedia.json.gz\"]}'\'',\n    '\''{\"type\": \"json\"}'\'',\n    '\''[{\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"cityName\", \"type\": \"string\"}, {\"name\": \"comment\", \"type\": \"string\"}, {\"name\": \"commentLength\", \"type\": \"long\"}, {\"name\": \"countryIsoCode\", \"type\": \"string\"}, {\"name\": \"countryName\", \"type\": \"string\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}, {\"name\": \"deltaBucket\", \"type\": \"string\"}, {\"name\": \"diffUrl\", \"type\": \"string\"}, {\"name\": \"flags\", \"type\": \"string\"}, {\"name\": \"isAnonymous\", \"type\": \"string\"}, {\"name\": \"isMinor\", \"type\": \"string\"}, {\"name\": \"isNew\", \"type\": \"string\"}, {\"name\": \"isRobot\", \"type\": \"string\"}, {\"name\": \"isUnpatrolled\", \"type\": \"string\"}, {\"name\": \"metroCode\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"regionIsoCode\", \"type\": \"string\"}, {\"name\": \"regionName\", \"type\": \"string\"}, {\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\''\n  )\n)\nPARTITIONED BY DAY",
@@ -93,15 +138,14 @@ curl --location --request POST 'https://<username>:<password>@<your-instance>:<p
 
 </TabItem>
 
-<TabItem value="3" label="Python">
+<TabItem value="6" label="Python">
 
 
 ```python
 import json
 import requests
 
-# Make sure you replace `your-instance`, and `port` with the values for your deployment.
-url = "https://<your-instance>:<port>/druid/v2/sql/task/"
+url = "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/task"
 
 payload = json.dumps({
   "query": "INSERT INTO wikipedia\nSELECT\n  TIME_PARSE(\"timestamp\") AS __time,\n  *\nFROM TABLE(\n  EXTERN(\n    '{\"type\": \"http\", \"uris\": [\"https://druid.apache.org/data/wikipedia.json.gz\"]}',\n    '{\"type\": \"json\"}',\n    '[{\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"cityName\", \"type\": \"string\"}, {\"name\": \"comment\", \"type\": \"string\"}, {\"name\": \"commentLength\", \"type\": \"long\"}, {\"name\": \"countryIsoCode\", \"type\": \"string\"}, {\"name\": \"countryName\", \"type\": \"string\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}, {\"name\": \"deltaBucket\", \"type\": \"string\"}, {\"name\": \"diffUrl\", \"type\": \"string\"}, {\"name\": \"flags\", \"type\": \"string\"}, {\"name\": \"isAnonymous\", \"type\": \"string\"}, {\"name\": \"isMinor\", \"type\": \"string\"}, {\"name\": \"isNew\", \"type\": \"string\"}, {\"name\": \"isRobot\", \"type\": \"string\"}, {\"name\": \"isUnpatrolled\", \"type\": \"string\"}, {\"name\": \"metroCode\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"regionIsoCode\", \"type\": \"string\"}, {\"name\": \"regionName\", \"type\": \"string\"}, {\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n  )\n)\nPARTITIONED BY DAY",
@@ -123,7 +167,10 @@ print(response.text)
 
 </Tabs>
 
-#### Response
+### Sample response
+
+<details>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -131,49 +178,78 @@ print(response.text)
   "state": "RUNNING",
 }
 ```
+</details>
 
 **Response fields**
 
 | Field | Description |
 |---|---|
 | `taskId` | Controller task ID. You can use Druid's standard [Tasks API](./tasks-api.md) to interact with this controller task. |
-| `state` | Initial state for the query, which is "RUNNING". |
+| `state` | Initial state for the query. |
 
 ## Get the status for a query task
 
-You can retrieve status of a query to see if it is still running, completed successfully, failed, or got canceled.
+Retrieves the status of a query task. It returns a JSON object with the task's status code, runner status, task type, datasource, and other relevant metadata.
 
-#### Request
+### URL
+
+`GET` `/druid/indexer/v1/task/{taskId}/status`
+
+### Responses
 
 <Tabs>
 
-<TabItem value="4" label="HTTP">
+<TabItem value="7" label="200 SUCCESS">
 
 
-```
-GET /druid/indexer/v1/task/<taskId>/status
+<br/>
+
+*Successfully retrieved task status*
+
+</TabItem>
+<TabItem value="8" label="404 NOT FOUND">
+
+
+<br/>
+
+*Cannot find task with ID*
+
+</TabItem>
+</Tabs>
+
+---
+
+### Sample request
+
+The following example shows how to retrieve the status of a task with the ID `query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e`.
+
+<Tabs>
+
+<TabItem value="9" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/status HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
 </TabItem>
 
-<TabItem value="5" label="curl">
+<TabItem value="10" label="cURL">
 
 
-```bash
-# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/status'
+```shell
+curl --location --request GET 'http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/status'
 ```
 
 </TabItem>
 
-<TabItem value="6" label="Python">
+<TabItem value="11" label="Python">
 
 
 ```python
 import requests
 
-# Make sure you replace `your-instance`, `port`, and `taskId` with the values for your deployment.
-url = "https://<your-instance>:<port>/druid/indexer/v1/task/<taskId>/status"
+url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/status"
 
 payload={}
 headers = {}
@@ -187,9 +263,12 @@ print(response.text)
 
 </Tabs>
 
-#### Response
+### Sample response
 
-```
+<details>
+  <summary>View the response</summary>
+
+```json
 {
   "task": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e",
   "status": {
@@ -212,55 +291,76 @@ print(response.text)
   }
 }
 ```
+</details>
 
 ## Get the report for a query task
 
-A report provides detailed information about a query task, including things like the stages, warnings, and errors.
+Retrieves the task report for a query.
+The report provides detailed information about the query task, including things like the stages, warnings, and errors.
 
 Keep the following in mind when using the task API to view reports:
 
-- The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks do not have
-  their own reports; their information is incorporated into the controller report.
+- The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks don't have their own reports; their information is incorporated into the controller report.
 - The task report API may report `404 Not Found` temporarily while the task is in the process of starting up.
 - As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
-- `multiStageQuery.payload.results.resultsTruncated` denote whether the results of the report have been truncated to prevent
-the reports from blowing up
+- `multiStageQuery.payload.results.resultsTruncated` denotes whether the results of the report have been truncated to prevent the reports from blowing up.
 
 For an explanation of the fields in a report, see [Report response fields](#report-response-fields).
 
-#### Request
+### URL
+
+
+`GET` `/druid/indexer/v1/task/{taskId}/reports`
+
+### Responses
 
 <Tabs>
 
-<TabItem value="7" label="HTTP">
+<TabItem value="12" label="200 SUCCESS">
 
 
-```
-GET /druid/indexer/v1/task/<taskId>/reports
+<br/>
+
+*Successfully retrieved task report*
+
+</TabItem>
+</Tabs>
+
+---
+
+### Sample request
+
+The following example shows how to retrieve the report for a query with the task ID `query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e`.
+
+<Tabs>
+
+<TabItem value="13" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/reports HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
 </TabItem>
 
-<TabItem value="8" label="curl">
+<TabItem value="14" label="cURL">
 
 
-```bash
-# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/reports'
+```shell
+curl --location --request GET 'http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/reports'
 ```
 
 </TabItem>
 
-<TabItem value="9" label="Python">
+<TabItem value="15" label="Python">
 
 
 ```python
 import requests
 
-# Make sure you replace `your-instance`, `port`, and `taskId` with the values for your deployment.
-url = "https://<your-instance>:<port>/druid/indexer/v1/task/<taskId>/reports"
+url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/reports"
 
 headers = {}
 response = requests.get(url, headers=headers, auth=('USER', 'PASSWORD'))
@@ -271,11 +371,11 @@ print(response.text)
 
 </Tabs>
 
-#### Response
+### Sample response
 
 The response shows an example report for a query.
 
-<details><summary>Show the response</summary>
+<details><summary>View the response</summary>
 
 ```json
 {
@@ -287,9 +387,19 @@ The response shows an example report for a query.
         "status": "SUCCESS",
         "startTime": "2022-09-14T22:12:09.266Z",
         "durationMs": 28227,
+        "workers": {
+          "0": [
+            {
+              "workerId": "query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e-worker0_0",
+              "state": "SUCCESS",
+              "durationMs": 15511,
+              "pendingMs": 137
+            }
+          ]
+        },
         "pendingTasks": 0,
         "runningTasks": 2,
-        "segmentLoadStatus": {
+        "segmentLoadWaiterStatus": {
           "state": "SUCCESS",
           "dataSource": "kttm_simple",
           "startTime": "2022-09-14T23:12:09.266Z",
@@ -300,6 +410,10 @@ The response shows an example report for a query.
           "onDemandSegments": 0,
           "pendingSegments": 0,
           "unknownSegments": 0
+        },
+        "segmentReport": {
+          "shardSpec": "NumberedShardSpec",
+          "details": "Cannot use RangeShardSpec, RangedShardSpec only supports string CLUSTER BY keys. Using NumberedShardSpec instead."
         }
       },
       "stages": [
@@ -594,7 +708,7 @@ The response shows an example report for a query.
 
 <a name="report-response-fields"></a>
 
-The following table describes the response fields when you retrieve a report for a MSQ task engine using the `/druid/indexer/v1/task/<taskId>/reports` endpoint:
+The following table describes the response fields when you retrieve a report for a MSQ task engine using the `/druid/indexer/v1/task/{taskId}/reports` endpoint:
 
 | Field | Description |
 |---|---|
@@ -607,7 +721,8 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.workers.<workerNumber>` | Array of worker tasks including retries. |
 | `multiStageQuery.payload.status.workers.<workerNumber>[].workerId` | Id of the worker task.| |
 | `multiStageQuery.payload.status.workers.<workerNumber>[].status` | RUNNING, SUCCESS, or FAILED.|
-| `multiStageQuery.payload.status.workers.<workerNumber>[].durationMs` | Milliseconds elapsed after the worker task started running. It is -1 for worker tasks with status RUNNING.|
+| `multiStageQuery.payload.status.workers.<workerNumber>[].durationMs` | Milliseconds elapsed between when the worker task was first requested and when it finished. It is -1 for worker tasks with status RUNNING.|
+| `multiStageQuery.payload.status.workers.<workerNumber>[].pendingMs` | Milliseconds elapsed between when the worker task was first requested and when it fully started RUNNING. Actual work time can be calculated using `actualWorkTimeMS = durationMs - pendingMs`.|
 | `multiStageQuery.payload.status.pendingTasks` | Number of tasks that are not fully started. -1 denotes that the number is currently unknown. |
 | `multiStageQuery.payload.status.runningTasks` | Number of currently running tasks. Should be at least 1 since the controller is included. |
 | `multiStageQuery.payload.status.segmentLoadStatus` | Segment loading container. Only present after the segments have been published. |
@@ -620,6 +735,9 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.segmentLoadStatus.onDemandSegments` | The number of segments which are not loaded on any historical, as per the load rules. |
 | `multiStageQuery.payload.status.segmentLoadStatus.pendingSegments` | The number of segments remaining to be loaded. |
 | `multiStageQuery.payload.status.segmentLoadStatus.unknownSegments` | The number of segments whose status is unknown. |
+| `multiStageQuery.payload.status.segmentReport` | Segment report. Only present if the query is an ingestion. |
+| `multiStageQuery.payload.status.segmentReport.shardSpec` | Contains the shard spec chosen. |
+| `multiStageQuery.payload.status.segmentReport.details` | Contains further reasoning about the shard spec chosen. |
 | `multiStageQuery.payload.status.errorReport` | Error object. Only present if there was an error. |
 | `multiStageQuery.payload.status.errorReport.taskId` | The task that reported the error, if known. May be a controller task or a worker task. |
 | `multiStageQuery.payload.status.errorReport.host` | The hostname and port of the task that reported the error, if known. |
@@ -645,37 +763,69 @@ The following table describes the response fields when you retrieve a report for
 
 ## Cancel a query task
 
-#### Request
+Cancels a query task.
+Returns a JSON object with the ID of the task that was canceled successfully.
+
+### URL
+
+`POST` `/druid/indexer/v1/task/{taskId}/shutdown`
+
+### Responses
 
 <Tabs>
 
-<TabItem value="10" label="HTTP">
+<TabItem value="16" label="200 SUCCESS">
 
 
-```
-POST /druid/indexer/v1/task/<taskId>/shutdown
+<br/>
+
+*Successfully shut down task*
+
+</TabItem>
+<TabItem value="17" label="404 NOT FOUND">
+
+
+<br/>
+
+*Cannot find task with ID or task is no longer running*
+
+</TabItem>
+</Tabs>
+
+---
+
+### Sample request
+
+The following example shows how to cancel a query task with the ID `query-655efe33-781a-4c50-ae84-c2911b42d63c`.
+
+<Tabs>
+
+<TabItem value="18" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/task/query-655efe33-781a-4c50-ae84-c2911b42d63c/shutdown HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
 </TabItem>
 
-<TabItem value="11" label="curl">
+<TabItem value="19" label="cURL">
 
 
-```bash
-# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
-curl --location --request POST 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown'
+```shell
+curl --location --request POST 'http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-655efe33-781a-4c50-ae84-c2911b42d63c/shutdown'
 ```
 
 </TabItem>
 
-<TabItem value="12" label="Python">
+<TabItem value="20" label="Python">
 
 
 ```python
 import requests
 
-# Make sure you replace `your-instance`, `port`, and `taskId` with the values for your deployment.
-url = "https://<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown"
+url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-655efe33-781a-4c50-ae84-c2911b42d63c/shutdown"
 
 payload={}
 headers = {}
@@ -689,9 +839,11 @@ print(response.text)
 
 </Tabs>
 
-#### Response
+### Sample response
 
-```
+The response shows the ID of the task that was canceled.
+
+```json
 {
     "task": "query-655efe33-781a-4c50-ae84-c2911b42d63c"
 }

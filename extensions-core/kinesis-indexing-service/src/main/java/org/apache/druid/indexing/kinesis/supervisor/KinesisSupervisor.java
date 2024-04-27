@@ -143,11 +143,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         maximumMessageTime,
         ioConfig.getInputFormat(),
         ioConfig.getEndpoint(),
-        ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId(),
-        ioConfig.isDeaggregate()
+        ioConfig.getAwsExternalId()
     );
   }
 
@@ -197,14 +195,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        0, // no records-per-fetch, it is not used
         ioConfig.getFetchDelayMillis(),
         0, // skip starting background fetch, it is not used
-        ioConfig.isDeaggregate(),
-        taskTuningConfig.getRecordBufferSizeOrDefault(Runtime.getRuntime().maxMemory(), ioConfig.isDeaggregate()),
+        taskTuningConfig.getRecordBufferSizeBytesOrDefault(Runtime.getRuntime().maxMemory()),
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),
-        taskTuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate()),
+        taskTuningConfig.getMaxBytesPerPollOrDefault(),
         ioConfig.isUseEarliestSequenceNumber(),
         spec.getSpec().getTuningConfig().isUseListShards()
     );
@@ -429,6 +425,13 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         expiredPartitionIds,
         KinesisSequenceNumber.EXPIRED_MARKER
     );
+  }
+
+  @Override
+  public long computeLagForAutoScaler()
+  {
+    LagStats lagStats = computeLagStats();
+    return lagStats == null ? 0L : lagStats.getMaxLag();
   }
 
   private SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedOrExpiredPartitions(

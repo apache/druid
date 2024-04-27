@@ -30,16 +30,23 @@ public class CloudBlobHolder
 {
   private final BlobItem delegate;
   private final String container;
+  private final String storageAccount;
 
-  public CloudBlobHolder(BlobItem delegate, String container)
+  public CloudBlobHolder(BlobItem delegate, String container, String storageAccount)
   {
     this.delegate = delegate;
     this.container = container;
+    this.storageAccount = storageAccount;
   }
 
   public String getContainerName()
   {
     return container;
+  }
+
+  public String getStorageAccount()
+  {
+    return storageAccount;
   }
 
   public String getName()

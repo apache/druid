@@ -62,6 +62,7 @@ import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
+import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -248,10 +249,23 @@ public class CalciteRulesManager
         ),
         Programs.sequence(
             druidPreProgram,
+            buildDecoupledLogicalOptimizationProgram(plannerContext),
+            new LoggingProgram("After DecoupledLogicalOptimizationProgram program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
         )
     );
+  }
+
+  private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addGroupBegin();
+    builder.addRuleCollection(baseRuleSet(plannerContext));
+    builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addGroupEnd();
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   /**
@@ -317,6 +331,7 @@ public class CalciteRulesManager
       // make it impossible to convert to COALESCE.
       builder.addRuleInstance(new CaseToCoalesceRule());
       builder.addRuleInstance(new CoalesceLookupRule());
+      builder.addRuleInstance(new RewriteFirstValueLastValueRule());
     }
 
     // Remaining rules run as a single group until fixpoint.
@@ -405,7 +420,7 @@ public class CalciteRulesManager
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext))
+        .add(CoreRules.SORT_REMOVE)
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }

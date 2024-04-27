@@ -89,7 +89,6 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         segmentAnnouncer,
         emitter,
         queryProcessingPool,
-        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats,
@@ -113,7 +112,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return Appenderators.createOpenSegmentsOffline(
@@ -127,7 +127,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -143,7 +144,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return Appenderators.createClosedSegmentsOffline(
@@ -157,7 +159,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -173,7 +176,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return Appenderators.createOffline(
@@ -187,7 +191,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 

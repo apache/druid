@@ -27,6 +27,7 @@ export * from './general';
 export * from './intermediate-query-state';
 export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
+export * from './null-mode-detection';
 export * from './object-change';
 export * from './query-action';
 export * from './query-manager';

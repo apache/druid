@@ -39,7 +39,7 @@ export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
 
   return (
     <div className="home-view app-view">
-      <StatusCard />
+      <StatusCard capabilities={capabilities} />
       {capabilities.hasSqlOrCoordinatorAccess() && (
         <>
           <DatasourcesCard capabilities={capabilities} />

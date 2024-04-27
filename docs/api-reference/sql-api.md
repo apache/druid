@@ -44,7 +44,7 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/sql</code>
+`POST` `/druid/v2/sql`
 
 #### Request body
 
@@ -53,11 +53,25 @@ The request body takes the following properties:
 * `query`: SQL query string.
 
 * `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
-  * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.
-  * `array`: Returns a JSON array of JSON arrays with the HTTP response header `Content-Type: application/json`.
-  * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Returns the HTTP response header `Content-Type: text/plain`.
-  * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP response header `Content-Type: text/plain`.
-  * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP response header `Content-Type: text/csv`.
+  * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
+     Object field names match the columns returned by the SQL query in the same order as the SQL query.
+
+  * `array`: Returns a JSON array of JSON arrays with the HTTP response header `Content-Type: application/json`.  
+     Each inner array has elements matching the columns returned by the SQL query, in order.
+
+  * `objectLines`: Returns newline-delimited JSON objects with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
+     This format includes a single trailing newline character so you can detect a truncated response.
+
+  * `arrayLines`: Returns newline-delimited JSON arrays with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
+     This format includes a single trailing newline character so you can detect a truncated response.
+
+  * `csv`: Returns comma-separated values with one row per line. Sent with the HTTP response header `Content-Type: text/csv`.  
+     Druid uses double quotes to escape individual field values. For example, a value with a comma returns `"A,B"`.
+     If the field value contains a double quote character, Druid escapes it with a second double quote character.
+     For example, `foo"bar` becomes `foo""bar`.
+      This format includes a single trailing newline character so you can detect a truncated response.
 
 * `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
 
@@ -124,6 +138,16 @@ The request body takes the following properties:
 </TabItem>
 </Tabs>
 
+#### Client-side error handling and truncated responses
+
+Druid reports errors that occur before the response body is sent as JSON with an HTTP 500 status code. The errors are reported using the same format as [native Druid query errors](../querying/querying.md#query-errors).
+If an error occurs while Druid is sending the response body, the server handling the request stops the response midstream and logs an error.
+
+This means that when you call the SQL API, you must properly handle response truncation.
+For  `object` and `array` formats, truncated responses are invalid JSON.
+For line-oriented formats, Druid includes a newline character as the final character of every complete response. Absence of a final newline character indicates a truncated response.
+
+If you detect a truncated response, treat it as an error.
 
 ---
 
@@ -174,7 +198,7 @@ Content-Length: 192
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 [
@@ -296,7 +320,7 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/:sqlQueryId</code>
+`DELETE` `/druid/v2/sql/{sqlQueryId}`
 
 #### Responses
 
@@ -393,7 +417,7 @@ Note that at least part of a datasource must be available on a Historical proces
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
+`POST` `/druid/v2/sql/statements`
 
 #### Request body
 
@@ -481,7 +505,7 @@ Content-Length: 134
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -607,7 +631,7 @@ Retrieves information about the query associated with the given query ID. The re
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
+`GET` `/druid/v2/sql/statements/{queryId}`
 
 #### Responses
 
@@ -666,7 +690,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -821,14 +845,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves results for completed queries. Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. Druid returns information about the composition of each page and its page number (`id`). For information about pages, see [Get query status](#get-query-status).
 
-
 If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
 Getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
+`GET` `/druid/v2/sql/statements/{queryId}/results`
 
 #### Query parameters
 * `page` (optional)
@@ -920,7 +943,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -1154,7 +1177,7 @@ Cancels a running or accepted query.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/statements/:queryId</code>
+`DELETE` `/druid/v2/sql/statements/{queryId}`
 
 #### Responses
 

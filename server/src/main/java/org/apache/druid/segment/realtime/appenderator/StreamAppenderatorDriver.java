@@ -43,16 +43,20 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -207,7 +211,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
       for (final SegmentIdWithShardSpec identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
-        final long key = identifier.getInterval().getStartMillis();
+        final Interval key = identifier.getInterval();
         final SegmentsOfInterval segmentsOfInterval = activeSegmentsForSequence.get(key);
         if (segmentsOfInterval == null ||
             segmentsOfInterval.getAppendingSegment() == null ||
@@ -320,17 +324,23 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegments().stream()
-                                                                                         .map(
-                                                                                       SegmentIdWithShardSpec::fromDataSegment)
-                                                                                         .collect(Collectors.toList());
+      final Set<DataSegment> segmentsToBeHandedOff = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+      if (segmentsAndCommitMetadata.getUpgradedSegments() != null) {
+        segmentsToBeHandedOff.addAll(segmentsAndCommitMetadata.getUpgradedSegments());
+      }
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList =
+          segmentsToBeHandedOff.stream()
+                               .map(SegmentIdWithShardSpec::fromDataSegment)
+                               .collect(Collectors.toList());
       final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
         return Futures.immediateFuture(
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                segmentsAndCommitMetadata.getUpgradedSegments()
             )
         );
       }
@@ -362,8 +372,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     public void onSuccess(Object result)
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
-                        List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
-                        log.info("Successfully handed off [%d] segments.", segments.size());
+                        log.info("Successfully handed off [%d] segments.", segmentsToBeHandedOff.size());
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
                         if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
@@ -372,8 +381,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         }
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
-                                segments,
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                                segmentsAndCommitMetadata.getSegments(),
+                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                                segmentsAndCommitMetadata.getUpgradedSegments()
                             )
                         );
                       }
@@ -457,11 +468,11 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
     SegmentsForSequence build()
     {
-      final NavigableMap<Long, SegmentsOfInterval> map = new TreeMap<>();
+      final Map<Interval, SegmentsOfInterval> map = new HashMap<>();
       for (Entry<SegmentIdWithShardSpec, Pair<SegmentWithState, List<SegmentWithState>>> entry :
           intervalToSegments.entrySet()) {
         map.put(
-            entry.getKey().getInterval().getStartMillis(),
+            entry.getKey().getInterval(),
             new SegmentsOfInterval(entry.getKey().getInterval(), entry.getValue().lhs, entry.getValue().rhs)
         );
       }

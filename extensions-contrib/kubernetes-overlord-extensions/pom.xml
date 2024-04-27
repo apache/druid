@@ -30,7 +30,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>29.0.0-SNAPSHOT</version>
+    <version>31.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -166,7 +166,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>5.8.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>

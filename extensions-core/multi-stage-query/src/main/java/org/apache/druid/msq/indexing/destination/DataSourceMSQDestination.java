@@ -26,12 +26,17 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.querykit.ShuffleSpecFactories;
+import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class DataSourceMSQDestination implements MSQDestination
 {
@@ -159,5 +164,17 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
+  }
+
+  @Override
+  public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
+  {
+    return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
+  }
+
+  @Override
+  public Optional<Resource> getDestinationResource()
+  {
+    return Optional.of(new Resource(getDataSource(), ResourceType.DATASOURCE));
   }
 }

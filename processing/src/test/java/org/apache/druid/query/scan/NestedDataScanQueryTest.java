@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -42,6 +43,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
@@ -547,6 +549,69 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testIngestAndScanSegmentsRealtimeAutoExplicit() throws Exception
+  {
+    DimensionsSpec spec = DimensionsSpec.builder()
+                                        .setDimensions(
+                                            ImmutableList.of(
+                                                new AutoTypeColumnSchema("str", ColumnType.STRING),
+                                                new AutoTypeColumnSchema("long", ColumnType.LONG),
+                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT)
+                                            )
+                                        )
+                                        .build();
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.TYPES_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            spec,
+            TransformSpec.NONE,
+            NestedDataTestUtils.COUNT,
+            Granularities.DAY,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.TYPES_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        spec,
+        TransformSpec.NONE,
+        NestedDataTestUtils.COUNT,
+        Granularities.DAY,
+        true,
+        IndexSpec.DEFAULT
+    );
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+  }
+
+  @Test
   public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryArrayTypes() throws Exception
   {
     Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
@@ -915,6 +980,74 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, ((List) results.get(0).getEvents()).size());
     Assert.assertEquals(results.size(), resultsRealtime.size());
     Assert.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsNestedColumnNotNullFilter() throws Exception
+  {
+    Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
+                                            .dataSource("test_datasource")
+                                            .intervals(
+                                                new MultipleIntervalSegmentSpec(
+                                                    Collections.singletonList(Intervals.ETERNITY)
+                                                )
+                                            )
+                                            .filters(NotDimFilter.of(NullFilter.forColumn("complexObj")))
+                                            .columns("complexObj")
+                                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                            .limit(100)
+                                            .context(ImmutableMap.of());
+    Query<ScanResultValue> scanQuery = builder.build();
+    final AggregatorFactory[] aggs = new AggregatorFactory[]{new CountAggregatorFactory("count")};
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            aggs,
+            Granularities.NONE,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        aggs,
+        Granularities.NONE,
+        true,
+        IndexSpec.DEFAULT
+    );
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(
+          "[[{x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}], z={}}], [{x=10, y=[{l=[b, b, c], m=b, n=2}, [1, 2, 3]], z={a=[5.5], b=false}}], [{x=1234, y=[{l=[a, b, c], m=a, n=1}, {l=[a, b, c], m=a, n=1}], z={a=[1.1, 2.2, 3.3], b=true}}], [{x=1234, z={a=[1.1, 2.2, 3.3], b=true}}], [{x=11, y=[], z={a=[null], b=false}}], [{x=4.4, y=[{l=[], m=100, n=3}, {l=[a]}, {l=[b], n=[]}], z={a=[], b=true}}]]",
+          resultsSegments.get(0).getEvents().toString()
+      );
+    } else {
+      Assert.assertEquals(
+          "[[{x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}], z={}}], [{x=10, y=[{l=[b, b, c], m=b, n=2}, [1, 2, 3]], z={a=[5.5], b=false}}], [{x=1234, y=[{l=[a, b, c], m=a, n=1}, {l=[a, b, c], m=a, n=1}], z={a=[1.1, 2.2, 3.3], b=true}}], [{x=1234, z={a=[1.1, 2.2, 3.3], b=true}}], [{x=11, y=[], z={a=[null], b=false}}], [{x=4.4, y=[{l=[], m=100, n=3}, {l=[a]}, {l=[b], n=[]}], z={a=[], b=true}}]]",
+          resultsSegments.get(0).getEvents().toString()
+      );
+    }
+    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
   }
 
   private static void logResults(List<ScanResultValue> results)

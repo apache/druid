@@ -113,7 +113,7 @@ Note that Druid uses port 8888 for the console. This port is also used by Jupyte
 
 `cd` into the directory that contains the configuration files. This is the directory you created above, or the `distribution/docker/` in your Druid installation directory if you installed Druid locally.
 
-Run `docker-compose up` to launch the cluster with a shell attached, or `docker-compose up -d` to run the cluster in the background.
+Run `docker compose up` to launch the cluster with a shell attached, or `docker compose up -d` to run the cluster in the background.
 
 Once the cluster has started, you can navigate to the [web console](../operations/web-console.md) at [http://localhost:8888](http://localhost:8888). The [Druid router process](../design/router.md) serves the UI.
 
@@ -133,5 +133,5 @@ docker exec -ti <id> sh
 
 Where `<id>` is the container id found with `docker ps`. Druid is installed in `/opt/druid`. The [script](https://github.com/apache/druid/blob/{{DRUIDVERSION}}/distribution/docker/druid.sh) which consumes the environment variables mentioned above, and which launches Druid, is located at `/druid.sh`.
 
-Run `docker-compose down` to shut down the cluster. Your data is persisted as a set of [Docker volumes](https://docs.docker.com/storage/volumes/) and will be available when you restart your Druid cluster.
+Run `docker compose down` to shut down the cluster. Your data is persisted as a set of [Docker volumes](https://docs.docker.com/storage/volumes/) and will be available when you restart your Druid cluster.
 

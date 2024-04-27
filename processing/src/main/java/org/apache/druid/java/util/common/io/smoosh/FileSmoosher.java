@@ -490,11 +490,9 @@ public class FileSmoosher implements Closeable
     public void close() throws IOException
     {
       closer.close();
-      FileSmoosher.LOG.debug(
-          "Created smoosh file [%s] of size [%s] bytes.",
-          outFile.getAbsolutePath(),
-          outFile.length()
-      );
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Created smoosh file [%s] of size [%s] bytes.", outFile.getAbsolutePath(), outFile.length());
+      }
     }
   }
 }

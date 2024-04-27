@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.primitives.Longs;
 import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -183,6 +184,12 @@ public class StructuredData implements Comparable<StructuredData>
   public int hashCode()
   {
     return Objects.hash(value);
+  }
+
+  // hashCode that relies on the object equality. Translates the hashcode to an integer as well
+  public int equalityHash()
+  {
+    return Longs.hashCode(hash.getAsLong());
   }
 
   @Override

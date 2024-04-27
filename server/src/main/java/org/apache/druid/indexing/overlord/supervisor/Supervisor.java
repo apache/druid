@@ -29,7 +29,6 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public interface Supervisor
 {
@@ -93,10 +92,14 @@ public interface Supervisor
    */
   LagStats computeLagStats();
 
-  int getActiveTaskGroupsCount();
-
   /**
-   * @return active sequence prefixes for reading and pending completion task groups of a seekable stream supervisor
+   * Used by AutoScaler to make scaling decisions.
    */
-  Set<String> getActiveRealtimeSequencePrefixes();
+  default long computeLagForAutoScaler()
+  {
+    LagStats lagStats = computeLagStats();
+    return lagStats == null ? 0L : lagStats.getTotalLag();
+  }
+
+  int getActiveTaskGroupsCount();
 }

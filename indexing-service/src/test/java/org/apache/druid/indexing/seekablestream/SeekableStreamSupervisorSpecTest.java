@@ -57,6 +57,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -129,6 +131,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     monitorSchedulerConfig = EasyMock.mock(DruidMonitorSchedulerConfig.class);
     supervisorStateManagerConfig = EasyMock.mock(SupervisorStateManagerConfig.class);
     supervisor4 = EasyMock.mock(SeekableStreamSupervisor.class);
+
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(null).anyTimes();
   }
 
   private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
@@ -517,6 +521,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             null
         )
         {
@@ -617,9 +622,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
             .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getStream()).andReturn("stream").anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
+    EasyMock.expect(supervisor4.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.replay(supervisor4);
 
     TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
@@ -690,8 +697,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
                 "1"
             ), AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getStream()).andReturn("stream").anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
+    EasyMock.expect(supervisor4.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
@@ -749,16 +758,19 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
 
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
+    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
         DATASOURCE,
         mapper.convertValue(
-            getScaleOutProperties(2),
+            getScaleOutProperties(10),
             LagBasedAutoScalerConfig.class
         ),
-        spec
+        spec,
+        dynamicActionEmitter
     );
     supervisor.start();
     autoScaler.start();
@@ -768,6 +780,72 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assert.assertTrue(
+        dynamicActionEmitter
+            .getMetricEvents()
+            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .stream()
+            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
+            .filter(Objects::nonNull)
+            .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
+  public void testSeekableStreamSupervisorSpecWithScaleOutAlreadyAtMax() throws InterruptedException
+  {
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, true)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10)
+    {
+      @Override
+      public int getActiveTaskGroupsCount()
+      {
+        return 2;
+      }
+    };
+
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(2),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        dynamicActionEmitter
+    );
+    supervisor.start();
+    autoScaler.start();
+    supervisor.runInternal();
+    Thread.sleep(1000);
+
+    Assert.assertTrue(
+        dynamicActionEmitter
+            .getMetricEvents()
+            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .stream()
+            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
+            .filter(Objects::nonNull)
+            .anyMatch("Already at max task count"::equals));
 
     autoScaler.reset();
     autoScaler.stop();
@@ -806,7 +884,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             getScaleOutProperties(2),
             LagBasedAutoScalerConfig.class
         ),
-        spec
+        spec,
+        emitter
     );
     supervisor.start();
     autoScaler.start();
@@ -850,7 +929,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             getScaleOutProperties(3),
             LagBasedAutoScalerConfig.class
         ),
-        spec
+        spec,
+        emitter
     );
     supervisor.start();
     autoScaler.start();
@@ -869,7 +949,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   public void testSeekableStreamSupervisorSpecWithScaleIn() throws InterruptedException
   {
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
-
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
@@ -894,7 +973,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             getScaleInProperties(),
             LagBasedAutoScalerConfig.class
         ),
-        spec
+        spec,
+        emitter
     );
 
     // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
@@ -908,6 +988,65 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
+
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
+  public void testSeekableStreamSupervisorSpecWithScaleInAlreadyAtMin() throws InterruptedException
+  {
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10)
+    {
+      @Override
+      public int getActiveTaskGroupsCount()
+      {
+        return 1;
+      }
+    };
+
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleInProperties(),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        dynamicActionEmitter
+    );
+    supervisor.start();
+    autoScaler.start();
+    supervisor.runInternal();
+    Thread.sleep(1000);
+
+    Assert.assertTrue(
+        dynamicActionEmitter
+            .getMetricEvents()
+            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .stream()
+            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
+            .filter(Objects::nonNull)
+            .anyMatch("Already at min task count"::equals));
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1184,7 +1323,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     HashMap<String, Object> autoScalerConfig = new HashMap<>();
     autoScalerConfig.put("enableTaskAutoScaler", true);
-    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 50);
     autoScalerConfig.put("lagCollectionRangeMillis", 500);
     autoScalerConfig.put("scaleOutThreshold", 0);
     autoScalerConfig.put("triggerScaleOutFractionThreshold", 0.0);

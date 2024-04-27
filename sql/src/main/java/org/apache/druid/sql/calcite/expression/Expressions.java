@@ -965,17 +965,17 @@ public class Expressions
                ? new NotDimFilter(Ranges.interval(rangeRefKey, interval))
                : Filtration.matchEverything();
       case GREATER_THAN:
-        return Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+        return Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
       case GREATER_THAN_OR_EQUAL:
         return isAligned
-               ? Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getStartMillis()))
-               : Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+               ? Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getStartMillis())
+               : Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
       case LESS_THAN:
         return isAligned
-               ? Ranges.lessThan(rangeRefKey, String.valueOf(interval.getStartMillis()))
-               : Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+               ? Ranges.lessThan(rangeRefKey, interval.getStartMillis())
+               : Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       case LESS_THAN_OR_EQUAL:
-        return Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+        return Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       default:
         throw new IllegalStateException("Shouldn't have got here");
     }

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
@@ -149,10 +150,10 @@ public class FrameCursorFactory implements CursorFactory
     if (filterToUse == null) {
       return new FrameVectorCursor(baseOffset, baseColumnSelectorFactory, closer);
     } else {
+      final VectorValueMatcher matcher = filterToUse.makeVectorMatcher(baseColumnSelectorFactory);
       final FilteredVectorOffset filteredOffset = FilteredVectorOffset.create(
           baseOffset,
-          baseColumnSelectorFactory,
-          filterToUse
+          matcher
       );
 
       final VectorColumnSelectorFactory filteredColumnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
