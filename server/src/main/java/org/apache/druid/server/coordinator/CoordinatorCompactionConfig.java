@@ -34,13 +34,12 @@ public class CoordinatorCompactionConfig
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
   private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
-  private static final DataSourceCompactionConfig.Engine DEFAULT_COMPACTION_ENGINE = DataSourceCompactionConfig.Engine.NATIVE;
-
+  private static final UserCompactionStrategy.CompactionEngine DEFAULT_COMPACTION_ENGINE = UserCompactionStrategy.CompactionEngine.NATIVE;
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
-  private final DataSourceCompactionConfig.Engine engine;
+  private final UserCompactionStrategy.CompactionEngine compactionEngine;
 
   public static CoordinatorCompactionConfig from(
       CoordinatorCompactionConfig baseConfig,
@@ -96,7 +95,7 @@ public class CoordinatorCompactionConfig
                                   DEFAULT_MAX_COMPACTION_TASK_SLOTS :
                                   maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots == null ? DEFAULT_USE_AUTO_SCALE_SLOTS : useAutoScaleSlots;
-    this.engine = DEFAULT_COMPACTION_ENGINE;
+    this.compactionEngine = DEFAULT_COMPACTION_ENGINE;
   }
 
   @JsonProperty
@@ -124,9 +123,9 @@ public class CoordinatorCompactionConfig
   }
 
   @JsonProperty
-  public DataSourceCompactionConfig.Engine getEngine()
+  public UserCompactionStrategy.CompactionEngine getEngine()
   {
-    return engine;
+    return compactionEngine;
   }
 
   @Override
@@ -142,14 +141,16 @@ public class CoordinatorCompactionConfig
     return Double.compare(that.compactionTaskSlotRatio, compactionTaskSlotRatio) == 0 &&
            maxCompactionTaskSlots == that.maxCompactionTaskSlots &&
            useAutoScaleSlots == that.useAutoScaleSlots &&
-           engine == that.engine &&
+           compactionEngine == that.compactionEngine &&
            Objects.equals(compactionConfigs, that.compactionConfigs);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(compactionConfigs, compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots, engine);
+    return Objects.hash(compactionConfigs, compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots,
+                        compactionEngine
+    );
   }
 
   @Override
@@ -160,7 +161,7 @@ public class CoordinatorCompactionConfig
            ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            ", useAutoScaleSlots=" + useAutoScaleSlots +
-           ", engine=" + engine +
+           ", engine=" + compactionEngine +
            '}';
   }
 }

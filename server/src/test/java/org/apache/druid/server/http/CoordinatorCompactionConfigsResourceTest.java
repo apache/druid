@@ -31,6 +31,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionStrategy;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -191,7 +192,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        DataSourceCompactionConfig.Engine.NATIVE,
+        UserCompactionStrategy.CompactionEngine.NATIVE,
         ImmutableMap.of("key", "val")
     );
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
@@ -392,7 +393,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
-        DataSourceCompactionConfig.Engine.MSQ,
+        UserCompactionStrategy.CompactionEngine.MSQ,
         ImmutableMap.of("key", "val")
     );
     String author = "maytas";

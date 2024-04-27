@@ -667,8 +667,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create(),
-        null
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

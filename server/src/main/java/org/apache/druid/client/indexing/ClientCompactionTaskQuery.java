@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionStrategy;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -47,7 +47,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final AggregatorFactory[] metricsSpec;
   private final ClientCompactionTaskTransformSpec transformSpec;
   private final Map<String, Object> context;
-  private final DataSourceCompactionConfig.Engine engine;
+  private final UserCompactionStrategy compactionStrategy;
 
   @JsonCreator
   public ClientCompactionTaskQuery(
@@ -60,7 +60,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("engine") DataSourceCompactionConfig.Engine engine
+      @JsonProperty("compactionStrategy") UserCompactionStrategy compactionStrategy
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -72,7 +72,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.metricsSpec = metrics;
     this.transformSpec = transformSpec;
     this.context = context;
-    this.engine = engine;
+    this.compactionStrategy = compactionStrategy;
   }
 
   @JsonProperty
@@ -140,9 +140,9 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
-  public DataSourceCompactionConfig.Engine getEngine()
+  public UserCompactionStrategy getCompactionStrategy()
   {
-    return engine;
+    return compactionStrategy;
   }
 
   @Override
@@ -164,7 +164,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(context, that.context) &&
-           Objects.equals(engine, that.engine);
+           Objects.equals(compactionStrategy, that.compactionStrategy);
   }
 
   @Override
@@ -179,7 +179,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         dimensionsSpec,
         transformSpec,
         context,
-        engine
+        compactionStrategy
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
@@ -198,7 +198,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", metricsSpec=" + Arrays.toString(metricsSpec) +
            ", transformSpec=" + transformSpec +
            ", context=" + context +
-           ", engine=" + engine +
+           ", compactionStrategy=" + compactionStrategy +
            '}';
   }
 }

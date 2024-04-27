@@ -26,7 +26,6 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
@@ -60,7 +59,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
-  private final Engine engine;
+  private final UserCompactionStrategy.CompactionEngine compactionEngine;
 
   @JsonCreator
   public DataSourceCompactionConfig(
@@ -75,7 +74,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
-      @JsonProperty("engine") @Nullable Engine engine,
+      @JsonProperty("engine") @Nullable UserCompactionStrategy.CompactionEngine compactionEngine,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -95,7 +94,7 @@ public class DataSourceCompactionConfig
     this.dimensionsSpec = dimensionsSpec;
     this.transformSpec = transformSpec;
     this.taskContext = taskContext;
-    this.engine = engine;
+    this.compactionEngine = compactionEngine;
   }
 
   @JsonProperty
@@ -181,9 +180,9 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public Engine getEngine()
+  public UserCompactionStrategy.CompactionEngine getEngine()
   {
-    return engine;
+    return compactionEngine;
   }
 
   @Override
@@ -207,7 +206,7 @@ public class DataSourceCompactionConfig
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(ioConfig, that.ioConfig) &&
-           Objects.equals(engine, that.engine) &&
+           Objects.equals(compactionEngine, that.compactionEngine) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -226,21 +225,24 @@ public class DataSourceCompactionConfig
         transformSpec,
         ioConfig,
         taskContext,
-        engine
+        compactionEngine
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
   }
 
-  public static DataSourceCompactionConfig from(Engine defaultEngine, DataSourceCompactionConfig newConfig)
+  public static DataSourceCompactionConfig from(
+      UserCompactionStrategy.CompactionEngine defaultCompactionEngine,
+      DataSourceCompactionConfig newConfig
+  )
   {
-    Engine newEngine = newConfig.getEngine();
+    UserCompactionStrategy.CompactionEngine newCompactionEngine = newConfig.getEngine();
     String engineSourceLog = "specified in spec";
-    if (newEngine == null) {
-      newEngine = defaultEngine;
+    if (newCompactionEngine == null) {
+      newCompactionEngine = defaultCompactionEngine;
       engineSourceLog = "set as default";
     }
-    if (newEngine == Engine.MSQ) {
+    if (newCompactionEngine == UserCompactionStrategy.CompactionEngine.MSQ) {
       if (newConfig.getTuningConfig() != null) {
         PartitionsSpec partitionsSpec = newConfig.getTuningConfig().getPartitionsSpec();
 
@@ -268,7 +270,7 @@ public class DataSourceCompactionConfig
         throw InvalidInput.exception("rollup in granularitySpec must be set to True if metricsSpec is specifed.");
       }
     }
-    if (newEngine == newConfig.getEngine()) {
+    if (newCompactionEngine == newConfig.getEngine()) {
       return newConfig;
     }
     return new DataSourceCompactionConfig(
@@ -283,26 +285,8 @@ public class DataSourceCompactionConfig
         newConfig.getMetricsSpec(),
         newConfig.getTransformSpec(),
         newConfig.getIoConfig(),
-        newEngine, newConfig.getTaskContext()
+        newCompactionEngine, newConfig.getTaskContext()
     );
   }
 
-  /**
-   * Engine to be used for a compaction task.
-   * Should be synchronized with {@link org.apache.druid.indexing.common.task.Engine}.
-   */
-  public enum Engine
-  {
-    NATIVE,
-    MSQ;
-
-    @JsonCreator
-    public static Engine fromString(String name)
-    {
-      if (name == null) {
-        return null;
-      }
-      return valueOf(StringUtils.toUpperCase(name));
-    }
-  }
 }

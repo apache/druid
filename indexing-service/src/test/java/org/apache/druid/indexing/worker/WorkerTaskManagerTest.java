@@ -168,8 +168,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 "1",
-                CentralizedDatasourceSchemaConfig.create(),
-                null
+                CentralizedDatasourceSchemaConfig.create()
             ),
             taskConfig,
             location

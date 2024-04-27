@@ -63,7 +63,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionStrategy;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
@@ -129,7 +129,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         ImmutableMap.of("key", "value"),
-        DataSourceCompactionConfig.Engine.MSQ
+        new UserCompactionStrategy(UserCompactionStrategy.CompactionEngine.NATIVE)
     );
 
     final byte[] json = mapper.writeValueAsBytes(query);
@@ -236,8 +236,8 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getMetricsSpec()
     );
     Assert.assertEquals(
-        query.getEngine().toString(),
-        task.getEngine().toString()
+        query.getCompactionStrategy().getType().toString(),
+        task.getCompactionStrategy().getType().toString()
     );
   }
 

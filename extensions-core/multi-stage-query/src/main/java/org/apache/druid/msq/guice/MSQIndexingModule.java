@@ -20,6 +20,7 @@
 package org.apache.druid.msq.guice;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -28,14 +29,13 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
-import org.apache.druid.msq.indexing.CompactionToMSQTaskImpl;
+import org.apache.druid.msq.indexing.MSQCompactionStrategy;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
@@ -199,6 +199,8 @@ public class MSQIndexingModule implements DruidModule
         NilInputSource.class
     );
 
+    module.registerSubtypes(new NamedType(MSQCompactionStrategy.class, MSQCompactionStrategy.type));
+
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());
     return Collections.singletonList(module);
@@ -207,7 +209,6 @@ public class MSQIndexingModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(CompactionToMSQTask.class).to(CompactionToMSQTaskImpl.class).in(LazySingleton.class);
   }
 
   @Provides

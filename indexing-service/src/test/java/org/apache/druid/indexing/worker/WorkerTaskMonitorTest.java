@@ -210,8 +210,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 "1",
-                CentralizedDatasourceSchemaConfig.create(),
-                null
+                CentralizedDatasourceSchemaConfig.create()
             ),
             taskConfig,
             new NoopServiceEmitter(),

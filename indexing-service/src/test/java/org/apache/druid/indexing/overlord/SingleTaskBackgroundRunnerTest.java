@@ -137,8 +137,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create(),
-        null
+        CentralizedDatasourceSchemaConfig.create()
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,

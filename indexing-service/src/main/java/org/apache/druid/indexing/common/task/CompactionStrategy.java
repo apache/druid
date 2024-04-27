@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -27,12 +29,18 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.Interval;
 
 import java.util.List;
-
-public interface CompactionToMSQTask
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = CompactionStrategy.TYPE_PROPERTY)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = NativeCompactionStrategy.type, value = NativeCompactionStrategy.class)
+})
+public interface CompactionStrategy
 {
-  TaskStatus createAndRunMSQTasks(
+  String TYPE_PROPERTY = "type";
+  TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
       TaskToolbox taskToolbox,
       List<NonnullPair<Interval, DataSchema>> dataSchemas
   ) throws JsonProcessingException;
+
+  String getType();
 }

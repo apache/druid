@@ -19,10 +19,11 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
@@ -32,7 +33,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.CompactionTask;
-import org.apache.druid.indexing.common.task.CompactionToMSQTask;
+import org.apache.druid.indexing.common.task.CompactionStrategy;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,25 +77,37 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class CompactionToMSQTaskImpl implements CompactionToMSQTask
+public class MSQCompactionStrategy implements CompactionStrategy
 {
-  private static final Logger log = new Logger(CompactionToMSQTaskImpl.class);
+  private static final Logger log = new Logger(MSQCompactionStrategy.class);
+  public static final String type = "MSQ";
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
-  final OverlordClient overlordClient;
-  final ObjectMapper jsonMapper;
+
+  OverlordClient overlordClient;
+  ObjectMapper jsonMapper;
 
   private static final String TIME_VIRTUAL_COLUMN = "vTime";
   private static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
-  @Inject
-  public CompactionToMSQTaskImpl(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
+  public MSQCompactionStrategy(@JacksonInject OverlordClient overlordClient, @JacksonInject JsonMapper jsonMapper)
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
   }
 
   @Override
-  public TaskStatus createAndRunMSQTasks(
+  public String getType()
+  {
+    return type;
+  }
+
+  public void setJsonMapper(ObjectMapper jsonMapper)
+  {
+    this.jsonMapper = jsonMapper;
+  }
+
+  @Override
+  public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
       TaskToolbox taskToolbox,
       List<NonnullPair<Interval, DataSchema>> intervalDataSchemas

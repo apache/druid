@@ -21,10 +21,11 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.coordinator.UserCompactionStrategy;
 
 /**
  * Engine to be used for a compaction task.
- * Should be synchronized with {@link org.apache.druid.server.coordinator.DataSourceCompactionConfig.Engine}.
+ * Should be synchronized with {@link UserCompactionStrategy.CompactionEngine}.
  */
 public enum Engine
 {

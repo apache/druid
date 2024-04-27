@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -49,6 +51,7 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.UserCompactionStrategy;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.compact.CompactionStatistics;
@@ -465,12 +468,12 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       }
 
-      DataSourceCompactionConfig.Engine engine = config.getEngine();
+      UserCompactionStrategy.CompactionEngine compactionEngine = config.getEngine();
       Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
       int numCurrentCompactionTasksAndSubtasks;
       final String maxNumTasksContextParam = "maxNumTasks";
 
-      if (engine == DataSourceCompactionConfig.Engine.MSQ) {
+      if (compactionEngine == UserCompactionStrategy.CompactionEngine.MSQ) {
         if (!autoCompactionContext.containsKey(maxNumTasksContextParam)) {
           // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
           // compaction slots to current compaction task to avoid stalling.
@@ -498,7 +501,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           transformSpec,
           dropExisting,
           autoCompactionContext,
-          engine
+          new UserCompactionStrategy(compactionEngine)
       );
 
       LOG.info(
@@ -652,7 +655,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context,
-      @Nullable DataSourceCompactionConfig.Engine engine
+      @Nullable UserCompactionStrategy compactionStrategy
   )
   {
     Preconditions.checkArgument(!segments.isEmpty(), "Expect non-empty segments to compact");
@@ -681,7 +684,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         metricsSpec,
         transformSpec,
         context,
-        engine
+        compactionStrategy
     );
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
     return taskId;

@@ -37,7 +37,6 @@ import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.CompactionToMSQTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -68,7 +67,6 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.function.Function;
 
@@ -119,7 +117,6 @@ public class TaskToolboxFactory
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-  private final CompactionToMSQTask compactionToMSQTask;
 
   @Inject
   public TaskToolboxFactory(
@@ -162,8 +159,7 @@ public class TaskToolboxFactory
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       @AttemptId String attemptId,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      @Nullable CompactionToMSQTask compactionToMSQTask
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.segmentLoaderConfig = segmentLoadConfig;
@@ -206,7 +202,6 @@ public class TaskToolboxFactory
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.compactionToMSQTask = compactionToMSQTask;
   }
 
   public TaskToolbox build(Task task)
@@ -271,7 +266,6 @@ public class TaskToolboxFactory
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
-        .compactionToMSQ(compactionToMSQTask)
         .build();
   }
 }
