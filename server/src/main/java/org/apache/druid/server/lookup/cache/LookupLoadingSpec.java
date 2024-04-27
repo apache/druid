@@ -21,6 +21,7 @@ package org.apache.druid.server.lookup.cache;
 
 import org.apache.druid.java.util.common.ISE;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,7 +48,7 @@ public class LookupLoadingSpec
   private final List<String> lookupsToLoad;
 
   public static final LookupLoadingSpec ALL = new LookupLoadingSpec(Mode.ALL, null);
-  public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, null);
+  public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, Collections.emptyList());
 
   private LookupLoadingSpec(Mode mode, List<String> lookupsToLoad)
   {
