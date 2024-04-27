@@ -35,7 +35,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.ExprEvalWrapper;
+import org.apache.druid.sql.calcite.expression.DruidLiteral;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -108,12 +108,12 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
       final List<Object> arrayElementLiteralValues = new ArrayList<>(arrayElements.size());
 
       for (final RexNode arrayElement : arrayElements) {
-        final ExprEvalWrapper arrayElementEval = Expressions.literalToExprEval(plannerContext, arrayElement);
+        final DruidLiteral arrayElementEval = Expressions.calciteLiteralToDruidLiteral(plannerContext, arrayElement);
         if (arrayElementEval == null) {
           return null;
         }
 
-        arrayElementLiteralValues.add(arrayElementEval.actualValue());
+        arrayElementLiteralValues.add(arrayElementEval.value());
       }
 
       return makeInFilter(

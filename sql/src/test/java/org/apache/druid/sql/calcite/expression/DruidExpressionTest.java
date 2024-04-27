@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -114,7 +114,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   @Test
   public void test_ofLiteral_nullString()
   {
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(null), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.STRING, null));
 
     Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
     Assert.assertEquals("null", expression.getExpression());
@@ -123,7 +123,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   @Test
   public void test_ofLiteral_nullLong()
   {
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.ofLong(null), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.LONG, null));
 
     Assert.assertEquals(ColumnType.LONG, expression.getDruidType());
     Assert.assertEquals("null", expression.getExpression());
@@ -132,7 +132,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   @Test
   public void test_ofLiteral_nullDouble()
   {
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.ofDouble(null), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.DOUBLE, null));
 
     Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
     Assert.assertEquals("null", expression.getExpression());
@@ -142,7 +142,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   public void test_ofLiteral_nullArray()
   {
     final DruidExpression expression =
-        DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.ofStringArray(null), false));
+        DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.STRING_ARRAY, null));
 
     Assert.assertEquals(ColumnType.STRING_ARRAY, expression.getDruidType());
     Assert.assertEquals("null", expression.getExpression());
@@ -152,7 +152,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   public void test_ofLiteral_string()
   {
     final String s = "abcdé\n \\\" ' \uD83E\uDD20 \txyz";
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(s), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.STRING, s));
 
     Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
     Assert.assertEquals("'abcdé\\u000A \\u005C\\u0022 \\u0027 \\uD83E\\uDD20 \\u0009xyz'", expression.getExpression());
@@ -163,7 +163,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   public void test_ofLiteral_emptyString()
   {
     final String s = "";
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(s), true));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.STRING, s));
 
     Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
     Assert.assertEquals("''", expression.getExpression());
@@ -176,7 +176,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   @Test
   public void test_ofLiteral_long()
   {
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(-123), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.LONG, -123));
 
     Assert.assertEquals(ColumnType.LONG, expression.getDruidType());
     Assert.assertEquals("-123", expression.getExpression());
@@ -186,7 +186,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   @Test
   public void test_ofLiteral_double()
   {
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(-123.4), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.DOUBLE, -123.4));
 
     Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
     Assert.assertEquals("-123.4", expression.getExpression());
@@ -196,7 +196,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   @Test
   public void test_ofLiteral_doubleNan()
   {
-    final DruidExpression expression = DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(Double.NaN), false));
+    final DruidExpression expression = DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.DOUBLE, Double.NaN));
 
     Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
     Assert.assertEquals("NaN", expression.getExpression());
@@ -207,7 +207,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   public void test_ofLiteral_doubleNegativeInfinity()
   {
     final DruidExpression expression =
-        DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(Double.NEGATIVE_INFINITY), false));
+        DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.DOUBLE, Double.NEGATIVE_INFINITY));
 
     Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
     Assert.assertEquals("-Infinity", expression.getExpression());
@@ -221,7 +221,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
   public void test_ofLiteral_doublePositiveInfinity()
   {
     final DruidExpression expression =
-        DruidExpression.ofLiteral(new ExprEvalWrapper(ExprEval.of(Double.POSITIVE_INFINITY), false));
+        DruidExpression.ofLiteral(new DruidLiteral(ExpressionType.DOUBLE, Double.POSITIVE_INFINITY));
 
     Assert.assertEquals(ColumnType.DOUBLE, expression.getDruidType());
     Assert.assertEquals("Infinity", expression.getExpression());

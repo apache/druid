@@ -35,7 +35,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -2828,57 +2828,57 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  public void testLiteralToExprEval()
+  public void testCalciteLiteralToDruidLiteral()
   {
     final RexBuilder rexBuilder = new RexBuilder(DruidTypeSystem.TYPE_FACTORY);
     final PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
     Mockito.when(plannerContext.getTimeZone()).thenReturn(DateTimeZone.UTC);
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.of(null), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.STRING, null),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR))
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.of(""), true),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.STRING, ""),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeLiteral("")
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLong(null), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, null),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BIGINT))
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.of(null), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(null, null),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.NULL))
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.of("abc"), false),
-        Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral("abc"))
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.STRING, "abc"),
+        Expressions.calciteLiteralToDruidLiteral(plannerContext, rexBuilder.makeLiteral("abc"))
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLongBoolean(true), false),
-        Expressions.literalToExprEval(plannerContext, rexBuilder.makeLiteral(true))
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, 1L),
+        Expressions.calciteLiteralToDruidLiteral(plannerContext, rexBuilder.makeLiteral(true))
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLong(123L), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, 123L),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeExactLiteral(
                 BigDecimal.valueOf(123L),
@@ -2887,9 +2887,9 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofDouble(123.0), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.DOUBLE, 123.0),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeExactLiteral(
                 BigDecimal.valueOf(123L),
@@ -2898,9 +2898,9 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLong(DateTimes.of("2000").getMillis()), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, DateTimes.of("2000").getMillis()),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             Calcites.jodaToCalciteTimestampLiteral(
                 rexBuilder,
@@ -2911,17 +2911,17 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLong(DateTimes.of("2000").getMillis()), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, DateTimes.of("2000").getMillis()),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeDateLiteral(Calcites.jodaToCalciteDateString(DateTimes.of("2000"), DateTimeZone.UTC))
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLong(3), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, 3L),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeIntervalLiteral(
                 BigDecimal.valueOf(3),
@@ -2930,9 +2930,9 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.ofLong(3), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.LONG, 3),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeIntervalLiteral(
                 BigDecimal.valueOf(3),
@@ -2941,9 +2941,9 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.of("123"), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.STRING, "123"),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeCast(
                 rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR),
@@ -2955,9 +2955,9 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    assertExprEval(
-        new ExprEvalWrapper(ExprEval.of(123.0), false),
-        Expressions.literalToExprEval(
+    assertDruidLiteral(
+        new DruidLiteral(ExpressionType.DOUBLE, 123.0),
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeCast(
                 rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DOUBLE),
@@ -2970,7 +2970,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     Assert.assertNull(
-        Expressions.literalToExprEval(
+        Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeCast(
                 rexBuilder.getTypeFactory().createSqlType(SqlTypeName.DATE),
@@ -2985,14 +2985,14 @@ public class ExpressionsTest extends CalciteTestBase
     );
   }
 
-  private void assertExprEval(
-      final ExprEvalWrapper expected,
-      final ExprEvalWrapper actual
+  private void assertDruidLiteral(
+      final DruidLiteral expected,
+      final DruidLiteral actual
   )
   {
     Assert.assertEquals(
-        StringUtils.format("%s: %s", expected.exprEval().type(), expected.actualValue()),
-        StringUtils.format("%s: %s", actual.exprEval().type(), actual.actualValue())
+        StringUtils.format("%s: %s", expected.type(), expected.value()),
+        StringUtils.format("%s: %s", actual.type(), actual.value())
     );
   }
 }

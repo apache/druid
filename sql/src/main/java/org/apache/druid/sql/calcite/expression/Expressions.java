@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -242,7 +241,7 @@ public class Expressions
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
-      final ExprEvalWrapper eval = literalToExprEval(plannerContext, rexNode);
+      final DruidLiteral eval = calciteLiteralToDruidLiteral(plannerContext, rexNode);
       return eval != null ? DruidExpression.ofLiteral(eval) : null;
     } else {
       // Can't translate.
@@ -310,10 +309,16 @@ public class Expressions
   }
 
   /**
-   * Create an {@link ExprEval} from a literal {@link RexNode}.
+   * Create a {@link DruidLiteral} from a literal {@link RexNode}. Necessary because Calcite represents literals using
+   * different Java classes than Druid does.
+   *
+   * @param plannerContext planner context
+   * @param rexNode        Calcite literal
+   *
+   * @return converted literal, or null if the literal cannot be converted
    */
   @Nullable
-  public static ExprEvalWrapper literalToExprEval(
+  public static DruidLiteral calciteLiteralToDruidLiteral(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
@@ -324,7 +329,12 @@ public class Expressions
         return null;
       }
 
-      final ExprEvalWrapper innerEval = literalToExprEval(plannerContext, ((RexCall) rexNode).getOperands().get(0));
+      final DruidLiteral innerLiteral =
+          calciteLiteralToDruidLiteral(plannerContext, ((RexCall) rexNode).getOperands().get(0));
+      if (innerLiteral == null) {
+        return null;
+      }
+
       final ColumnType castToColumnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
       if (castToColumnType == null) {
         return null;
@@ -335,53 +345,48 @@ public class Expressions
         return null;
       }
 
-      return new ExprEvalWrapper(
-          innerEval.exprEval().castTo(castToExprType),
-          false
-      );
+      return innerLiteral.castTo(castToExprType);
     }
 
     // Translate literal.
     final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-    final ExprEval<?> retVal;
-    boolean isEmptyString = false;
+    final DruidLiteral retVal;
 
     if (RexLiteral.isNullLiteral(rexNode)) {
       final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
       final ExpressionType expressionType = columnType == null ? null : ExpressionType.fromColumnTypeStrict(columnType);
-      retVal = ExprEval.ofType(expressionType, null);
+      retVal = new DruidLiteral(expressionType, null);
     } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
       final Number number = (Number) RexLiteral.value(rexNode);
-      retVal = ExprEval.ofType(ExpressionType.LONG, number == null ? null : number.longValue());
+      retVal = new DruidLiteral(ExpressionType.LONG, number == null ? null : number.longValue());
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
       // Numeric, non-INT, means we represent it as a double.
       final Number number = (Number) RexLiteral.value(rexNode);
-      retVal = ExprEval.ofType(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
+      retVal = new DruidLiteral(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      retVal = ExprEval.ofType(ExpressionType.LONG, milliseconds);
+      retVal = new DruidLiteral(ExpressionType.LONG, milliseconds);
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      retVal = ExprEval.ofType(ExpressionType.LONG, months);
+      retVal = new DruidLiteral(ExpressionType.LONG, months);
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
       final String s = RexLiteral.stringValue(rexNode);
-      retVal = ExprEval.ofType(ExpressionType.STRING, s);
-      isEmptyString = s != null && s.isEmpty();
+      retVal = new DruidLiteral(ExpressionType.STRING, s);
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
-      retVal = ExprEval.ofType(
+      retVal = new DruidLiteral(
           ExpressionType.LONG,
           Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
       );
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      retVal = ExprEval.ofType(ExpressionType.LONG, RexLiteral.booleanValue(rexNode) ? 1 : 0);
+      retVal = new DruidLiteral(ExpressionType.LONG, RexLiteral.booleanValue(rexNode) ? 1L : 0L);
     } else {
       // Can't translate other literals.
       return null;
     }
 
-    return new ExprEvalWrapper(retVal, isEmptyString);
+    return retVal;
   }
 
   /**
@@ -668,8 +673,8 @@ public class Expressions
 
       final DruidExpression rhsExpression = toDruidExpression(plannerContext, rowSignature, rhs);
       final Expr rhsParsed = rhsExpression != null
-                                       ? plannerContext.parseExpression(rhsExpression.getExpression())
-                                       : null;
+                             ? plannerContext.parseExpression(rhsExpression.getExpression())
+                             : null;
       // rhs must be a literal
       if (rhsParsed == null || !rhsParsed.isLiteral()) {
         return null;
@@ -836,7 +841,9 @@ public class Expressions
       }
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox()
+                                                             .operatorTable()
+                                                             .lookupOperatorConversion(operator);
 
       if (conversion == null) {
         return null;
