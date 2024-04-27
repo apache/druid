@@ -383,18 +383,18 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   {
     LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
     List<LookupBean> lookupBeanList;
-    if (lookupLoadingSpec.getLookupLoadingMode() == LookupLoadingSpec.LookupLoadingMode.NONE) {
+    if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.NONE) {
       lookupBeanList = Collections.emptyList();
     } else {
       lookupBeanList = getLookupsList();
-      if (lookupLoadingSpec.getLookupLoadingMode() == LookupLoadingSpec.LookupLoadingMode.PARTIAL && lookupBeanList != null) {
+      if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.PARTIAL && lookupBeanList != null) {
         lookupBeanList = lookupBeanList.stream()
                                        .filter(lookupBean -> lookupLoadingSpec.getLookupsToLoad().contains(lookupBean.getName()))
                                        .collect(Collectors.toList());
       }
     }
 
-    if (lookupBeanList != null) {
+    if (lookupBeanList != null && !lookupBeanList.isEmpty()) {
       startLookups(lookupBeanList);
     } else {
       LOG.debug("No lookups to be loaded at this point.");

@@ -19,45 +19,53 @@
 
 package org.apache.druid.server.lookup.cache;
 
+import org.apache.druid.java.util.common.ISE;
+
 import java.util.List;
 
+/**
+ * This class defines the spec for loading of lookups for a given task. It contains 2 fields:
+ * <ol>
+ *   <li>{@link LookupLoadingSpec#mode}: This mode defines whether lookups need to be
+ *   loaded for the given task, or not. It can take 3 values: </li>
+ *   <ul>
+ *    <li> ALL: Load all the lookups.</li>
+ *    <li> NONE: Load no lookups. </li>
+ *    <li> PARTIAL: Load only the lookups defined in lookupsToLoad </li>
+ *   </ul>
+ * <li>{@link LookupLoadingSpec#lookupsToLoad}: Defines the lookups to load when the lookupLoadingMode is set to PARTIAL.</li>
+ * </ol>
+ */
 public class LookupLoadingSpec
 {
-  /**
-   * This class defines the spec for loading of lookups for a given task. It contains 2 fields:
-   * <ol>
-   *   <li>{@link LookupLoadingSpec#lookupLoadingMode}: This mode defines whether lookups need to be
-   *   loaded for the given task, or not. It can take 3 values: </li>
-   *   <ul>
-   *    <li> ALL: Load all the lookups.</li>
-   *    <li> NONE: Load no lookups. </li>
-   *    <li> PARTIAL: Load only the lookups defined in lookupsToLoad </li>
-   *   </ul>
-   * <li>{@link LookupLoadingSpec#lookupsToLoad}: Defines the lookups to load when the lookupLoadingMode is set to PARTIAL.</li>
-   * </ol>
-   */
-  public enum LookupLoadingMode
+  public enum Mode
   {
     ALL, NONE, PARTIAL
   }
 
-  public LookupLoadingMode lookupLoadingMode;
-  public List<String> lookupsToLoad;
+  private final Mode mode;
+  private final List<String> lookupsToLoad;
 
-  public LookupLoadingSpec(LookupLoadingMode lookupLoadingMode, List<String> lookupsToLoad)
+  public static final LookupLoadingSpec ALL = new LookupLoadingSpec(Mode.ALL, null);
+  public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, null);
+
+  private LookupLoadingSpec(Mode mode, List<String> lookupsToLoad)
   {
-    this.lookupLoadingMode = lookupLoadingMode;
+    this.mode = mode;
     this.lookupsToLoad = lookupsToLoad;
   }
 
-  public LookupLoadingSpec()
+  public static LookupLoadingSpec partial(List<String> lookupsToLoad)
   {
-    this.lookupLoadingMode = LookupLoadingMode.ALL;
+    if (lookupsToLoad == null) {
+      throw new ISE("Expected non-null list of lookups to load.");
+    }
+    return new LookupLoadingSpec(Mode.PARTIAL, lookupsToLoad);
   }
 
-  public LookupLoadingMode getLookupLoadingMode()
+  public Mode getMode()
   {
-    return lookupLoadingMode;
+    return mode;
   }
 
   public List<String> getLookupsToLoad()

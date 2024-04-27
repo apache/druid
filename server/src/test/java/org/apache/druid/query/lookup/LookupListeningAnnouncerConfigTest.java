@@ -141,7 +141,7 @@ public class LookupListeningAnnouncerConfigTest
   {
     final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
     injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(LookupLoadingSpec.LookupLoadingMode.ALL, dimensionIdHolder.getLookupLoadingSpec().getLookupLoadingMode());
+    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, dimensionIdHolder.getLookupLoadingSpec().getMode());
   }
 
   @Test(expected = IllegalArgumentException.class)

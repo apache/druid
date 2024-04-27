@@ -54,7 +54,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -345,6 +344,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return new LookupLoadingSpec(LookupLoadingSpec.LookupLoadingMode.NONE, Collections.emptyList());
+    return LookupLoadingSpec.NONE;
   }
 }

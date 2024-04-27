@@ -40,7 +40,7 @@ public class DataSourceTaskIdHolder
   @Nullable
   @Named(LOOKUPS_TO_LOAD_FOR_TASK)
   @Inject(optional = true)
-  LookupLoadingSpec lookupLoadingSpec = new LookupLoadingSpec();
+  LookupLoadingSpec lookupLoadingSpec = LookupLoadingSpec.ALL;
 
   public String getDataSource()
   {

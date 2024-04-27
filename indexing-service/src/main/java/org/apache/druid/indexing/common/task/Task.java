@@ -334,14 +334,9 @@ public interface Task
     );
   }
 
-  /**
-   * Returns the {@link LookupLoadingSpec} for the given task, which can be used to determine the list of lookups to be loaded.
-   *
-   * @return {@link LookupLoadingSpec}
-   */
   @Nullable
   default LookupLoadingSpec getLookupLoadingSpec()
   {
-    return new LookupLoadingSpec();
+    return LookupLoadingSpec.ALL;
   }
 }

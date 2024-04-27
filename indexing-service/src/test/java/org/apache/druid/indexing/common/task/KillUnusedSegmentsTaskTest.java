@@ -432,7 +432,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         .interval(Intervals.of("2019-03-01/2019-04-01"))
         .markAsUnused(true)
         .build();
-    Assert.assertEquals(LookupLoadingSpec.LookupLoadingMode.NONE, task.getLookupLoadingSpec().getLookupLoadingMode());
+    Assert.assertEquals(LookupLoadingSpec.Mode.NONE, task.getLookupLoadingSpec().getMode());
   }
 
   @Test
