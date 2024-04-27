@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
@@ -37,14 +38,28 @@ public class ServerCostComputer
   private final Map<String, SortingCostComputer> computerPerDatasource = new HashMap<>();
 
   ServerCostComputer(
-      DruidServer server
+      DruidServer server,
+      LoadQueuePeon peon
   )
   {
     Set<DataSegment> segments = new HashSet<>();
+    Map<String, Set<DataSegment>> datasourceSegments = new HashMap<>();
+    if (peon != null) {
+      for (DataSegment segment : peon.getSegmentsToLoad()) {
+        segments.add(segment);
+        String dsName = segment.getDataSource();
+        datasourceSegments.computeIfAbsent(dsName, ds -> new HashSet<>()).add(segment);
+      }
+    }
     for (DruidDataSource dataSource : server.getDataSources()) {
-      Set<DataSegment> dataSourceSegments = new HashSet<>(dataSource.getSegments());
-      computerPerDatasource.put(dataSource.getName(), new SortingCostComputer(dataSourceSegments));
-      segments.addAll(dataSourceSegments);
+      final String dsName = dataSource.getName();
+      datasourceSegments.computeIfAbsent(dsName, ds -> new HashSet<>())
+                        .addAll(dataSource.getSegments());
+      computerPerDatasource.put(
+          dsName,
+          new SortingCostComputer(datasourceSegments.get(dsName))
+      );
+      segments.addAll(dataSource.getSegments());
     }
     serverComputer = new SortingCostComputer(segments);
   }

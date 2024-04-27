@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.SortingCostBalancerStrategy;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -118,7 +119,11 @@ public class SortingCostBalancerStrategyTest
       ListeningExecutorService listeningExecutorService
   )
   {
-    return new SortingCostBalancerStrategy(createServerInventoryView(serverHolders), listeningExecutorService);
+    return new SortingCostBalancerStrategy(
+        createServerInventoryView(serverHolders),
+        getLoadQueueTaskMaster(serverHolders),
+        listeningExecutorService
+    );
   }
 
   private ServerInventoryView createServerInventoryView(
@@ -168,6 +173,17 @@ public class SortingCostBalancerStrategyTest
         druidServer.toImmutableDruidServer(),
         new TestLoadQueuePeon()
     );
+  }
+
+  private LoadQueueTaskMaster getLoadQueueTaskMaster(List<ServerHolder> serverHolders)
+  {
+    LoadQueueTaskMaster master = EasyMock.mock(LoadQueueTaskMaster.class);
+    for (ServerHolder serverHolder : serverHolders) {
+      EasyMock.expect(master.getPeonForServer(EasyMock.eq(serverHolder.getServer())))
+              .andReturn(serverHolder.getPeon()).anyTimes();
+    }
+    EasyMock.replay(master);
+    return master;
   }
 
   private List<DataSegment> createDataSegments(

@@ -23,22 +23,30 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 
 public class SortingCostBalancerStrategyFactory extends CostBalancerStrategyFactory
 {
   private final ServerInventoryView serverInventoryView;
+  private final LoadQueueTaskMaster loadQueueTaskMaster;
 
 
   public SortingCostBalancerStrategyFactory(
-      @JacksonInject ServerInventoryView serverInventoryView
+      @JacksonInject ServerInventoryView serverInventoryView,
+      @JacksonInject LoadQueueTaskMaster loadQueueTaskMaster
   )
   {
     this.serverInventoryView = serverInventoryView;
+    this.loadQueueTaskMaster = loadQueueTaskMaster;
   }
 
   @Override
   public CostBalancerStrategy createBalancerStrategy(final int numBalancerThreads)
   {
-    return new SortingCostBalancerStrategy(serverInventoryView, getOrCreateBalancerExecutor(1));
+    return new SortingCostBalancerStrategy(
+        serverInventoryView,
+        loadQueueTaskMaster,
+        getOrCreateBalancerExecutor(1)
+    );
   }
 }

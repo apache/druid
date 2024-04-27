@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.server.coordinator.balancer.ClusterCostComputer;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.timeline.DataSegment;
 
 /**
@@ -38,10 +39,14 @@ public class SortingCostBalancerStrategy extends CostBalancerStrategy
 {
   private final ClusterCostComputer costComputer;
 
-  public SortingCostBalancerStrategy(ServerInventoryView serverInventoryView, ListeningExecutorService exec)
+  public SortingCostBalancerStrategy(
+      ServerInventoryView serverInventoryView,
+      LoadQueueTaskMaster loadQueueTaskMaster,
+      ListeningExecutorService exec
+  )
   {
     super(exec);
-    costComputer = new ClusterCostComputer(serverInventoryView);
+    costComputer = new ClusterCostComputer(serverInventoryView, loadQueueTaskMaster);
   }
 
   @Override

@@ -244,7 +244,8 @@ public class CoordinatorSimulationBuilder
   {
     try {
       return new SortingCostBalancerStrategyFactory(
-          env.coordinatorInventoryView
+          env.coordinatorInventoryView,
+          env.loadQueueTaskMaster
       );
     }
     catch (Exception e) {

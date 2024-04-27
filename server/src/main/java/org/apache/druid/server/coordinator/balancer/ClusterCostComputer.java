@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
@@ -33,10 +34,13 @@ public class ClusterCostComputer
 {
   private final Map<String, ServerCostComputer> serverCostComputerMap = new HashMap<>();
 
-  public ClusterCostComputer(ServerInventoryView serverInventoryView)
+  public ClusterCostComputer(ServerInventoryView serverInventoryView, LoadQueueTaskMaster loadQueueTaskMaster)
   {
     for (DruidServer server : serverInventoryView.getInventory()) {
-      serverCostComputerMap.put(server.getName(), new ServerCostComputer(server));
+      serverCostComputerMap.put(
+          server.getName(),
+          new ServerCostComputer(server, loadQueueTaskMaster.getPeonForServer(server.toImmutableDruidServer()))
+      );
     }
   }
 

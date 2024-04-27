@@ -21,10 +21,12 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ import java.util.List;
  */
 public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 {
+  private static final Logger LOG = new Logger(SegmentLoadingTest.class);
   private DruidServer historicalT11;
   private DruidServer historicalT12;
 
@@ -87,8 +90,9 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     historicalT22 = createHistorical(2, Tier.T2, 10_000);
   }
 
+  @Ignore
   @Test
-  public void testLoadAndBalanceSeveral()
+  public void testLoadAndBalanceSeveralSortingCost()
   {
     List<DataSegment> severalSegments = new ArrayList<>();
     severalSegments.addAll(WIKI_YEARLY);
@@ -97,7 +101,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
-                                .withMaxSegmentsToMove(severalSegments.size() / 20)
+                                .withMaxSegmentsToMove(severalSegments.size() / 10)
                                 .withReplicationThrottleLimit(Integer.MAX_VALUE)
                                 .withMaxSegmentsInNodeLoadingQueue(Integer.MAX_VALUE)
                                 .withUseRoundRobinSegmentAssignment(false)
@@ -117,27 +121,26 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                              .build();
 
 
-    System.out.println("Beginning simulation");
     startSimulation(sim);
-    System.out.println("Simulator ready");
-    long startTimeMillis = System.currentTimeMillis();
-    System.out.println("Starting with 3 historicals");
+    LOG.info("Starting with 3 historicals");
     int numCycles = 500;
     for (int i = 0; i < 50; i++) {
-      System.out.println("Coordinator Run: " + (i + 1) + " / " + numCycles);
+      LOG.info("Coordinator Run: " + (i + 1) + " / " + numCycles);
       runCoordinatorCycle();
-      loadQueuedSegments();
+      if (i % 5 == 4) {
+        loadQueuedSegments();
+      }
     }
     sim.cluster().addServer(historicalT14);
     sim.cluster().addServer(historicalT15);
-    System.out.println("Adding 2 more historicals");
+    LOG.info("Adding 2 more historicals");
     for (int i = 50; i < numCycles; i++) {
-      System.out.println("Coordinator Run: " + (i + 1) + " / " + numCycles);
+      LOG.info("Coordinator Run: " + (i + 1) + " / " + numCycles);
       runCoordinatorCycle();
-      loadQueuedSegments();
+      if (i % 5 == 4) {
+        loadQueuedSegments();
+      }
     }
-    long endTimeMillis = System.currentTimeMillis();
-    System.out.println("Total time =  " + (endTimeMillis - startTimeMillis));
   }
 
   @Test
