@@ -27,21 +27,18 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import com.google.inject.Injector;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.DataSource;
@@ -50,7 +47,6 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -73,7 +69,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -85,10 +80,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
@@ -99,21 +91,13 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.EngineFeature;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
-import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
@@ -139,7 +123,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -154,8 +137,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
+@SqlTestFrameWorkModule(StandardComponentSupplier.class)
 public class BaseCalciteQueryTest extends CalciteTestBase
-    implements QueryComponentSupplier, PlannerComponentSupplier
 {
   public static final double ASSERTION_EPSILON = 1e-5;
   public static String NULL_STRING;
@@ -295,25 +278,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> OUTER_LIMIT_CONTEXT = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
-  @Nullable
-  public final SqlEngine engine0;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
-
-  private QueryComponentSupplier baseComponentSupplier;
-  public PlannerComponentSupplier basePlannerComponentSupplier = new StandardPlannerComponentSupplier();
-
-  public BaseCalciteQueryTest()
-  {
-    this(null);
-  }
-
-  public BaseCalciteQueryTest(@Nullable final SqlEngine engine)
-  {
-    this.engine0 = engine;
-  }
 
   static {
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
@@ -663,97 +631,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryFrameworkRule.get();
   }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
-  }
-
-  @Override
-  public SqlEngine createEngine(
-      final QueryLifecycleFactory qlf,
-      final ObjectMapper queryJsonMapper,
-      Injector injector
-  )
-  {
-    if (engine0 == null) {
-      return baseComponentSupplier.createEngine(qlf, queryJsonMapper, injector);
-    } else {
-      return engine0;
-    }
-  }
-
-  @Override
-  public void gatherProperties(Properties properties)
-  {
-    baseComponentSupplier = new StandardComponentSupplier(newTempFolder());
-    baseComponentSupplier.gatherProperties(properties);
-  }
-
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    baseComponentSupplier.configureGuice(builder);
-  }
-
-  @Override
-  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
-  {
-    return baseComponentSupplier.createCongolmerate(builder, closer);
-  }
-
-  @Override
-  public void configureJsonMapper(ObjectMapper mapper)
-  {
-    baseComponentSupplier.configureJsonMapper(mapper);
-  }
-
-  @Override
-  public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
-  {
-    return baseComponentSupplier.createJoinableFactoryWrapper(lookupProvider);
-  }
-
-  @Override
-  public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
-  {
-    baseComponentSupplier.finalizeTestFramework(sqlTestFramework);
-  }
-
-  @Override
-  public Set<ExtensionCalciteRuleProvider> extensionCalciteRules()
-  {
-    return basePlannerComponentSupplier.extensionCalciteRules();
-  }
-
-  @Override
-  public ViewManager createViewManager()
-  {
-    return basePlannerComponentSupplier.createViewManager();
-  }
-
-  @Override
-  public void populateViews(ViewManager viewManager, PlannerFactory plannerFactory)
-  {
-    basePlannerComponentSupplier.populateViews(viewManager, plannerFactory);
-  }
-
-  @Override
-  public DruidSchemaManager createSchemaManager()
-  {
-    return basePlannerComponentSupplier.createSchemaManager();
-  }
-
-  @Override
-  public void finalizePlanner(PlannerFixture plannerFixture)
-  {
-    basePlannerComponentSupplier.finalizePlanner(plannerFixture);
-  }
-
   public void assumeFeatureAvailable(EngineFeature feature)
   {
     boolean featureAvailable = queryFramework().engine().featureAvailable(feature);
@@ -1020,7 +897,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
     {
-      return queryFramework().plannerFixture(BaseCalciteQueryTest.this, plannerConfig, authConfig);
+      return queryFramework().plannerFixture(plannerConfig, authConfig);
     }
 
     @Override
@@ -1322,7 +1199,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       AuthConfig authConfig
   )
   {
-    return queryFramework().plannerFixture(this, plannerConfig, authConfig).statementFactory();
+    return queryFramework().plannerFixture(plannerConfig, authConfig).statementFactory();
   }
 
   protected void cannotVectorize()

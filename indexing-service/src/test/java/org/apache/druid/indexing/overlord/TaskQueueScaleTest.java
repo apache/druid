@@ -48,6 +48,8 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -85,6 +87,7 @@ public class TaskQueueScaleTest
   private TaskStorage taskStorage;
   private TestTaskRunner taskRunner;
   private Closer closer;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp()
@@ -98,11 +101,13 @@ public class TaskQueueScaleTest
     taskRunner = new TestTaskRunner();
     closer.register(taskRunner::stop);
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), jsonMapper, derbyConnectorRule.getConnector());
     final IndexerSQLMetadataStorageCoordinator storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     final TaskActionClientFactory unsupportedTaskActionFactory =

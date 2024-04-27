@@ -107,6 +107,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -158,6 +159,8 @@ public class CliOverlord extends ServerRunnable
       "/status/health"
   );
 
+  private Properties properties;
+
   public CliOverlord()
   {
     super(log);
@@ -175,6 +178,12 @@ public class CliOverlord extends ServerRunnable
     return getModules(true);
   }
 
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
+  }
+
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
@@ -183,12 +192,16 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            validateCentralizedDatasourceSchemaConfig(properties);
+
             if (standalone) {
               binder.bindConstant()
                     .annotatedWith(Names.named("serviceName"))
                     .to(DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
+
+              JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);

@@ -24,14 +24,17 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.TableBuilder;
+import org.apache.druid.catalog.sql.CatalogInsertTest.CatalogInsertComponentSupplier;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogInsertTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.Assert.fail;
@@ -39,6 +42,7 @@ import static org.junit.Assert.fail;
 /**
  * Test the use of catalog specs to drive MSQ ingestion.
  */
+@SqlTestFrameWorkModule(CatalogInsertComponentSupplier.class)
 public class CatalogInsertTest extends CalciteCatalogInsertTest
 {
   @RegisterExtension
@@ -46,60 +50,68 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
 
   private static CatalogStorage storage;
 
-  @Override
-  public CatalogResolver createCatalogResolver()
+  protected static class CatalogInsertComponentSupplier extends CatalogIngestionDmlComponentSupplier
   {
-    CatalogTests.DbFixture dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTION_RULE);
-    storage = dbFixture.storage;
-    MetadataCatalog catalog = new CachedMetadataCatalog(
-        storage,
-        storage.schemaRegistry(),
-        storage.jsonMapper()
-    );
-    return new LiveCatalogResolver(catalog);
-  }
-
-  @Override
-  public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
-  {
-    super.finalizeTestFramework(sqlTestFramework);
-    buildDatasources();
-  }
-
-  public void buildDatasources()
-  {
-    RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
-      DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
-      TableBuilder tableBuilder = TableBuilder.datasource(datasourceName, catalogMetadata.segmentGranularityString());
-      catalogMetadata.columnFacades().forEach(
-          columnFacade -> {
-            tableBuilder.column(columnFacade.spec().name(), columnFacade.spec().dataType());
-          }
-      );
-
-      if (catalogMetadata.hiddenColumns() != null && !catalogMetadata.hiddenColumns().isEmpty()) {
-        tableBuilder.hiddenColumns(catalogMetadata.hiddenColumns());
-      }
-
-      if (catalogMetadata.isSealed()) {
-        tableBuilder.sealed(true);
-      }
-
-      if (catalogMetadata.clusterKeys() != null && !catalogMetadata.clusterKeys().isEmpty()) {
-        tableBuilder.clusterColumns(catalogMetadata.clusterKeys().toArray(new ClusterKeySpec[0]));
-      }
-
-      createTableMetadata(tableBuilder.build());
-    });
-  }
-
-  private void createTableMetadata(TableMetadata table)
-  {
-    try {
-      storage.tables().create(table);
+    public CatalogInsertComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
     }
-    catch (CatalogException e) {
-      fail(e.getMessage());
+
+    @Override
+    public CatalogResolver createCatalogResolver()
+    {
+      CatalogTests.DbFixture dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTION_RULE);
+      storage = dbFixture.storage;
+      MetadataCatalog catalog = new CachedMetadataCatalog(
+          storage,
+          storage.schemaRegistry(),
+          storage.jsonMapper()
+      );
+      return new LiveCatalogResolver(catalog);
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+      super.finalizeTestFramework(sqlTestFramework);
+      buildDatasources();
+    }
+
+    public void buildDatasources()
+    {
+      RESOLVED_TABLES.forEach((datasourceName, datasourceTable) -> {
+        DatasourceFacade catalogMetadata = datasourceTable.effectiveMetadata().catalogMetadata();
+        TableBuilder tableBuilder = TableBuilder.datasource(datasourceName, catalogMetadata.segmentGranularityString());
+        catalogMetadata.columnFacades().forEach(
+            columnFacade -> {
+              tableBuilder.column(columnFacade.spec().name(), columnFacade.spec().dataType());
+            }
+        );
+
+        if (catalogMetadata.hiddenColumns() != null && !catalogMetadata.hiddenColumns().isEmpty()) {
+          tableBuilder.hiddenColumns(catalogMetadata.hiddenColumns());
+        }
+
+        if (catalogMetadata.isSealed()) {
+          tableBuilder.sealed(true);
+        }
+
+        if (catalogMetadata.clusterKeys() != null && !catalogMetadata.clusterKeys().isEmpty()) {
+          tableBuilder.clusterColumns(catalogMetadata.clusterKeys().toArray(new ClusterKeySpec[0]));
+        }
+
+        createTableMetadata(tableBuilder.build());
+      });
+    }
+
+    private void createTableMetadata(TableMetadata table)
+    {
+      try {
+        storage.tables().create(table);
+      }
+      catch (CatalogException e) {
+        fail(e.getMessage());
+      }
     }
   }
 }
